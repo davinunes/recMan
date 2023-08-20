@@ -34,6 +34,24 @@ function getUsuario($login){
 	return $dados[0];
 }
 
+function getMensagens($recurso) {
+    $sql = "SELECT id, id_usuario, id_recurso, texto, timestamp 
+            FROM conselho.mensagem
+            WHERE id_recurso = '$recurso'";
+
+    $result = DBExecute($sql);
+    $dados = array(); // Inicializa a variável $dados como um array vazio
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+
 function verificarLogin($username, $password){
 	$password = hash('sha256', $password);
 	
@@ -128,5 +146,20 @@ function upsertRecurso($dados) {
     }
 }
 
+function upsertComentario($dados) {
+    $id_recurso = $dados['id_recurso'];
+    $id_usuario = $dados['user_id']; // Supondo que você tenha o ID do usuário na sessão
+    $mensagem = DBEscape($dados['messageText']); 
+
+    $sql  = "INSERT INTO conselho.mensagem ";
+    $sql .= "(id_usuario, id_recurso, texto) ";
+    $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
+    
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
 
 ?>

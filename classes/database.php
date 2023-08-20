@@ -27,7 +27,7 @@
 
 	function DBEscape($dados){ # Proteje contra SQL Injection
 		$link = DBConnect();
-		var_dump($link);
+		// var_dump($link);
 		
 		if(!is_array($dados)){
 			$dados = mysqli_real_escape_string($link,$dados);

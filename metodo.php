@@ -22,6 +22,15 @@
             // var_dump($response);
             // var_dump($dados); 
             break;
+		case "novoComentario":
+			session_start();
+			
+            $dados = $_POST;
+			$dados["user_id"] = $_SESSION["user_id"];
+
+            $response = upsertComentario($dados);
+			echo $response;
+            break;
 		case "logon":
             $dados = $_POST;
             $response = verificarLogin($dados['email'], $dados['password']);
