@@ -1,6 +1,7 @@
 $(document).ready(function(){
 	$('select').formSelect();
 	$('.modal').modal();
+	$('.chips').chips();
 	
 });
 
@@ -113,6 +114,41 @@ $(document).on('click', '#comentar', function() { // Inserir mensagem no Recurso
 			if(responseData === "ok"){
 				M.toast({html: responseData, classes: 'rounded'});
 				window.location.reload();
+			}else{
+				M.toast({html: responseData, classes: 'rounded'});
+				// window.location.reload();
+				
+			}
+
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
+$(document).on('click', '.opVoto', function() { // Inserir mensagem no Recurso
+    let metodo = "votar";
+	let idRec = $('#idRecurso').attr('idRec');
+	let voto = $(this).attr('voto');
+	const formData = { 
+				voto: voto,
+				idRec:idRec
+			};
+	console.log(formData);
+	    
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'metodo.php?metodo=' + metodo;
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+		data: formData,
+        data: formData, // Adicione o objeto 'data' aqui
+        success: function(responseData) {
+			if(responseData === "ok"){
+				M.toast({html: responseData, classes: 'rounded'});
+				// window.location.reload();
 			}else{
 				M.toast({html: responseData, classes: 'rounded'});
 				// window.location.reload();

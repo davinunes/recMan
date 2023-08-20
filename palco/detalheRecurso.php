@@ -93,10 +93,26 @@ echo '      </div>
 <div id="votoModal" class="modal">
     <div class="modal-content">
         <h4>Votar</h4>
-        <p>Formulário para votar...</p>
+
+
+<label>Clique na opção desejada</label><br>
+<table>
+    <tr>
+        <td class="opVoto" voto="manter">
+            <div class="chip">Manter</div>
+        </td>
+        <td class="opVoto" voto="revogar">
+            <div class="chip">Revogar</div>
+        </td>
+        <td class="opVoto" voto="converter">
+            <div class="chip">Converter</div>
+        </td>
+    </tr>
+</table>
+
     </div>
     <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Enviar Voto</a>
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
     </div>
 </div>
 

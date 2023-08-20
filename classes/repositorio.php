@@ -162,4 +162,22 @@ function upsertComentario($dados) {
     }
 }
 
+function upsertVoto($dados) {
+    $id_recurso = $dados['idRec'];
+    $id_usuario = $dados['user_id'];
+    $voto = $dados['voto'];
+
+    $sql = "INSERT INTO conselho.votos ";
+    $sql .= "(id_recurso, id_usuario, voto) ";
+    $sql .= "VALUES ('$id_recurso', '$id_usuario', '$voto') ";
+    $sql .= "ON DUPLICATE KEY UPDATE ";
+    $sql .= "voto = '$voto'";
+
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
 ?>

@@ -31,10 +31,19 @@
             $response = upsertComentario($dados);
 			echo $response;
             break;
+		case "votar":
+			session_start();
+			
+            $dados = $_POST;
+			$dados["user_id"] = $_SESSION["user_id"];
+
+            $response = upsertVoto($dados);
+			echo $response;
+			// var_dump($dados);
+            break;
 		case "logon":
             $dados = $_POST;
             $response = verificarLogin($dados['email'], $dados['password']);
-			// var_dump($response);
 			if($response){
 				session_start();
 				$usuario = getUsuario($dados['email']);
