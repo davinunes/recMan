@@ -18,8 +18,26 @@
 <?php
 
 header("Content-Type: text/html; charset=UTF-8");
+session_start();
+// Verificar se o usuário está logado
+if (!isset($_SESSION['user_id'])) {
+    include('forms/login.php'); // Inclui a página de login
+    exit(); // Encerra a execução do script após incluir o login.php
+}
+// var_dump($_SESSION);
+include "palco/usuarioLogado.php";
 
-include "forms/newUser.php";
 
+// include "forms/newUser.php";
+// include "forms/newRecurso.php";
+switch($_GET['pag']){
+	case "recurso":
+		include "palco/detalheRecurso.php";
+		break;
+	default:
+		include "palco/listaRecursos.php";
+		
+}
+// session_destroy();
 
 ?>

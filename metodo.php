@@ -14,5 +14,32 @@
             // var_dump($response);
             // var_dump($dados); // Alterei para exibir o array $dados
             break;
+		case "novoRecurso":
+            $dados = $_POST;
+
+            $response = upsertRecurso($dados);
+			echo $response;
+            // var_dump($response);
+            // var_dump($dados); 
+            break;
+		case "logon":
+            $dados = $_POST;
+            $response = verificarLogin($dados['email'], $dados['password']);
+			// var_dump($response);
+			if($response){
+				session_start();
+				$usuario = getUsuario($dados['email']);
+				$_SESSION['user_id'] = $usuario['id'];
+				$_SESSION['user_email'] = $usuario['email'];
+				$_SESSION['user_nome'] = $usuario['nome'];
+				echo "ok";
+			}else{
+				echo "erro";
+			}
+            break;
+		case "logout":
+			session_start();
+			session_destroy();
+            break;
     }
 ?>
