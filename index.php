@@ -25,19 +25,30 @@ if (!isset($_SESSION['user_id'])) {
     exit(); // Encerra a execução do script após incluir o login.php
 }
 // var_dump($_SESSION);
+$esseUsuario = $_SESSION["user_id"];
+$meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
 
 
-// include "forms/newUser.php";
-// include "forms/newRecurso.php";
 switch($_GET['pag']){
 	case "recurso":
 		include "palco/detalheRecurso.php";
+		break;
+	case "senha":
+		include "forms/trocaSenha.php";
+		break;
+	case "novoUsuario":
+		include "forms/newUser.php";
+		break;
+	case "novoRecurso":
+		include "forms/newRecurso.php";
+		break;
+	case "perfil":
+		include "forms/atualizaUsuario.php";
 		break;
 	default:
 		include "palco/listaRecursos.php";
 		
 }
-// session_destroy();
 
 ?>

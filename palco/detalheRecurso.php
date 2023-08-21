@@ -7,6 +7,8 @@ $result = mysqli_fetch_assoc($result);
 $esseRecurso = $result['id'];
 
 $mensagens = getMensagens($esseRecurso);
+$votos = getVotos($esseRecurso);
+
 // var_dump($mensagens);
 ?>
 
@@ -22,10 +24,7 @@ echo '<header class="header-container">
             <li><a><span id="blocoRecurso">'.$result['titulo'].'</span></a></li>
         </ul>
         <ul class="right">
-            <li>Votos:</li>
-            <li><a>Manter: <span id="votosManter">5</span></a></li>
-            <li><a>Revogar: <span id="votosRevogar">3</span></a></li>
-            <li><a>Converter: <span id="votosConverter">2</span></a></li>
+
         </ul>
     </div>
 </nav>
@@ -41,7 +40,19 @@ echo '<div class="row">
             <div class="card-content">
                 <span class="card-title">Texto na Notificação</span>
                 <p>'.$result['detalhes'].'</p>';
-				// Adicione uma lista para exibir as mensagens
+				
+echo '<div class="row">
+    <div class="">
+        <ul class="collection with-header">
+            ';
+            foreach ($votos as $voto) {
+                echo '<li class="collection-item">' . $voto['voto'] . '</li>';
+            }
+echo   '</ul>
+    </div>
+</div>';
+
+
 echo '<div class="row">
     <div class="">
         <ul class="collection with-header">
@@ -54,9 +65,9 @@ echo   '</ul>
 </div>';
 echo '      </div>
             <div class="card-action">
-                <a class="modal-trigger" href="#novaMensagemModal">Comentar</a>
-                <a class="modal-trigger" href="#votoModal">Votar</a>
-                <a class="modal-trigger" href="#alterarFaseModal">Mudar  Status</a>
+                <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
+                <a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a>
+                <a class="modal-trigger btn right" href="index.php">Voltar</a>
             </div>
         </div>
     </div>

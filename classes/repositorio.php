@@ -18,7 +18,7 @@ function getUsuarios($id){
 }
 
 function getUsuario($login){
-	$sql  = " SELECT id, email, nome, status, unidade ";
+	$sql  = " SELECT id, email, nome, status, unidade, senha, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
 	$sql .= " where email = '$login'" ;
 	
@@ -51,6 +51,23 @@ function getMensagens($recurso) {
     return $dados;
 }
 
+function getVotos($recurso) {
+    $sql = "SELECT v.id, v.id_recurso, v.id_usuario, v.voto, v.data, u.nome 
+            FROM conselho.votos v
+            LEFT JOIN conselho.usuarios u ON u.id = v.id_usuario 
+            WHERE v.id_recurso = '$recurso'";
+
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
 
 function verificarLogin($username, $password){
 	$password = hash('sha256', $password);
@@ -93,18 +110,64 @@ function upsertUsuario($dados) {
     $sql  = "INSERT INTO conselho.usuarios ";
     $sql .= "(email, senha, nome, status, unidade) ";
     $sql .= "VALUES ('$email', '$senha', '$nome', '$status', '$unidade') ";
-    $sql .= "ON DUPLICATE KEY UPDATE ";
-    $sql .= "email = '$email', ";
-    $sql .= "senha = '$senha', ";
-    $sql .= "nome = '$nome', ";
-    $sql .= "status = $status, ";
-    $sql .= "unidade = '$unidade' ";
+    // $sql .= "ON DUPLICATE KEY UPDATE ";
+    // $sql .= "email = '$email', ";
+    // $sql .= "senha = '$senha', ";
+    // $sql .= "nome = '$nome', ";
+    // $sql .= "status = $status, ";
+    // $sql .= "unidade = '$unidade' ";
 	
 	// var_dump($sql);
 	
 	
 	// sha2('{$_POST[password]}', '256') 
 
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function updateUsuario($dados, $avatar = '') {
+    $email = $dados['email'];
+    $nome = $dados['nome'];
+    $status = isset($_POST['status']) ? $_POST['status'] : 1;
+    $unidade = $dados['unidade'];
+	$id = $dados['id'];
+
+    $sql  = "UPDATE conselho.usuarios ";
+    $sql .= "SET ";
+	$sql .= "email = '$email', ";
+	$sql .= "nome = '$nome', ";
+	$sql .= "status = $status, ";
+	$sql .= "unidade = '$unidade', ";
+	$sql .= "avatar = '$avatar' ";
+	$sql .= "where ";
+	$sql .= "id = $id ";
+	
+	// var_dump($sql);
+	
+	
+	// sha2('{$_POST[password]}', '256') 
+
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function trocaSenha($dados) {
+    $id = $dados["user_id"];
+    $senha = hash('sha256', $dados["newPassword"]);
+
+    $sql  = "update conselho.usuarios ";
+    $sql .= "set ";
+    $sql .= "senha = '$senha' ";
+    $sql .= "where ";
+    $sql .= "id = $id ";
+	
     if (DBExecute($sql)) {
         return "ok";
     } else {

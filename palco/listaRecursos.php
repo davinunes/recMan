@@ -4,11 +4,9 @@
             <thead>
                 <tr>
                     <th>Unidade</th>
-                    <th>Bloco</th>
                     <th>Número</th>
-                    <th>Fase</th>
-                    <th>Data do Recurso</th>
-                    <th>Titulo</th>
+                    <th>Data</th>
+                    <th>Assunto</th>
                 </tr>
             </thead>
             <tbody>
@@ -20,10 +18,8 @@
                 while ($row = mysqli_fetch_assoc($result)) {
                     echo "<tr class='recurso' rec='{$row['numero']}'>";
                     // echo "<td>{$row['id']}</td>";
-                    echo "<td>{$row['unidade']}</td>";
-                    echo "<td>{$row['bloco']}</td>";
+                    echo "<td>{$row['bloco']}{$row['unidade']}</td>";
                     echo "<td>{$row['numero']}</td>";
-                    echo "<td>{$row['fase']}</td>";
                     echo "<td>{$row['data']}</td>";
                     echo "<td>{$row['titulo']}</td>";
                     echo "</tr>";

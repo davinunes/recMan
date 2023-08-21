@@ -2,6 +2,20 @@ $(document).ready(function(){
 	$('select').formSelect();
 	$('.modal').modal();
 	$('.chips').chips();
+	$('.sidenav').sidenav();
+	
+	$('#avatar').on('change', function() {
+        var file = $(this)[0].files[0]; // Obtém o arquivo selecionado
+
+        // if (file) {
+            // var reader = new FileReader();
+            // reader.onload = function(e) {
+                // var base64Data = e.target.result.split(',')[1]; // Remove o cabeçalho de data URI
+                // $('#updateThisUser').data('avatar', base64Data); // Armazena a base64 nos dados do formulário
+            // };
+            // reader.readAsDataURL(file); // Lê o arquivo como data URL
+        // }
+    });
 	
 });
 
@@ -148,7 +162,7 @@ $(document).on('click', '.opVoto', function() { // Inserir mensagem no Recurso
         success: function(responseData) {
 			if(responseData === "ok"){
 				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
+				window.location.reload();
 			}else{
 				M.toast({html: responseData, classes: 'rounded'});
 				// window.location.reload();
@@ -175,3 +189,66 @@ $(document).on('click', '.recurso', function() { // Inserir novo Usuário
 
 });
 
+$(document).on('submit', '#changePasswordForm', function(event) {
+        event.preventDefault();
+        
+        var currentPassword = $('#currentPassword').val();
+        var newPassword = $('#newPassword').val();
+        var confirmPassword = $('#confirmPassword').val();
+		
+		if(newPassword != confirmPassword){
+			M.toast({html: "Nova senha e confirmação não são iguais ", classes: 'rounded'});
+			return;
+		}
+		
+        // Exemplo de chamada AJAX para enviar os dados ao servidor
+        $.post('metodo.php?metodo=trocaSenha', {
+            currentPassword: currentPassword,
+            newPassword: newPassword
+        }, function(response) {
+			if(response === "ok"){
+				M.toast({html: response, classes: 'rounded'});
+				// window.location.reload();
+			}else{
+				M.toast({html: response, classes: 'rounded'});
+				// window.location.reload();
+				
+			}
+        });
+    });
+
+$(document).on('submit', '#updateThisUser', function(e) {
+         e.preventDefault(); // Impede o envio padrão do formulário
+        
+        // Obtém os dados do formulário
+        var formData = new FormData(this);
+
+        // Obtém a base64 do avatar dos dados do formulário
+        // var avatarBase64 = $(this).data('avatar');
+        // if (avatarBase64) {
+            // formData.append('avatarBase64', avatarBase64); // Adiciona a base64 aos dados do formulário
+        // }
+
+        // Envia os dados usando AJAX
+        $.ajax({
+            type: 'POST',
+            url: 'metodo.php?metodo=updateThisUser',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+				if(response === "ok"){
+					M.toast({html: response, classes: 'rounded'});
+					// window.location.reload();
+				}else{
+					M.toast({html: response, classes: 'rounded'});
+					// window.location.reload();
+					
+				}
+            },
+            error: function(xhr, status, error) {
+                // Lida com erros
+                console.error(error);
+            }
+        });
+});

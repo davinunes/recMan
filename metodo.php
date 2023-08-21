@@ -41,6 +41,41 @@
 			echo $response;
 			// var_dump($dados);
             break;
+		case "trocaSenha":
+			session_start();
+            $dados = $_POST;
+			if($_SESSION['user_pwd'] != hash('sha256', $dados["currentPassword"]) ){
+				echo "Senha atual incorreta!";
+				break;
+			}
+			$dados["user_id"] = $_SESSION["user_id"];
+
+            $response = trocaSenha($dados);
+			echo $response;
+			// var_dump($dados);
+            break;
+		case "updateThisUser":
+			session_start();
+            $dados = $_POST;
+			if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+				$avatarTmpName = $_FILES['avatar']['tmp_name'];
+
+				// Lê o conteúdo da imagem
+				$avatarContent = file_get_contents($avatarTmpName);
+
+				// Converte o conteúdo da imagem para base64
+				$avatarBase64 = base64_encode($avatarContent);
+			} else {
+				// Caso nenhum arquivo tenha sido enviado, defina o valor como vazio
+				$avatarBase64 = '';
+			}
+			
+			$response = updateUsuario($dados, $avatarBase64);
+			echo $response;
+
+			// var_dump($dados);
+			// var_dump($avatarBase64);
+            break;
 		case "logon":
             $dados = $_POST;
             $response = verificarLogin($dados['email'], $dados['password']);
@@ -50,6 +85,8 @@
 				$_SESSION['user_id'] = $usuario['id'];
 				$_SESSION['user_email'] = $usuario['email'];
 				$_SESSION['user_nome'] = $usuario['nome'];
+				$_SESSION['user_pwd'] = $usuario['senha'];
+				$_SESSION['avatar'] = $usuario['avatar'];
 				echo "ok";
 			}else{
 				echo "erro";
