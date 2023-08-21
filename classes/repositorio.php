@@ -35,8 +35,9 @@ function getUsuario($login){
 }
 
 function getMensagens($recurso) {
-    $sql = "SELECT id, id_usuario, id_recurso, texto, timestamp 
-            FROM conselho.mensagem
+    $sql = "SELECT m.*, u.avatar 
+            FROM conselho.mensagem m
+			left join conselho.usuarios u on u.id = m.id_usuario
             WHERE id_recurso = '$recurso'";
 
     $result = DBExecute($sql);
@@ -52,7 +53,7 @@ function getMensagens($recurso) {
 }
 
 function getVotos($recurso) {
-    $sql = "SELECT v.id, v.id_recurso, v.id_usuario, v.voto, v.data, u.nome 
+    $sql = "SELECT v.id, v.id_recurso, v.id_usuario, v.voto, v.data, u.nome, u.avatar
             FROM conselho.votos v
             LEFT JOIN conselho.usuarios u ON u.id = v.id_usuario 
             WHERE v.id_recurso = '$recurso'";
@@ -188,8 +189,8 @@ function upsertRecurso($dados) {
 	$data = $dados['data'];
 
     $sql  = "INSERT INTO recurso ";
-    $sql .= "(unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo) ";
-    $sql .= "VALUES ('$unidade', '$bloco', '$numero', '$artigo', '$fase', '$email', '$nome', '$detalhes', '$titulo') ";
+    $sql .= "(unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo, data) ";
+    $sql .= "VALUES ('$unidade', '$bloco', '$numero', '$artigo', '$fase', '$email', '$nome', '$detalhes', '$titulo', '$data') ";
     $sql .= "ON DUPLICATE KEY UPDATE ";
     $sql .= "unidade = '$unidade', ";
     $sql .= "bloco = '$bloco', ";

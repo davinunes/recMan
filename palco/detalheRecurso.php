@@ -46,19 +46,25 @@ echo '<div class="row">
         <ul class="collection with-header">
             ';
             foreach ($votos as $voto) {
-                echo '<li class="collection-item">' . $voto['voto'] . '</li>';
+                echo '<li class="collection-item avatar">
+				<img src="data:image/png;base64,'.$voto['avatar'].'" alt="" class="circle">
+				' . $voto['voto'] . '
+				</li>';
             }
 echo   '</ul>
     </div>
 </div>';
-
+echo "Comentários";
 
 echo '<div class="row">
     <div class="">
         <ul class="collection with-header">
             ';
             foreach ($mensagens as $mensagem) {
-                echo '<li class="collection-item">' . $mensagem['texto'] . '</li>';
+                echo '<li class="collection-item avatar">
+				<img src="data:image/png;base64,'.$mensagem['avatar'].'" alt="" class="circle">
+				' . $mensagem['texto'] . '
+				</li>';
             }
 echo   '</ul>
     </div>
