@@ -59,12 +59,19 @@
             $dados = $_POST;
 			if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
 				$avatarTmpName = $_FILES['avatar']['tmp_name'];
+				
+				// Obter a extensão do arquivo
+				$avatarExtension = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
 
-				// Lê o conteúdo da imagem
-				$avatarContent = file_get_contents($avatarTmpName);
-
-				// Converte o conteúdo da imagem para base64
-				$avatarBase64 = base64_encode($avatarContent);
+				// Construir o nome do arquivo
+				$avatarFileName = "avatar{$_SESSION['user_id']}.$avatarExtension";
+				// Caminho completo para salvar
+				$avatarFullPath = "raw/$avatarFileName";
+				
+				// Mover o arquivo para o destino final
+				move_uploaded_file($avatarTmpName, $avatarFullPath);
+				// Atualizar a variável $avatarBase64 para ser o caminho completo
+				$avatarBase64 = $avatarFullPath;
 			} else {
 				// Caso nenhum arquivo tenha sido enviado, defina o valor como vazio
 				$avatarBase64 = '';
@@ -75,6 +82,13 @@
 
 			// var_dump($dados);
 			// var_dump($avatarBase64);
+            break;
+		case "atualizarRecurso":
+			session_start();
+            $dados = $_POST;
+						
+			$response = upsertRecurso($dados);
+			echo $response;
             break;
 		case "logon":
             $dados = $_POST;

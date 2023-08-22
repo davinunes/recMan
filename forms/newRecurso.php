@@ -45,7 +45,7 @@
 					include "/var/www/html/classes/repositorio.php";
 					
 					$fases = getFasesRecurso();
-					var_dump($fases);
+					// var_dump($fases);
 					$i = 0;
 					foreach ($fases as $fase) {
 						$selecionado = $i++ == 0 ? "selected" : "";

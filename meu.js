@@ -252,3 +252,33 @@ $(document).on('submit', '#updateThisUser', function(e) {
             }
         });
 });
+
+$(document).on('submit', '#atualizarRecursoForm', function(e) {
+         e.preventDefault(); // Impede o envio padrão do formulário
+        
+        // Obtém os dados do formulário
+		
+        var formData = new FormData(this);
+        // Envia os dados usando AJAX
+        $.ajax({
+            type: 'POST',
+            url: 'metodo.php?metodo=atualizarRecurso',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+				if(response === "ok"){
+					M.toast({html: response, classes: 'rounded'});
+					// window.location.reload();
+				}else{
+					M.toast({html: response, classes: 'rounded'});
+					// window.location.reload();
+					
+				}
+            },
+            error: function(xhr, status, error) {
+                // Lida com erros
+                console.error(error);
+            }
+        });
+});

@@ -5,7 +5,7 @@
 			<div class="background">
 				<!-- Background da sidenav, se desejar -->
 			</div>
-			<a href="#user"><img class="circle" src="data:image/png;base64,<?php echo $meuAvatar; ?>"></a>
+			<a href="#user"><img class="circle" src="<?php echo $meuAvatar; ?>"></a>
 			<a href="#name"><span class="blue-text name"><?php echo $_SESSION['user_nome']; ?></span></a>
 			<a href="#email"><span class="blue-text email"><?php echo $_SESSION['user_email']; ?></span></a>
 		</div>

@@ -7,6 +7,7 @@ if (mysqli_num_rows($result) > 0) {
 	
     $usuario = mysqli_fetch_assoc($result);
 	
+	echo '<div class="container" >';
 	echo '<form id="updateThisUser" >';
 	echo '<input type="hidden" name="id" value="' . $usuario['id'] . '">';
 	echo '<label for="nome">Nome:</label>';
@@ -31,5 +32,6 @@ if (mysqli_num_rows($result) > 0) {
 			</div>';
 	echo '<button class="btn orange darken-3" type="submit">Atualizar</button>';
 	echo '</form>';
+	echo '</div>';
 }
 ?>

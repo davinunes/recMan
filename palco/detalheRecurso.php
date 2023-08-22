@@ -15,30 +15,30 @@ $votos = getVotos($esseRecurso);
 <body>
     <!-- Cabeçalho -->
 	<?php
-echo '<header class="header-container">
-<nav class="header-navbar">
-    <div class="nav-wrapper">
-        <ul class="left">
-            <li><a>Recurso <span id="idRecurso" idRec="'.$esseRecurso.'">'.$result['numero'].'</span></a></li>
-            <li><a>Unidade <span id="unidadeRecurso">'.$result['unidade'].$result['bloco'].'</span></a></li>
-            <li><a><span id="blocoRecurso">'.$result['titulo'].'</span></a></li>
-        </ul>
-        <ul class="right">
-
-        </ul>
-    </div>
-</nav>
-</header>
-	';
 	?>
     <!-- Corpo da página -->
     <main>
 		<?php
 echo '<div class="row">
     <div class="col s12 m8 offset-m2">
-        <div class="card">
-            <div class="card-content">
-                <span class="card-title">Texto na Notificação</span>
+        <div class="card">';
+echo '
+<nav class="header-navbar orange darken-2">
+    <div class="nav-wrapper">
+        <ul class="left">
+            <li><a> <span id="idRecurso" idRec="'.$esseRecurso.'">'.$result['numero'].'</span></a></li>
+            <li><a> <span id="unidadeRecurso">'.$result['unidade'].$result['bloco'].'</span></a></li>
+            
+        </ul>
+        <ul class="right">
+				<a class="editarRecurso" href="index.php?pag=editarRecurso&rec='.$esseRecurso.'"><i class="material-icons">edit</i></a>
+        </ul>
+    </div>
+</nav>
+
+	';
+echo '            <div class="card-content">
+                <h6 class="">'.$result['titulo'].'</h6>
                 <p>'.$result['detalhes'].'</p>';
 				
 echo '<div class="row">
@@ -47,14 +47,14 @@ echo '<div class="row">
             ';
             foreach ($votos as $voto) {
                 echo '<li class="collection-item avatar">
-				<img src="data:image/png;base64,'.$voto['avatar'].'" alt="" class="circle">
+				<img src="'.$voto['avatar'].'" alt="" class="circle">
 				' . $voto['voto'] . '
 				</li>';
             }
 echo   '</ul>
     </div>
 </div>';
-echo "Comentários";
+echo "<h6>Comentários</h6>";
 
 echo '<div class="row">
     <div class="">
@@ -62,7 +62,7 @@ echo '<div class="row">
             ';
             foreach ($mensagens as $mensagem) {
                 echo '<li class="collection-item avatar">
-				<img src="data:image/png;base64,'.$mensagem['avatar'].'" alt="" class="circle">
+				<img src="'.$mensagem['avatar'].'" alt="" class="circle">
 				' . $mensagem['texto'] . '
 				</li>';
             }
@@ -72,8 +72,9 @@ echo   '</ul>
 echo '      </div>
             <div class="card-action">
                 <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
+                <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a>
                 <a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a>
-                <a class="modal-trigger btn right" href="index.php">Voltar</a>
+                <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
         </div>
     </div>

@@ -1,0 +1,16 @@
+/* Mantém o ícone do menu visível em todas as telas */
+@media (min-width: 992px) {
+  .sidenav-trigger {
+    display: block !important;
+  }
+}
+
+.auto-height-textarea {
+    overflow: hidden;
+	height: 12em;
+    transition: height 0.2s; /* Adiciona uma transição suave de altura */
+}
+
+.auto-height-textarea:focus {
+    height: auto; /* Define a altura da textarea para auto quando em foco */
+}
