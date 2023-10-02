@@ -43,9 +43,24 @@ $(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário
 
 $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
     let metodo = "novoRecurso";
-	const formData = $("#formNewRecurso").serializeArray();
-	console.log(formData);
-    
+    const formData = $("#formNewRecurso").serializeArray();
+    console.log(formData);
+
+    // Verificar se os campos obrigatórios estão preenchidos
+    let camposObrigatorios = ["unidade", "bloco", "numero", "fase", "data"]; // Adicione aqui os nomes dos campos obrigatórios
+
+    let camposVazios = camposObrigatorios.filter(function(campo) {
+        return formData.find(function(item) {
+            return item.name === campo && item.value === "";
+        });
+    });
+
+    if (camposVazios.length > 0) {
+        // Exibir um toast informando que os campos obrigatórios não foram preenchidos
+        M.toast({html: 'Por favor, preencha todos os campos obrigatórios.', classes: 'rounded red'});
+        return; // Impedir o envio da solicitação AJAX
+    }
+
     // Realizar a solicitação GET para obter os dados desejados
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
@@ -54,6 +69,7 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
         data: formData, // Adicione o objeto 'data' aqui
         success: function(responseData) {
             M.toast({html: responseData, classes: 'rounded'});
+            window.location.href = "index.php";
         },
         error: function(jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
@@ -61,6 +77,7 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
         }
     });
 });
+
 
 $(document).on('click', '#logon', function() { // Logar Usuario
     let metodo = "logon";
@@ -148,6 +165,41 @@ $(document).on('click', '.opVoto', function() { // Inserir mensagem no Recurso
 	let voto = $(this).attr('voto');
 	const formData = { 
 				voto: voto,
+				idRec:idRec
+			};
+	console.log(formData);
+	    
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'metodo.php?metodo=' + metodo;
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+		data: formData,
+        data: formData, // Adicione o objeto 'data' aqui
+        success: function(responseData) {
+			if(responseData === "ok"){
+				M.toast({html: responseData, classes: 'rounded'});
+				window.location.reload();
+			}else{
+				M.toast({html: responseData, classes: 'rounded'});
+				// window.location.reload();
+				
+			}
+
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
+$(document).on('click', '.recFase', function() { // Altera a fase do recurso
+    let metodo = "mudaFase";
+	let idRec = $('#idRecurso').attr('idRec');
+	let fase = $(this).attr('fase');
+	const formData = { 
+				fase: fase,
 				idRec:idRec
 			};
 	console.log(formData);

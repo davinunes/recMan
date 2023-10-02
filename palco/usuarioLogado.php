@@ -1,4 +1,4 @@
-<nav>
+<nav class="blue darken-3">
 <ul id="slide-out" class="sidenav">
     <li>
 		<div class="user-view ">
@@ -13,7 +13,7 @@
     <li>
 		<a  href="index.php" class="btn">Recursos</a>
 		<a  href="index.php?pag=novoRecurso" class="btn">Novo Recurso</a>
-		<a  href="index.php?pag=novoUsuario" class="btn">Novo Usuario</a>
+		<a  href="index.php?pag=usuarios" class="btn">Usuarios</a>
 		<a  href="index.php?pag=perfil" class="btn">Perfil</a>
 		<a  href="index.php?pag=senha" class="btn">Mudar Senha</a>
 		<a id="logout" href="#" class="btn">Sair</a>

@@ -35,6 +35,9 @@ switch($_GET['pag']){
 	case "recurso":
 		include "palco/detalheRecurso.php";
 		break;
+	case "usuarios":
+		include "palco/listaUsuarios.php";
+		break;
 	case "senha":
 		include "forms/trocaSenha.php";
 		break;

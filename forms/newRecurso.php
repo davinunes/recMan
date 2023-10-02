@@ -9,7 +9,7 @@
                 <input type="text" name="titulo" id="titulo">
                 <label for="titulo">Título do Recurso</label>
             </div>
-		<div class="row">
+		<div class="row teal lighten-4">
 			<div class="input-field col s6">
 				<select class="" name="bloco" id="bloco" required>
 					<option value="" disabled selected>Escolha um bloco</option>
@@ -28,7 +28,7 @@
             </div>
 		</div>
 		<div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col s6 teal lighten-4">
                 <input type="text" name="numero" id="numero" required>
                 <label for="numero">Número da Notificação (xxx/yyyy)</label>
             </div>
@@ -64,7 +64,7 @@
                 <textarea name="detalhes" id="detalhes" class="materialize-textarea active"></textarea>
                 <label for="detalhes">Detalhes do Recurso</label>
             </div>
-			<div class="input-field">
+			<div class="input-field teal lighten-4">
 				<input type="date" name="data" id="data" required>
 				<label for="data_recurso">Data do Recurso</label>
 			</div>

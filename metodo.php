@@ -41,6 +41,16 @@
 			echo $response;
 			// var_dump($dados);
             break;
+		case "mudaFase":
+			session_start();
+			
+            $dados = $_POST;
+			$dados["user_id"] = $_SESSION["user_id"];
+
+            $response = upsertFase($dados);
+			echo $response;
+			// var_dump($dados);
+            break;
 		case "trocaSenha":
 			session_start();
             $dados = $_POST;

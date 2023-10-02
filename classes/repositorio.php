@@ -1,8 +1,8 @@
 <?php
 require "/var/www/html/classes/database.php";
 
-function getUsuarios($id){
-	$sql  = " SELECT id, email, senha, nome, status, unidade ";
+function getUsuarios($id=1){
+	$sql  = " SELECT id, email, senha, nome, status, unidade, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
 	
 	$result	= DBExecute($sql);
@@ -177,36 +177,33 @@ function trocaSenha($dados) {
 }
 
 function upsertRecurso($dados) {
-    $unidade = $dados['unidade'];
-    $bloco = $dados['bloco'];
-    $numero = $dados['numero'];
-    $artigo = $dados['artigo'];
-    $fase = $dados['fase'];
-    $email = $dados['email'];
-    $nome = $dados['nome'];
-    $detalhes = $dados['detalhes'];
-    $titulo = $dados['titulo'];
-	$data = $dados['data'];
+    // Verifique se os campos obrigatórios estão presentes
+    if (!isset($dados['unidade'], $dados['bloco'], $dados['numero'], $dados['fase'])) {
+        return "Campos obrigatórios não estão preenchidos.";
+    }
 
-    $sql  = "INSERT INTO recurso ";
-    $sql .= "(unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo, data) ";
-    $sql .= "VALUES ('$unidade', '$bloco', '$numero', '$artigo', '$fase', '$email', '$nome', '$detalhes', '$titulo', '$data') ";
+    // Construa a consulta SQL de inserção/atualização
+    $fields = implode(', ', array_keys($dados));
+    $values = implode(', ', array_map(function($value) {
+        return $value !== null ? "'" . DBEscape($value) . "'" : 'NULL';
+    }, $dados));
+
+    $sql = "INSERT INTO recurso ($fields) VALUES ($values) ";
     $sql .= "ON DUPLICATE KEY UPDATE ";
-    $sql .= "unidade = '$unidade', ";
-    $sql .= "bloco = '$bloco', ";
-    $sql .= "numero = '$numero', ";
-    $sql .= "artigo = '$artigo', ";
-    $sql .= "fase = '$fase', ";
-    $sql .= "email = '$email', ";
-    $sql .= "Nome = '$nome', ";
-    $sql .= "detalhes = '$detalhes', ";
-    $sql .= "titulo = '$titulo', ";
-	$sql .= "data = '$data'";
+    
+    foreach ($dados as $key => $value) {
+        if ($value !== null) {
+            $sql .= "$key = VALUES($key), ";
+        }
+    }
+    // Remova a última vírgula e espaço desnecessários
+    $sql = rtrim($sql, ', ');
 
+    // Execute a consulta
     if (DBExecute($sql)) {
         return "ok";
     } else {
-        return "erro";
+        return "Erro na execução da consulta.";
     }
 }
 
@@ -236,6 +233,25 @@ function upsertVoto($dados) {
     $sql .= "VALUES ('$id_recurso', '$id_usuario', '$voto') ";
     $sql .= "ON DUPLICATE KEY UPDATE ";
     $sql .= "voto = '$voto'";
+
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function upsertFase($dados) {
+    $id_recurso = $dados['idRec'];
+    $id_usuario = $dados['user_id'];
+    $fase = $dados['fase'];
+	
+	// return var_dump($dados);
+    $sql = "update conselho.recurso ";
+    $sql .= "set ";
+    $sql .= "fase = '$fase' ";
+    $sql .= "where ";
+    $sql .= "id = '$id_recurso'";
 
     if (DBExecute($sql)) {
         return "ok";

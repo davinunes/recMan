@@ -137,9 +137,27 @@ echo '      </div>
 <div id="alterarFaseModal" class="modal">
     <div class="modal-content">
         <h4>Alterar Estágio do Recurso</h4>
-        <p>Formulário para alterar o estágio do recurso...</p>
+        <table>
+			<tr>
+				<td class="recFase" fase="1">
+					<div class="chip">Novo</div>
+				</td>
+				<td class="recFase" fase="2">
+					<div class="chip">Falta Material</div>
+				</td>
+				<td class="recFase" fase="3">
+					<div class="chip">Análise</div>
+				</td>
+				<td class="recFase" fase="4">
+					<div class="chip">Confecionar Parecer</div>
+				</td>
+				<td class="recFase" fase="5">
+					<div class="chip">Concluido</div>
+				</td>
+			</tr>
+		</table>
     </div>
     <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Salvar Alterações</a>
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
     </div>
 </div>
