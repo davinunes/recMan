@@ -6,13 +6,12 @@
 		
 		$mensagem = $_POST['msg'] ? $_POST['msg'] : "Atualização";
 		// echo $mensagem."<br/>";
-		$cmd = 'cd /var/www/html 2>&1; 
-		/usr/bin/git pull;  
-		/usr/bin/git add .;  
-		/usr/bin/git commit -m "'.$mensagem.'"; 
-		/usr/bin/git push origin main 2>&1';
+		$cmd = 'cd /var/www/html && git pull && git add . && git commit -m "'.$mensagem.'" && git push';
+		$comando = "/usr/bin/python3 /var/www/html/py/ssh.py '".$cmd."'";
+		
+		var_dump($comando);
 
-		$output = shell_exec('/bin/bash ./script.sh '.$cmd);
+		$output = shell_exec($comando);
 		echo "<pre>".$output."</pre>";
 		exit;
 	}
