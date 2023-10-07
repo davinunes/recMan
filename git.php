@@ -1,7 +1,7 @@
 <?php
 
 	if(isset($_GET['git']) and  $_GET['git'] == 1){
-		
+		//
 		// exit;
 		
 		$mensagem = $_POST['msg'] ? $_POST['msg'] : "Atualização";
