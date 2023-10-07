@@ -9,7 +9,7 @@
 		$cmd = 'cd /var/www/html && git pull && git add . && git commit -m "'.$mensagem.'" && git push';
 		$comando = "/usr/bin/python3 /var/www/html/py/ssh.py '".$cmd."'";
 		
-		var_dump($comando);
+		// var_dump($comando);
 
 		$output = shell_exec($comando);
 		echo "<pre>".$output."</pre>";
