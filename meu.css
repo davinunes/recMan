@@ -14,3 +14,7 @@
 .auto-height-textarea:focus {
     height: auto; /* Define a altura da textarea para auto quando em foco */
 }
+
+.recurso td{
+	padding: 5px!important;
+}

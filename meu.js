@@ -229,7 +229,7 @@ $(document).on('click', '.recFase', function() { // Altera a fase do recurso
     });
 });
 
-$(document).on('click', '.recurso', function() { // Inserir novo Usuário
+$(document).on('dblclick', '.recurso', function() { // Inserir novo Usuário
     let metodo = "recurso";
 	let recurso  = $(this).attr("rec");
     
@@ -238,6 +238,11 @@ $(document).on('click', '.recurso', function() { // Inserir novo Usuário
 	console.log(url);
 	
 	window.location.href = url;
+
+});
+
+$(document).on('click', '.recurso', function() { // Inserir novo Usuário
+    M.toast({html: "Clique duplo para entrar ", classes: 'rounded'});
 
 });
 
