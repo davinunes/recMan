@@ -22,7 +22,7 @@
 		/usr/bin/git config credential.helper cache 2>&1;
 		'; 
 	// $cmd = '/usr/bin/git config --global --add safe.directory /var/www/html 2>&1'; 
-	// $cmd = 'whoami';
+	// $cmd = 'whoami'; **
 
 	$output = shell_exec($cmd);
 	echo "<pre>".$output."</pre>";
