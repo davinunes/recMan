@@ -10,7 +10,7 @@
 		/usr/bin/git pull;  
 		/usr/bin/git add .;  
 		/usr/bin/git commit -m "'.$mensagem.'"; 
-		/usr/bin/git push origin main';
+		/usr/bin/git push origin main 2>&1';
 
 		$output = shell_exec($cmd);
 		echo "<pre>".$output."</pre>";
