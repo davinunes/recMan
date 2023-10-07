@@ -12,7 +12,7 @@
 		/usr/bin/git commit -m "'.$mensagem.'"; 
 		/usr/bin/git push origin main 2>&1';
 
-		$output = shell_exec($cmd);
+		$output = shell_exec('/bin/bash ./script.sh '.$cmd);
 		echo "<pre>".$output."</pre>";
 		exit;
 	}
