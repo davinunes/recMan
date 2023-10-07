@@ -3,7 +3,7 @@
 require("classes/key.php");
 $host = 'localhost'; // Host do banco de dados
 $username = DB_USERNAME; // Nome de usuário do banco de dados
-$password = DB_PASSWORD; // Senha do banco de dados
+$password = DB_PASSWORD; // Senha do banco de dados  
 $database = DB_DATABASE; // Nome do banco de dados
 
 // Caminho para salvar o arquivo de backup
