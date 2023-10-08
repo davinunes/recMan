@@ -8,6 +8,7 @@ $esseRecurso = $result['id'];
 
 $mensagens = getMensagens($esseRecurso);
 $votos = getVotos($esseRecurso);
+$historico = getNotificacoes($result['unidade'] ,$result['bloco']);
 
 // var_dump($mensagens);
 ?>
@@ -28,6 +29,7 @@ echo '
         <ul class="left">
             <li><a> <span id="idRecurso" idRec="'.$esseRecurso.'">'.$result['numero'].'</span></a></li>
             <li><a> <span id="unidadeRecurso">'.$result['unidade'].$result['bloco'].'</span></a></li>
+            <li><a> <span id="historico">'.sizeof($historico).'</span></a></li>
             
         </ul>
         <ul class="right">
@@ -66,8 +68,21 @@ echo '<div class="row">
 				' . $mensagem['texto'] . '
 				</li>';
             }
-echo   '</ul>
-    </div>
+echo   '</ul>';
+echo "<h6>Histórico da unidade</h6>";
+
+echo '<table class="striped">';
+foreach($historico as $h){
+	
+echo '<tr class="recurso">';
+	echo "<td>".$h['numero_ano_virtual']."</td>";
+	echo "<td>".$h['notificacao']."</td>";
+	echo "<td>".$h['assunto']."</td>";
+echo '</tr>';
+}
+echo '</table>';
+
+echo '    </div>
 </div>';
 echo '      </div>
             <div class="card-action">

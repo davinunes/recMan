@@ -70,6 +70,21 @@ function getVotos($recurso) {
     return $dados;
 }
 
+function getNotificacoes($unidade, $torre) {
+    $sql = "select * from notificacoes where unidade = $unidade and torre = '$torre'";
+
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
 function verificarLogin($username, $password){
 	$password = hash('sha256', $password);
 	
@@ -175,6 +190,38 @@ function trocaSenha($dados) {
         return "erro";
     }
 }
+
+function upsertNotificacao($dados) {
+    // Verifique se os campos obrigatórios estão presentes
+    if (!isset($dados['ano'], $dados['numero'])) {
+        return "Campos obrigatórios 'ano' e 'numero' não estão preenchidos.";
+    }
+
+    // Construa a consulta SQL de inserção/atualização
+    $fields = implode(', ', array_keys($dados));
+    $values = implode(', ', array_map(function($value) {
+        return $value !== null ? "'" . DBEscape($value) . "'" : 'NULL';
+    }, $dados));
+
+    $sql = "INSERT INTO notificacoes ($fields) VALUES ($values) ";
+    $sql .= "ON DUPLICATE KEY UPDATE ";
+    
+    foreach ($dados as $key => $value) {
+        if ($value !== null) {
+            $sql .= "$key = VALUES($key), ";
+        }
+    }
+    // Remova a última vírgula e espaço desnecessários
+    $sql = rtrim($sql, ', ');
+	var_dump($sql);
+    // Execute a consulta
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "Erro na execução da consulta.";
+    }
+}
+
 
 function upsertRecurso($dados) {
     // Verifique se os campos obrigatórios estão presentes

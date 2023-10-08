@@ -13,6 +13,7 @@
                     <th>Dias</th>
                     <th>Assunto</th>
                     <th>Fase</th>
+                    <th>#H</th>
                     <th>Votos</th>
                     <th>mail</th>
                 </tr>
@@ -50,6 +51,7 @@
 							$classe = "black";
 					}
 					$votos = getVotos($row['recurso']);
+					$historico = sizeof(getNotificacoes($row['unidade'] ,$row['bloco']));
 					$vt = '';
 						foreach($votos as $v){
 							switch($v['voto']) {
@@ -82,6 +84,7 @@
                     echo "<td>" . calcularDiasPassados($row['data']) . "</td>";
                     echo "<td>{$row['titulo']}</td>";
                     echo "<td>{$row['texto']}</td>";
+                    echo "<td>{$historico}</td>";
 					// var_dump($row);
                     echo "<td>{$vt}</td>";
                     echo "<td>{$row['email']}</td>";
