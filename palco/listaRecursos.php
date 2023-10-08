@@ -51,9 +51,23 @@
 					}
 					$votos = getVotos($row['recurso']);
 					$vt = '';
-					foreach($votos as $v){
+						foreach($votos as $v){
+							switch($v['voto']) {
+							case "revogar": //Novo
+								$classeVoto = "green accent-2";
+								break;
+							case "manter": // Falta Material
+								$classeVoto = " red accent-2";
+								break;
+							case "converter": // Concluido
+								$classeVoto = "amber accent-1";
+								break;
+							default:
+								$classeVoto = "black";
+						}
+						// var_dump($v);
 						// $vt .= $v[nome].": ".$v[voto]."<br/>";
-						$vt .= '<div class="chip">';
+						$vt .= '<div class="chip '.$classeVoto.'">';
 						$vt .= '<img src="'.$v[avatar].'" alt="Contact Person">';
 						$vt .= $v[voto];
 						$vt .= '</div>';
