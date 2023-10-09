@@ -13,7 +13,7 @@
                     <th>Dias</th>
                     <th>Assunto</th>
                     <th>Fase</th>
-                    <th>#H</th>
+                    <th>#H</th> 
                     <th>Votos</th>
                     <th>mail</th>
                 </tr>
