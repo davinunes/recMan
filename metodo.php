@@ -77,9 +77,14 @@
 				$avatarFileName = "avatar{$_SESSION['user_id']}.$avatarExtension";
 				// Caminho completo para salvar
 				$avatarFullPath = "raw/$avatarFileName";
+				// var_dump($avatarFullPath);
 				
 				// Mover o arquivo para o destino final
-				move_uploaded_file($avatarTmpName, $avatarFullPath);
+				if (move_uploaded_file($avatarTmpName, $avatarFullPath)) {
+					// echo "O arquivo foi movido com sucesso.";
+				} else {
+					echo "Houve um erro ao mover o arquivo.";
+				}
 				// Atualizar a variável $avatarBase64 para ser o caminho completo
 				$avatarBase64 = $avatarFullPath;
 			} else {

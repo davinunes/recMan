@@ -6364,7 +6364,7 @@
   "data_email": "06\/26\/2023",
   "data_envio": "07\/11\/2023",
   "data_ocorrido": "06\/16\/2023",
-  "status": "AUTORIZADA",
+  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
   "assunto": "USO DO ESPAÇO GOURMET",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -7299,7 +7299,7 @@
   "data_email": "08\/07\/2023",
   "data_envio": "08\/14\/2023",
   "data_ocorrido": "07\/28\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -7323,7 +7323,7 @@
   "data_email": "08\/07\/2023",
   "data_envio": "08\/14\/2023",
   "data_ocorrido": "07\/28\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -7436,7 +7436,7 @@
   "data_email": "08\/12\/2023",
   "data_envio": "08\/23\/2023",
   "data_ocorrido": "08\/10\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DO ESPAÇO COMUM",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -7447,7 +7447,7 @@
   "data_email": "08\/15\/2023",
   "data_envio": "08\/23\/2023",
   "data_ocorrido": "08\/13\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DA PISCINA",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -7549,7 +7549,7 @@
   "data_email": "08\/22\/2023",
   "data_envio": "09\/01\/2023",
   "data_ocorrido": "08\/19\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "CONSUMO DE CIGARRO E SIMILARES NAS ÁREAS COMUNS",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -7966,7 +7966,7 @@
   "data_email": "08\/25\/2023",
   "data_envio": "09\/13\/2023",
   "data_ocorrido": "08\/24\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "ESTACIONAMENTO INDEVIDO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8001,7 +8001,7 @@
   "data_email": "09\/06\/2023",
   "data_envio": "09\/14\/2023",
   "data_ocorrido": "09\/02\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8140,7 +8140,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8152,7 +8152,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8164,7 +8164,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8176,7 +8176,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DAS PARTES COMUNS ",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8188,7 +8188,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "CONSUMO DE CIGARRO E SIMILARES NAS ÁREAS COMUNS",
   "notificacao": "MULTA",
   "cobranca": "50% da menor taxa condominial ordinária"
@@ -8200,7 +8200,7 @@
   "data_email": "09\/08\/2023",
   "data_envio": "09\/15\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "CONSUMO DE CIGARRO E SIMILARES NAS ÁREAS COMUNS",
   "notificacao": "MULTA",
   "cobranca": "50% da menor taxa condominial ordinária"
@@ -8292,7 +8292,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/18\/2023",
   "data_ocorrido": "09\/06\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "DANO AO PATRIMÔNIO ",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8303,7 +8303,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/18\/2023",
   "data_ocorrido": "09\/08\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DA CHURRASQUEIRA",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8314,7 +8314,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/18\/2023",
   "data_ocorrido": "09\/09\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "USO DA GARAGEM",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8325,7 +8325,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/18\/2023",
   "data_ocorrido": "09\/09\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "ESTACIONAMENTO INDEVIDO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8337,7 +8337,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/18\/2023",
   "data_ocorrido": "09\/09\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "ACESSO INDEVIDO AO CONDOMÍNIO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8348,7 +8348,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/10\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "DEVERES COM OS ANIMAIS",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8360,7 +8360,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/12\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "ESTACIONAMENTO INDEVIDO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8372,7 +8372,7 @@
   "data_email": "09\/13\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/12\/2023",
-  "status": "CONFIRMADA",
+  "status": "JÁ ENVIADA",
   "assunto": "ESTACIONAMENTO INDEVIDO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8384,7 +8384,7 @@
   "data_email": "09\/13\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/12\/2023",
-  "status": "CONFIRMADA",
+  "status": "AUTORIIZADA",
   "assunto": "DEVERES COM OS ANIMAIS",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8396,7 +8396,7 @@
   "data_email": "09\/13\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/12\/2023",
-  "status": "CONFIRMADA",
+  "status": "AUTORIIZADA",
   "assunto": "ANIMAL DOMÉSTICO NO ELEVADOR SOCIAL",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8407,7 +8407,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/19\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "CONFIRMADA",
+  "status": "AUTORIIZADA",
   "assunto": "ACESSO INDEVIDO AO CONDOMÍNIO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8597,7 +8597,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8609,7 +8609,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8621,7 +8621,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8633,7 +8633,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8645,7 +8645,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8657,7 +8657,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8669,7 +8669,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8681,7 +8681,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8693,7 +8693,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8705,7 +8705,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8717,7 +8717,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8729,7 +8729,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8741,7 +8741,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8752,7 +8752,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8763,7 +8763,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8775,7 +8775,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8787,7 +8787,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8799,7 +8799,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8811,7 +8811,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8823,7 +8823,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8835,7 +8835,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8847,7 +8847,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8859,7 +8859,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8871,7 +8871,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -8882,7 +8882,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8894,7 +8894,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8906,7 +8906,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8918,7 +8918,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8930,7 +8930,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8942,7 +8942,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -8954,7 +8954,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8966,7 +8966,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8978,7 +8978,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -8990,7 +8990,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9002,7 +9002,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9014,7 +9014,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9026,7 +9026,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9038,7 +9038,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9050,7 +9050,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9062,7 +9062,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9074,7 +9074,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -9085,7 +9085,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/20\/2023",
   "data_ocorrido": "09\/05\/2023",
-  "status": "DISPONÍVEIS NA SOLUÇÕES PARA RETIRADA",
+  "status": "JÁ ENVIADA",
   "assunto": "INSTALAÇÃO DAS TELAS DE PROTEÇÃO",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9132,7 +9132,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/28\/2023",
   "data_ocorrido": "09\/08\/2023",
-  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "status": "AUTORIIZADA",
   "assunto": "ESTACIONAMENTO INDEVIDO",
   "notificacao": "MULTA",
   "cobranca": "150% da menor taxa condominial ordinária"
@@ -9144,7 +9144,7 @@
   "data_email": "09\/12\/2023",
   "data_envio": "09\/28\/2023",
   "data_ocorrido": "09\/11\/2023",
-  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "status": "AUTORIIZADA",
   "assunto": "DEVERES COM OS ANIMAIS",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9156,7 +9156,7 @@
   "data_email": "09\/13\/2023",
   "data_envio": "09\/29\/2023",
   "data_ocorrido": "09\/03\/2023",
-  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "status": "AUTORIIZADA",
   "assunto": "ACESSO INDEVIDO AO CONDOMÍNIO",
   "notificacao": "ADVERTÊNCIA"
  },
@@ -9167,7 +9167,7 @@
   "data_email": "09\/05\/2023",
   "data_envio": "09\/29\/2023",
   "data_ocorrido": "09\/02\/2023",
-  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "status": "AUTORIIZADA",
   "assunto": "DEVERES COM OS ANIMAIS",
   "notificacao": "MULTA",
   "cobranca": "100% da menor taxa condominial ordinária"
@@ -9179,8 +9179,113 @@
   "data_email": "09\/20\/2023",
   "data_envio": "09\/29\/2023",
   "data_ocorrido": "09\/16\/2023",
+  "status": "AUTORIIZADA",
+  "assunto": "USO DA CHURRASQUEIRA",
+  "notificacao": "ADVERTÊNCIA"
+ },
+ {
+  "numero": "869.23",
+  "torre": "A",
+  "unidade": 1705,
+  "data_email": "09\/12\/2023",
+  "data_envio": "10\/02\/2023",
+  "data_ocorrido": "09\/09\/2023",
   "status": "AGUARDANDO CONFIRMAÇÃO",
   "assunto": "USO DA CHURRASQUEIRA",
   "notificacao": "ADVERTÊNCIA"
+ },
+ {
+  "numero": "870.23",
+  "torre": "A",
+  "unidade": 1705,
+  "data_email": "09\/12\/2023",
+  "data_envio": "10\/02\/2023",
+  "data_ocorrido": "09\/09\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "USO DAS PARTES COMUNS ",
+  "notificacao": "MULTA",
+  "cobranca": "150% da menor taxa condominial ordinária"
+ },
+ {
+  "numero": "871.23",
+  "torre": "B",
+  "unidade": 1602,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/04\/2023",
+  "data_ocorrido": "09\/05\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "USO DO ELEVADOR",
+  "notificacao": "ADVERTÊNCIA"
+ },
+ {
+  "numero": "872.23",
+  "torre": "B",
+  "unidade": 1010,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/04\/2023",
+  "data_ocorrido": "09\/16\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "ACESSO INDEVIDO AO CONDOMÍNIO",
+  "notificacao": "ADVERTÊNCIA"
+ },
+ {
+  "numero": "873.23",
+  "torre": "B",
+  "unidade": 1909,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/04\/2023",
+  "data_ocorrido": "09\/19\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "DEVERES COM OS ANIMAIS",
+  "notificacao": "MULTA",
+  "cobranca": "100% da menor taxa condominial ordinária"
+ },
+ {
+  "numero": "874.23",
+  "torre": "B",
+  "unidade": 1402,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/06\/2023",
+  "data_ocorrido": "09\/16\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "DEVERES COM OS ANIMAIS",
+  "notificacao": "MULTA",
+  "cobranca": "100% da menor taxa condominial ordinária"
+ },
+ {
+  "numero": "875.23",
+  "torre": "E",
+  "unidade": 606,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/06\/2023",
+  "data_ocorrido": "09\/18\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "ESTACIONAMENTO INDEVIDO",
+  "notificacao": "MULTA",
+  "cobranca": "150% da menor taxa condominial ordinária"
+ },
+ {
+  "numero": "876.23",
+  "torre": "F",
+  "unidade": 307,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/06\/2023",
+  "data_ocorrido": "09\/18\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "ESTACIONAMENTO INDEVIDO",
+  "notificacao": "MULTA",
+  "cobranca": "150% da menor taxa condominial ordinária"
+ },
+ {
+  "numero": "877.23",
+  "torre": "F",
+  "unidade": 1112,
+  "data_email": "09\/20\/2023",
+  "data_envio": "10\/06\/2023",
+  "data_ocorrido": "09\/16\/2023",
+  "status": "AGUARDANDO CONFIRMAÇÃO",
+  "assunto": "DEVERES COM OS ANIMAIS",
+  "notificacao": "MULTA",
+  "cobranca": "100% da menor taxa condominial ordinária"
  }
 ]
