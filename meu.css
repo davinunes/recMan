@@ -16,5 +16,13 @@
 }
 
 .recurso td{
-	padding: 5px!important;
+	padding: 2px!important;
+	border-bottom:1px solid teal!important;
 }
+
+.chip {
+  white-space: nowrap; /* Impede quebrar linhas */
+  overflow: hidden; /* Oculta qualquer conteúdo que transborde */
+  text-overflow: ellipsis; /* Adiciona reticências (...) quando o texto não couber */
+}
+
