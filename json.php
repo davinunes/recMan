@@ -1,31 +1,110 @@
 <?php
-// Caminho para o arquivo JSON
-$filePath = 'plan.json';
-require("classes/repositorio.php");
+if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
+    // Obtém o JSON enviado via POST
+    $jsonData = $_POST['jsonData'];
+    
+    // Converte o JSON em um array associativo
+    $dataArray = json_decode($jsonData, true);
 
-// Lê o conteúdo do arquivo JSON em uma string
-$jsonData = file_get_contents($filePath);
-
-
-// Converte a string JSON em um array associativo (definido como true no segundo argumento)
-$dataArray = json_decode($jsonData, true);
-
-// Verifique se a decodificação foi bem-sucedida
-if ($dataArray !== null) {
-    // Agora você pode usar os dados contidos no array $dataArray
-    foreach($dataArray as $linha){
-		$linha["numero"] = explode(".", $linha["numero"])[0];
-		$linha["numero"] = intval($linha["numero"]);
-		$linha["ano"] = "2023";
-		$linha["unidade"] = intval($linha["unidade"]);
-		$linha["data_email"] = date("Y-m-d", strtotime($linha["data_email"]));;
-		$linha["data_envio"] = date("Y-m-d", strtotime($linha["data_envio"]));;
-		$linha["data_ocorrido"] = date("Y-m-d", strtotime($linha["data_ocorrido"]));;
-		$linha["torre"] = preg_replace('/[^A-F]/', '', $linha["torre"]);;
-		// var_dump($linha);
-		upsertNotificacao($linha);
-	}
+    // Verifique se a decodificação foi bem-sucedida
+    if ($dataArray !== null) {
+        // Agora você pode usar os dados contidos no array $dataArray
+        foreach ($dataArray as $linha) {
+            $linha["numero"] = explode(".", $linha["numero"])[0];
+            $linha["numero"] = intval($linha["numero"]);
+            $linha["ano"] = "2023";
+            $linha["unidade"] = intval($linha["unidade"]);
+            $linha["data_email"] = date("Y-m-d", strtotime($linha["data_email"]));
+            $linha["data_envio"] = date("Y-m-d", strtotime($linha["data_envio"]));
+            $linha["data_ocorrido"] = date("Y-m-d", strtotime($linha["data_ocorrido"]));
+            $linha["torre"] = preg_replace('/[^A-F]/', '', $linha["torre"]);
+            // var_dump($linha);
+            upsertNotificacao($linha);
+        }
+        echo "JSON processado com sucesso!";
+    } else {
+        echo "Erro ao decodificar o JSON recebido via POST.";
+    }
 } else {
-    echo "Erro ao decodificar o JSON.";
+?>
+
+
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Conversor JSON</title>
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	</head>
+	<body>
+		<h1>Conversor JSON</h1>
+		<a href="https://products.aspose.app/cells/conversion/xlsx-to-json">Conversor de XLS em Json</a><br/>
+		<label for="json2">Cole o JSON no segundo formato:</label><br>
+		<textarea id="json2" rows="10" cols="50"></textarea><br>
+		<button id="converter">Converter</button>
+		
+		<div id="resultado" style="display: none;">
+			<h2>JSON no primeiro formato:</h2>
+			<button id="processar">Processar</button>
+			<pre id="json1"></pre>
+		</div>
+
+	<script>
+		$(document).ready(function() {
+			$("#converter").click(function() {
+				// Obtém o JSON do segundo formato do campo de texto
+				var json2 = $("#json2").val();
+				
+				// Converte o JSON do segundo formato em um array de objetos
+				var dataArray2 = JSON.parse(json2);
+				
+				// Inicializa um array para armazenar os resultados
+				var dataArray1 = [];
+
+				// Itera pelos objetos do array e realiza a conversão
+				dataArray2.forEach(function(data2) {
+				   var data1 = {
+						"numero": data2["NOTIFICAÇÕES MIAMI BEACH - 2023"],
+						"torre": data2["Column2"],
+						"unidade": data2["Column3"],
+						"data_email": data2["Column4"],
+						"data_envio": data2["Column5"],
+						"data_ocorrido": data2["Column6"],
+						"status": data2["Column7"],
+						"assunto": data2["Column8"],
+						"notificacao": data2["Column9"],
+						"cobranca": data2["Column10"],
+						"obs": data2["Column11"]
+					};
+					
+					dataArray1.push(data1);
+				});
+				
+				// Exibe o resultado na página
+				$("#json1").text(JSON.stringify(dataArray1, null, 2));
+				$("#resultado").show();
+			});
+
+			$("#processar").click(function() {
+				// Realize uma solicitação AJAX para enviar os dados transformados para json.php
+				$.ajax({
+					type: "POST",
+					url: "json.php",
+					data: { processar: "sim", jsonData: JSON.stringify(dataArray1) },
+					success: function(response) {
+						// Faça algo com a resposta da página json.php, se necessário
+						console.log(response);
+						$("#json1").text(response);
+					}
+				});
+			});
+		});
+	</script>
+
+	</body>
+	</html>
+
+
+<?php
 }
 ?>
+
