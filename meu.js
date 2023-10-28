@@ -19,7 +19,6 @@ $(document).ready(function(){
 	
 });
 
-
 $(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário
     let metodo = "novoUsuario";
 	const formData = $("#formNewUser").serializeArray();
@@ -77,7 +76,6 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
         }
     });
 });
-
 
 $(document).on('click', '#logon', function() { // Logar Usuario
     let metodo = "logon";
@@ -324,7 +322,45 @@ $(document).on('keyup','#unidade', function(event) {
 	$(this).val(unidadeValue);
 });
 
+$(document).on('keyup', '#numero', function(event) {
+    var entrada = $(this).val();
+    var formData = new FormData();
 
+    // Use uma expressão regular para extrair o número e o ano
+    var matches = entrada.match(/^(\d{1,4})\/(\d{4})$/);
+
+    if (matches) {
+        var numero = matches[1];
+        var ano = matches[2];
+
+        // Adicione os valores extraídos ao objeto FormData
+        formData.append('numero', numero);
+        formData.append('ano', ano);
+
+        console.log("Número: " + numero);
+        console.log("Ano: " + ano);
+
+        $.ajax({
+            method: "POST",
+            url: 'metodo.php?metodo=buscaHistorico',
+            data: formData,
+            processData: false,
+            contentType: false,
+			dataType: 'json', // Defina o tipo de dados como JSON
+            success: function(response) {
+					console.log(response);
+				if (response.length > 0 && response[0].ano) {
+					console.log("faz algo");
+					ajustaValores(response[0]);
+				}
+            },
+            error: function(xhr, status, error) {
+                // Lida com erros
+                console.error(error);
+            }
+        });
+    }
+});
 
 $(document).on('submit', '#atualizarRecursoForm', function(e) {
          e.preventDefault(); // Impede o envio padrão do formulário
@@ -355,3 +391,15 @@ $(document).on('submit', '#atualizarRecursoForm', function(e) {
             }
         });
 });
+
+function ajustaValores(data) {
+	console.log(data);
+    let bloco = $("#bloco");
+    let unidade = $("#unidade");
+    let titulo = $("#titulo");
+	
+    bloco.val(data.torre);
+    unidade.val(data.unidade);
+    titulo.val(data.assunto);
+    M.FormSelect.init(document.querySelector("#bloco"));
+}

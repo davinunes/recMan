@@ -22,6 +22,15 @@
             // var_dump($response);
             // var_dump($dados); 
             break;
+		case "buscaHistorico":
+            $num = $_POST['numero'];
+            $ano = $_POST['ano'];
+
+            $response = buscaNotificacoes($num, $ano);
+			echo $response;
+            // var_dump($response);
+            // var_dump($dados); 
+            break;
 		case "novoComentario":
 			session_start();
 			
