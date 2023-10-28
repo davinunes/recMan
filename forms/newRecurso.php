@@ -23,7 +23,7 @@
 				<label for="bloco">Bloco</label>
 			</div>
             <div class="input-field col s6">
-                <input type="number" name="unidade" id="unidade" required>
+                <input type="text" name="unidade" id="unidade" required>
                 <label for="unidade">Unidade (101 a 1912)</label>
             </div>
 		</div>

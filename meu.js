@@ -310,6 +310,22 @@ $(document).on('submit', '#updateThisUser', function(e) {
         });
 });
 
+$(document).on('keyup','#unidade', function(event) {
+	
+	var unidadeValue = $(this).val().toUpperCase();
+    var letra = unidadeValue.match(/[A-F]/);
+    if (letra) {
+        letra = letra[0]; // Pega a primeira letra encontrada
+        console.log("Letra digitada: " + letra);
+        $("#bloco").val(letra);
+        M.FormSelect.init(document.querySelector("#bloco"));
+    }
+	unidadeValue = unidadeValue.replace(/[^0-9]/g, '');
+	$(this).val(unidadeValue);
+});
+
+
+
 $(document).on('submit', '#atualizarRecursoForm', function(e) {
          e.preventDefault(); // Impede o envio padrão do formulário
         
