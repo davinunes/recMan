@@ -1,5 +1,7 @@
 <?php
 if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
+	
+	require("classes/repositorio.php");
     // Obtém o JSON enviado via POST
     $jsonData = $_POST['jsonData'];
     
@@ -49,6 +51,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 		</div>
 
 	<script>
+		var dataArray1; // Declarando a variável dataArray1 global
 		$(document).ready(function() {
 			$("#converter").click(function() {
 				// Obtém o JSON do segundo formato do campo de texto
@@ -58,10 +61,17 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 				var dataArray2 = JSON.parse(json2);
 				
 				// Inicializa um array para armazenar os resultados
-				var dataArray1 = [];
+				dataArray1 = [];
+				
+				var firstIteration = true; // Variável de controle para a primeira iteração
 
 				// Itera pelos objetos do array e realiza a conversão
 				dataArray2.forEach(function(data2) {
+					
+					if (firstIteration) {
+						firstIteration = false;
+						return; // Pula a primeira iteração
+					}
 				   var data1 = {
 						"numero": data2["NOTIFICAÇÕES MIAMI BEACH - 2023"],
 						"torre": data2["Column2"],
