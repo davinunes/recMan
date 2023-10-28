@@ -26,3 +26,10 @@
   text-overflow: ellipsis; /* Adiciona reticências (...) quando o texto não couber */
 }
 
+pre {
+    overflow: auto; /* Adiciona barras de rolagem quando necessário */
+	white-space: pre-wrap; /* Quebras de linha automáticas e preservação de espaços em branco */
+	max-width: 100%; /* Limita a largura do elemento a 100% do contêiner pai */
+}
+
+

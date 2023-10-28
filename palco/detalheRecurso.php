@@ -41,7 +41,7 @@ echo '
 	';
 echo '            <div class="card-content">
                 <h6 class="">'.$result['titulo'].'</h6>
-                <p>'.$result['detalhes'].'</p>';
+                <pre>'.$result['detalhes'].'</pre>';
 				
 echo '<div class="row">
     <div class="">
@@ -74,10 +74,11 @@ echo "<h6>Histórico da unidade</h6>";
 echo '<table class="striped">';
 foreach($historico as $h){
 	
-echo '<tr class="recurso">';
+echo '<tr class="recurso" rec="'.$h['numero_ano_virtual'].'">';
 	echo "<td>".$h['numero_ano_virtual']."</td>";
 	echo "<td>".$h['notificacao']."</td>";
 	echo "<td>".$h['assunto']."</td>";
+	echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
 echo '</tr>';
 }
 echo '</table>';
