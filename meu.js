@@ -3,6 +3,10 @@ $(document).ready(function(){
 	$('.modal').modal();
 	$('.chips').chips();
 	$('.sidenav').sidenav();
+	$('#listaRecursos').DataTable({
+        searching: false, // Oculta o campo de busca
+        paging: false // Desativa a paginação
+    });
 	
 	$('#avatar').on('change', function() {
         var file = $(this)[0].files[0]; // Obtém o arquivo selecionado

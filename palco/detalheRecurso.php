@@ -1,16 +1,41 @@
 <?php
-// require "classes/database.php"; // Certifique-se de incluir o arquivo de conexão com o banco de dados
+
 require "classes/repositorio.php"; // Certifique-se de incluir o arquivo de conexão com o banco de dados
+
 $sql = "SELECT * FROM recurso where numero = '{$_GET['rec']}'";
+
 $result = DBExecute($sql);
+
 $result = mysqli_fetch_assoc($result);
 $esseRecurso = $result['id'];
 
 $mensagens = getMensagens($esseRecurso);
 $votos = getVotos($esseRecurso);
-$historico = getNotificacoes($result['unidade'] ,$result['bloco']);
 
-// var_dump($mensagens);
+if (isset($result['unidade']) && isset($result['bloco']) ) {
+	$historico = getNotificacoes($result['unidade'] ,$result['bloco']);
+	
+}
+
+
+if($esseRecurso == null){
+	echo "<div class='container'>
+		<center>
+				<h3>Não há recurso cadastrado pra essa notificação</h3>
+				<a class='btn' href='javascript:void(0);' onclick='goBack();'>voltar<a>
+				    <script>
+						function goBack() {
+							window.history.back();
+						}
+					</script>
+		</center>
+	</div>";
+	exit;
+}
+
+
+
+
 ?>
 
 <body>

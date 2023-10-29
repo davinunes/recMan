@@ -1,10 +1,12 @@
 <div class="container">
-        <h3>Recursos em Andamento</h3>
+        <h3>Recursos</h3>
 		
-		<a  href="?concluidos=true" class="btn left">Concluidos</a> 
-		<a  href="?concluidos=false" class="btn left blue">Em aberto</a>
-		<a  href="?concluidos=false&resumo=true" class="btn left blue">Resumo</a>
-		<a  href="index.php?pag=novoRecurso" class="btn right">Novo Recurso</a>
+		<div class='row'>
+			<a class="btn left col s2"  	href="?concluidos=true" >Concluidos</a> 
+			<a class="btn left blue col s2" href="?concluidos=false" >Em aberto</a>
+			<a class="btn left blue col s2" href="?concluidos=false&resumo=true" >Resumo</a>
+			<a class="btn right col s2" 	href="index.php?pag=novoRecurso" >Novo Recurso</a>
+		</div>
 
                 <!-- Loop para exibir os recursos -->
                 <?php
@@ -76,18 +78,18 @@
 					</script>
 				";
 				}else{
-					echo '        <table class="striped">
+					echo '        <table class="striped" id="listaRecursos">
 										<thead>
-											<tr>
+											<tr class="teal darken-2">
 												<th>Número</th>
 												<th>Unidade</th>
 												<th>Data</th>
-												<th>Dias</th>
+												<th class="center-align">&#8987;</th>
 												<th>Assunto</th>
 												<th>Fase</th>
-												<th>#H</th> 
+												<th><i class="material-icons">filter_9_plus</i></th> 
 												<th>Votos</th>
-												<th>mail</th>
+												<th>e-mail</th>
 											</tr>
 										</thead>
 										<tbody>';
@@ -142,7 +144,7 @@
 						echo "<td>{$row['numero']}</td>";
 						echo "<td>{$row['bloco']}{$row['unidade']}</td>";
 						echo "<td>" . date('d/m/Y', strtotime($row['data'])) . "</td>";
-						echo "<td>" . calcularDiasPassados($row['data']) . "</td>";
+						echo "<td class='center-align'>" . calcularDiasPassados($row['data']) . "</td>";
 						echo "<td>{$row['titulo']}</td>";
 						echo "<td>{$row['texto']}</td>";
 						echo "<td>{$historico}</td>";
