@@ -73,13 +73,14 @@ echo "<h6>Histórico da unidade</h6>";
 
 echo '<table class="striped">';
 foreach($historico as $h){
-	
-echo '<tr class="recurso" rec="'.$h['numero_ano_virtual'].'">';
-	echo "<td>".$h['numero_ano_virtual']."</td>";
-	echo "<td>".$h['notificacao']."</td>";
-	echo "<td>".$h['assunto']."</td>";
-	echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
-echo '</tr>';
+	// var_dump($esseRecurso);
+	$classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
+	echo '<tr class="recurso '.$classe.'" rec="'.$h['numero_ano_virtual'].'">';
+		echo "<td>".$h['numero_ano_virtual']."</td>";
+		echo "<td>".$h['notificacao']."</td>";
+		echo "<td>".$h['assunto']."</td>";
+		echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
+	echo '</tr>';
 }
 echo '</table>';
 
