@@ -21,6 +21,47 @@ $(document).ready(function(){
         // }
     });
 	
+  var $popup = $('#popup');
+  var $popupContent = $('#popup-content');
+
+  $('.recurso').on('mouseenter', function () {
+    var data = {
+      "numero": $(this).data('numero'),
+      "status": $(this).data('status'),
+      "cobranca": $(this).data('cobranca'),
+      "obs": $(this).data('obs'),
+      "assunto": $(this).data('assunto'),
+      "tipo": $(this).data('tipo'),
+      "data_envio": $(this).data('data_envio'),
+      "data_email": $(this).data('data_email'),
+      "data_ocorrido": $(this).data('data-ocorrido'),
+    };
+
+    var content = '<h5>Informações Adicionais</h5>' +
+      '<p>Número: ' + data.numero + '</p>' +
+      '<p>Tipo: ' + data.tipo + '</p>' +
+      '<p>Status: ' + data.status + '</p>' +
+      '<p>Cobrança: ' + data.cobranca + '</p>' +
+      '<p>Observações: ' + data.obs + '</p>' +
+      '<p>Assunto: ' + data.assunto + '</p>' +
+      '<p>Data de Email: ' + data.data_email + '</p>' +
+      '<p>Data de Envio: ' + data.data_envio + '</p>' +
+      '<p>Data de Ocorrência: ' + data.data_ocorrido + '</p>';
+
+    $popupContent.html(content);
+	
+		$popup.css({
+		  display: 'block',
+		  left: $(this).offset().left + 'px',
+		  top: ($(this).offset().top - $popup.height()*1.38) + 'px'
+		});
+
+  });
+
+  $('.recurso').on('mouseleave', function () {
+    $popup.css('display', 'none');
+  });
+	
 });
 
 $(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário

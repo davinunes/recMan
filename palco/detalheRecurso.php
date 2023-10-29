@@ -97,14 +97,30 @@ echo   '</ul>';
 echo "<h6>Histórico da unidade</h6>";
 
 echo '<table class="striped">';
+		echo "<div id=\"popup\" class=\"popup\">
+				  <div id=\"popup-content\" class=\"popup-content\">
+					Popup
+				  </div>
+				</div>";
 foreach($historico as $h){
 	// var_dump($esseRecurso);
 	$classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
-	echo '<tr class="recurso '.$classe.'" rec="'.$h['numero_ano_virtual'].'">';
+	echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
+          data-numero="' . $h['numero_ano_virtual'] . '" 
+          data-data_email="' . date("d/m/Y", strtotime($h['data_email'])) . '" 
+          data-data_envio="' . date("d/m/Y", strtotime($h['data_envio'])) . '" 
+          data-status="' . $h['status'] . '" 
+          data-cobranca="' . $h['cobranca'] . '" 
+          data-tipo="' . $h['notificacao'] . '" 
+          data-obs="' . $h['obs'] . '" 
+          data-assunto="' . $h['assunto'] . '" 
+          data-data-ocorrido="' . date("d/m/Y", strtotime($h['data_ocorrido'])) . '">';
+
 		echo "<td>".$h['numero_ano_virtual']."</td>";
 		echo "<td>".$h['notificacao']."</td>";
 		echo "<td>".$h['assunto']."</td>";
 		echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
+
 	echo '</tr>';
 }
 echo '</table>';
@@ -203,3 +219,5 @@ echo '      </div>
         <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
     </div>
 </div>
+
+
