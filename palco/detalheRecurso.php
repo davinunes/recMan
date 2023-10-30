@@ -2,7 +2,9 @@
 
 require "classes/repositorio.php"; // Certifique-se de incluir o arquivo de conexão com o banco de dados
 
-$sql = "SELECT * FROM recurso where numero = '{$_GET['rec']}'";
+$sql = "SELECT r.*, f.texto as fasee FROM recurso r
+		left join fase f on f.id = r.fase 
+		where r.numero = '{$_GET['rec']}'";
 
 $result = DBExecute($sql);
 
@@ -55,6 +57,7 @@ echo '
             <li><a> <span id="idRecurso" idRec="'.$esseRecurso.'">'.$result['numero'].'</span></a></li>
             <li><a> <span id="unidadeRecurso">'.$result['unidade'].$result['bloco'].'</span></a></li>
             <li><a> <span id="historico">'.sizeof($historico).'</span></a></li>
+            <li><a> <span id="fase">'.$result['fasee'].'</span></a></li>
             
         </ul>
         <ul class="right">
@@ -103,7 +106,7 @@ echo '<table class="striped">';
 				  </div>
 				</div>";
 foreach($historico as $h){
-	// var_dump($esseRecurso);
+	// var_dump($result);
 	$classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
 	echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
           data-numero="' . $h['numero_ano_virtual'] . '" 
@@ -197,21 +200,15 @@ echo '      </div>
         <h4>Alterar Estágio do Recurso</h4>
         <table>
 			<tr>
-				<td class="recFase" fase="1">
-					<div class="chip">Novo</div>
-				</td>
-				<td class="recFase" fase="2">
-					<div class="chip">Falta Material</div>
-				</td>
-				<td class="recFase" fase="3">
-					<div class="chip">Análise</div>
-				</td>
-				<td class="recFase" fase="4">
-					<div class="chip">Confecionar Parecer</div>
-				</td>
-				<td class="recFase" fase="5">
-					<div class="chip">Concluido</div>
-				</td>
+			<?php
+			
+				foreach(getFasesRecurso() as $fs){
+					$cor = $fs[id] == $result[fase] ? "blue" : "";
+				echo "<td class='recFase ' fase='{$fs[id]}'>";
+					echo "<div class='chip {$cor}'>{$fs[texto]}</div>";
+					echo "</td>";
+				}
+			?>
 			</tr>
 		</table>
     </div>

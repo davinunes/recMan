@@ -5,7 +5,10 @@ $(document).ready(function(){
 	$('.sidenav').sidenav();
 	$('#listaRecursos').DataTable({
         searching: false, // Oculta o campo de busca
-        paging: false // Desativa a paginação
+        paging: false, // Desativa a paginação
+		"order": [
+			[3, 'desc'] // Ordenação inicial pela primeira coluna em ordem ascendente
+		]
     });
 	
 	$('#avatar').on('change', function() {
