@@ -295,8 +295,49 @@ function upsertVoto($dados) {
     $sql .= "VALUES ('$id_recurso', '$id_usuario', '$voto') ";
     $sql .= "ON DUPLICATE KEY UPDATE ";
     $sql .= "voto = '$voto'";
+	
+	
 
     if (DBExecute($sql)) {
+		
+		$sql2  = " SELECT voto, COUNT(*) AS total ";
+		$sql2 .= " FROM conselho.votos  ";
+		$sql2 .= " WHERE id_recurso = $id_recurso  ";
+		$sql2 .= " GROUP BY voto  ";
+		$sql2 .= " HAVING total >= 2 ";
+		
+		$result	= DBExecute($sql2);
+		
+		if(!mysqli_num_rows($result)){
+			
+		}else{
+			while($retorno = mysqli_fetch_assoc($result)){
+				$numVotos[] = $retorno;
+			}
+		}
+		
+		if(isset($numVotos[0]["total"]) && $numVotos[0]["total"] >= 2){
+			// Se tem mais de 1 voto igual para este recurso, mude a fase para confecionar parecer
+			$sql3  = "update conselho.recurso ";
+			$sql3 .= "set ";
+			$sql3 .= "fase = 4 ";
+			$sql3 .= "where ";
+			$sql3 .= "id = '$id_recurso'";
+			
+			$result	= DBExecute($sql3);
+
+		}else{
+			// Senão configura como em análise
+			$sql3  = "update conselho.recurso ";
+			$sql3 .= "set ";
+			$sql3 .= "fase = 3 ";
+			$sql3 .= "where ";
+			$sql3 .= "id = '$id_recurso'";
+			
+			$result	= DBExecute($sql3);
+			
+		}
+		
         return "ok";
     } else {
         return "erro";
