@@ -40,7 +40,7 @@ if (curl_errno($ch)) {
         $token_type = $tokenData['token_type'];
 		include("../classes/repositorio.php");
 		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
-			echo "ok";
+			echo $accessToken;
 			header("Location: ../index.php");
 		}
         

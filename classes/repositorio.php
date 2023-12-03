@@ -287,13 +287,13 @@ function upsertComentario($dados) {
 function upsertGmailToken($access_token, $expires_in, $scope, $token_type) {
 
     $sql  = "INSERT INTO conselho.tokens  ";
-    $sql .= "(id,access_token, expires_in, scope, token_type) ";
-    $sql .= "VALUES (1,'$access_token', $expires_in, '$scope', '$token_type') ";
-    $sql .= "ON DUPLICATE KEY UPDATE  ";
-    $sql .= "access_token = '$access_token',  ";
-    $sql .= "expires_in = $expires_in,  ";
-    $sql .= "scope = '$scope',  ";
-    $sql .= "token_type = '$token_type'  ";
+    $sql .= "(access_token, expires_in, scope, token_type) ";
+    $sql .= "VALUES ('$access_token', $expires_in, '$scope', '$token_type') ";
+    // $sql .= "ON DUPLICATE KEY UPDATE  ";
+    // $sql .= "access_token = '$access_token',  ";
+    // $sql .= "expires_in = $expires_in,  ";
+    // $sql .= "scope = '$scope',  ";
+    // $sql .= "token_type = '$token_type'  ";
     
     if (DBExecute($sql)) {
         return "ok";
@@ -380,30 +380,26 @@ function upsertFase($dados) {
     }
 }
 
-function isTokenExpired($expirationTime)
-{
+function isTokenExpired($expirationTime){
     $currentTime = time();
     return $expirationTime <= $currentTime;
 }
 
 // Função para obter o último token do banco
-function getLastTokenFromDatabase()
-{
-    $sql  = "select * from conselho.tokens ";
+function getLastTokenFromDatabase(){
+    $sql  = "SELECT * FROM conselho.tokens ORDER BY id DESC LIMIT 1";
+	
+	$dados = null;  // Inicializa $dados como nulo
+	
     $result	= DBExecute($sql);
-	if(!mysqli_num_rows($result)){
-
-	}else{
-		while($retorno = mysqli_fetch_assoc($result)){
-			$dados[] = $retorno;
-		}
+	if(mysqli_num_rows($result) > 0){
+		$dados = mysqli_fetch_assoc($result);
 	}
 	return $dados;
 }
 
 // Função principal para verificar o token
-function verificarToken()
-{
+function verificarToken(){
     // Obter o último token do banco
     $lastToken = getLastTokenFromDatabase();
 	
@@ -415,7 +411,7 @@ function verificarToken()
         return;
     }
 
-    $tokenData = $lastToken[0];
+    $tokenData = $lastToken;
     $expirationTime = strtotime($tokenData["created_at"]) + $tokenData["expires_in"];
 	$timeRemaining = $expirationTime - time();
 	
