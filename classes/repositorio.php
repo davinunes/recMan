@@ -237,7 +237,6 @@ function upsertNotificacao($dados) {
     }
 }
 
-
 function upsertRecurso($dados) {
     // Verifique se os campos obrigatórios estão presentes
     if (!isset($dados['unidade'], $dados['bloco'], $dados['numero'], $dados['fase'])) {
@@ -277,6 +276,24 @@ function upsertComentario($dados) {
     $sql  = "INSERT INTO conselho.mensagem ";
     $sql .= "(id_usuario, id_recurso, texto) ";
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
+    
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function upsertGmailToken($access_token, $expires_in, $scope, $token_type) {
+
+    $sql  = "INSERT INTO conselho.tokens  ";
+    $sql .= "(id,access_token, expires_in, scope, token_type) ";
+    $sql .= "VALUES (1,'$access_token', $expires_in, '$scope', '$token_type') ";
+    $sql .= "ON DUPLICATE KEY UPDATE  ";
+    $sql .= "access_token = '$access_token',  ";
+    $sql .= "expires_in = $expires_in,  ";
+    $sql .= "scope = '$scope',  ";
+    $sql .= "token_type = '$token_type'  ";
     
     if (DBExecute($sql)) {
         return "ok";
@@ -362,5 +379,53 @@ function upsertFase($dados) {
         return "erro";
     }
 }
+
+function isTokenExpired($expirationTime)
+{
+    $currentTime = time();
+    return $expirationTime <= $currentTime;
+}
+
+// Função para obter o último token do banco
+function getLastTokenFromDatabase()
+{
+    $sql  = "select * from conselho.tokens ";
+    $result	= DBExecute($sql);
+	if(!mysqli_num_rows($result)){
+
+	}else{
+		while($retorno = mysqli_fetch_assoc($result)){
+			$dados[] = $retorno;
+		}
+	}
+	return $dados;
+}
+
+// Função principal para verificar o token
+function verificarToken()
+{
+    // Obter o último token do banco
+    $lastToken = getLastTokenFromDatabase();
+	
+	// var_dump($lastToken);
+
+    // Verificar se o token está vazio
+    if (!$lastToken) {
+        echo "Nenhum token encontrado no banco.";
+        return;
+    }
+
+    $tokenData = $lastToken[0];
+    $expirationTime = strtotime($tokenData["created_at"]) + $tokenData["expires_in"];
+	$timeRemaining = $expirationTime - time();
+	
+	$r['status'] = !isTokenExpired($expirationTime);
+	$r['resta'] = $timeRemaining;
+	$r['tkn'] = $tokenData["access_token"];
+    // Verificar se o token está expirado
+    
+	return $r;
+}
+
 
 ?>
