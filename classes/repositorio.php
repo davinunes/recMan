@@ -302,6 +302,27 @@ function upsertGmailToken($access_token, $expires_in, $scope, $token_type) {
     }
 }
 
+function getMaisVotado($id_recurso){
+		$sql2  = " SELECT voto, COUNT(*) AS total ";
+		$sql2 .= " FROM conselho.votos  ";
+		$sql2 .= " WHERE id_recurso = $id_recurso  ";
+		$sql2 .= " GROUP BY voto  ";
+		$sql2 .= " HAVING total >= 2 ";
+		
+		$result	= DBExecute($sql2);		$result	= DBExecute($sql2);
+		
+		if(!mysqli_num_rows($result)){
+			
+		}else{
+			while($retorno = mysqli_fetch_assoc($result)){
+				$r[] = $retorno;
+			}
+		}
+		// Só deve vir uma linha mesmo...
+		return $r[0];
+}
+
+
 function upsertVoto($dados) {
     $id_recurso = $dados['idRec'];
     $id_usuario = $dados['user_id'];

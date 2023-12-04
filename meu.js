@@ -125,6 +125,27 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
     });
 });
 
+$(document).on('click', '#testeEnvioParecer', function() { // Enviar e-mail
+    const mimeContent = $("#mime").text();
+    
+    let url = 'gmail/sendMailParecer.php';
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+        data: {
+            mime: mimeContent
+        }, // Adicione o objeto 'data' aqui
+        success: function(responseData) {
+            M.toast({html: responseData, classes: 'rounded'});
+            $("#mime").text(responseData);
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
 $(document).on('click', '#logon', function() { // Logar Usuario
     let metodo = "logon";
 	const formData = $("#loginForm").serializeArray();

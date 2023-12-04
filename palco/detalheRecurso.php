@@ -135,6 +135,11 @@ echo '      </div>
                 <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
                 <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a>
                 <a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a>
+				';
+				
+if($result['fase'] == 4) echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec='.$result['numero'].'">Parecer</a>';
+				
+echo 				'
                 <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
         </div>

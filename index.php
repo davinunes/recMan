@@ -50,6 +50,9 @@ switch($_GET['pag']){
 	case "novoRecurso":
 		include "forms/newRecurso.php";
 		break;
+	case "emiteParecer":
+		include "palco/emiteParecer.php";
+		break;
 	case "perfil":
 		include "forms/atualizaUsuario.php";
 		break;
