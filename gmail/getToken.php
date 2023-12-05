@@ -12,6 +12,7 @@ $authorizationParams = [
     'client_id' => $clientId,
     'redirect_uri' => $redirectUri,
     'scope' => 'https://www.googleapis.com/auth/gmail.modify',
+	'access_type' => 'offline'
 ];
 
 // Construir a URL de autorização

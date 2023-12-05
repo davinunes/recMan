@@ -97,6 +97,15 @@ echo '<div class="row">
 				</li>';
             }
 echo   '</ul>';
+
+
+$vaga = getEstacionamento($result['bloco'], $result['unidade']);
+
+foreach($vaga as $vg){
+	echo "<div class='chip'>Vaga ".$vg['id_estacionamento']." ".$vg['local']." </div>";
+}
+
+
 echo "<h6>Histórico da unidade</h6>";
 
 echo '<table class="striped">';

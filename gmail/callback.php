@@ -31,6 +31,7 @@ if (curl_errno($ch)) {
 } else {
     // Decodificar a resposta JSON
     $tokenData = json_decode($response, true);
+	var_dump($tokenData);
 
     // Verificar se o token de acesso está presente na resposta
     if (isset($tokenData['access_token'])) {
