@@ -40,6 +40,15 @@
             $response = upsertComentario($dados);
 			echo $response;
             break;
+		case "editaComentario":
+			session_start();
+			
+            $dados = $_POST;
+			$dados['usuario'] = $_SESSION["user_id"];
+			$response = updateComentario($dados);
+			echo $response;
+
+            break;
 		case "votar":
 			session_start();
 			

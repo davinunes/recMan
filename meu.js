@@ -146,6 +146,48 @@ $(document).on('click', '#testeEnvioParecer', function() { // Enviar e-mail
     });
 });
 
+$(document).on('click', '.editComment', function() { // Enviar e-mail
+    let comentario = $(this).closest("li.collection-item").find("p").text();
+	console.log(comentario);
+	$("#messageTextComment").val(comentario);
+	$("#messageTextComment").attr("message_id",$(this).attr("comment"));
+	
+});
+
+$(document).on('click', '#updateComment', function() { // Enviar e-mail
+    let comentario = $("#messageTextComment").val();
+	let id_comentario = $("#messageTextComment").attr("message_id");
+	
+	const formData = { 
+		id_comentario: id_comentario,
+		comentario:comentario
+	};
+	console.log(formData);
+    $.ajax({
+        url: "metodo.php?metodo=editaComentario",
+        method: "POST", // Defina o método como POST
+		data: formData,
+        // data: formData, // Adicione o objeto 'data' aqui
+        success: function(responseData) {
+			if(responseData === "ok"){
+				M.toast({html: responseData, classes: 'rounded'});
+				window.location.reload();
+			}else{
+				M.toast({html: responseData, classes: 'rounded'});
+				// window.location.reload();
+				
+			}
+
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+	
+	
+});
+
 $(document).on('click', '#logon', function() { // Logar Usuario
     let metodo = "logon";
 	const formData = $("#loginForm").serializeArray();

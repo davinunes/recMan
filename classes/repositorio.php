@@ -1,6 +1,12 @@
 <?php
 require "/var/www/html/classes/database.php";
 
+function dump($el){
+	echo "<pre>";
+		var_dump($el);
+	echo "</pre>";
+}
+
 function getUsuarios($id=1){
 	$sql  = " SELECT id, email, senha, nome, status, unidade, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
@@ -309,6 +315,25 @@ function upsertComentario($dados) {
     $sql  = "INSERT INTO conselho.mensagem ";
     $sql .= "(id_usuario, id_recurso, texto) ";
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
+    
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function updateComentario($dados) {
+    $id_comentario = $dados['id_comentario'];
+    $mensagem = DBEscape($dados['comentario']); 
+    $usuario = DBEscape($dados['usuario']); 
+
+    $sql  = "update conselho.mensagem ";
+    $sql .= "set texto =  '$mensagem' " ;
+    $sql .= "where id = $id_comentario ";
+    $sql .= "and  id_usuario = $usuario ";
+	
+	// echo $sql;
     
     if (DBExecute($sql)) {
         return "ok";

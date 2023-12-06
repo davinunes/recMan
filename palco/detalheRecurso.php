@@ -91,13 +91,20 @@ echo '<div class="row">
         <ul class="collection with-header">
             ';
             foreach ($mensagens as $mensagem) {
+				if($_SESSION["user_id"] == $mensagem["id_usuario"]){
+					$editavel = true;
+					$actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'><i class='material-icons'>edit</i></a></span>";
+				}else{
+					$editavel = false;
+					$actions = "";
+				}
                 echo '<li class="collection-item avatar">
 				<img src="'.$mensagem['avatar'].'" alt="" class="circle">
-				' . $mensagem['texto'] . '
+				' .$actions."<p>". $mensagem['texto'] . '</p>
 				</li>';
             }
 echo   '</ul>';
-
+// dump($mensagens);
 
 $vaga = getEstacionamento($result['bloco'], $result['unidade']);
 
@@ -180,6 +187,22 @@ echo 				'
     </div>
     <div class="modal-footer">
         <a id="comentar" class="modal-close waves-effect waves-green btn-flat">Enviar</a>
+    </div>
+</div>
+<!-- Modal de Nova Mensagem -->
+<div id="editaComentario" class="modal">
+    <div class="modal-content">
+        <h4>Editar comentário</h4>
+        <p>Edite o seu Comentário...</p>
+		<form id="postMessageForm">
+            <div class="input-field">
+                <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto" required></textarea>
+                <label for="messageText">Mensagem</label>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a id="updateComment" class="modal-close waves-effect waves-green btn-flat">Salvar</a>
     </div>
 </div>
 
