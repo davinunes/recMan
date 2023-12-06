@@ -1,6 +1,6 @@
 <?php
 
-include("api.json");
+include("api.php");
 $redirectUri = 'https://mini.davinunes.eti.br/gmail/callback.php';
 
 // URL do endpoint de autorização

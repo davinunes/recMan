@@ -1,19 +1,15 @@
 <?php
 
-include("api.php");
-$redirectUri = 'https://mini.davinunes.eti.br/gmail/callback.php';
-$code = $_GET['code'];
+include_once("/var/www/html/gmail/api.php");
 
-// URL do endpoint de token
 $tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
 // Parâmetros para a solicitação de token
 $params = [
-    'code' => $code,
     'client_id' => $clientId,
     'client_secret' => $clientSecret,
-    'redirect_uri' => $redirectUri,
-    'grant_type' => 'authorization_code',
+    'refresh_token' => $refresh_token,
+    'grant_type' => 'refresh_token',
 ];
 
 // Configuração da solicitação cURL
@@ -31,7 +27,7 @@ if (curl_errno($ch)) {
 } else {
     // Decodificar a resposta JSON
     $tokenData = json_decode($response, true);
-	var_dump($tokenData);
+	// var_dump($tokenData);
 
     // Verificar se o token de acesso está presente na resposta
     if (isset($tokenData['access_token'])) {
@@ -39,7 +35,7 @@ if (curl_errno($ch)) {
         $expires_in = $tokenData['expires_in'];
         $scope = $tokenData['scope'];
         $token_type = $tokenData['token_type'];
-		include("../classes/repositorio.php");
+		include_once("/var/www/html/classes/repositorio.php");
 		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
 			echo $accessToken;
 			header("Location: ../index.php");
@@ -52,8 +48,5 @@ if (curl_errno($ch)) {
 
 // Fechar a sessão cURL
 curl_close($ch);
-
-
-
 
 ?>

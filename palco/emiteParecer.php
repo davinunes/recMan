@@ -94,6 +94,7 @@ if($gmail["status"] && $gmail["resta"] > 59){
 	echo "É necessário o token para enviar e-mails!<br/>";
 	echo "Se abrir uma tela solicitando logar com google, logue apenas com a conta do conselho!<br/>";
 	echo "<a class='btn' target='_blank' href='/gmail/checkToken.php'>Obter Token</a>";
+	include("/var/www/html/gmail/refresh.php");
 }
 ?>
 

@@ -91,12 +91,12 @@ echo '<div class="row">
         <ul class="collection with-header">
             ';
             foreach ($mensagens as $mensagem) {
+				$dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
+				$mensagem = str_replace("\r","<br>",$mensagem);
 				if($_SESSION["user_id"] == $mensagem["id_usuario"]){
-					$editavel = true;
-					$actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'><i class='material-icons'>edit</i></a></span>";
+					$actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
 				}else{
-					$editavel = false;
-					$actions = "";
+					$actions = "<span class='actions'>$dataFormatada</span>";
 				}
                 echo '<li class="collection-item avatar">
 				<img src="'.$mensagem['avatar'].'" alt="" class="circle">
