@@ -67,9 +67,21 @@ echo '
 </nav>
 
 	';
-echo '            <div class="card-content">
+	
+	
+echo '      <div class="card-content">
+				
+				
                 <h6 class="">'.$result['titulo'].'</h6>
-                <pre>'.$result['detalhes'].'</pre>';
+				
+				<span>'.$result['fato'].'</span>
+				
+				<h6 class="">Argumentação</h6>
+				
+                <pre>'.$result['detalhes'].'</pre>
+			';
+			
+
 				
 echo '<div class="row">
     <div class="">
@@ -143,6 +155,7 @@ foreach($historico as $h){
 	echo '</tr>';
 }
 echo '</table>';
+
 
 echo '    </div>
 </div>';

@@ -23,6 +23,8 @@ function getUsuarios($id=1){
 	return $dados;
 }
 
+
+
 function getUsuario($login){
 	$sql  = " SELECT id, email, nome, status, unidade, senha, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
@@ -39,6 +41,85 @@ function getUsuario($login){
 	}
 	return $dados[0];
 }
+
+function existeParecer($id){
+	$sql  = " SELECT COUNT(*) AS pareceres_encontrados ";
+	$sql .= " FROM conselho.parecer" ;
+	$sql .= " where id = '$id'" ;
+	
+	$result	= DBExecute($sql);
+	// var_dump($sql);
+	if(!mysqli_num_rows($result)){
+
+	}else{
+		while($retorno = mysqli_fetch_assoc($result)){
+			$dados[] = $retorno;
+		}
+	}
+	return $dados[0]["pareceres_encontrados"] == 1 ? true : false;
+}
+
+function getParecer($id){
+	$sql  = " SELECT * ";
+	$sql .= " FROM conselho.parecer" ;
+	$sql .= " where id = '$id'" ;
+	
+	$result	= DBExecute($sql);
+	// var_dump($sql);
+	if(!mysqli_num_rows($result)){
+
+	}else{
+		while($retorno = mysqli_fetch_assoc($result)){
+			$dados[] = $retorno;
+		}
+	}
+	return $dados[0];
+}
+
+function updateParecer($dados) {
+    $id = DBEscape($dados['id_parecer']);
+    $resultado = DBEscape($dados['resultado']);
+    $assunto = DBEscape($dados['assunto']);
+    $notificacao = DBEscape($dados['notificacao']);
+    $analise = DBEscape($dados['analise']);
+    $conclusao = DBEscape($dados['conclusao']);
+
+    $sql = "UPDATE conselho.parecer
+            SET resultado = '$resultado',
+                assunto = '$assunto',
+                notificacao = '$notificacao',
+                analise = '$analise',
+                conclusao = '$conclusao'
+            WHERE id = '$id'";
+
+    if (DBExecute($sql)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+function insertParecer($dados) {
+    $id = DBEscape($dados['id']);
+    $unidade = DBEscape($dados['unidade']);
+    $assunto = DBEscape($dados['assunto']);
+	$resultado = DBEscape($dados['resultado']);
+    $conclusao = DBEscape($dados['conclusao']);
+    $concluido = isset($dados['concluido']) ? (int)$dados['concluido'] : 0; // Converte para inteiro (0 ou 1)
+
+    $sql  = "INSERT INTO conselho.parecer ";
+    $sql .= "(id, unidade, assunto, conclusao, concluido) ";
+    $sql .= "VALUES ('$id', '$unidade', '$assunto',  '$conclusao', $concluido) ";
+
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+
 
 function getMensagens($recurso) {
     $sql = "SELECT m.*, u.avatar 

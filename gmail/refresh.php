@@ -37,8 +37,8 @@ if (curl_errno($ch)) {
         $token_type = $tokenData['token_type'];
 		include_once("/var/www/html/classes/repositorio.php");
 		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
-			echo $accessToken;
-			header("Location: ../index.php");
+			// echo $accessToken;
+			// header("Location: /index.php");
 		}
         
     } else {

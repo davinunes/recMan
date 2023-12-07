@@ -1,6 +1,6 @@
 <?php
 include "classes/repositorio.php";
-$sql = "SELECT id, unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo, `data`
+$sql = "SELECT id, unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo, `data`, fato
 FROM conselho.recurso where id={$_GET['rec']}";
 $result = DBExecute($sql);
 
@@ -65,6 +65,11 @@ if (mysqli_num_rows($result) > 0) {
 	echo '<div class="col s12">';	
 	echo '<label for="detalhes">Detalhes:</label>';
 	echo '<textarea class="materialize-textarea" name="detalhes">' . $recurso['detalhes'] . '</textarea>';
+	echo '</div>';	
+	
+	echo '<div class="col s12">';	
+	echo '<label for="fato">Fato:</label>';
+	echo '<textarea class="materialize-textarea fato" name="fato">' . $recurso['fato'] . '</textarea>';
 	echo '</div>';
 	
 	echo '<button class="btn orange darken-3" id="atualizarRecurso" type="submit">Atualizar</button>';

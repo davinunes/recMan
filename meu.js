@@ -146,11 +146,48 @@ $(document).on('click', '#testeEnvioParecer', function() { // Enviar e-mail
     });
 });
 
+$(document).on('click', '#btnAlterarParecer', function() { // Enviar e-mail
+	$("#previaPDF").hide();
+	$("#formParecer").removeClass("hide");
+	$(this).remove();
+	$("#testeEnvioParecer").remove();
+	
+});
+
+$(document).on('click', '#btnSalvarParecer', function() { // Enviar e-mail
+	let formData = $("#formParecer form").serializeArray();
+	console.log(formData);
+	
+    $.ajax({
+        url: "metodo.php?metodo=editaParecer",
+        method: "POST", // Defina o método como POST
+		data: formData,
+        // data: formData, // Adicione o objeto 'data' aqui
+        success: function(responseData) {
+			if(responseData === "ok"){
+				M.toast({html: responseData, classes: 'rounded'});
+				window.location.reload();
+			}else{
+				M.toast({html: responseData, classes: 'rounded'});
+				// window.location.reload();
+				
+			}
+
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+	
+});
+
 $(document).on('click', '.editComment', function() { // Enviar e-mail
     let comentario = $(this).closest("li.collection-item").find("p").text();
 	console.log(comentario);
 	$("#messageTextComment").val(comentario);
 	$("#messageTextComment").attr("message_id",$(this).attr("comment"));
+	
 	
 });
 
@@ -472,6 +509,17 @@ $(document).on('keyup', '#numero', function(event) {
         });
     }
 });
+
+$(document).on('keyup', '.fato', function(event) {
+    var entrada = $(this).val();
+
+    // Remover quebras de linha e manter apenas um espaço entre palavras
+    entrada = entrada.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+
+    // Agora, você pode usar a variável 'entrada' conforme necessário
+    $(this).val(entrada);
+});
+
 
 $(document).on('submit', '#atualizarRecursoForm', function(e) {
          e.preventDefault(); // Impede o envio padrão do formulário

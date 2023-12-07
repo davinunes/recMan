@@ -49,6 +49,15 @@
 			echo $response;
 
             break;
+		case "editaParecer":
+			session_start();
+			
+            $dados = $_POST;
+
+			$response = updateParecer($dados) ? "ok" : "erro";
+			echo $response;
+
+            break;
 		case "votar":
 			session_start();
 			
