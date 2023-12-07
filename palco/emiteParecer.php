@@ -53,8 +53,9 @@ if(!$temParecer){ //Se não tem Parecer
 }
 
 $parecer = getParecer($_GET['rec']);
+$parecerJaFoiEnviado = $parecer["concluido"] == 1 ? true : false;
 
-// dump($_SESSION);
+// dump($parecer);
 
 $pdf['notificacao'] = $parecer["id"];
 $pdf['unidade'] = $parecer["unidade"];
@@ -126,7 +127,7 @@ echo "</details>";
 
 if($gmail["status"] && $gmail["resta"] > 59){
 	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
-	echo "<a class='btn' id='testeEnvioParecer'>Testar envio de e-mail</a>";
+	echo "<a class='btn' id='testeEnvioParecer' idParecer='{$parecer['id']}'>Testar envio de e-mail</a>";
 }else{
 	// echo "Não temos token Gmail!<br/>";
 	// echo "Clique no Link para obter um Token!<br/>";
@@ -136,7 +137,13 @@ if($gmail["status"] && $gmail["resta"] > 59){
 	include("/var/www/html/gmail/refresh.php");
 }
 
-echo "<a class='btn blue right' id='btnAlterarParecer'>Quero alterar dados do parecer</a>";
+if(!$parecerJaFoiEnviado) echo "<a class='btn blue right' id='btnAlterarParecer'>Quero alterar dados do parecer</a>";
+
+if($parecerJaFoiEnviado) {
+	$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
+	echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
+}
+
 ?>
 
 		</div>

@@ -14,11 +14,12 @@ $esseRecurso = $result['id'];
 $mensagens = getMensagens($esseRecurso);
 $votos = getVotos($esseRecurso);
 
+$parecer = getParecer($result['numero']);
+
 if (isset($result['unidade']) && isset($result['bloco']) ) {
 	$historico = getNotificacoes($result['unidade'] ,$result['bloco']);
 	
 }
-
 
 if($esseRecurso == null){
 	echo "<div class='container'>
@@ -34,9 +35,6 @@ if($esseRecurso == null){
 	</div>";
 	exit;
 }
-
-
-
 
 ?>
 
@@ -68,19 +66,22 @@ echo '
 
 	';
 	
-	
 echo '      <div class="card-content">
 				
 				
                 <h6 class="">'.$result['titulo'].'</h6>
 				
-				<span>'.$result['fato'].'</span>
+				<span class="">'.$result['fato'].'</span>
 				
 				<h6 class="">Argumentação</h6>
 				
                 <pre>'.$result['detalhes'].'</pre>
 			';
 			
+	if($parecer['concluido'] == 1){
+		$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
+	echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
+	}
 
 				
 echo '<div class="row">

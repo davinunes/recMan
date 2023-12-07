@@ -155,6 +155,79 @@ $(document).on('click', '#testeEnvioParecer', function() {
     }
 });
 
+$(document).on('click', '#finalizaEnviaParecer', function() {
+    // Adiciona um prompt de confirmação
+    const userConfirmation = window.confirm("Será enviado o parecer abaixo por email para o endereço cadastrado no recurso, com cópia para o síndico e cópia oculta para a soluções. Depois disso, o status será ajustado para finalizado, não será mais possível editar este parecer. A fase do recurso também será alterada para 'Concluido'. Você deseja continuar?");
+
+    // Verifica se o usuário confirmou
+    if (userConfirmation) {
+        const mimeContent = $("#mime").text();
+        const idParecer = $(this).attr("idparecer");
+
+        let url = 'gmail/sendMailParecer.php';
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: {
+                mime: mimeContent
+            },
+            success: function(responseData) {
+				// console.log(responseData);
+                try {
+                    const responseJson = JSON.parse(responseData);
+					console.log(responseJson);
+
+                    // Verifica se a resposta possui um 'mailId'
+                    if (responseJson.id) {
+                        // Se 'mailId' existe, realizar a segunda chamada
+                        const mailId = responseJson.id;
+
+                        $.ajax({
+                            url: 'metodo.php?metodo=finalizaParecer',
+                            method: 'POST',
+                            data: {
+                                id_parecer: idParecer,
+                                mailId: mailId
+                            },
+                            success: function(finalizaResponse) {
+                                // Verifica se a resposta da segunda chamada é 'ok'
+                                if (finalizaResponse.trim().toLowerCase() === 'ok') {
+                                    // Se 'ok', atualiza a página
+                                    location.reload();
+                                } else {
+                                    // Exibe um toast informando que algo deu errado
+                                    M.toast({html: 'Erro ao finalizar o parecer.', classes: 'rounded'});
+                                }
+                            },
+                            error: function(jqXHR, textStatus, errorThrown) {
+                                console.log("Erro na segunda solicitação AJAX: " + textStatus);
+                                console.log("Detalhes do erro: " + errorThrown);
+                                // Exibe um toast informando que algo deu errado
+                                M.toast({html: 'Erro ao finalizar o parecer.', classes: 'rounded'});
+                            }
+                        });
+                    } else {
+                        // Se 'mailId' não existe, exibe um toast informando que algo deu errado
+                        M.toast({html: 'Erro ao enviar o e-mail. Resposta inválida.', classes: 'rounded'});
+                    }
+                } catch (error) {
+                    // Exibe um toast informando que algo deu errado ao analisar a resposta JSON
+                    M.toast({html: 'Erro ao analisar a resposta JSON.', classes: 'rounded'});
+                    console.log("Erro ao analisar a resposta JSON: " + error);
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log("Erro na primeira solicitação AJAX: " + textStatus);
+                console.log("Detalhes do erro: " + errorThrown);
+                // Exibe um toast informando que algo deu errado
+                M.toast({html: 'Erro ao enviar o e-mail.', classes: 'rounded'});
+            }
+        });
+    } else {
+        // Se o usuário não confirmou, você pode fazer alguma coisa aqui, ou apenas retornar
+        console.log("Operação cancelada pelo usuário.");
+    }
+});
 
 $(document).on('click', '#btnAlterarParecer', function() { // Enviar e-mail
 	$("#previaPDF").hide();
@@ -537,6 +610,7 @@ $(document).on('submit', '#atualizarRecursoForm', function(e) {
         // Obtém os dados do formulário
 		
         var formData = new FormData(this);
+		var numeroValue = formData.get('numero');
         // Envia os dados usando AJAX
         $.ajax({
             type: 'POST',
@@ -547,7 +621,7 @@ $(document).on('submit', '#atualizarRecursoForm', function(e) {
             success: function(response) {
 				if(response === "ok"){
 					M.toast({html: response, classes: 'rounded'});
-					// window.location.reload();
+					window.location.href = "index.php?pag=recurso&rec=" + numeroValue;
 				}else{
 					M.toast({html: response, classes: 'rounded'});
 					// window.location.reload();

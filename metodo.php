@@ -58,6 +58,15 @@
 			echo $response;
 
             break;
+		case "finalizaParecer":
+			session_start();
+			
+            $dados = $_POST;
+			$dados["userId"] = $_SESSION["user_id"];
+			$response = finalizaParecer($dados) ? "ok" : "erro";
+			echo $response;
+
+            break;
 		case "votar":
 			session_start();
 			

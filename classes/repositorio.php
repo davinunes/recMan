@@ -99,6 +99,38 @@ function updateParecer($dados) {
     }
 }
 
+function finalizaParecer($dados) {
+    $id = DBEscape($dados['id_parecer']);
+    $rid = DBEscape($dados['mailId']);
+    $userId = DBEscape($dados['userId']);
+
+    // Inicia uma transação
+    DBExecute("BEGIN");
+
+    // Atualiza a tabela 'parecer'
+    $sqlParecer = "UPDATE conselho.parecer
+                    SET mailId = '$rid', concluido = 1, quemFinalizou = $userId 
+                    WHERE id = '$id'";
+
+    // Atualiza a tabela 'recurso'
+    $sqlRecurso = "UPDATE conselho.recurso
+                    SET fase = 5 
+                    WHERE numero = '$id'";
+					
+	// dump($sqlParecer);
+	// dump($sqlRecurso);
+
+    // Executa as atualizações
+    if (DBExecute($sqlParecer) && DBExecute($sqlRecurso)) {
+        // Se ambas as atualizações forem bem-sucedidas, realiza o COMMIT
+        DBExecute("COMMIT");
+        return true;
+    } else {
+        // Se ocorrer algum erro, realiza o ROLLBACK
+        DBExecute("ROLLBACK");
+        return false;
+    }
+}
 
 function insertParecer($dados) {
     $id = DBEscape($dados['id']);
@@ -119,8 +151,6 @@ function insertParecer($dados) {
         return "erro";
     }
 }
-
-
 
 function getMensagens($recurso) {
     $sql = "SELECT m.*, u.avatar 
