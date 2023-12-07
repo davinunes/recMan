@@ -104,13 +104,14 @@ function insertParecer($dados) {
     $id = DBEscape($dados['id']);
     $unidade = DBEscape($dados['unidade']);
     $assunto = DBEscape($dados['assunto']);
+    $notificacao = DBEscape($dados['notificacao']);
 	$resultado = DBEscape($dados['resultado']);
     $conclusao = DBEscape($dados['conclusao']);
     $concluido = isset($dados['concluido']) ? (int)$dados['concluido'] : 0; // Converte para inteiro (0 ou 1)
 
     $sql  = "INSERT INTO conselho.parecer ";
-    $sql .= "(id, unidade, assunto, conclusao, concluido) ";
-    $sql .= "VALUES ('$id', '$unidade', '$assunto',  '$conclusao', $concluido) ";
+    $sql .= "(id, unidade, assunto, conclusao, concluido, resultado, notificacao) ";
+    $sql .= "VALUES ('$id', '$unidade', '$assunto',  '$conclusao', $concluido, '$resultado', '$notificacao') ";
 
     if (DBExecute($sql)) {
         return "ok";

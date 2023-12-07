@@ -125,26 +125,36 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
     });
 });
 
-$(document).on('click', '#testeEnvioParecer', function() { // Enviar e-mail
-    const mimeContent = $("#mime").text();
-    
-    let url = 'gmail/sendMailParecer.php';
-    $.ajax({
-        url: url,
-        method: "POST", // Defina o método como POST
-        data: {
-            mime: mimeContent
-        }, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-            M.toast({html: responseData, classes: 'rounded'});
-            $("#mime").text(responseData);
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
+$(document).on('click', '#testeEnvioParecer', function() {
+    // Adiciona um prompt de confirmação
+    const userConfirmation = window.confirm("Nesse teste, o e-mail será enviado para o endereço do usuário logado. Você deseja continuar?");
+
+    // Verifica se o usuário confirmou
+    if (userConfirmation) {
+        const mimeContent = $("#mime").text();
+        
+        let url = 'gmail/sendMailParecer.php';
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: {
+                mime: mimeContent
+            },
+            success: function(responseData) {
+                M.toast({html: responseData, classes: 'rounded'});
+                $("#mime").text(responseData);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log("Erro na solicitação AJAX: " + textStatus);
+                console.log("Detalhes do erro: " + errorThrown);
+            }
+        });
+    } else {
+        // Se o usuário não confirmou, você pode fazer alguma coisa aqui, ou apenas retornar
+        console.log("Operação cancelada pelo usuário.");
+    }
 });
+
 
 $(document).on('click', '#btnAlterarParecer', function() { // Enviar e-mail
 	$("#previaPDF").hide();

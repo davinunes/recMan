@@ -4,26 +4,46 @@ require "classes/pdfParecer.php";
 
 $gmail = verificarToken();
 
+$email_teste = $_SESSION["user_email"];
 $temParecer = existeParecer($_GET['rec']);
 
 // dump($temParecer);
+$sql = "SELECT r.*, f.texto as fasee FROM recurso r
+		left join fase f on f.id = r.fase 
+		where r.numero = '{$_GET['rec']}'";
+
+$result = DBExecute($sql);
+$result = mysqli_fetch_assoc($result);
 
 if(!$temParecer){ //Se não tem Parecer
-	$sql = "SELECT r.*, f.texto as fasee FROM recurso r
-			left join fase f on f.id = r.fase 
-			where r.numero = '{$_GET['rec']}'";
-
-	$result = DBExecute($sql);
-	$result = mysqli_fetch_assoc($result);
 
 	$votos = getMaisVotado($result['id']);
 	$rv = strtoupper($votos["voto"]);
+	
+	switch ($rv){
+		case "REVOGAR":
+			$pdf['resultado'] = "Após análise detalhada, o conselho considera este recurso válido.";
+		break;
+		
+		case "MANTER":
+			$pdf['resultado'] = "Não foi possível validar a argumentação presente no recurso, haja posto as provas apresentadas pelo condomínio.";
+		break;
+		
+		case "CONVERTER":
+			$pdf['resultado'] = "Após análise detalhada, e considerando a argumentação e os dados de vídeo, observando os princípios de razoabilidade e proporcionalidade, o Conselho recomenda converter esta penalidade em Advertência.";
+		break;
+	}
+	
 
 	$pdf['id'] = $result["numero"];
 	$pdf['unidade'] = $result["bloco"].$result["unidade"];
 	$pdf['assunto'] = $result["titulo"];
 	$pdf['notificacao'] = $result["fato"];
 	$pdf['conclusao'] = $rv == "CONVERTER" ? "CONVERTER EM ADVERTÊNCIA": $rv;
+	
+	// dump($result);
+	
+	// dump($pdf);
 	
 	insertParecer($pdf);
 	
@@ -34,7 +54,7 @@ if(!$temParecer){ //Se não tem Parecer
 
 $parecer = getParecer($_GET['rec']);
 
-// dump($parecer);
+// dump($_SESSION);
 
 $pdf['notificacao'] = $parecer["id"];
 $pdf['unidade'] = $parecer["unidade"];
@@ -45,7 +65,7 @@ $pdf['resultado'] = $parecer["resultado"];
 $pdf['parecer'] = $parecer["conclusao"];
 
 //Dados do e-mail a ser enviado:
-$assunto = "Parecer do Conselho ".$result["numero"];
+$assunto = "Parecer do Conselho ".$parecer["id"];
 $destinatarios = $result["email"];
 $cc = "sindicogeral.miami@gmail.com";
 $bcc = "admcond@solucoesdf.com.br";
@@ -80,10 +100,10 @@ echo "Mensagem: ".$mensagem;
 
 $mime  = "Content-Type: multipart/mixed; boundary=foo_bar_baz
 MIME-Version: 1.0\n";
-$mime .= "to: davi.nunes@gmail.com"."\n";
-$mime .= "cc: davi.nunes+cc@gmail.com"."\n";
-$mime .= "bcc: davinunes.franca@eb.mil.br"."\n";
-$mime .= "subject: $assunto"."\n"."\n";
+$mime .= "to: ".$email_teste."\n";
+$mime .= "cc: ".$email_teste."\n";
+$mime .= "bcc: ".$email_teste."\n";
+$mime .= "subject: TESTE $assunto"."\n"."\n";
 
 $mime .= "--foo_bar_baz"."\n";
 $mime .= $mensagem."\n";
@@ -195,3 +215,15 @@ echo "<a class='btn blue right' id='btnAlterarParecer'>Quero alterar dados do pa
 
 
 </div class='container'>
+
+<!-- 
+
+{
+  "id": "18c441555f7bcb23",
+  "threadId": "18c441555f7bcb23",
+  "labelIds": [
+    "SENT"
+  ]
+}
+
+-->
