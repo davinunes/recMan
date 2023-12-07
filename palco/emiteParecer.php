@@ -127,7 +127,7 @@ echo "</details>";
 
 if($gmail["status"] && $gmail["resta"] > 59){
 	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
-	echo "<a class='btn' id='finalizaEnviaParecer' idParecer='{$parecer['id']}'>Enviar parecer e finalizar recurso</a>";
+	if(!$parecerJaFoiEnviado) echo "<a class='btn red' id='finalizaEnviaParecer' idParecer='{$parecer['id']}'>Enviar parecer e finalizar recurso</a>";
 }else{
 	// echo "Não temos token Gmail!<br/>";
 	// echo "Clique no Link para obter um Token!<br/>";
