@@ -101,10 +101,10 @@ echo "Mensagem: ".$mensagem;
 
 $mime  = "Content-Type: multipart/mixed; boundary=foo_bar_baz
 MIME-Version: 1.0\n";
-$mime .= "to: ".$email_teste."\n";
-$mime .= "cc: ".$email_teste."\n";
-$mime .= "bcc: ".$email_teste."\n";
-$mime .= "subject: TESTE $assunto"."\n"."\n";
+$mime .= "to: ".$destinatarios."\n";
+$mime .= "cc: ".$cc."\n";
+$mime .= "bcc: ".$bcc."\n";
+$mime .= "subject: $assunto"."\n"."\n";
 
 $mime .= "--foo_bar_baz"."\n";
 $mime .= $mensagem."\n";
@@ -127,7 +127,7 @@ echo "</details>";
 
 if($gmail["status"] && $gmail["resta"] > 59){
 	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
-	echo "<a class='btn' id='testeEnvioParecer' idParecer='{$parecer['id']}'>Testar envio de e-mail</a>";
+	echo "<a class='btn' id='finalizaEnviaParecer' idParecer='{$parecer['id']}'>Enviar parecer e finalizar recurso</a>";
 }else{
 	// echo "Não temos token Gmail!<br/>";
 	// echo "Clique no Link para obter um Token!<br/>";

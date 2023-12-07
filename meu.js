@@ -234,6 +234,7 @@ $(document).on('click', '#btnAlterarParecer', function() { // Enviar e-mail
 	$("#formParecer").removeClass("hide");
 	$(this).remove();
 	$("#testeEnvioParecer").remove();
+	$("#finalizaEnviaParecer").remove();
 	
 });
 
