@@ -42,7 +42,7 @@ if (curl_errno($ch)) {
 		include("../classes/repositorio.php");
 		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
 			echo $accessToken;
-			header("Location: ../index.php");
+			// header("Location: ../index.php");
 		}
         
     } else {

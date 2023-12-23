@@ -155,6 +155,36 @@ $(document).on('click', '#testeEnvioParecer', function() {
     }
 });
 
+$(document).on('click', '#EnviaRelatorioJuridico', function() {
+    // Adiciona um prompt de confirmação
+    const userConfirmation = window.confirm("Será enviado relatório de notificações com o Conselho. Você deseja continuar?");
+
+    // Verifica se o usuário confirmou
+    if (userConfirmation) {
+        const mimeContent = $("#mime").html();
+        
+        let url = 'gmail/sendMailParecer.php';
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: {
+                mime: mimeContent
+            },
+            success: function(responseData) {
+                M.toast({html: responseData, classes: 'rounded'});
+                $("#mime").text(responseData);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log("Erro na solicitação AJAX: " + textStatus);
+                console.log("Detalhes do erro: " + errorThrown);
+            }
+        });
+    } else {
+        // Se o usuário não confirmou, você pode fazer alguma coisa aqui, ou apenas retornar
+        console.log("Operação cancelada pelo usuário.");
+    }
+});
+
 $(document).on('click', '#finalizaEnviaParecer', function() {
     // Adiciona um prompt de confirmação
     const userConfirmation = window.confirm("Será enviado o parecer abaixo por email para o endereço cadastrado no recurso, com cópia para o síndico e cópia oculta para a soluções. Depois disso, o status será ajustado para finalizado, não será mais possível editar este parecer. A fase do recurso também será alterada para 'Concluido'. Você deseja continuar?");

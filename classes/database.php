@@ -51,4 +51,19 @@
 		DBClose($link);
 		return $result;
 	}
+	
+	function DBQuery($sql){ # Executa um Comando na Conexão
+		$result = DBExecute($sql);
+		// echo $sql;
+		if (mysqli_num_rows($result) > 0) {
+			while ($retorno = mysqli_fetch_assoc($result)) {
+				$dados[] = $retorno;
+			}
+			
+			return $dados;
+		}else{
+			return null;
+			
+		}
+	}
 ?>

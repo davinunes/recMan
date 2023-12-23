@@ -11,72 +11,133 @@
                 <!-- Loop para exibir os recursos -->
                 <?php
                 require "classes/repositorio.php"; // Certifique-se de incluir o arquivo de conexão com o banco de dados
+				
+				$gmail = verificarToken();
+				$token = $gmail["tkn"];
+				
+if($gmail["status"] && $gmail["resta"] > 59){
+	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
+}else{
+	// echo "Não temos token Gmail!<br/>";
+	// echo "Clique no Link para obter um Token!<br/>";
+	// echo "É necessário o token para enviar e-mails!<br/>";
+	// echo "Se abrir uma tela solicitando logar com google, logue apenas com a conta do conselho!<br/>";
+	// echo "<a class='btn' target='_blank' href='/gmail/checkToken.php'>Obter Token</a>";
+	include("/var/www/html/gmail/refresh.php");
+}
+				
                 if($_GET[concluidos] == "true"){
 					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.data";
 
 				}elseif(isset($_GET[resumo]) and  $_GET[resumo] == "true"){
-					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 4 order by r.data";
+					$sql1 = "SELECT r.numero, f.texto FROM recurso r left join fase f on f.id = r.fase where f.id < 4 order by r.numero";
+					$sql2 = "SELECT r.numero
+								FROM conselho.recurso r
+								 JOIN (
+									SELECT id_recurso
+									FROM conselho.votos
+									WHERE voto = 'manter'
+									GROUP BY id_recurso
+									HAVING COUNT(*) >= 2
+								) votos_manter ON r.id = votos_manter.id_recurso
+								 JOIN conselho.fase f ON f.id = r.fase
+								WHERE f.id = 4
+								ORDER BY r.numero
+								";
+					$sql3 = "SELECT r.numero
+								FROM conselho.recurso r
+								 JOIN (
+									SELECT id_recurso
+									FROM conselho.votos
+									WHERE voto = 'revogar'
+									GROUP BY id_recurso
+									HAVING COUNT(*) >= 2
+								) votos_manter ON r.id = votos_manter.id_recurso
+								 JOIN conselho.fase f ON f.id = r.fase
+								WHERE f.id = 4
+								ORDER BY r.numero
+								";
+					$sql4 = "SELECT r.numero
+								FROM conselho.recurso r
+								 JOIN (
+									SELECT id_recurso
+									FROM conselho.votos
+									WHERE voto = 'converter'
+									GROUP BY id_recurso
+									HAVING COUNT(*) >= 2
+								) votos_manter ON r.id = votos_manter.id_recurso
+								 JOIN conselho.fase f ON f.id = r.fase
+								WHERE f.id = 4
+								ORDER BY r.numero
+								";
+										
+					// dump(DBQuery($sql1));
+					echo "<span id='corpoEmail'>";
+					$mensagem .=  "<p>Prezados, segue relação de notificações em tratamento pelo Conselho:\n</p>";
+					$mensagem .=   "<p><b>Em análise</b>:\n<br>";
+					foreach(DBQuery($sql1) as $analise){
+						$mensagem .=   $analise['numero']."\n<br>";
+					}
+					$mensagem .=   "</p>";
+					$mensagem .=   "<p><b>Recomendamos Manter a notificação</b>:\n<br>";
+					foreach(DBQuery($sql2) as $analise){
+						$mensagem .=   $analise['numero']."\n<br>";
+						// dump($analise);
+					}
+					$mensagem .=   "</p>";
+					$mensagem .=   "<p><b>Recomendamos Revogar a notificação</b>:\n<br>";
+					foreach(DBQuery($sql3) as $analise){
+						$mensagem .=   $analise['numero']."\n<br>";
+						// dump($analise);
+					}
+					$mensagem .=   "</p>";
+					$mensagem .=   "<p><b>Recomendamos Converter a notificação em Advertência</b>:\n<br>";
+					foreach(DBQuery($sql4) as $analise){
+						$mensagem .=   $analise['numero']."\n<br>";
+						// dump($analise);
+					}
+					$mensagem .=   "</p>";
+					$mensagem .=   "<p>Atenciosamente,\n<br>Membros do Conselho Consultivo e Fiscal\n</p>";
+						
+					echo $mensagem;
+					
+					echo "</span>";
+					
+					
+					//Dados do e-mail a ser enviado:
+					$assunto = "Relação de Notificações com o Conselho";
+					$assunto = "=?UTF-8?B?".base64_encode($assunto)."?=";
+					$destinatarios = "admcond@solucoesdf.com.br, erisvaldo.soares@solucoesdf.com.br";
+					// $destinatarios = "davi.nunes@gmail.com";
+					$cc = "sindicogeral.miami@gmail.com";
+					// $bcc = "admcond@solucoesdf.com.br";
+					
+					$mime .= "Content-Type: text/html; charset=UTF-8\n";
+					$mime .= "to: ".$destinatarios."\n";
+					$mime .= "cc: ".$cc."\n";
+					$mime .= "bcc: ".$bcc."\n";
+					$mime .= "subject: $assunto"."\n"."\n";
+
+					$mime .= $mensagem."\n";
+
+					
+					echo "<details><summary>Visualizar metadados do e-mail</summary>";
+					echo "<pre id='mime'>";
+					echo $mime;
+					echo "</pre>";
+					echo "</details>";
+					
+					// echo "<a class='btn' id='EnviaRelatorioJuridico'>Enviar e-mail ao Juridico</a>";
 				}else{
 					
 					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id != 5 order by r.data";
 				}
+				
                 $result = DBExecute($sql);
+				
 				if (isset($_GET[resumo]) and  $_GET[resumo] == "true"){
+					// Faz nada;
 					
-					echo '<button class="btn" data-clipboard-target="#sql">Copiar para colar</button>
-					<table id="sql" class="striped">
-										<thead>
-											<tr>
-												<th>unidade</th>
-												<th>numero</th>
-												<th>ano</th>
-												<th>email</th>
-												<th>emailsub</th>
-												<th>data</th>
-												<th>gerar</th> 
-												<th>arts</th>
-												<th>fechamento</th>
-												<th>assunto</th>
-												<th>notificação</th>
-												<th>analise</th>
-												<th>conclusão</th>
-											</tr>
-										</thead>
-										<tbody>';
-					while ($row = mysqli_fetch_assoc($result)) {
-
-						$votos = getVotos($row['recurso']);
-						$vt = '';
-						foreach($votos as $v){
-							$vt .= $v[voto]." ";
-						}
-						// unidade, numero, ano, email, emailsub,data, gerar, arts, fechamento, assunto, notificação, analise, conclusão 33626336 27 7h manha
-						$unidade = explode("/",$row['numero']);
-						// var_dump($unidade);
-						echo "<tr>";
-						echo "<td>{$row['bloco']}{$row['unidade']}</td>";
-						echo "<td>{$unidade[0]}</td>";
-						echo "<td>{$unidade[1]}</td>";
-						echo "<td>{$row['email']}</td>";
-						echo "<td></td>";
-						echo "<td></td>";
-						echo "<td>$vt</td>";
-						echo "<td>{$row['artigo']}</td>";
-						echo "<td></td>";
-						echo "<td>{$row['titulo']}</td>";
-						echo "<td></td>";
-						echo "<td></td>";
-						echo "<td></td>";
-						echo "</tr>";
-						
-						
-						
-					}
-				echo "
-					<script>
-						new ClipboardJS('.btn');
-					</script>
-				";
 				}else{
 					echo '        <table class="striped" id="listaRecursos">
 										<thead>
