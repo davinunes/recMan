@@ -105,7 +105,7 @@ echo '<div class="row">
             ';
             foreach ($mensagens as $mensagem) {
 				$dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
-				$mensagem = str_replace("\r","<br>",$mensagem);
+				$mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
 				if($_SESSION["user_id"] == $mensagem["id_usuario"]){
 					$actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
 				}else{

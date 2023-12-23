@@ -267,9 +267,23 @@ $(document).on('click', '#btnSalvarParecer', function() { // Enviar e-mail
 });
 
 $(document).on('click', '.editComment', function() { // Enviar e-mail
-    let comentario = $(this).closest("li.collection-item").find("p").text();
+
+
+	function ajustarAlturaTextarea() {
+		let textarea = $("#messageTextComment")[0];
+		textarea.style.height = "auto"; // Redefinir a altura para auto
+		textarea.style.height = textarea.scrollHeight + "px"; // Definir a altura com base no conteúdo
+	}
+	
+    let comentario = $(this).closest("li.collection-item").find("p").html();
+	
+	
+	comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
 	console.log(comentario);
 	$("#messageTextComment").val(comentario);
+	
+	ajustarAlturaTextarea();
+	
 	$("#messageTextComment").attr("message_id",$(this).attr("comment"));
 	
 	

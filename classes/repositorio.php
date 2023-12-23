@@ -23,8 +23,6 @@ function getUsuarios($id=1){
 	return $dados;
 }
 
-
-
 function getUsuario($login){
 	$sql  = " SELECT id, email, nome, status, unidade, senha, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
@@ -387,7 +385,6 @@ function upsertEstacionamento($dados) {
     }
 }
 
-
 function upsertRecurso($dados) {
     // Verifique se os campos obrigatórios estão presentes
     if (!isset($dados['unidade'], $dados['bloco'], $dados['numero'], $dados['fase'])) {
@@ -509,7 +506,6 @@ function getEstacionamento($bloco, $unidade){
 		}
 		return $r;
 }
-
 
 function upsertVoto($dados) {
     $id_recurso = $dados['idRec'];
