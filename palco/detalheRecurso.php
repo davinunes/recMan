@@ -135,7 +135,13 @@ echo '<table class="striped">';
 				  </div>
 				</div>";
 foreach($historico as $h){
+	$votos = "";
 	// var_dump($result);
+	$rst = getVotos($h['numero_ano_virtual']);
+	// dump($rst);
+	foreach($rst as $v){
+		$votos .= $v['voto']."<br>";
+	}
 	$classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
 	echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
           data-numero="' . $h['numero_ano_virtual'] . '" 
@@ -152,6 +158,7 @@ foreach($historico as $h){
 		echo "<td>".$h['notificacao']."</td>";
 		echo "<td>".$h['assunto']."</td>";
 		echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
+		echo "<td>$votos</td>";
 
 	echo '</tr>';
 }

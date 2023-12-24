@@ -16,6 +16,7 @@
 		<a  href="index.php?pag=usuarios" class="btn">Usuarios</a>
 		<a  href="index.php?pag=perfil" class="btn">Perfil</a>
 		<a  href="index.php?pag=senha" class="btn">Mudar Senha</a>
+		<a  href="index.php?pag=tools" class="btn">Ferramentas</a>
 		<a id="logout" href="#" class="btn">Sair</a>
 	</li>
 </ul>

@@ -2,10 +2,10 @@
         <h3>Recursos</h3>
 		
 		<div class='row'>
-			<a class="btn left col s2"  	href="?concluidos=true" >Concluidos</a> 
 			<a class="btn left blue col s2" href="?concluidos=false" >Em aberto</a>
-			<a class="btn left blue col s2" href="?concluidos=false&resumo=true" >Resumo</a>
-			<a class="btn right col s2" 	href="index.php?pag=novoRecurso" >Novo Recurso</a>
+			<a class="btn left teal col s2" href="?concluidos=false&resumo=true" >Resumo</a>
+			<a class="btn left black col s2"  	href="?concluidos=true" >Concluidos</a> 
+			<a class="btn right orange col s2" 	href="index.php?pag=novoRecurso" >Novo Recurso</a>
 		</div>
 
                 <!-- Loop para exibir os recursos -->
@@ -73,33 +73,33 @@ if($gmail["status"] && $gmail["resta"] > 59){
 										
 					// dump(DBQuery($sql1));
 					echo "<span id='corpoEmail'>";
-					$mensagem .=  "<p>Prezados, segue relação de notificações em tratamento pelo Conselho:\n</p>";
-					$mensagem .=   "<p><b>Em análise</b>:\n<br>";
+					$mensagem .=  "<p>Prezados, segue relação de notificações em tratamento pelo Conselho:</p>";
+					$mensagem .=   "<p><b>Em análise</b>:<br>";
 					foreach(DBQuery($sql1) as $analise){
-						$mensagem .=   $analise['numero']."\n<br>";
+						$mensagem .=   $analise['numero']."<br>";
 					}
 					$mensagem .=   "</p>";
-					$mensagem .=   "<p><b>Recomendamos Manter a notificação</b>:\n<br>";
+					$mensagem .=   "<p><b>Recomendamos Manter a notificação</b>:<br>";
 					foreach(DBQuery($sql2) as $analise){
-						$mensagem .=   $analise['numero']."\n<br>";
+						$mensagem .=   $analise['numero']."<br>";
 						// dump($analise);
 					}
 					$mensagem .=   "</p>";
-					$mensagem .=   "<p><b>Recomendamos Revogar a notificação</b>:\n<br>";
+					$mensagem .=   "<p><b>Recomendamos Revogar a notificação</b>:<br>";
 					foreach(DBQuery($sql3) as $analise){
-						$mensagem .=   $analise['numero']."\n<br>";
+						$mensagem .=   $analise['numero']."<br>";
 						// dump($analise);
 					}
 					$mensagem .=   "</p>";
-					$mensagem .=   "<p><b>Recomendamos Converter a notificação em Advertência</b>:\n<br>";
+					$mensagem .=   "<p><b>Recomendamos Converter a notificação em Advertência</b>:<br>";
 					foreach(DBQuery($sql4) as $analise){
-						$mensagem .=   $analise['numero']."\n<br>";
+						$mensagem .=   $analise['numero']."<br>";
 						// dump($analise);
 					}
 					$mensagem .=   "</p>";
-					$mensagem .=   "<p>Atenciosamente,\n<br>Membros do Conselho Consultivo e Fiscal\n</p>";
+					$mensagem .=   "<p>Atenciosamente,<br>Membros do Conselho Consultivo e Fiscal</p>";
 						
-					echo $mensagem;
+					// echo $mensagem;
 					
 					echo "</span>";
 					
@@ -115,17 +115,17 @@ if($gmail["status"] && $gmail["resta"] > 59){
 					$mime .= "Content-Type: text/html; charset=UTF-8\n";
 					$mime .= "to: ".$destinatarios."\n";
 					$mime .= "cc: ".$cc."\n";
-					$mime .= "bcc: ".$bcc."\n";
+					// $mime .= "bcc: ".$bcc."\n";
 					$mime .= "subject: $assunto"."\n"."\n";
 
 					$mime .= $mensagem."\n";
 
 					
-					echo "<details><summary>Visualizar metadados do e-mail</summary>";
+					// echo "<details><summary>Visualizar prévia do e-mail</summary>";
 					echo "<pre id='mime'>";
 					echo $mime;
 					echo "</pre>";
-					echo "</details>";
+					// echo "</details>";
 					
 					// echo "<a class='btn' id='EnviaRelatorioJuridico'>Enviar e-mail ao Juridico</a>";
 				}else{

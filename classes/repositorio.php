@@ -172,7 +172,8 @@ function getVotos($recurso) {
     $sql = "SELECT v.id, v.id_recurso, v.id_usuario, v.voto, v.data, u.nome, u.avatar
             FROM conselho.votos v
             LEFT JOIN conselho.usuarios u ON u.id = v.id_usuario 
-            WHERE v.id_recurso = '$recurso'";
+			left join conselho.recurso r on r.id = v.id_recurso
+            WHERE v.id_recurso = '$recurso' or r.numero = '$recurso'";
 
     $result = DBExecute($sql);
     $dados = array();

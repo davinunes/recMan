@@ -33,7 +33,6 @@ $esseUsuario = $_SESSION["user_id"];
 $meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
 
-
 switch($_GET['pag']){
 	case "recurso":
 		include "palco/detalheRecurso.php";
@@ -59,9 +58,22 @@ switch($_GET['pag']){
 	case "editarRecurso":
 		include "forms/atualizarRecurso.php";
 		break;
+	case "tools":
+		include "palco/tools.php";
+		break;
 	default:
 		include "palco/listaRecursos.php";
 		
+}
+
+require_once "classes/repositorio.php";
+$gmail = verificarToken();
+$token = $gmail["tkn"];
+				
+if($gmail["status"] && $gmail["resta"] > 59){
+	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
+}else{
+	include("/var/www/html/gmail/refresh.php");
 }
 
 ?>
