@@ -1,12 +1,12 @@
 <div class="container">
-        <h3>Recursos</h3>
-		
-		<div class='row'>
-			<a class="btn left blue col s2" href="?concluidos=false" >Em aberto</a>
-			<a class="btn left teal col s2" href="?concluidos=false&resumo=true" >Resumo</a>
-			<a class="btn left black col s2"  	href="?concluidos=true" >Concluidos</a> 
-			<a class="btn right orange col s2" 	href="index.php?pag=novoRecurso" >Novo Recurso</a>
-		</div>
+	<h3>Recursos</h3>
+	
+	<div class='row'>
+		<a class="btn left blue col s2" href="?concluidos=false" >Em aberto</a>
+		<a class="btn left teal col s2" href="?concluidos=false&resumo=true" >Resumo</a>
+		<a class="btn left black col s2"  	href="?concluidos=true" >Concluidos</a> 
+		<a class="btn right orange col s2" 	href="index.php?pag=novoRecurso" >Novo Recurso</a>
+	</div>
 
                 <!-- Loop para exibir os recursos -->
                 <?php
@@ -15,16 +15,16 @@
 				$gmail = verificarToken();
 				$token = $gmail["tkn"];
 				
-if($gmail["status"] && $gmail["resta"] > 59){
-	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
-}else{
-	// echo "Não temos token Gmail!<br/>";
-	// echo "Clique no Link para obter um Token!<br/>";
-	// echo "É necessário o token para enviar e-mails!<br/>";
-	// echo "Se abrir uma tela solicitando logar com google, logue apenas com a conta do conselho!<br/>";
-	// echo "<a class='btn' target='_blank' href='/gmail/checkToken.php'>Obter Token</a>";
-	include("/var/www/html/gmail/refresh.php");
-}
+				if($gmail["status"] && $gmail["resta"] > 59){
+					// echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
+				}else{
+					// echo "Não temos token Gmail!<br/>";
+					// echo "Clique no Link para obter um Token!<br/>";
+					// echo "É necessário o token para enviar e-mails!<br/>";
+					// echo "Se abrir uma tela solicitando logar com google, logue apenas com a conta do conselho!<br/>";
+					// echo "<a class='btn' target='_blank' href='/gmail/checkToken.php'>Obter Token</a>";
+					include("/var/www/html/gmail/refresh.php");
+				}
 				
                 if($_GET[concluidos] == "true"){
 					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.data";
@@ -237,4 +237,4 @@ if($gmail["status"] && $gmail["resta"] > 59){
                 ?>
 
 		
-    </div>
+</div>

@@ -71,7 +71,7 @@ $gmail = verificarToken();
 $token = $gmail["tkn"];
 				
 if($gmail["status"] && $gmail["resta"] > 59){
-	echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
+	echo $gmail['resta']."s<br/>";
 }else{
 	include("/var/www/html/gmail/refresh.php");
 }
