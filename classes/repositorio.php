@@ -202,6 +202,21 @@ function getNotificacoes($unidade, $torre) {
     return $dados;
 }
 
+function getAllNotificacoes() {
+    $sql = "select * from notificacoes ";
+
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
 function buscaNotificacoes($numero=1, $ano=2023) {
     $sql = "select * from notificacoes where numero='$numero' and ano='$ano'";
 	// echo $sql;

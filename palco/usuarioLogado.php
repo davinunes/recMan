@@ -11,8 +11,9 @@
 		</div>
 	</li>
     <li>
-		<a  href="index.php" class="btn">Recursos</a>
 		<a  href="index.php?pag=novoRecurso" class="btn">Novo Recurso</a>
+		<a  href="index.php" class="btn">Recursos</a>
+		<a  href="index.php?pag=planilhaSolucoes" class="btn">Lista Soluções</a>
 		<a  href="index.php?pag=usuarios" class="btn">Usuarios</a>
 		<a  href="index.php?pag=perfil" class="btn">Perfil</a>
 		<a  href="index.php?pag=senha" class="btn">Mudar Senha</a>

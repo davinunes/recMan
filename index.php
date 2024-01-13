@@ -58,6 +58,9 @@ switch($_GET['pag']){
 	case "editarRecurso":
 		include "forms/atualizarRecurso.php";
 		break;
+	case "planilhaSolucoes":
+		include "palco/planSoluc.php";
+		break;
 	case "tools":
 		include "palco/tools.php";
 		break;

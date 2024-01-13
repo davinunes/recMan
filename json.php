@@ -12,9 +12,9 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
     if ($dataArray !== null) {
         // Agora você pode usar os dados contidos no array $dataArray
         foreach ($dataArray as $linha) {
+			$linha["ano"] = "20" . substr(explode(".", $linha["numero"])[1], 0, 2);
             $linha["numero"] = explode(".", $linha["numero"])[0];
             $linha["numero"] = intval($linha["numero"]);
-            $linha["ano"] = "2023";
             $linha["unidade"] = intval($linha["unidade"]);
             $linha["data_email"] = date("Y-m-d", strtotime($linha["data_email"]));
             $linha["data_envio"] = date("Y-m-d", strtotime($linha["data_envio"]));

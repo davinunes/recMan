@@ -1,4 +1,24 @@
 $(document).ready(function(){
+	
+	if (window.screen.orientation.type.includes("portrait")) {
+		console.log("Monitor na orientação vertical");
+		// Remove a classe "container" e adiciona o atributo "data-custom" ao elemento
+		$(".container").removeClass("container").addClass("exContainer");
+
+	} else {
+		console.log("Monitor na orientação horizontal");
+		$(".exContainer").removeClass("exContainer").addClass("container");
+	}
+
+	if (window.innerHeight > window.innerWidth) {
+		console.log("Monitor na orientação vertical");
+		$(".container").removeClass("container").addClass("exContainer");
+	} else {
+		console.log("Monitor na orientação horizontal");
+		$(".exContainer").removeClass("exContainer").addClass("container");
+	}
+
+	
 	$('select').formSelect();
 	$('.modal').modal();
 	$('.chips').chips();
@@ -8,7 +28,47 @@ $(document).ready(function(){
         paging: false, // Desativa a paginação
 		"order": [
 			[3, 'desc'] // Ordenação inicial pela primeira coluna em ordem ascendente
-		]
+		],
+		dom: '<"top"fl>rt<"bottom"ip><"clear">',
+		language: {
+			search: "Pesquisar:",
+			lengthMenu: "Mostrar _MENU_ resultados por página",
+			info: "Mostrando _START_ a _END_ de _TOTAL_ resultados",
+			infoEmpty: "Mostrando 0 a 0 de 0 resultados",
+			infoFiltered: "(filtrado de _MAX_ resultados no total)",
+			paginate: {
+				first: "Primeira",
+				previous: "Anterior",
+				next: "Próxima",
+				last: "Última"
+			}
+		}
+    });
+	$('#listaSolucoes').DataTable({
+        searching: true, // Oculta o campo de busca
+        paging: true, // Desativa a paginação
+		"order": [
+			[1, 'asc'],
+			[0, 'asc']
+		],
+		dom: '<"top"lf>rt<"bottom"ip><"clear">',
+		language: {
+			search: "Pesquisar:",
+			lengthMenu: "Mostrar _MENU_ resultados por página",
+			info: "Mostrando _START_ a _END_ de _TOTAL_ resultados",
+			infoEmpty: "Mostrando 0 a 0 de 0 resultados",
+			infoFiltered: "(filtrado de _MAX_ resultados no total)",
+			paginate: {
+				first: "Primeira",
+				previous: "Anterior",
+				next: "Próxima",
+				last: "Última"
+			},
+			initComplete: function () {
+				// Adiciona estilo para posicionar a caixa de pesquisa à esquerda
+				$('.dataTables_filter').css('text-align', 'left');
+			}
+		}
     });
 	
 	$('#avatar').on('change', function() {
