@@ -168,13 +168,55 @@ function getMensagens($recurso) {
     return $dados;
 }
 
+function getEstatisticas($mes = null, $ano = null) {
+    // Se $ano não for fornecido, define-o como o ano atual
+    if ($ano === null) {
+        $ano = date('Y');
+    }
+
+    // Se $mes não for fornecido ou for 0, não aplicamos o filtro de mês
+    if ($mes === null || $mes == 0) {
+        $mesFiltro = ''; // Deixa $mesFiltro vazio para não aplicar o filtro de mês
+    } else {
+        $mesFiltro = "AND MONTH(data) = '$mes'";
+    }
+
+    $sql = "SELECT conclusao, COUNT(*) as total_pareceres, GROUP_CONCAT(id) as lista_ids
+            FROM conselho.parecer
+            WHERE YEAR(data) = '$ano' $mesFiltro
+            GROUP BY conclusao";
+
+    // dump($sql);
+    $result = DBExecute($sql);
+    $dados = array(); // Inicializa a variável $dados como um array vazio
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+
 function getVotos($recurso) {
+    // Verifica se o valor contém uma barra ("/")
+    if (strpos($recurso, '/') !== false) {
+        // Se contiver barra, pesquisar por r.numero
+        $campo = 'r.numero';
+    } else {
+        // Caso contrário, pesquisar por v.id_recurso
+        $campo = 'v.id_recurso';
+    }
+
     $sql = "SELECT v.id, v.id_recurso, v.id_usuario, v.voto, v.data, u.nome, u.avatar
             FROM conselho.votos v
             LEFT JOIN conselho.usuarios u ON u.id = v.id_usuario 
-			left join conselho.recurso r on r.id = v.id_recurso
-            WHERE v.id_recurso = '$recurso' or r.numero = '$recurso'";
+            LEFT JOIN conselho.recurso r ON r.id = v.id_recurso
+            WHERE $campo = '$recurso'";
 
+    // dump($sql);
     $result = DBExecute($sql);
     $dados = array();
 
@@ -186,6 +228,8 @@ function getVotos($recurso) {
 
     return $dados;
 }
+
+
 
 function getNotificacoes($unidade, $torre) {
     $sql = "select * from notificacoes where unidade = $unidade and torre = '$torre'";

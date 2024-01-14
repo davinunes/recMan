@@ -16,6 +16,7 @@
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
   <script src="clip.js"></script>
   <script defer src="meu.js?<?php echo time();?>"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
 
 </head>
 
@@ -63,6 +64,9 @@ switch($_GET['pag']){
 		break;
 	case "tools":
 		include "palco/tools.php";
+		break;
+	case "estatisticas":
+		include "palco/estatisticas.php";
 		break;
 	default:
 		include "palco/listaRecursos.php";
