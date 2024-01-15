@@ -107,7 +107,7 @@
 					//Dados do e-mail a ser enviado:
 					$assunto = "Relação de Notificações com o Conselho";
 					$assunto = "=?UTF-8?B?".base64_encode($assunto)."?=";
-					$destinatarios = "admcond@solucoesdf.com.br, erisvaldo.soares@solucoesdf.com.br";
+					$destinatarios = "juridico@solucoesdf.com.br, admcond@solucoesdf.com.br, erisvaldo.soares@solucoesdf.com.br";
 					// $destinatarios = "davi.nunes@gmail.com";
 					$cc = "sindicogeral.miami@gmail.com";
 					// $bcc = "admcond@solucoesdf.com.br";
@@ -127,7 +127,7 @@
 					echo "</pre>";
 					// echo "</details>";
 					
-					// echo "<a class='btn' id='EnviaRelatorioJuridico'>Enviar e-mail ao Juridico</a>";
+					echo "<a class='btn' id='EnviaRelatorioJuridico'>Enviar e-mail ao Juridico</a>";
 				}else{
 					
 					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id != 5 order by r.data";

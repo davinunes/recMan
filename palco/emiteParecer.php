@@ -55,7 +55,6 @@ if(!$temParecer){ //Se não tem Parecer
 $parecer = getParecer($_GET['rec']);
 $parecerJaFoiEnviado = $parecer["concluido"] == 1 ? true : false;
 
-// dump($parecer);
 
 $pdf['notificacao'] = $parecer["id"];
 $pdf['unidade'] = $parecer["unidade"];
@@ -65,6 +64,7 @@ $pdf['analise'] = $parecer["analise"];
 $pdf['resultado'] = $parecer["resultado"];
 $pdf['parecer'] = $parecer["conclusao"];
 
+// dump($pdf);
 //Dados do e-mail a ser enviado:
 $assunto = "Parecer do Conselho ".$parecer["id"];
 $destinatarios = $result["email"];
@@ -142,6 +142,7 @@ if(!$parecerJaFoiEnviado) echo "<a class='btn blue right' id='btnAlterarParecer'
 if($parecerJaFoiEnviado) {
 	$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
 	echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
+	echo " <a class='btn blue' href='index.php'>Voltar para Recursos</a>";
 }
 
 ?>

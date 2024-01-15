@@ -13,8 +13,9 @@ $campoAgrupamento = ($totalizacao == 'por_assunto') ? 'assunto' : 'torre';
 
 // Consulta SQL
 $sql = "SELECT
-            $campoAgrupamento AS chave_agrupado,
-            COUNT(*) as total_por_agrupado
+            UPPER($campoAgrupamento) AS chave_agrupado,
+            SUM(CASE WHEN UPPER(notificacao) = 'MULTA' THEN 1 ELSE 0 END) as total_multas,
+            SUM(CASE WHEN UPPER(notificacao) = 'ADVERTENCIA' THEN 1 ELSE 0 END) as total_advertencias
         FROM notificacoes
         WHERE ano = $anoSelecionado
         GROUP BY chave_agrupado
@@ -30,7 +31,8 @@ $dadosFormatados = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $dadosFormatados[] = [
         'name' => $row['chave_agrupado'],
-        'y' => (int)$row['total_por_agrupado']
+        'multas' => (int)$row['total_multas'],
+        'advertencias' => (int)$row['total_advertencias']
     ];
 }
 // dump();
@@ -105,7 +107,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 }
             },
             legend: {
-                enabled: false
+                enabled: true
             },
             plotOptions: {
                 bar: {
@@ -115,6 +117,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                     shadow: false
                 },
                 series: {
+					stacking: 'normal',
                     dataLabels: {
                         enabled: true,
                         format: '{point.y}',
@@ -126,10 +129,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                 }
             },
             series: [{
-                name: 'Agrupamento',
-                colorByPoint: true,
-                data: dados
-            }]
+				name: 'Multas',
+				color: 'red',
+				data: dados.map(item => ({ name: item.name, y: item.multas })),
+			}, {
+				name: 'Advertências',
+				color: 'green',
+				data: dados.map(item => ({ name: item.name, y: item.advertencias })),
+			}]
         });
     </script>
 </div>
