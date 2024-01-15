@@ -4,20 +4,21 @@ require "classes/repositorio.php";
 // Obtenha o ano atual
 $anoAtual = date('Y');
 
-// Inicialize a variável $anoSelecionado
+// Inicialize as variáveis $anoSelecionado e $totalizacao
 $anoSelecionado = isset($_POST['ano']) ? $_POST['ano'] : $anoAtual;
+$totalizacao = isset($_POST['totalizacao']) ? $_POST['totalizacao'] : 'por_assunto';
+
+// Escolha os campos de agrupamento com base na opção escolhida
+$campoAgrupamento = ($totalizacao == 'por_assunto') ? 'assunto' : 'torre';
 
 // Consulta SQL
 $sql = "SELECT
-            CASE
-                WHEN assunto IS NULL THEN 'Não Especificado'
-                ELSE assunto
-            END AS assunto_agrupado,
-            COUNT(*) as total_por_assunto
+            $campoAgrupamento AS chave_agrupado,
+            COUNT(*) as total_por_agrupado
         FROM notificacoes
         WHERE ano = $anoSelecionado
-        GROUP BY assunto_agrupado
-        ORDER BY total_por_assunto DESC LIMIT 15";
+        GROUP BY chave_agrupado
+        ORDER BY $campoAgrupamento DESC";
 
 // Executa a consulta
 $result = DBExecute($sql);
@@ -28,14 +29,15 @@ $dadosFormatados = [];
 // Loop através dos resultados da consulta
 while ($row = mysqli_fetch_assoc($result)) {
     $dadosFormatados[] = [
-        'name' => $row['assunto_agrupado'],
-        'y' => (int)$row['total_por_assunto']
+        'name' => $row['chave_agrupado'],
+        'y' => (int)$row['total_por_agrupado']
     ];
 }
+// dump();
 ?>
 
 <div class="container">
-    <!-- Adicione um formulário para escolher o ano -->
+    <!-- Adicione um formulário para escolher o ano e a totalização -->
     <form method="post" action="">
         <label for="ano">Escolha o ano:</label>
         <select name="ano" id="ano">
@@ -50,38 +52,49 @@ while ($row = mysqli_fetch_assoc($result)) {
             }
             ?>
         </select>
+
+        <label for="totalizacao">Totalizar por:</label>
+        <select name="totalizacao" id="totalizacao">
+            <option value="por_assunto" <?php echo $totalizacao == 'por_assunto' ? 'selected' : ''; ?>>Por Assunto</option>
+            <option value="por_torre" <?php echo $totalizacao == 'por_torre' ? 'selected' : ''; ?>>Por Torre</option>
+        </select>
+
         <button type="submit">Filtrar</button>
     </form>
 
     <!-- Adicione um contêiner para o gráfico -->
-    <div id="grafico"></div>
+    <div id="grafico" alturaIdeal="<?php echo max(sizeof($dadosFormatados) * 16, 400); ?>" style="height:500px!important;"></div>
 
     <!-- Adicione um script para criar o gráfico de barras -->
     <script>
         // Use PHP para injetar dados diretamente no script JavaScript
         var dados = <?php echo json_encode($dadosFormatados, JSON_PRETTY_PRINT); ?>;
-
-        // Função para ajustar dinamicamente a altura da área do gráfico
+		
+		// Função para ajustar dinamicamente a altura da área do gráfico
         function ajustarAlturaGrafico() {
-            var alturaJanela = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-            var alturaDesejada = Math.max(400, alturaJanela - 200); // Altura mínima de 400, ajuste conforme necessário
-            document.getElementById('grafico').style.height = alturaDesejada + 'px';
+            var alturaIdeal = document.getElementById('grafico').getAttribute('alturaIdeal');
+            document.getElementById('grafico').style.height = alturaIdeal + 'px';
         }
 
-        // Chame a função ao carregar a página e redimensionar a janela
+        // Chame a função ao carregar a página
         window.addEventListener('load', ajustarAlturaGrafico);
-        window.addEventListener('resize', ajustarAlturaGrafico);
+
+        $(document).ready(function () {
+			ajustarAlturaGrafico();
+		});
+
+		function ajustarAlturaGrafico() {
+			var alturaIdeal = $('#grafico').attr('alturaIdeal');
+			$('#grafico').height(alturaIdeal);
+		}
 
         // Crie o gráfico de barras usando Highcharts
         Highcharts.chart('grafico', {
             chart: {
                 type: 'bar',
-                scrollablePlotArea: {
-                    minHeight: 600 // Ajuste conforme necessário
-                }
             },
             title: {
-                text: 'Top 15 motivos das notificações (' + <?php echo $anoSelecionado; ?> + ')'
+                text: 'Notificações ' + (<?php echo $totalizacao == 'por_assunto' ? "'por Assunto'" : "'por Torre'"; ?>) + ' (' + <?php echo $anoSelecionado; ?> + ')'
             },
             xAxis: {
                 type: 'category'
@@ -113,7 +126,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 }
             },
             series: [{
-                name: 'Assuntos',
+                name: 'Agrupamento',
                 colorByPoint: true,
                 data: dados
             }]
