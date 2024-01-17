@@ -10,4 +10,5 @@
 <a class='btn' target="_blank" href="git.php">GIT</a>
 <a class='btn' target="_blank" href="gmail/getToken.php">Novo Token Gmail</a>
 <a class='btn' target="_blank" href="gmail/refresh.php">Atualizar Token Gmail</a>
+<a class='btn' target="_blank" href="tools/datasRetirada.php">Cadastrar datas de retiradas </a>
 </div>

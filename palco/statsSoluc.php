@@ -65,7 +65,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     </form>
 
     <!-- Adicione um contêiner para o gráfico -->
-    <div id="grafico" alturaIdeal="<?php echo max(sizeof($dadosFormatados) * 16, 400); ?>" style="height:500px!important;"></div>
+    <div id="grafico" alturaIdeal="<?php echo max(sizeof($dadosFormatados) * 30, 400); ?>" style="height:500px!important;"></div>
 
     <!-- Adicione um script para criar o gráfico de barras -->
     <script>

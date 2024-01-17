@@ -247,7 +247,21 @@ function getNotificacoes($unidade, $torre) {
 }
 
 function getAllNotificacoes() {
-    $sql = "select * from notificacoes ";
+    $sql = "select n.numero
+					,n.torre
+					,n.unidade
+					,n.data_email
+					,n.data_envio
+					,n.data_ocorrido
+					,n.assunto
+					,n.notificacao
+					,n.ano
+					,n.numero_ano_virtual
+					,n.cobranca
+					,n.status
+					,n.obs
+					,d.dia_retirada 
+	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual ";
 
     $result = DBExecute($sql);
     $dados = array();
@@ -381,6 +395,51 @@ function trocaSenha($dados) {
         return "erro";
     }
 }
+
+function upsertDatasDeRetirada($dados) {
+    // Verifique se os campos obrigatórios estão presentes
+    if (!isset($dados['notificacao'], $dados['ano'])) {
+        return "Campos obrigatórios 'notificacao' e 'ano' não estão preenchidos.";
+    }
+
+    // Converta a data para o formato adequado
+    $timestamp = strtotime($dados['dia_retirada']);
+    $dados['dia_retirada'] = date('Y-m-d', $timestamp);
+	
+	// Verifique se o valor de 'apartamento' está no intervalo desejado
+    $apartamento = (int) $dados['apartamento'];
+    if ($apartamento < 101 || $apartamento > 1912) {
+        return "O valor de 'apartamento' deve estar entre 101 e 1912.";
+    }
+
+    // Construa a consulta SQL de inserção/atualização
+    $fields = implode(', ', array_keys($dados));
+    $values = implode(', ', array_map(function ($value) {
+        return $value !== null ? "'" . DBEscape($value) . "'" : 'NULL';
+    }, $dados));
+
+    $sql = "INSERT INTO DatasDeRetirada ($fields) VALUES ($values) ";
+    $sql .= "ON DUPLICATE KEY UPDATE ";
+
+    foreach ($dados as $key => $value) {
+        if ($value !== null && $key !== 'notificacao' && $key !== 'ano') {
+            $sql .= "$key = '$value', ";
+        }
+    }
+
+    // Remova a última vírgula e espaço desnecessários
+    $sql = rtrim($sql, ', ');
+    
+    // dump($sql);
+
+    // Execute a consulta
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "Erro na execução da consulta.";
+    }
+}
+
 
 function upsertNotificacao($dados) {
     // Verifique se os campos obrigatórios estão presentes
