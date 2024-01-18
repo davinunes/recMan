@@ -1,5 +1,5 @@
 <?php
-    require("/var/www/html/classes/repositorio.php");
+    require_once("/var/www/html/classes/repositorio.php");
 
     switch($_GET['metodo']) {
         case "novoUsuario":
@@ -140,6 +140,18 @@
 						
 			$response = upsertRecurso($dados);
 			echo $response;
+            break;
+		case "atualizaDataRetiradaNotificacao":
+			session_start();
+            $dados = $_POST;
+			$aux = explode("/", $dados['virtual']);
+			$data['notificacao'] = $aux[0];
+			$data['ano'] = $aux[1];
+			$data['dia_retirada'] = $dados['dia_retirada'];
+						
+			$try = upsertDatasDeRetirada($data);
+			if ($try === "ok") echo "success";
+			// dump($try);
             break;
 		case "logon":
             $dados = $_POST;

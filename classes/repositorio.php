@@ -261,7 +261,76 @@ function getAllNotificacoes() {
 					,n.status
 					,n.obs
 					,d.dia_retirada 
-	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual ";
+	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual order by n.ano asc, n.numero desc";
+
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+function getNotificacoesByDate($inicio, $fim, $coluna) {
+    $sql = "select n.numero
+					,n.torre
+					,n.unidade
+					,n.data_email
+					,n.data_envio
+					,n.data_ocorrido
+					,n.assunto
+					,n.notificacao
+					,n.ano
+					,n.numero_ano_virtual
+					,n.cobranca
+					,n.status
+					,n.obs
+					,d.dia_retirada 
+	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual 
+	where $coluna  BETWEEN '$inicio' AND '$fim'
+	order by n.ano asc, n.numero desc";
+
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+function getNotificacoesByDateWithStatus($inicio, $fim, $coluna) {
+    $sql = "SELECT 
+                n.numero,
+                n.torre,
+                n.unidade,
+                n.data_email,
+                n.data_envio,
+                n.data_ocorrido,
+                n.assunto,
+                n.notificacao,
+                n.ano,
+                n.numero_ano_virtual,
+                n.cobranca,
+                n.status,
+                n.obs,
+                d.dia_retirada,
+                (SELECT COUNT(*) FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso,
+                (SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
+            FROM 
+                notificacoes n 
+                LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
+            WHERE 
+                $coluna BETWEEN '$inicio' AND '$fim'
+            ORDER BY 
+                n.ano ASC, n.numero DESC";
 
     $result = DBExecute($sql);
     $dados = array();
@@ -397,6 +466,7 @@ function trocaSenha($dados) {
 }
 
 function upsertDatasDeRetirada($dados) {
+	// dump($dados);
     // Verifique se os campos obrigatórios estão presentes
     if (!isset($dados['notificacao'], $dados['ano'])) {
         return "Campos obrigatórios 'notificacao' e 'ano' não estão preenchidos.";
@@ -407,10 +477,13 @@ function upsertDatasDeRetirada($dados) {
     $dados['dia_retirada'] = date('Y-m-d', $timestamp);
 	
 	// Verifique se o valor de 'apartamento' está no intervalo desejado
-    $apartamento = (int) $dados['apartamento'];
-    if ($apartamento < 101 || $apartamento > 1912) {
-        return "O valor de 'apartamento' deve estar entre 101 e 1912.";
-    }
+	if(isset($apartamento)){
+		$apartamento = (int) $dados['apartamento'];
+		if ($apartamento < 101 || $apartamento > 1912) {
+			return "O valor de 'apartamento' deve estar entre 101 e 1912.";
+		}
+		
+	}
 
     // Construa a consulta SQL de inserção/atualização
     $fields = implode(', ', array_keys($dados));

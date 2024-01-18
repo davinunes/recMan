@@ -740,6 +740,43 @@ $(document).on('submit', '#atualizarRecursoForm', function(e) {
         });
 });
 
+$(document).on('dblclick', '.edit-retirado', function(e) {
+	var id = $(this).data('id');
+	var originalValue = $(this).text();
+	var formattedDate = originalValue.split('/').reverse().join('-');
+	
+	// Substituir a célula pelo input
+	$(this).html('<input type="date" class="edit-retirado-input" value="' + formattedDate  + '">');
+	$('.edit-retirado-input').focus();
+	
+	// Adicionar evento para tratar Enter e perda de foco
+	$('.edit-retirado-input').on('blur keypress', function (e) {
+		if (e.type === 'blur' || (e.type === 'keypress' && e.which === 13)) {
+			var newValue = $(this).val();
+
+			// Enviar dados para o servidor usando AJAX
+			$.ajax({
+				url: 'metodo.php?metodo=atualizaDataRetiradaNotificacao',
+				method: 'POST',
+				data: { virtual: id, dia_retirada: newValue },
+				success: function (response) {
+					M.toast({html: response, classes: 'rounded'});
+					// Atualizar a célula com o novo valor se a atualização for bem-sucedida
+					if (response === 'success') {
+						$('.edit-retirado[data-id="' + id + '"]').text(newValue);
+					} else {
+						// Lidar com erros, se necessário
+						console.log('Erro ao atualizar');
+					}
+				},
+				error: function () {
+					console.log('Erro de requisição AJAX');
+				}
+			});
+		}
+	});
+});
+
 function ajustaValores(data) {
 	console.log(data);
     let bloco = $("#bloco");
