@@ -307,11 +307,24 @@ function getNotificacoesByDate($inicio, $fim, $coluna) {
 }
 
 function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
-	if($tipo == "tudo"){
-		$tipo = "";
-	}else{
-		$tipo = "AND n.notificacao = '$tipo'";
-	}
+    // Inicializa a parte da consulta relacionada às datas como uma string vazia
+    $dataFilter = "";
+
+    // Verifica se as datas foram fornecidas
+    if (!empty($inicio) && !empty($fim)) {
+        $dataFilter = "AND $coluna BETWEEN '$inicio' AND '$fim'";
+    }
+
+    // Converte o tipo para a condição WHERE adequada
+    if ($tipo == "tudo") {
+        $tipoFilter = "";
+    } else if($tipo == "NULL"){
+		$tipoFilter = "AND n.notificacao is NULL";
+	}else {
+        $tipoFilter = "AND n.notificacao = '$tipo'";
+    }
+
+    // Monta a consulta SQL com as condições
     $sql = "SELECT 
                 n.numero,
                 n.torre,
@@ -333,9 +346,11 @@ function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
                 notificacoes n 
                 LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
             WHERE 
-                $coluna BETWEEN '$inicio' AND '$fim' $tipo
+                1=1 $dataFilter $tipoFilter
             ORDER BY 
                 n.ano ASC, n.numero DESC";
+	
+	// dump($sql);
 
     $result = DBExecute($sql);
     $dados = array();
@@ -348,6 +363,7 @@ function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
 
     return $dados;
 }
+
 
 function buscaNotificacoes($numero=1, $ano=2023) {
     $sql = "select * from notificacoes where numero='$numero' and ano='$ano'";

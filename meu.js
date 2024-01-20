@@ -31,44 +31,29 @@ $(document).ready(function(){
 		],
 		dom: '<"top"fl>rt<"bottom"ip><"clear">',
 		language: {
-			search: "Pesquisar:",
-			lengthMenu: "Mostrar _MENU_ resultados por página",
-			info: "Mostrando _START_ a _END_ de _TOTAL_ resultados",
-			infoEmpty: "Mostrando 0 a 0 de 0 resultados",
-			infoFiltered: "(filtrado de _MAX_ resultados no total)",
-			paginate: {
-				first: "Primeira",
-				previous: "Anterior",
-				next: "Próxima",
-				last: "Última"
-			}
+			url:"datatable_br.json"
 		}
     });
 	$('#listaSolucoes').DataTable({
         searching: true, // Oculta o campo de busca
         paging: true, // Desativa a paginação
 		"order": [
-			[1, 'asc'],
+			[1, 'desc'],
 			[0, 'asc']
 		],
+		pageLength: 25,
+		"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tudo"]], // permite listar todos os itens
 		dom: '<"top"lf>rt<"bottom"ip><"clear">',
 		language: {
-			search: "Pesquisar:",
-			lengthMenu: "Mostrar _MENU_ resultados por página",
-			info: "Mostrando _START_ a _END_ de _TOTAL_ resultados",
-			infoEmpty: "Mostrando 0 a 0 de 0 resultados",
-			infoFiltered: "(filtrado de _MAX_ resultados no total)",
-			paginate: {
-				first: "Primeira",
-				previous: "Anterior",
-				next: "Próxima",
-				last: "Última"
-			},
+			url:"datatable_br.json"
+		},
 			initComplete: function () {
-				// Adiciona estilo para posicionar a caixa de pesquisa à esquerda
-				$('.dataTables_filter').css('text-align', 'left');
-			}
-		}
+                // Adiciona estilo para posicionar a caixa de pesquisa à esquerda
+                $('.dataTables_filter').css('text-align', 'left');
+                
+                // Ajusta a altura das linhas após a inicialização
+                $('.dataTables_filter tbody tr').css('height', '5px');
+            }
     });
 	
 	$('#avatar').on('change', function() {

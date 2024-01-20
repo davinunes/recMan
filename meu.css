@@ -20,6 +20,10 @@
 	border-bottom:1px solid teal!important;
 }
 
+#listaSolucoes td{
+	padding: 1px!important;
+}
+
 .chip {
   white-space: nowrap; /* Impede quebrar linhas */
   overflow: hidden; /* Oculta qualquer conteúdo que transborde */
