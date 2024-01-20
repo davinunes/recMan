@@ -306,7 +306,12 @@ function getNotificacoesByDate($inicio, $fim, $coluna) {
     return $dados;
 }
 
-function getNotificacoesByDateWithStatus($inicio, $fim, $coluna) {
+function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
+	if($tipo == "tudo"){
+		$tipo = "";
+	}else{
+		$tipo = "AND n.notificacao = '$tipo'";
+	}
     $sql = "SELECT 
                 n.numero,
                 n.torre,
@@ -328,7 +333,7 @@ function getNotificacoesByDateWithStatus($inicio, $fim, $coluna) {
                 notificacoes n 
                 LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
             WHERE 
-                $coluna BETWEEN '$inicio' AND '$fim'
+                $coluna BETWEEN '$inicio' AND '$fim' $tipo
             ORDER BY 
                 n.ano ASC, n.numero DESC";
 

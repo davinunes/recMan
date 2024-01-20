@@ -1,3 +1,7 @@
+<?php
+require "classes/repositorio.php";
+
+?>
 
 <div class="row">
     <form id="filtro-form" action="index.php?pag=planilhaSolucoes">
@@ -20,6 +24,35 @@
                 <!-- Adicione outras opções conforme necessário -->
             </select>
         </div>
+<?php
+	$sqlTipos = "SELECT DISTINCT notificacao FROM notificacoes";
+    $resultTipos = DBExecute($sqlTipos);
+	$tiposDisponiveis = array();
+
+    if (mysqli_num_rows($resultTipos) > 0) {
+        while ($rowTipo = mysqli_fetch_assoc($resultTipos)) {
+            $tiposDisponiveis[] = $rowTipo['notificacao'];
+        }
+    }
+	
+	$tipoSelecionado = isset($_GET['tipo']) ? $_GET['tipo'] : 'tudo';
+
+function gerarOpcoesDinamicas($tiposDisponiveis, $tipoSelecionado = "tudo") {
+    echo "<option value='tudo' " . ($tipoSelecionado == 'tudo' ? 'selected' : '') . ">Tudo</option>";
+
+    foreach ($tiposDisponiveis as $tipo) {
+        $selected = ($tipo == $tipoSelecionado) ? 'selected' : '';
+        echo "<option value='$tipo' $selected>$tipo</option>";
+    }
+}
+
+?>
+        <div class="col s2">
+            <label for="tipo">Selecionar Tipo:</label>
+            <select id="tipo" name="tipo">
+                <?php gerarOpcoesDinamicas($tiposDisponiveis, $tipoSelecionado); ?>
+            </select>
+        </div>
         <div class="col s2">
             <button class="btn" id="aplicar-filtro">Aplicar Filtro</button>
         </div>
@@ -29,13 +62,13 @@
 
 
 <?php
-require "classes/repositorio.php";
 
-if(isset($_GET['data-inicio']) && isset($_GET['data-fim']) && isset($_GET['coluna-selecionada'])) {
+if(isset($_GET['data-inicio']) && isset($_GET['data-fim']) && isset($_GET['coluna-selecionada']) && isset($_GET['tipo'])) {
 	$dataInicio = $_GET['data-inicio'];
     $dataFim = $_GET['data-fim'];
     $colunaSelecionada = $_GET['coluna-selecionada'];
-	$lista = getNotificacoesByDateWithStatus($dataInicio, $dataFim, $colunaSelecionada);
+    $tipo = $_GET['tipo'];
+	$lista = getNotificacoesByDateWithStatus($dataInicio, $dataFim, $colunaSelecionada, $tipo);
 }else{
 	$lista = getAllNotificacoes();
 	
@@ -93,7 +126,7 @@ echo "</tr>";
 echo "</thead>";
 echo "<tbody>";
 foreach($lista as $item){
-	echo "<tr>";
+	echo "<tr data-id='{$item['numero']}/{$item['ano']}'>";
 		echo "<td>";
 			echo $item[numero];
 		echo "</td>";
