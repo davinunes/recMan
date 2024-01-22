@@ -41,8 +41,10 @@ if (curl_errno($ch)) {
         $expires_in = $tokenData['expires_in'];
         $scope = $tokenData['scope'];
         $token_type = $tokenData['token_type'];
+        $refresh_token = isset($tokenData['refresh_token']) ? $tokenData['refresh_token'] : "NULL";
+		
 		include("../classes/repositorio.php");
-		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
+		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type, $refresh_token)){
 			// echo $accessToken;
 			// header("Location: ../index.php");
 		}

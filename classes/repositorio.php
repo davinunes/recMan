@@ -664,11 +664,11 @@ function updateComentario($dados) {
     }
 }
 
-function upsertGmailToken($access_token, $expires_in, $scope, $token_type) {
+function upsertGmailToken($access_token, $expires_in, $scope, $token_type, $refresh_token = null) {
 
     $sql  = "INSERT INTO conselho.tokens  ";
-    $sql .= "(access_token, expires_in, scope, token_type) ";
-    $sql .= "VALUES ('$access_token', $expires_in, '$scope', '$token_type') ";
+    $sql .= "(access_token, expires_in, scope, token_type, refresh_token) ";
+    $sql .= "VALUES ('$access_token', $expires_in, '$scope', '$token_type', '$refresh_token') ";
     // $sql .= "ON DUPLICATE KEY UPDATE  ";
     // $sql .= "access_token = '$access_token',  ";
     // $sql .= "expires_in = $expires_in,  ";
@@ -814,6 +814,18 @@ function getLastTokenFromDatabase(){
 		$dados = mysqli_fetch_assoc($result);
 	}
 	return $dados;
+}
+// Função para obter o último token do banco
+function getLastRefreshTokenFromDatabase(){
+    $sql  = "SELECT refresh_token FROM conselho.tokens where refresh_token != 'NULL' ORDER BY id DESC LIMIT 1";
+	
+	$dados = null;  // Inicializa $dados como nulo
+	
+    $result	= DBExecute($sql);
+	if(mysqli_num_rows($result) > 0){
+		$dados = mysqli_fetch_assoc($result);
+	}
+	return $dados["refresh_token"];
 }
 
 // Função principal para verificar o token

@@ -1,6 +1,12 @@
 <?php
 
 include_once("/var/www/html/gmail/api.php");
+include_once("/var/www/html/classes/repositorio.php");
+
+$refresh_token = getLastRefreshTokenFromDatabase();
+
+// dump($refresh_token);
+// exit;
 
 $tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
@@ -36,7 +42,7 @@ if (curl_errno($ch)) {
         $scope = $tokenData['scope'];
         $token_type = $tokenData['token_type'];
 		include_once("/var/www/html/classes/repositorio.php");
-		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type)){
+		if(upsertGmailToken($accessToken, $expires_in, $scope, $token_type,"NULL")){
 			// echo $accessToken;
 			// header("Location: /index.php");
 		}
