@@ -26,6 +26,7 @@ $(document).ready(function(){
 	$('#listaRecursos').DataTable({
         searching: false, // Oculta o campo de busca
         paging: false, // Desativa a paginação
+		select: true,
 		"order": [
 			[3, 'desc'] // Ordenação inicial pela primeira coluna em ordem ascendente
 		],

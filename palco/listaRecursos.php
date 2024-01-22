@@ -150,7 +150,6 @@
 												<th>Fase</th>
 												<th><i class="material-icons">filter_9_plus</i></th> 
 												<th>Votos</th>
-												<th>e-mail</th>
 											</tr>
 										</thead>
 										<tbody>';
@@ -195,9 +194,9 @@
 							// $vt .= $v[nome].": ".$v[voto]."<br/>";
 							$vt .= '<div class="chip '.$classeVoto.'">';
 							$vt .= '<img src="'.$v[avatar].'" alt="Contact Person">';
-							$vt .= $v[voto];
+							// $vt .= $v[voto];
 							$vt .= '</div>';
-							$vt .= '<br/>';
+							// $vt .= '<br/>';
 						}
 						// var_dump($votos);
 						echo "<tr class='recurso $classe' rec='{$row['numero']}'>";
@@ -207,11 +206,11 @@
 						echo "<td>" . date('d/m/Y', strtotime($row['data'])) . "</td>";
 						echo "<td class='center-align'>" . calcularDiasPassados($row['data']) . "</td>";
 						echo "<td>{$row['titulo']}</td>";
-						echo "<td>{$row['texto']}</td>";
+						echo "<td>{$row['texto']}</td>"; //Fase
 						echo "<td>{$historico}</td>";
 						// var_dump($row);
 						echo "<td>{$vt}</td>";
-						echo "<td>{$row['email']}</td>";
+						// echo "<td>{$row['email']}</td>";
 						echo "</tr>";
 						
 						
