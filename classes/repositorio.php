@@ -232,7 +232,8 @@ function getVotos($recurso) {
 
 
 function getNotificacoes($unidade, $torre) {
-    $sql = "select * from notificacoes where unidade = $unidade and torre = '$torre'";
+    $sql = "select * from notificacoes where unidade = '$unidade' and torre = '$torre'";
+	// dump($sql);
 
     $result = DBExecute($sql);
     $dados = array();

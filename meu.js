@@ -37,7 +37,7 @@ $(document).ready(function(){
     });
 	$('#listaSolucoes').DataTable({
         searching: true, // Oculta o campo de busca
-        paging: true, // Desativa a paginação
+        paging: false, // Desativa a paginação
 		"order": [
 			[1, 'desc'],
 			[0, 'asc']
