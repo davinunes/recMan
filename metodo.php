@@ -141,6 +141,13 @@
 			$response = upsertRecurso($dados);
 			echo $response;
             break;
+		case "historicoPorUnidade":
+			session_start();
+            $dados = $_GET;
+						
+			$response = getNotificacoes($dados['unidade'], $dados['torre']);
+			echo json_encode($response);
+            break;
 		case "atualizaDataRetiradaNotificacao":
 			session_start();
             $dados = $_POST;

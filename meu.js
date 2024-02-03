@@ -763,6 +763,55 @@ $(document).on('dblclick', '.edit-retirado', function(e) {
 	});
 });
 
+$(document).on('click', '#buscaHistoricoUnidade', function(e) {
+	
+	var unidade = $("#unidade").val();
+	var bloco = $("#bloco").val();
+	
+	$.ajax({
+		url: 'metodo.php?metodo=historicoPorUnidade&unidade='+unidade+'&torre='+bloco,
+		method: 'POST',
+		data: "",
+		dataType: 'json',
+		success: function (response) {
+			// M.toast({html: response, classes: 'rounded'});
+			let tableHtml = jsonToTable(response);
+			console.log(tableHtml);
+			$('#listaRetorno1').html(tableHtml);
+			
+		},
+		error: function () {
+			console.log('Erro de requisição AJAX');
+		}
+	});
+});
+
+function jsonToTable(jsonData) {
+	console.log(jsonData);
+      var tableHtml = '<table border="1">';
+      
+      // Cabeçalho da tabela
+      tableHtml += '<thead><tr>';
+      for (var key in jsonData[0]) {
+        tableHtml += '<th>' + key + '</th>';
+      }
+      tableHtml += '</tr></thead>';
+
+      // Corpo da tabela
+      tableHtml += '<tbody>';
+      for (var i = 0; i < jsonData.length; i++) {
+        tableHtml += '<tr>';
+        for (var key in jsonData[i]) {
+          tableHtml += '<td>' + jsonData[i][key] + '</td>';
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</tbody>';
+
+      tableHtml += '</table>';
+      return tableHtml;
+    }
+
 function ajustaValores(data) {
 	console.log(data);
     let bloco = $("#bloco");

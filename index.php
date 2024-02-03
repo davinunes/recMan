@@ -65,6 +65,9 @@ switch($_GET['pag']){
 	case "tools":
 		include "palco/tools.php";
 		break;
+	case "historico":
+		include "palco/historico.php";
+		break;
 	case "estatisticas":
 		include "palco/estatisticas.php";
 		break;

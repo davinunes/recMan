@@ -20,6 +20,7 @@
 		<a  href="index.php?pag=tools" class="btn">Ferramentas</a>
 		<a  href="index.php?pag=estatisticas" class="btn green">Estatisticas</a>
 		<a  href="index.php?pag=statsSoluc" class="btn green">Stats Soluções</a>
+		<a  href="index.php?pag=historico" class="btn orange">Historico</a>
 		<a id="logout" href="#" class="btn">Sair</a>
 	</li>
 </ul>
