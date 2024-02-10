@@ -11,8 +11,35 @@ $result = DBExecute($sql);
 $result = mysqli_fetch_assoc($result);
 $esseRecurso = $result['id'];
 
+// dump($result);
+
 $mensagens = getMensagens($esseRecurso);
 $votos = getVotos($esseRecurso);
+
+//Verifica se Recurso está no Prazo
+$dataRetirada = getDatasDeRetiradaByID($_GET['rec']);
+if(isset($dataRetirada[0]["dia_retirada"])){
+	$retirada = strtotime($dataRetirada[0]["dia_retirada"]);
+	$dataRecurso = strtotime($result["data"]);
+	$delayRecurso = $dataRecurso - $retirada;
+	
+	$delayEmDias = $delayRecurso / 86400;
+	// dump(date('Y-m-d H:i:s', $retirada));  // Mostrar a data de retirada
+    // dump(date('Y-m-d H:i:s', $dataRecurso));  // Mostrar a data do recurso
+    // dump($delayEmDias);
+	if($delayEmDias < 7){
+		$pontoDeAtencao = "green";
+	}else{
+		$pontoDeAtencao = "red";
+	}
+}else{
+	$delayEmDias = "Data de retirada indisponivel";
+	$pontoDeAtencao = "";
+}
+// $dataRetirada =  ? $dataRetirada[0]["dia_retirada"] : null;
+
+
+
 
 $parecer = getParecer($result['numero']);
 
@@ -67,16 +94,18 @@ echo '
 	';
 	
 echo '      <div class="card-content">
-				
-				
                 <h6 class="">'.$result['titulo'].'</h6>
-				
-				<span class="">'.$result['fato'].'</span>
-				
-				<h6 class="">Argumentação</h6>
-				
+                <div class="'.$pontoDeAtencao.'">
+                    <p>Dias transcorridos entre a data de retirada e apresentação do Recurso: '.$delayEmDias.'</p>
+                    <p>Retirado dia: '.date('d/m/Y', strtotime($dataRetirada[0]["dia_retirada"])).'</p>
+                    <p>Recurso apresentado dia: '.date('d/m/Y', strtotime($result["data"])).'</p>
+                    <p>Obs: '.$dataRetirada[0]["obs"].'</p>
+                </div>
+                <span class="">'.$result['fato'].'</span>
+                <h6 class="">Argumentação</h6>
                 <pre>'.$result['detalhes'].'</pre>
-			';
+            ';
+
 			
 	if($parecer['concluido'] == 1){
 		$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];

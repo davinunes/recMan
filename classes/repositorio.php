@@ -536,6 +536,23 @@ function upsertDatasDeRetirada($dados) {
 }
 
 
+function getDatasDeRetiradaByID($id) {
+	$sql = "select * from  DatasDeRetirada where virtual = '$id' ";
+
+    
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+
 function upsertNotificacao($dados) {
     // Verifique se os campos obrigatórios estão presentes
     if (!isset($dados['ano'], $dados['numero'])) {

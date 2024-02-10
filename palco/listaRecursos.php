@@ -149,6 +149,7 @@
 												<th>Assunto</th>
 												<th>Fase</th>
 												<th><i class="material-icons">filter_9_plus</i></th> 
+												<th><i class="material-icons">history</i></th> 
 												<th>Votos</th>
 											</tr>
 										</thead>
@@ -173,6 +174,24 @@
 							default:
 								$classe = "black";
 						}
+						$dataRetirada = getDatasDeRetiradaByID($row['numero']);
+						// dump($dataRetirada);
+						if(isset($dataRetirada[0]["dia_retirada"])){
+							$retirada = strtotime($dataRetirada[0]["dia_retirada"]);
+							$dataRecurso = strtotime($row["data"]);
+							$delayRecurso = $dataRecurso - $retirada;
+							
+							$delayEmDias = $delayRecurso / 86400;
+							if($delayEmDias < 7){
+								$pontoDeAtencao = "green";
+							}else{
+								$pontoDeAtencao = "red";
+							}
+						}else{
+							$delayEmDias = "";
+							$pontoDeAtencao = "";
+						}
+						
 						$votos = getVotos($row['recurso']);
 						$historico = sizeof(getNotificacoes($row['unidade'] ,$row['bloco']));
 						$vt = '';
@@ -208,6 +227,7 @@
 						echo "<td>{$row['titulo']}</td>";
 						echo "<td>{$row['texto']}</td>"; //Fase
 						echo "<td>{$historico}</td>";
+						echo "<td title='Informações adicionais: ".htmlspecialchars(json_encode($dataRetirada, JSON_PRETTY_PRINT), ENT_QUOTES, 'UTF-8')."'><span class='circle {$pontoDeAtencao}'><b>{$delayEmDias}</b></span></td>";
 						// var_dump($row);
 						echo "<td>{$vt}</td>";
 						// echo "<td>{$row['email']}</td>";
