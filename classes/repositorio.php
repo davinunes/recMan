@@ -232,7 +232,22 @@ function getVotos($recurso) {
 
 
 function getNotificacoes($unidade, $torre) {
-    $sql = "select * from notificacoes where unidade = '$unidade' and torre = '$torre'";
+    $sql = "select 
+		n.numero_ano_virtual,
+		n.unidade,
+		n.torre,
+		n.notificacao,
+		n.assunto,
+		n.cobranca,
+		n.status,
+		n.data_email,
+		n.data_envio,
+		n.data_ocorrido,
+		d.dia_retirada,
+		d.obs as obsRetirada,
+		n.status,
+		n.obs as obsSolucoes
+	from notificacoes n left join DatasDeRetirada d on n.numero_ano_virtual = d.virtual where unidade = '$unidade' and torre = '$torre'";
 	// dump($sql);
 
     $result = DBExecute($sql);

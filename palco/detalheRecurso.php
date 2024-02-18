@@ -20,6 +20,7 @@ $votos = getVotos($esseRecurso);
 $dataRetirada = getDatasDeRetiradaByID($_GET['rec']);
 if(isset($dataRetirada[0]["dia_retirada"])){
 	$retirada = strtotime($dataRetirada[0]["dia_retirada"]);
+	$dataRetirada = date('d/m/Y', strtotime($dataRetirada[0]["dia_retirada"]));
 	$dataRecurso = strtotime($result["data"]);
 	$delayRecurso = $dataRecurso - $retirada;
 	
@@ -33,8 +34,9 @@ if(isset($dataRetirada[0]["dia_retirada"])){
 		$pontoDeAtencao = "red";
 	}
 }else{
-	$delayEmDias = "Data de retirada indisponivel";
+	$delayEmDias = "Indisponivel";
 	$pontoDeAtencao = "";
+	$dataRetirada = "Indisponível";
 }
 // $dataRetirada =  ? $dataRetirada[0]["dia_retirada"] : null;
 
@@ -97,7 +99,7 @@ echo '      <div class="card-content">
                 <h6 class="">'.$result['titulo'].'</h6>
                 <div class="'.$pontoDeAtencao.'">
                     <p>Dias transcorridos entre a data de retirada e apresentação do Recurso: '.$delayEmDias.'</p>
-                    <p>Retirado dia: '.date('d/m/Y', strtotime($dataRetirada[0]["dia_retirada"])).'</p>
+                    <p>Retirado dia: '.$dataRetirada.'</p>
                     <p>Recurso apresentado dia: '.date('d/m/Y', strtotime($result["data"])).'</p>
                     <p>Obs: '.$dataRetirada[0]["obs"].'</p>
                 </div>
