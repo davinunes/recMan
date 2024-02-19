@@ -20,7 +20,7 @@ $votos = getVotos($esseRecurso);
 $dataRetirada = getDatasDeRetiradaByID($_GET['rec']);
 if(isset($dataRetirada[0]["dia_retirada"])){
 	$retirada = strtotime($dataRetirada[0]["dia_retirada"]);
-	$dataRetirada = date('d/m/Y', strtotime($dataRetirada[0]["dia_retirada"]));
+	$diaRetirada = date('d/m/Y', strtotime($dataRetirada[0]["dia_retirada"]));
 	$dataRecurso = strtotime($result["data"]);
 	$delayRecurso = $dataRecurso - $retirada;
 	
@@ -36,7 +36,7 @@ if(isset($dataRetirada[0]["dia_retirada"])){
 }else{
 	$delayEmDias = "Indisponivel";
 	$pontoDeAtencao = "";
-	$dataRetirada = "Indisponível";
+	$diaRetirada = "Indisponível";
 }
 // $dataRetirada =  ? $dataRetirada[0]["dia_retirada"] : null;
 
@@ -99,15 +99,16 @@ echo '      <div class="card-content">
                 <h6 class="">'.$result['titulo'].'</h6>
                 <div class="'.$pontoDeAtencao.'">
                     <p>Dias transcorridos entre a data de retirada e apresentação do Recurso: '.$delayEmDias.'</p>
-                    <p>Retirado dia: '.$dataRetirada.'</p>
+                    <p>Retirado dia: '.$diaRetirada.'</p>
                     <p>Recurso apresentado dia: '.date('d/m/Y', strtotime($result["data"])).'</p>
                     <p>Obs: '.$dataRetirada[0]["obs"].'</p>
                 </div>
-                <span class="">'.$result['fato'].'</span>
-                <h6 class="">Argumentação</h6>
-                <pre>'.$result['detalhes'].'</pre>
+				<h6 class=""><b>Fato Ocorrido</b></h6>
+                <div class="grey">'.$result['fato'].'</div>
+                <h6 class=""><b>Argumentação</b></h6>
+                
             ';
-
+echo '<pre>'.$result['detalhes'].'</pre>';
 			
 	if($parecer['concluido'] == 1){
 		$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
@@ -128,7 +129,7 @@ echo '<div class="row">
 echo   '</ul>
     </div>
 </div>';
-echo "<h6>Comentários</h6>";
+echo "<h6><b>Comentários</b></h6>";
 
 echo '<div class="row">
     <div class="">

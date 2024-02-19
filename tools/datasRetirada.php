@@ -3,34 +3,31 @@
 include_once("/var/www/html/classes/repositorio.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === UPLOAD_ERR_OK) {
-        $arquivo_tmp = $_FILES['arquivo']['tmp_name'];
-		$semData = array();
-
-        // Ler o conteúdo do arquivo
-        $conteudo_arquivo = file_get_contents($arquivo_tmp);
+    if (isset($_POST['conteudo_arquivo']) && !empty($_POST['conteudo_arquivo'])) {
+        $conteudo_arquivo = $_POST['conteudo_arquivo'];
+        $semData = array();
 
         // Dividir o conteúdo em blocos usando "bloco:" como termo
-		$blocos = strtolower($conteudo_arquivo);
+        $blocos = strtolower($conteudo_arquivo);
         $blocos = explode('bloco', $blocos);
-		// dump($blocos);
+        // dump($blocos);
 
         // Processar cada bloco
         foreach ($blocos as $bloco) {
             processarBloco($bloco);
         }
-		
-		// dump($semData);
 
-        echo "Arquivo processado com sucesso!";
+        // dump($semData);
+
+        echo "Conteúdo processado com sucesso!";
     } else {
         echo "Erro no envio do arquivo.";
     }
 } else {
     echo '
-    <form action="datasRetirada.php" method="post" enctype="multipart/form-data">
-        <label for="arquivo">Selecione o arquivo TXT:</label>
-        <input type="file" name="arquivo" id="arquivo" accept=".txt" required>
+    <form action="datasRetirada.php" method="post">
+        <label for="conteudo_arquivo">Cole o conteúdo do arquivo TXT:</label><br>
+        <textarea name="conteudo_arquivo" id="conteudo_arquivo" rows="10" cols="30" required></textarea>
         <br>
         <input type="submit" value="Enviar">
     </form>
