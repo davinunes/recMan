@@ -82,7 +82,7 @@ echo "<table class='striped' id='listaSolucoes'>";
 echo "<thead>";
 echo "<tr>";
 	echo "<th>";
-		echo "#";
+		echo "numero";
 	echo "</th>";
 	echo "<th>";
 		echo "ano";
@@ -94,16 +94,16 @@ echo "<tr>";
 		echo "bloco";
 	echo "</th>";
 	echo "<th>";
-		echo "Email";
+		echo "DataEmail";
 	echo "</th>";
 	echo "<th>";
-		echo "Envio";
+		echo "DataEnvio";
 	echo "</th>";
 	echo "<th>";
-		echo "Ocorrido";
+		echo "DataOcorrido";
 	echo "</th>";
 	echo "<th class='teal'>";
-		echo "Retirado";
+		echo "DataCiência";
 	echo "</th>";
 	// echo "<th>";
 		// echo "Assunto";
@@ -121,7 +121,7 @@ echo "<tr>";
 		// echo "Observação";
 	// echo "</th>";
 	echo "<th>";
-		echo "Recurso";
+		echo "Recorreu?";
 	echo "</th>";
 	echo "<th>";
 		echo "Parecer";
@@ -152,11 +152,13 @@ foreach($lista as $item){
 		echo "<td>";
 			echo $item[data_ocorrido];
 		echo "</td>";
-			if (strtotime($item['dia_retirada']) > strtotime('-6 days')) {
-				$prazo = "Blue";
-			} else {
-				$prazo = "Teal";
-			}
+		
+		if (isset($item['diferenca_dias']) && $item['diferenca_dias'] < 6) {
+			$prazo = "Blue";
+		} else {
+			$prazo = "Teal";
+		}
+			
 		echo "<td class='edit-retirado $prazo' data-id='{$item['numero']}/{$item['ano']}'>{$item['dia_retirada']}</td>";
 		// echo "<td>";
 			// echo $item[assunto];
@@ -165,6 +167,7 @@ foreach($lista as $item){
 			echo $item[notificacao];
 		echo "</td>";
 		// echo "<td>";
+			// echo $item[cobranca];
 			// echo $item[cobranca];
 		// echo "</td>";
 		echo "<td>";

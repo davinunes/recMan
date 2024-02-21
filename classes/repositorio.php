@@ -246,7 +246,8 @@ function getNotificacoes($unidade, $torre) {
 		d.dia_retirada,
 		d.obs as obsRetirada,
 		n.status,
-		n.obs as obsSolucoes
+		n.obs as obsSolucoes,
+		DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
 	from notificacoes n left join DatasDeRetirada d on n.numero_ano_virtual = d.virtual where unidade = '$unidade' and torre = '$torre'";
 	// dump($sql);
 
@@ -266,9 +267,9 @@ function getAllNotificacoes() {
     $sql = "select n.numero
 					,n.torre
 					,n.unidade
-					,n.data_email
-					,n.data_envio
-					,n.data_ocorrido
+					,DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email
+					,DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio
+					,DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido
 					,n.assunto
 					,n.notificacao
 					,n.ano
@@ -276,7 +277,10 @@ function getAllNotificacoes() {
 					,n.cobranca
 					,n.status
 					,n.obs
-					,d.dia_retirada 
+					,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
+					,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
+					,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
+					,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
 	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual order by n.ano asc, n.numero desc";
 
     $result = DBExecute($sql);
@@ -295,9 +299,9 @@ function getNotificacoesByDate($inicio, $fim, $coluna) {
     $sql = "select n.numero
 					,n.torre
 					,n.unidade
-					,n.data_email
-					,n.data_envio
-					,n.data_ocorrido
+					,DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email
+					,DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio
+					,DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido
 					,n.assunto
 					,n.notificacao
 					,n.ano
@@ -305,7 +309,8 @@ function getNotificacoesByDate($inicio, $fim, $coluna) {
 					,n.cobranca
 					,n.status
 					,n.obs
-					,d.dia_retirada 
+					,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
+					,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
 	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual 
 	where $coluna  BETWEEN '$inicio' AND '$fim'
 	order by n.ano asc, n.numero desc";
@@ -345,9 +350,9 @@ function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
                 n.numero,
                 n.torre,
                 n.unidade,
-                n.data_email,
-                n.data_envio,
-                n.data_ocorrido,
+                DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email,
+				DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio,
+				DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido,
                 n.assunto,
                 n.notificacao,
                 n.ano,
@@ -355,9 +360,10 @@ function getNotificacoesByDateWithStatus($inicio, $fim, $coluna, $tipo) {
                 n.cobranca,
                 n.status,
                 n.obs,
-                d.dia_retirada,
-                (SELECT COUNT(*) FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso,
-                (SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
+                DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada,
+                (SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso,
+                (SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer,
+				DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
             FROM 
                 notificacoes n 
                 LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
@@ -510,11 +516,13 @@ function upsertDatasDeRetirada($dados) {
     }
 
     // Converta a data para o formato adequado
+	// dump($dados['dia_retirada']);
+	$dateTimeObject = DateTime::createFromFormat('d/m/Y H:i', $dados['dia_retirada'] . ' 00:00');
     $timestamp = strtotime($dados['dia_retirada']);
-    $dados['dia_retirada'] = date('Y-m-d', $timestamp);
+    $dados['dia_retirada'] = $dateTimeObject->format('Y-m-d');
 	
 	// Verifique se o valor de 'apartamento' está no intervalo desejado
-	if(isset($apartamento)){
+	if (isset($dados['apartamento'])) {
 		$apartamento = (int) $dados['apartamento'];
 		if ($apartamento < 101 || $apartamento > 1912) {
 			return "O valor de 'apartamento' deve estar entre 101 e 1912.";
