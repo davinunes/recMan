@@ -66,8 +66,10 @@ function processarBloco($bloco) {
 	}
 	
 	$cartas = extrairCartas($blocoLimpo);
+	// dump($cartas);
 
     foreach($cartas as $carta){
+		// dump($carta);
 		$carta = explode("/", $carta);
 		$dados['notificacao'] = $carta[0];
 		$dados['ano'] = $carta[1];
@@ -76,9 +78,9 @@ function processarBloco($bloco) {
 		$dados['apartamento'] = $ap;
 		$dados['obs'] = $blocoLimpo;
 		
+		upsertDatasDeRetirada($dados);
 	}
 	// dump($dados);
-	upsertDatasDeRetirada($dados);
 	
 }
 
@@ -109,7 +111,7 @@ function extrairApartamento($blocoLimpo) {
 	$b = explode(":",$b)[1];
     preg_match_all('/\d+/', $b, $matches);
 	// dump($matches);
-	// dump($matches[0][0]);
+	// dump($matches[0][0]); 
     return !empty($matches[0]) ? $matches[0][0] : null;
 }
 
