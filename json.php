@@ -16,9 +16,10 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
             $linha["numero"] = explode(".", $linha["numero"])[0];
             $linha["numero"] = intval($linha["numero"]);
             $linha["unidade"] = intval($linha["unidade"]);
-            $linha["data_email"] = date("Y-m-d", strtotime($linha["data_email"]));
-            $linha["data_envio"] = date("Y-m-d", strtotime($linha["data_envio"]));
-            $linha["data_ocorrido"] = date("Y-m-d", strtotime($linha["data_ocorrido"]));
+            $linha["data_email"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_email"])->getTimestamp());
+			$linha["data_envio"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_envio"])->getTimestamp());
+			$linha["data_ocorrido"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_ocorrido"])->getTimestamp());
+
             $linha["torre"] = preg_replace('/[^A-F]/', '', $linha["torre"]);
             // var_dump($linha);
             upsertNotificacao($linha);

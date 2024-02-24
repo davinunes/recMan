@@ -2,11 +2,6 @@
 
 require("classes/repositorio.php");
 
-function dump($el){
-	echo "<pre>";
-		var_dump($el);
-	echo "</pre>";
-}
 
 $vagas['A'] = '618	585	573	534	546	558	598	610	655	643	217	179	140	128	116	79	42	30	630/631
 619	586	574	533	545	557	597	609	656	644	218	180	168	129	117	80	43	31	632/633
@@ -1552,6 +1547,7 @@ foreach($vagas as $k => $v){
 
 
 $tabela .=    "</table>";
+echo $tabela;
 // sort($porVaga);
 // dump($porVaga);
 // dump($vagasCompleto);
@@ -1565,10 +1561,10 @@ foreach($vgs as $vg){
 	$dados['tipo'] = $vg[3];
 	$dados['local'] = str_replace("\r", "", $vg[4]);
 	
-	upsertEstacionamento($dados);
+	// upsertEstacionamento($dados);
 	
 	// dump($vg);
-	dump($dados);
+	// dump($dados);
 }
 
 ?>

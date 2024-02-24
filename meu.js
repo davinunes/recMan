@@ -787,11 +787,13 @@ $(document).on('click', '#buscaHistoricoUnidade', function(e) {
 });
 
 function jsonToTable(jsonData) {
-	console.log(jsonData);
-      var tableHtml = '<table border="1">';
+	// console.log(jsonData);
+	const missingValueReplacement = '';
+      var tableHtml = '<table class="centered striped recurso case-headers">';
       
       // Cabeçalho da tabela
       tableHtml += '<thead><tr>';
+	  tableHtml += '<th>Seq.</th>';
       for (var key in jsonData[0]) {
         tableHtml += '<th>' + key + '</th>';
       }
@@ -801,8 +803,10 @@ function jsonToTable(jsonData) {
       tableHtml += '<tbody>';
       for (var i = 0; i < jsonData.length; i++) {
         tableHtml += '<tr>';
+		tableHtml += '<td>' + (i+1) + '</td>';
         for (var key in jsonData[i]) {
-          tableHtml += '<td>' + jsonData[i][key] + '</td>';
+		  let valor = jsonData[i][key] === null ? missingValueReplacement : jsonData[i][key];
+          tableHtml += '<td>' + valor + '</td>';
         }
         tableHtml += '</tr>';
       }

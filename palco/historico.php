@@ -21,7 +21,7 @@ require "classes/repositorio.php";
 		</form>
 	</div>
 </div>
-<div class="container" id="listaRetorno1">
+<div class="" id="listaRetorno1">
 </div>
-<div class="container" id="listaRetorno2">
+<div class="" id="listaRetorno2">
 </div>

@@ -20,6 +20,15 @@
 	border-bottom:1px solid teal!important;
 }
 
+.historico td{
+	padding: 2px!important;
+	/* border-bottom:1px solid teal!important; */
+}
+
+.uppercase-headers th {
+  text-transform: uppercase;
+}
+
 #listaSolucoes td{
 	padding: 1px!important;
 }

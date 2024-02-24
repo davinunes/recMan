@@ -232,23 +232,30 @@ function getVotos($recurso) {
 
 
 function getNotificacoes($unidade, $torre) {
-    $sql = "select 
-		n.numero_ano_virtual,
-		n.unidade,
-		n.torre,
-		n.notificacao,
-		n.assunto,
-		n.cobranca,
-		n.status,
-		n.data_email,
-		n.data_envio,
-		n.data_ocorrido,
-		d.dia_retirada,
-		d.obs as obsRetirada,
-		n.status,
-		n.obs as obsSolucoes,
-		DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
-	from notificacoes n left join DatasDeRetirada d on n.numero_ano_virtual = d.virtual where unidade = '$unidade' and torre = '$torre'";
+    $sql = "SELECT 
+                n.numero_ano_virtual,
+                n.numero as numero,
+                n.ano,
+                n.unidade as unidade,
+                n.torre as bloco,
+                DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email,
+				DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio,
+				DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido,
+                DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada,
+				DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS defasagem,
+                n.assunto,
+                n.notificacao,
+                n.cobranca,
+                n.status,
+                n.obs as obs_soluções,
+				d.obs as obs_retirada,
+                (SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS recurso,
+                (SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS parecer
+            FROM 
+                notificacoes n 
+                LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
+            WHERE unidade = '$unidade' and torre = '$torre'
+			order by n.ano asc, n.numero asc";
 	// dump($sql);
 
     $result = DBExecute($sql);
@@ -518,9 +525,13 @@ function upsertDatasDeRetirada($dados) {
     // Converta a data para o formato adequado
 	// dump($dados['dia_retirada']);
 	$dateTimeObject = DateTime::createFromFormat('d/m/Y H:i', $dados['dia_retirada'] . ' 00:00');
-    $timestamp = strtotime($dados['dia_retirada']);
-    $dados['dia_retirada'] = $dateTimeObject->format('Y-m-d');
+	if (!$dateTimeObject) {
+		$timestamp = strtotime($dados['dia_retirada']);
+		$dateTimeObject = new DateTime("@$timestamp");
+		
+	}
 	
+	$dados['dia_retirada'] = $dateTimeObject->format('Y-m-d');
 	// Verifique se o valor de 'apartamento' está no intervalo desejado
 	if (isset($dados['apartamento'])) {
 		$apartamento = (int) $dados['apartamento'];

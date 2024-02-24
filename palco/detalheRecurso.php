@@ -177,19 +177,19 @@ foreach($historico as $h){
 	$classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
 	echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
           data-numero="' . $h['numero_ano_virtual'] . '" 
-          data-data_email="' . date("d/m/Y", strtotime($h['data_email'])) . '" 
-          data-data_envio="' . date("d/m/Y", strtotime($h['data_envio'])) . '" 
+          data-data_email="' . $h['data_email']. '" 
+          data-data_envio="' . $h['data_envio'] . '" 
           data-status="' . $h['status'] . '" 
           data-cobranca="' . $h['cobranca'] . '" 
           data-tipo="' . $h['notificacao'] . '" 
           data-obs="' . $h['obs'] . '" 
           data-assunto="' . $h['assunto'] . '" 
-          data-data-ocorrido="' . date("d/m/Y", strtotime($h['data_ocorrido'])) . '">';
+          data-data-ocorrido="' . $h['data_ocorrido'] . '">';
 
 		echo "<td>".$h['numero_ano_virtual']."</td>";
 		echo "<td>".$h['notificacao']."</td>";
 		echo "<td>".$h['assunto']."</td>";
-		echo "<td>Ocorreu " . date("d/m/Y", strtotime($h['data_ocorrido'])) . "</td>";
+		echo "<td>Ocorreu " . $h['data_ocorrido'] . "</td>";
 		echo "<td>$votos</td>";
 
 	echo '</tr>';
