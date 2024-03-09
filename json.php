@@ -4,6 +4,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 	require("classes/repositorio.php");
     // Obtém o JSON enviado via POST
     $jsonData = $_POST['jsonData'];
+    $dataFormat = $_POST['dataFormat'];
     
     // Converte o JSON em um array associativo
     $dataArray = json_decode($jsonData, true);
@@ -16,9 +17,9 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
             $linha["numero"] = explode(".", $linha["numero"])[0];
             $linha["numero"] = intval($linha["numero"]);
             $linha["unidade"] = intval($linha["unidade"]);
-            $linha["data_email"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_email"])->getTimestamp());
-			$linha["data_envio"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_envio"])->getTimestamp());
-			$linha["data_ocorrido"] = date("Y-m-d", DateTime::createFromFormat('d/m/Y', $linha["data_ocorrido"])->getTimestamp());
+            $linha["data_email"] = date("Y-m-d", DateTime::createFromFormat($dataFormat, $linha["data_email"])->getTimestamp());
+			$linha["data_envio"] = date("Y-m-d", DateTime::createFromFormat($dataFormat, $linha["data_envio"])->getTimestamp());
+			$linha["data_ocorrido"] = date("Y-m-d", DateTime::createFromFormat($dataFormat, $linha["data_ocorrido"])->getTimestamp());
 
             $linha["torre"] = preg_replace('/[^A-F]/', '', $linha["torre"]);
             // var_dump($linha);
@@ -43,6 +44,8 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 		<a href="https://products.aspose.app/cells/conversion/xlsx-to-json">Conversor de XLS em Json</a><br/>
 		<label for="json2">Cole o JSON no segundo formato:</label><br>
 		<textarea id="json2" rows="10" cols="50"></textarea><br>
+		<label for="json3">Verifique se as datas ficaram no formato certo:</label><br>
+		<input id="json3" type="text" value="m/d/Y"></input><br>
 		<button id="converter">Converter</button>
 		
 		<div id="resultado" style="display: none;">
@@ -100,7 +103,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 				$.ajax({
 					type: "POST",
 					url: "json.php",
-					data: { processar: "sim", jsonData: JSON.stringify(dataArray1) },
+					data: { processar: "sim", jsonData: JSON.stringify(dataArray1), dataFormat:$("#json3").val() },
 					success: function(response) {
 						// Faça algo com a resposta da página json.php, se necessário
 						console.log(response);

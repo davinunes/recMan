@@ -130,7 +130,7 @@
 					echo "<a class='btn' id='EnviaRelatorioJuridico'>Enviar e-mail ao Juridico</a>";
 				}else{
 					
-					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id != 5 order by r.data";
+					$sql = "SELECT r.id as recurso, r.*, f.*, n.* FROM recurso r left join fase f on f.id = r.fase left join notificacoes n on n.numero_ano_virtual = r.numero where f.id != 5 order by r.data";
 				}
 				
                 $result = DBExecute($sql);
@@ -144,7 +144,7 @@
 											<tr class="teal darken-2">
 												<th>Número</th>
 												<th>Unidade</th>
-												<th>Data</th>
+												<th>Tipo</th>
 												<th class="center-align">&#8987;</th>
 												<th>Assunto</th>
 												<th>Fase</th>
@@ -175,7 +175,7 @@
 								$classe = "black";
 						}
 						$dataRetirada = getDatasDeRetiradaByID($row['numero']);
-						// dump($dataRetirada);
+						// dump($row);
 						if(isset($dataRetirada[0]["dia_retirada"])){
 							$retirada = strtotime($dataRetirada[0]["dia_retirada"]);
 							$dataRecurso = strtotime($row["data"]);
@@ -222,7 +222,7 @@
 						// echo "<td>{$row['recurso']}</td>";
 						echo "<td>{$row['numero']}</td>";
 						echo "<td>{$row['bloco']}{$row['unidade']}</td>";
-						echo "<td>" . date('d/m/Y', strtotime($row['data'])) . "</td>";
+						echo "<td>{$row['notificacao']}</td>";
 						echo "<td class='center-align'>" . calcularDiasPassados($row['data']) . "</td>";
 						echo "<td>{$row['titulo']}</td>";
 						echo "<td>{$row['texto']}</td>"; //Fase

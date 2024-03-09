@@ -74,7 +74,7 @@
             </div>
 			
             <div class="input-field">
-                <textarea name="fato" id="fato" class="materialize-textarea active fato" placeholder="Fato descrito na notificação"></textarea>
+                <textarea name="fato" id="fato" class="materialize-textarea active fato" placeholder="Fato descrito na notificação">Fato descrito na notificação</textarea>
                 <label for="detalhes">Fato descrito na notificação</label>
             </div>
             <a id="newRecurso" class="btn waves-effect waves-light" >Cadastrar</a>

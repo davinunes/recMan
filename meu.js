@@ -28,7 +28,8 @@ $(document).ready(function(){
         paging: false, // Desativa a paginação
 		select: true,
 		"order": [
-			[3, 'desc'] // Ordenação inicial pela primeira coluna em ordem ascendente
+			[2, 'desc'], // Ordenação inicial pela primeira coluna em ordem ascendente
+			[3, 'desc']
 		],
 		dom: '<"top"fl>rt<"bottom"ip><"clear">',
 		language: {
