@@ -19,7 +19,7 @@ $sql = "SELECT
         FROM notificacoes
         WHERE ano = $anoSelecionado
         GROUP BY chave_agrupado
-        ORDER BY $campoAgrupamento DESC";
+        ORDER BY total_multas DESC";
 
 // Executa a consulta
 $result = DBExecute($sql);
@@ -35,6 +35,29 @@ while ($row = mysqli_fetch_assoc($result)) {
         'advertencias' => (int)$row['total_advertencias']
     ];
 }
+
+function arrayToHtmlTable($array, $class = '') {
+  $html = "<table class=\"$class\">";
+
+
+
+  // Gerando linhas da tabela
+  foreach ($array as $row) {
+    $html .= "<tr>";
+    foreach ($row as $cell) {
+      $html .= "<td>$cell</td>";
+    }
+    $html .= "</tr>";
+  }
+
+  $html .= "</table>";
+
+  return $html;
+}
+
+$table = arrayToHtmlTable($dadosFormatados, 'tabela');
+
+echo $table;
 // dump();
 ?>
 
@@ -128,6 +151,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                     }
                 }
             },
+			
             series: [{
 				name: 'Multas',
 				color: 'red',
