@@ -68,7 +68,7 @@ $pdf['parecer'] = $parecer["conclusao"];
 //Dados do e-mail a ser enviado:
 $assunto = "Parecer do Conselho ".$parecer["id"];
 $destinatarios = $result["email"];
-$cc = "sindicogeral.miami@gmail.com";
+$cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
 $bcc = "admcond@solucoesdf.com.br, juridico@solucoesdf.com.br";
 $mensagem = "Prezados,<br/>
 Segue parecer do conselho referente ao recurso {$pdf['notificacao']}, da unidade {$pdf['unidade']}.";

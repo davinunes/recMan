@@ -109,7 +109,7 @@
 					$assunto = "=?UTF-8?B?".base64_encode($assunto)."?=";
 					$destinatarios = "juridico@solucoesdf.com.br, admcond@solucoesdf.com.br, erisvaldo.soares@solucoesdf.com.br";
 					// $destinatarios = "davi.nunes@gmail.com";
-					$cc = "sindicogeral.miami@gmail.com";
+					$cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
 					// $bcc = "admcond@solucoesdf.com.br";
 					
 					$mime .= "Content-Type: text/html; charset=UTF-8\n";
