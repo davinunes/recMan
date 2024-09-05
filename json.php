@@ -1,10 +1,15 @@
 <?php
+    if(isset($_POST['dataFormat'])){
+		$dataFormat = $_POST['dataFormat'];
+	}else{
+		$dataFormat = "d/m/Y";
+	}
+	require("classes/repositorio.php");
+		
 if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 	
-	require("classes/repositorio.php");
     // Obtém o JSON enviado via POST
     $jsonData = $_POST['jsonData'];
-    $dataFormat = $_POST['dataFormat'];
     
     // Converte o JSON em um array associativo
     $dataArray = json_decode($jsonData, true);
@@ -57,6 +62,20 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 	<script>
 		var dataArray1; // Declarando a variável dataArray1 global
 		$(document).ready(function() {
+			$("#importar_magnacom").click(function() {
+				// Obtém a URL atual
+				var currentUrl = window.location.href;
+
+				// Verifica se já existe um "?" na URL
+				if (currentUrl.indexOf('?') === -1) {
+					// Se não houver, adiciona o parâmetro
+					window.location.href = currentUrl + "?importar_magnacom=1";
+				} else {
+					// Se já houver outros parâmetros, adiciona o novo parâmetro com "&"
+					window.location.href = currentUrl + "&importar_magnacom=1";
+				}
+			});
+
 			$("#converter").click(function() {
 				// Obtém o JSON do segundo formato do campo de texto
 				var json2 = $("#json2").val();
@@ -122,3 +141,123 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 }
 ?>
 
+
+<?php
+function fetchJsonFromUrl($url) {
+    // Realiza a requisição HTTP
+    $response = file_get_contents($url);
+
+    // Verifica se houve algum erro na requisição
+    if ($response === false) {
+        return null; // Retorna null em caso de erro
+    }
+
+    // Converte o JSON recebido para um array associativo do PHP
+    $json = json_decode($response, true);
+
+    // Verifica se houve algum erro na decodificação do JSON
+    if ($json === null && json_last_error() !== JSON_ERROR_NONE) {
+        return null; // Retorna null em caso de erro
+    }
+
+    return $json; // Retorna o JSON como array associativo do PHP
+}
+
+// Exemplo de uso da função
+$url = 'https://opensheet.elk.sh/19g62-RqOPWkbzDcloTFB4D7wh4ft_iL-H_zi2ym9-CI/clone';
+$jsonData = fetchJsonFromUrl($url);
+
+// Verifica se houve algum erro ao buscar o JSON
+if(!$_GET['importar_magnacom']){
+	echo "<button id='importar_magnacom'>Importar da Magnacom</button>";
+	exit;
+}
+if ($jsonData === null) {
+    echo "Erro ao obter o JSON da URL.";
+} else {
+    foreach ($jsonData as $row) {
+        $linha = []; // Inicializa o array vazio a cada iteração
+        
+        // Verifica e seta o valor de 'ano'
+        if (isset($row['Nº'])) {
+            $numeroParts = explode("/", $row['Nº']);
+            if (isset($numeroParts[1])) {
+                $linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
+            }
+            $linha["numero"] = isset($numeroParts[0]) ? intval(preg_replace('/\D/', '', $numeroParts[0])) : null;
+        }
+
+        // Verifica e seta o valor de 'unidade'
+        if (isset($row["APTO."])) {
+            $linha["unidade"] = intval($row["APTO."]);
+        }
+
+        // Verifica e seta o valor de 'notificacao'
+        if (isset($row["NOTIFICAÇÃO"])) {
+            $linha["notificacao"] = $row["NOTIFICAÇÃO"];
+        }
+
+        // Verifica e seta o valor de 'assunto'
+        if (isset($row["MOTIVO"])) {
+            $linha["assunto"] = $row["MOTIVO"];
+        }
+
+        // Verifica e seta o valor de 'cobranca'
+        if (isset($row["COBRANÇA"]) or isset($row["VALOR DA PENALIDADE"])) {
+            @$linha["cobranca"] = $row["COBRANÇA"] . " - " . $row["VALOR DA PENALIDADE"];
+        }
+
+        // Verifica e seta a data do 'data_email'
+		$date2 = isset($row["ENVIO"]) ? DateTime::createFromFormat($dataFormat, $row["ENVIO"]) : false;
+        if ($date2 !== false) {
+            $linha["data_email"] = date("Y-m-d", $date2->getTimestamp());
+        }
+
+        // Verifica e seta a data do 'data_ocorrido'
+		@$date = DateTime::createFromFormat($dataFormat, $row["OCORRIDO"]);
+
+		if ($date !== false) {
+			$linha["data_ocorrido"] = date("Y-m-d", $date->getTimestamp());
+		}
+
+
+        // Verifica e seta o valor de 'torre'
+        if (isset($row["TORRE"])) {
+            $linha["torre"] = preg_replace('/[^A-F]/', '', $row["TORRE"]);
+        }
+		
+		if(sizeof($linha) > 2){
+			upsertNotificacao($linha);
+			// var_dump($linha);
+			
+		}
+        echo "<br>";
+
+        // Verifica e seta os valores para 'dados'
+        if (isset($linha["numero"]) && isset($linha["ano"]) && isset($row["RECEBIMENTO FISICO"]) && isset($linha["torre"]) && isset($linha["unidade"])) {
+            $dados['notificacao'] = $linha["numero"];
+            $dados['ano'] = $linha["ano"];
+            $dados['dia_retirada'] = $row["RECEBIMENTO FISICO"];
+            $dados['bloco'] = $linha["torre"];
+            $dados['apartamento'] = $linha["unidade"];
+            $dados['obs'] = isset($linha["cobranca"]) ? $linha["cobranca"] : '';
+			
+			if(strlen($dados['dia_retirada']) == 10){
+				
+				upsertDatasDeRetirada($dados);
+				// var_dump($dados);
+				// echo "<br>";
+			}
+
+        }
+    }
+}
+
+?>
+
+
+<?php
+echo "<br>Importando da Magnacom";
+
+
+?>
