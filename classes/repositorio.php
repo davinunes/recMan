@@ -559,7 +559,7 @@ function upsertDatasDeRetirada($dados) {
     // Remova a última vírgula e espaço desnecessários
     $sql = rtrim($sql, ', ');
     
-    dump($sql);
+    // dump($sql);
 
     // Execute a consulta
     if (DBExecute($sql)) {
@@ -609,7 +609,7 @@ function upsertNotificacao($dados) {
     }
     // Remova a última vírgula e espaço desnecessários
     $sql = rtrim($sql, ', ');
-	var_dump($sql);
+	dump($sql);
     // Execute a consulta
     if (DBExecute($sql)) {
         return "ok";

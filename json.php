@@ -56,6 +56,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 		<div id="resultado" style="display: none;">
 			<h2>JSON no primeiro formato:</h2>
 			<button id="processar">Processar</button>
+			<br>
 			<pre id="json1"></pre>
 		</div>
 
@@ -169,7 +170,7 @@ $jsonData = fetchJsonFromUrl($url);
 
 // Verifica se houve algum erro ao buscar o JSON
 if(!$_GET['importar_magnacom']){
-	echo "<button id='importar_magnacom'>Importar da Magnacom</button>";
+	echo "<button id='importar_magnacom'>Importar da Magnacom</button><br>";
 	exit;
 }
 if ($jsonData === null) {
@@ -222,7 +223,8 @@ if ($jsonData === null) {
 
 
         // Verifica e seta o valor de 'torre'
-        if (isset($row["TORRE"])) {
+		// echo $row["TORRE"];
+        if (isset($row["TORRE"]) and $row["TORRE"] != "") {
             $linha["torre"] = preg_replace('/[^A-F]/', '', $row["TORRE"]);
         }
 		
@@ -231,7 +233,7 @@ if ($jsonData === null) {
 			// var_dump($linha);
 			
 		}
-        echo "<br>";
+        // echo "<br>";
 
         // Verifica e seta os valores para 'dados'
         if (isset($linha["numero"]) && isset($linha["ano"]) && isset($row["RECEBIMENTO FISICO"]) && isset($linha["torre"]) && isset($linha["unidade"])) {
