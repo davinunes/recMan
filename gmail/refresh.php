@@ -48,7 +48,7 @@ if (curl_errno($ch)) {
 		}
         
     } else {
-        echo 'Erro ao obter token: ' . print_r($tokenData, true);
+        echo '<div class="container"><span class="red-text">Precisa renovar token do Gmail</span></div>';
     }
 }
 
