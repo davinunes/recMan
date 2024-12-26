@@ -177,11 +177,12 @@ if ($jsonData === null) {
     echo "Erro ao obter o JSON da URL.";
 } else {
     foreach ($jsonData as $row) {
+		// var_dump($row);
         $linha = []; // Inicializa o array vazio a cada iteração
         
         // Verifica e seta o valor de 'ano'
-        if (isset($row['Nº'])) {
-            $numeroParts = explode("/", $row['Nº']);
+        if (isset($row['9'])) {
+            $numeroParts = explode("/", $row['9']);
             if (isset($numeroParts[1])) {
                 $linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
             }
