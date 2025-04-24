@@ -28,11 +28,55 @@
                 echo "<td>{$usuario['email']}</td>";
                 echo "<td>{$usuario['status']}</td>";
                 echo "<td>{$usuario['unidade']}</td>";
+				echo "<td><a class='btn edit-user' userid-data='{$usuario['id']}'>Editar</a></td>";
                 echo "</tr>";
             }
             ?>
         </tbody>
     </table>
+</div>
+
+<!-- Modal Structure -->
+<div id="modalEditarUsuario" class="modal">
+    <div class="modal-content">
+
+
+<div class="container">
+    <h2>Editar Usuário</h2>
+    <form id="formEditUser">
+        <input type="hidden" name="id" id="edit_id">
+        <div class="input-field">
+            <input type="text" name="nome" id="edit_nome" placeholder="s">
+            <label for="edit_nome">Nome</label>
+        </div>
+        <div class="input-field">
+            <input type="email" name="email" id="edit_email" required placeholder="s">
+            <label for="edit_email">Email</label>
+        </div>
+        <div class="input-field">
+            <input type="password" name="senha" id="edit_senha">
+            <label for="edit_senha">Nova Senha (deixe em branco para manter a atual)</label>
+        </div>
+        <div class="input-field">
+            <input type="text" name="unidade" id="edit_unidade" placeholder="s">
+            <label for="edit_unidade">Unidade</label>
+        </div>
+        <div class="input-field">
+            <select name="status" id="edit_status">
+                <option value="1">Ativo</option>
+                <option value="0">Inativo</option>
+            </select>
+            <label>Status</label>
+        </div>
+        <a id="salvarEdicao" class="btn waves-effect waves-light">Salvar Alterações</a>
+    </form>
+</div>
+
+
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Fechar</a>
+    </div>
 </div>
 	
 

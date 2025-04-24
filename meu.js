@@ -114,6 +114,74 @@ $(document).ready(function(){
 	
 });
 
+$(document).on('click', '.edit-user', function() {
+    const userId = $(this).attr('userid-data');
+    
+    // Carrega os dados do usuário via AJAX
+    $.ajax({
+        url: 'metodo.php?metodo=carregarUsuario&id=' + userId,
+        method: "GET",
+        success: function(response) {
+            try {
+                const usuario = JSON.parse(response);
+				console.log(usuario);
+                
+                // Localiza o formulário de edição e preenche os campos
+                const $form = $('#formEditUser');
+                
+                $form.find('#edit_id').val(usuario.id);
+                $form.find('#edit_nome').val(usuario.nome);
+                $form.find('#edit_email').val(usuario.email);
+                $form.find('#edit_unidade').val(usuario.unidade);
+                
+                // Para o campo de status (select)
+                $form.find('#edit_status').val(usuario.status ? '1' : '0');
+                $form.find('select').formSelect(); // Atualiza o select do Materialize
+                
+                // Limpa o campo de senha (opcional)
+                $form.find('#edit_senha').val('');
+                
+                // Abre o modal (ajuste conforme sua implementação de modal)
+                $('#modalEditarUsuario').modal('open');
+                
+            } catch (e) {
+                console.error("Erro ao parsear resposta:", e, response);
+                M.toast({html: 'Erro ao carregar usuário', classes: 'rounded red'});
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus, errorThrown);
+            M.toast({html: 'Erro ao carregar usuário', classes: 'rounded red'});
+        }
+    });
+});
+
+$(document).on('click', '#salvarEdicao', function() {
+    const metodo = "editarUsuario";
+    const formData = $("#formEditUser").serializeArray();
+	console.log(formData);
+    
+    $.ajax({
+        url: 'metodo.php?metodo=' + metodo,
+        method: "POST",
+        data: formData,
+        success: function(response) {
+            M.toast({html: response, classes: 'rounded'});
+            // Recarrega a página após 1.5 segundos
+			if(response === "ok"){
+				setTimeout(function() {
+					location.reload();
+				}, 1500);
+			}
+
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            M.toast({html: 'Erro ao salvar alterações', classes: 'rounded red'});
+        }
+    });
+});
+
 $(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário
     let metodo = "novoUsuario";
 	const formData = $("#formNewUser").serializeArray();

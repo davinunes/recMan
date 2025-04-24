@@ -14,6 +14,25 @@
             // var_dump($response);
             // var_dump($dados); // Alterei para exibir o array $dados
             break;
+		case "carregarUsuario":
+			$id = $_GET['id'];
+			$usuario = getUsuariosById($id); // Você precisa implementar essa função no repositório
+			echo json_encode($usuario);
+			break;
+		case "editarUsuario":
+			$dados['id'] = $_POST['id'];
+			$dados['email'] = $_POST['email'];
+			// Só atualiza a senha se foi fornecida
+			if (!empty($_POST['senha'])) {
+				$dados['senha'] = $_POST['senha'];
+			}
+			$dados['nome'] = $_POST['nome'];
+			$dados['status'] = $_POST['status'];
+			$dados['unidade'] = $_POST['unidade'];
+
+			$response = upsertUsuario($dados); // Reutiliza a mesma função de inserção/atualização
+			echo $response;
+			break;
 		case "novoRecurso":
             $dados = $_POST;
 

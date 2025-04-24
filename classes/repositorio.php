@@ -23,6 +23,23 @@ function getUsuarios($id=1){
 	return $dados;
 }
 
+function getUsuariosById($id=1){
+	$sql  = " SELECT id, email, senha, nome, status, unidade, avatar ";
+	$sql .= " FROM conselho.usuarios" ;
+	$sql .= " where id=".$id ;
+	
+	$result	= DBExecute($sql);
+	// var_dump($sql);
+	if(!mysqli_num_rows($result)){
+
+	}else{
+		while($retorno = mysqli_fetch_assoc($result)){
+			$dados[] = $retorno;
+		}
+	}
+	return $dados[0];
+}
+
 function getUsuario($login){
 	$sql  = " SELECT id, email, nome, status, unidade, senha, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
@@ -414,7 +431,7 @@ function verificarLogin($username, $password){
 	
 	$sql  = " SELECT id, email, senha, nome, status, unidade ";
 	$sql .= " FROM conselho.usuarios " ;
-	$sql .= " WHERE email = '$username' AND senha = '$password'" ;
+	$sql .= " WHERE email = '$username' AND senha = '$password' AND status=1" ;
 	
 	$result	= DBExecute($sql);
 	$result	= mysqli_num_rows($result);
@@ -441,26 +458,28 @@ function getFasesRecurso(){
 
 function upsertUsuario($dados) {
     $email = $dados['email'];
-    $senha = hash('sha256', $dados['senha']);
-    // $senha = $dados['senha'];
+    $senha = isset($dados['senha']) && $dados['senha'] !== '' ? hash('sha256', $dados['senha']) : null;
     $nome = $dados['nome'];
-    $status = isset($_POST['status']) ? $_POST['status'] : 1;
+    $status = isset($dados['status']) ? $dados['status'] : 1;
     $unidade = $dados['unidade'];
 
-    $sql  = "INSERT INTO conselho.usuarios ";
-    $sql .= "(email, senha, nome, status, unidade) ";
-    $sql .= "VALUES ('$email', '$senha', '$nome', '$status', '$unidade') ";
-    // $sql .= "ON DUPLICATE KEY UPDATE ";
-    // $sql .= "email = '$email', ";
-    // $sql .= "senha = '$senha', ";
-    // $sql .= "nome = '$nome', ";
-    // $sql .= "status = $status, ";
-    // $sql .= "unidade = '$unidade' ";
-	
-	// var_dump($sql);
-	
-	
-	// sha2('{$_POST[password]}', '256') 
+    // Sempre incluir senha no INSERT, mesmo que seja null (assumindo que seja obrigatório no INSERT)
+    $sql = "INSERT INTO conselho.usuarios (email, senha, nome, status, unidade) ";
+    $sql .= "VALUES ('$email', '" . ($senha ?? '') . "', '$nome', '$status', '$unidade') ";
+
+    // Construir UPDATE dinamicamente
+    $sql .= "ON DUPLICATE KEY UPDATE ";
+    $updates = [];
+
+    if ($senha !== null) {
+        $updates[] = "senha = '$senha'";
+    }
+    $updates[] = "nome = '$nome'";
+    $updates[] = "status = $status";
+    $updates[] = "unidade = '$unidade'";
+
+    $sql .= implode(", ", $updates);
+	// echo $sql;
 
     if (DBExecute($sql)) {
         return "ok";
@@ -468,6 +487,8 @@ function upsertUsuario($dados) {
         return "erro";
     }
 }
+
+
 
 function updateUsuario($dados, $avatar = '') {
     $email = $dados['email'];
