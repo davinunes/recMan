@@ -156,31 +156,47 @@ $(document).on('click', '.edit-user', function() {
     });
 });
 
-$(document).on('click', '#salvarEdicao', function() {
+$(document).on('click', '#salvarEdicao', function () {
     const metodo = "editarUsuario";
-    const formData = $("#formEditUser").serializeArray();
-	console.log(formData);
-    
+    const formElement = document.getElementById('formEditUser');
+    const formData = new FormData();
+
+    // Adiciona campos manualmente, exceto avatar
+    formData.append('id', $('#edit_id').val());
+    formData.append('nome', $('#edit_nome').val());
+    formData.append('email', $('#edit_email').val());
+    formData.append('senha', $('#edit_senha').val());
+    formData.append('unidade', $('#edit_unidade').val());
+    formData.append('status', $('#edit_status').val());
+
+    // Se um novo arquivo foi selecionado, adiciona ao FormData
+    const avatarInput = document.getElementById('edit_avatar'); // Novo campo <input type="file" name="avatar" id="edit_avatar">
+    if (avatarInput.files.length > 0) {
+        formData.append('avatar', avatarInput.files[0]);
+    }
+
     $.ajax({
         url: 'metodo.php?metodo=' + metodo,
         method: "POST",
         data: formData,
-        success: function(response) {
-            M.toast({html: response, classes: 'rounded'});
-            // Recarrega a página após 1.5 segundos
-			if(response === "ok"){
-				setTimeout(function() {
-					location.reload();
-				}, 1500);
-			}
-
+        contentType: false,
+        processData: false,
+        success: function (response) {
+            M.toast({ html: response, classes: 'rounded' });
+            if (response === "ok") {
+                setTimeout(function () {
+                    location.reload();
+                }, 1500);
+            }
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
-            M.toast({html: 'Erro ao salvar alterações', classes: 'rounded red'});
+            M.toast({ html: 'Erro ao salvar alterações', classes: 'rounded red' });
         }
     });
 });
+
+
 
 $(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário
     let metodo = "novoUsuario";
@@ -685,7 +701,7 @@ $(document).on('submit', '#updateThisUser', function(e) {
             success: function(response) {
 				if(response === "ok"){
 					M.toast({html: response, classes: 'rounded'});
-					// window.location.reload();
+					window.location.reload();
 				}else{
 					M.toast({html: response, classes: 'rounded'});
 					// window.location.reload();

@@ -22,15 +22,31 @@
 		case "editarUsuario":
 			$dados['id'] = $_POST['id'];
 			$dados['email'] = $_POST['email'];
-			// Só atualiza a senha se foi fornecida
+
 			if (!empty($_POST['senha'])) {
 				$dados['senha'] = $_POST['senha'];
 			}
+
 			$dados['nome'] = $_POST['nome'];
 			$dados['status'] = $_POST['status'];
 			$dados['unidade'] = $_POST['unidade'];
 
-			$response = upsertUsuario($dados); // Reutiliza a mesma função de inserção/atualização
+			// Upload de imagem, apenas se houver arquivo válido
+			if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+				$avatarTmpName = $_FILES['avatar']['tmp_name'];
+				$avatarExtension = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
+				$avatarFileName = "avatar{$_POST['id']}.$avatarExtension";
+				$avatarFullPath = "raw/$avatarFileName";
+
+				if (move_uploaded_file($avatarTmpName, $avatarFullPath)) {
+					$dados['avatar'] = $avatarFullPath; // <-- SOMENTE AQUI
+				} else {
+					echo "Erro ao mover o arquivo.";
+					exit;
+				}
+			}
+
+			$response = upsertUsuario($dados);
 			echo $response;
 			break;
 		case "novoRecurso":

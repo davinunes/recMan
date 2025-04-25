@@ -462,12 +462,13 @@ function upsertUsuario($dados) {
     $nome = $dados['nome'];
     $status = isset($dados['status']) ? $dados['status'] : 1;
     $unidade = $dados['unidade'];
+    $avatar = isset($dados['avatar']) ? $dados['avatar'] : null;
 
-    // Sempre incluir senha no INSERT, mesmo que seja null (assumindo que seja obrigatório no INSERT)
-    $sql = "INSERT INTO conselho.usuarios (email, senha, nome, status, unidade) ";
-    $sql .= "VALUES ('$email', '" . ($senha ?? '') . "', '$nome', '$status', '$unidade') ";
+    // Sempre incluir senha no INSERT, mesmo que seja null
+    $sql = "INSERT INTO conselho.usuarios (email, senha, nome, status, unidade" . ($avatar !== null ? ", avatar" : "") . ") ";
+    $sql .= "VALUES ('$email', '" . ($senha ?? '') . "', '$nome', '$status', '$unidade'" . ($avatar !== null ? ", '$avatar'" : "") . ") ";
 
-    // Construir UPDATE dinamicamente
+    // UPDATE dinâmico
     $sql .= "ON DUPLICATE KEY UPDATE ";
     $updates = [];
 
@@ -477,9 +478,15 @@ function upsertUsuario($dados) {
     $updates[] = "nome = '$nome'";
     $updates[] = "status = $status";
     $updates[] = "unidade = '$unidade'";
+    
+	if (isset($dados['avatar'])) {
+		$avatar = $dados['avatar'];
+		$updates[] = "avatar = '$avatar'";
+	}
 
     $sql .= implode(", ", $updates);
-	// echo $sql;
+
+    // echo $sql; // Para debug, se quiser ver o SQL gerado
 
     if (DBExecute($sql)) {
         return "ok";
@@ -487,6 +494,7 @@ function upsertUsuario($dados) {
         return "erro";
     }
 }
+
 
 
 

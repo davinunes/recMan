@@ -43,7 +43,7 @@
 
 <div class="container">
     <h2>Editar Usuário</h2>
-    <form id="formEditUser">
+    <form id="formEditUser" enctype="multipart/form-data">
         <input type="hidden" name="id" id="edit_id">
         <div class="input-field">
             <input type="text" name="nome" id="edit_nome" placeholder="s">
@@ -68,6 +68,16 @@
             </select>
             <label>Status</label>
         </div>
+		<div class="file-field input-field">
+		  <div class="btn">
+			<span>Foto</span>
+			<input type="file" name="avatar" id="edit_avatar" accept="image/*">
+		  </div>
+		  <div class="file-path-wrapper">
+			<input class="file-path validate" type="text" placeholder="Envie uma nova imagem">
+		  </div>
+		</div>
+
         <a id="salvarEdicao" class="btn waves-effect waves-light">Salvar Alterações</a>
     </form>
 </div>
