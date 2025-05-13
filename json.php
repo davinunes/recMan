@@ -181,17 +181,18 @@ if ($jsonData === null) {
         $linha = []; // Inicializa o array vazio a cada iteração
         
         // Verifica e seta o valor de 'ano'
-        if (isset($row['9'])) {
-            $numeroParts = explode("/", $row['9']);
-            if (isset($numeroParts[1])) {
-                $linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
-            }
-            $linha["numero"] = isset($numeroParts[0]) ? intval(preg_replace('/\D/', '', $numeroParts[0])) : null;
-        }
+        if (isset($row['Nº'])) {
+			$numeroParts = explode("/", preg_replace('/[^\d\/]/', '', $row['Nº']));
+			if (isset($numeroParts[1])) {
+				$linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
+			}
+			$linha["numero"] = isset($numeroParts[0]) ? intval($numeroParts[0]) : null;
+		}
 
         // Verifica e seta o valor de 'unidade'
         if (isset($row["APTO."])) {
             $linha["unidade"] = intval($row["APTO."]);
+			if($linha["unidade"] == 0) continue;
         }
 
         // Verifica e seta o valor de 'notificacao'
