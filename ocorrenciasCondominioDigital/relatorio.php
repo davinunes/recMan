@@ -1,0 +1,193 @@
+<?php
+// Inclui o arquivo com as funções de banco de dados
+require_once '../classes/database.php';
+
+// Define o local para o português para formatar os nomes dos meses
+setlocale(LC_TIME, 'pt_BR', 'pt_BR.utf-8', 'portuguese');
+
+// --- LÓGICA DE BUSCA E FILTRO ---
+
+// Pega os valores dos filtros da URL (via GET)
+$bloco_filter = $_GET['bloco'] ?? '';
+$status_filter = $_GET['status'] ?? '';
+// Define o filtro de mês, com o padrão sendo o mês e ano atuais
+$mes_filter = $_GET['mes'] ?? date('Y-m');
+
+
+// Monta a query SQL base
+$sql = "SELECT * FROM ocorrencias WHERE 1=1";
+$params = [];
+$types = '';
+
+// Adiciona os filtros à query dinamicamente, se eles foram selecionados
+if (!empty($bloco_filter)) {
+    $sql .= " AND bloco = ?";
+    $params[] = $bloco_filter;
+    $types .= 's';
+}
+if (!empty($status_filter)) {
+    $sql .= " AND status = ?";
+    $params[] = $status_filter;
+    $types .= 's';
+}
+if (!empty($mes_filter)) {
+    // Separa ano e mês do formato YYYY-MM
+    list($ano, $mes) = explode('-', $mes_filter);
+    // --- MUDANÇA NA LÓGICA DO FILTRO DE MÊS ---
+    // Agora considera tanto a data de abertura QUANTO a data da última mensagem
+    $sql .= " AND ( (YEAR(abertura) = ? AND MONTH(abertura) = ?) OR (YEAR(data_ultima_mensagem) = ? AND MONTH(data_ultima_mensagem) = ?) )";
+    // Adiciona os parâmetros duas vezes para a condição OR
+    $params[] = $ano;
+    $params[] = $mes;
+    $params[] = $ano;
+    $params[] = $mes;
+    $types .= 'iiii'; // quatro inteiros
+}
+
+
+// Adiciona uma ordenação padrão
+$sql .= " ORDER BY abertura DESC";
+
+$link = null;
+$ocorrencias = [];
+
+try {
+    $link = DBConnect();
+    $stmt = mysqli_prepare($link, $sql);
+
+    // Faz o bind dos parâmetros apenas se houver filtros
+    if (!empty($types)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    // Pega todos os resultados como um array associativo
+    while ($row = mysqli_fetch_assoc($result)) {
+        $ocorrencias[] = $row;
+    }
+    
+    mysqli_stmt_close($stmt);
+
+} catch (Exception $e) {
+    // Em um caso real, você poderia logar o erro
+    die("Erro ao buscar dados: " . $e->getMessage());
+} finally {
+    if ($link) {
+        DBClose($link);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Ocorrências</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 sm:p-8">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Relatório de Ocorrências</h1>
+
+                <!-- Formulário de Filtros -->
+                <form action="relatorio.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label for="mes" class="block text-sm font-medium text-gray-700">Mês</label>
+                        <select name="mes" id="mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <?php
+                                // Gera opções para os últimos 12 meses
+                                for ($i = 0; $i <= 12; $i++) {
+                                    $time = strtotime(date("Y-m-01") . " -$i months");
+                                    $value = date("Y-m", $time);
+                                    $label = ucfirst(strftime('%B de %Y', $time));
+                                    echo '<option value="' . $value . '"' . ($mes_filter == $value ? ' selected' : '') . '>' . $label . '</option>';
+                                }
+                            ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="bloco" class="block text-sm font-medium text-gray-700">Bloco</label>
+                        <select name="bloco" id="bloco" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Todos</option>
+                            <?php foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $b): ?>
+                                <option value="<?= $b ?>" <?= $bloco_filter == $b ? 'selected' : '' ?>><?= $b ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select name="status" id="status" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Todos</option>
+                            <option value="Aberto" <?= $status_filter == 'Aberto' ? 'selected' : '' ?>>Aberto</option>
+                            <option value="Resolvido" <?= $status_filter == 'Resolvido' ? 'selected' : '' ?>>Resolvido</option>
+                        </select>
+                    </div>
+                    <div class="self-end">
+                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Filtrar
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Cabeçalho do Relatório (simulando tabela) -->
+                <div class="hidden lg:flex bg-gray-50 text-xs text-gray-500 uppercase font-semibold p-3 rounded-t-lg border-b">
+                    <div class="w-1/12">ID</div>
+                    <div class="w-2/12">Abertura</div>
+                    <div class="w-1/12">Unidade</div>
+                    <div class="w-1/12">Status</div>
+                    <div class="w-1/12 text-center">Msgs</div>
+                    <div class="w-2/12">Última Mensagem</div>
+                    <div class="w-3/12">Responsáveis</div>
+                    <div class="w-1/12 text-center">URL</div>
+                </div>
+
+                <!-- Corpo do Relatório -->
+                <div class="divide-y divide-gray-200">
+                    <?php if (empty($ocorrencias)): ?>
+                        <div class="text-center p-6 text-gray-500">
+                            Nenhuma ocorrência encontrada com os filtros selecionados.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($ocorrencias as $ocorrencia): ?>
+                            <div class="flex flex-col lg:flex-row p-3 items-start lg:items-center text-sm text-gray-700 transition-colors duration-200 <?= $ocorrencia['resolvido'] ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50' ?>">
+                                <div class="lg:w-1/12 font-bold"><span class="lg:hidden text-gray-500 font-semibold">ID: </span><?= htmlspecialchars($ocorrencia['id']) ?></div>
+                                <div class="lg:w-2/12"><span class="lg:hidden text-gray-500 font-semibold">Abertura: </span><?= htmlspecialchars(date('d/m/Y H:i', strtotime($ocorrencia['abertura']))) ?></div>
+                                <!-- --- MUDANÇA NO FORMATO DE EXIBIÇÃO --- -->
+                                <div class="lg:w-1/12"><span class="lg:hidden text-gray-500 font-semibold">Local: </span><?= htmlspecialchars($ocorrencia['unidade']) ?> <?= htmlspecialchars($ocorrencia['bloco']) ?></div>
+                                <div class="lg:w-1/12">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?= $ocorrencia['resolvido'] ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' ?>">
+                                        <?= htmlspecialchars($ocorrencia['status'] ?: 'Aberto') ?>
+                                    </span>
+                                </div>
+                                <div class="lg:w-1/12 text-center"><span class="lg:hidden text-gray-500 font-semibold">Mensagens: </span><?= htmlspecialchars($ocorrencia['total_mensagens']) ?></div>
+                                <div class="lg:w-2/12"><span class="lg:hidden text-gray-500 font-semibold">Última Msg: </span><?= $ocorrencia['data_ultima_mensagem'] ? htmlspecialchars(date('d/m/Y H:i', strtotime($ocorrencia['data_ultima_mensagem']))) : 'N/A' ?></div>
+                                <div class="lg:w-3/12 flex space-x-2 mt-2 lg:mt-0">
+                                    <?php if($ocorrencia['sindico']): ?><span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Síndico</span><?php endif; ?>
+                                    <?php if($ocorrencia['sub']): ?><span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">Sub</span><?php endif; ?>
+                                    <?php if($ocorrencia['adm']): ?><span class="text-xs bg-gray-200 text-gray-800 px-2 py-1 rounded">Adm</span><?php endif; ?>
+                                </div>
+                                <div class="lg:w-1/12 text-center mt-2 lg:mt-0">
+                                    <?php if (!empty($ocorrencia['url'])): ?>
+                                        <a href="<?= htmlspecialchars($ocorrencia['url']) ?>" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-900" title="Abrir em nova aba">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
