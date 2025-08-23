@@ -26,15 +26,13 @@ $url = $_POST['url'] ?? null;
 $status = isset($_POST['status']) ? $_POST['status'] : null;
 $total_mensagens = isset($_POST['total_mensagens']) ? (int)$_POST['total_mensagens'] : 0;
 
-// --- INÍCIO DA NOVA MUDANÇA ---
 $responsabilidade_raw = $_POST['responsabilidade'] ?? null;
 $responsabilidade = null; // Padrão é NULL
 if ($responsabilidade_raw === 'sindico') {
     $responsabilidade = 'sindico';
-} elseif ($responsabilidade_raw === 'sub') {
+} elseif ($responsabilidade_raw === 'sub' || $responsabilidade_raw === 'subsindico') {
     $responsabilidade = 'sub';
 }
-// --- FIM DA NOVA MUDANÇA ---
 
 // Trata as datas, convertendo para o formato do banco de dados
 $data_ultima_mensagem_raw = $_POST['data_ultima_mensagem'] ?? null;
@@ -61,7 +59,9 @@ if ($abertura_raw) {
 $resolvido = (isset($_POST['resolvido']) && strtolower($_POST['resolvido']) === 'sim') ? 1 : 0;
 $sindico = (isset($_POST['sindico']) && strtolower($_POST['sindico']) === 'sim') ? 1 : 0;
 $sub = (isset($_POST['subsindico']) && strtolower($_POST['subsindico']) === 'sim') ? 1 : 0;
-$adm = (isset($_POST['administracao']) && strtolower($_POST['administracao']) === 'sim') ? 1 : 0;
+// --- CORREÇÃO AQUI ---
+// O script esperava 'administracao', mas a requisição envia 'adm'.
+$adm = (isset($_POST['adm']) && strtolower($_POST['adm']) === 'sim') ? 1 : 0;
 
 if (empty($id)) {
     http_response_code(400);
@@ -94,11 +94,13 @@ try {
         if (isset($_POST['status'])) { $fieldsToUpdate[] = 'status = ?'; $types .= 's'; $params[] = $status; }
         if (isset($_POST['sindico'])) { $fieldsToUpdate[] = 'sindico = ?'; $types .= 'i'; $params[] = $sindico; }
         if (isset($_POST['subsindico'])) { $fieldsToUpdate[] = 'sub = ?'; $types .= 'i'; $params[] = $sub; }
-        if (isset($_POST['administracao'])) { $fieldsToUpdate[] = 'adm = ?'; $types .= 'i'; $params[] = $adm; }
+        // --- CORREÇÃO AQUI ---
+        // A verificação também deve usar 'adm'.
+        if (isset($_POST['adm'])) { $fieldsToUpdate[] = 'adm = ?'; $types .= 'i'; $params[] = $adm; }
         if (isset($_POST['resolvido'])) { $fieldsToUpdate[] = 'resolvido = ?'; $types .= 'i'; $params[] = $resolvido; }
         if (isset($_POST['total_mensagens'])) { $fieldsToUpdate[] = 'total_mensagens = ?'; $types .= 'i'; $params[] = $total_mensagens; }
         if (isset($_POST['data_ultima_mensagem'])) { $fieldsToUpdate[] = 'data_ultima_mensagem = ?'; $types .= 's'; $params[] = $data_ultima_mensagem; }
-		if (isset($_POST['responsabilidade'])) { $fieldsToUpdate[] = 'responsabilidade = ?'; $types .= 's'; $params[] = $responsabilidade; }
+        if (isset($_POST['responsabilidade'])) { $fieldsToUpdate[] = 'responsabilidade = ?'; $types .= 's'; $params[] = $responsabilidade; }
 
         if (count($fieldsToUpdate) > 0) {
             $types .= 'i';
@@ -129,10 +131,8 @@ try {
         $insertStmt = mysqli_prepare($link, $sql);
         
         $types = "isssssiiisiss";
-        // --- CORREÇÃO AQUI ---
-        // A variável $responsabilidade estava faltando na lista de parâmetros
         mysqli_stmt_bind_param($insertStmt, $types, $id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem);
-       
+        
         $executionSuccess = mysqli_stmt_execute($insertStmt);
         $affectedRows = mysqli_stmt_affected_rows($insertStmt);
         $errorMessage = mysqli_stmt_error($insertStmt);
