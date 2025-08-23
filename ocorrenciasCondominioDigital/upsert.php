@@ -26,6 +26,16 @@ $url = $_POST['url'] ?? null;
 $status = isset($_POST['status']) ? $_POST['status'] : null;
 $total_mensagens = isset($_POST['total_mensagens']) ? (int)$_POST['total_mensagens'] : 0;
 
+// --- INÍCIO DA NOVA MUDANÇA ---
+$responsabilidade_raw = $_POST['responsabilidade'] ?? null;
+$responsabilidade = null; // Padrão é NULL
+if ($responsabilidade_raw === 'sindico') {
+    $responsabilidade = 'sindico';
+} elseif ($responsabilidade_raw === 'sub') {
+    $responsabilidade = 'sub';
+}
+// --- FIM DA NOVA MUDANÇA ---
+
 // Trata as datas, convertendo para o formato do banco de dados
 $data_ultima_mensagem_raw = $_POST['data_ultima_mensagem'] ?? null;
 $data_ultima_mensagem = null;
@@ -88,6 +98,7 @@ try {
         if (isset($_POST['resolvido'])) { $fieldsToUpdate[] = 'resolvido = ?'; $types .= 'i'; $params[] = $resolvido; }
         if (isset($_POST['total_mensagens'])) { $fieldsToUpdate[] = 'total_mensagens = ?'; $types .= 'i'; $params[] = $total_mensagens; }
         if (isset($_POST['data_ultima_mensagem'])) { $fieldsToUpdate[] = 'data_ultima_mensagem = ?'; $types .= 's'; $params[] = $data_ultima_mensagem; }
+		if (isset($_POST['responsabilidade'])) { $fieldsToUpdate[] = 'responsabilidade = ?'; $types .= 's'; $params[] = $responsabilidade; }
 
         if (count($fieldsToUpdate) > 0) {
             $types .= 'i';
@@ -114,14 +125,14 @@ try {
             send_response(['status' => 'error', 'message' => 'O campo "abertura" é obrigatório ou está em formato inválido.']);
         }
 
-        $sql = "INSERT INTO ocorrencias (id, abertura, bloco, unidade, url, status, sindico, sub, adm, resolvido, total_mensagens, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO ocorrencias (id, abertura, bloco, unidade, url, status, sindico, sub, adm, responsabilidade, resolvido, total_mensagens, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $insertStmt = mysqli_prepare($link, $sql);
         
+        $types = "isssssiiisiss";
         // --- CORREÇÃO AQUI ---
-        // A string de tipos estava errada. O correto é 'isssssiiiiis' (12 tipos para 12 colunas).
-        $types = "isssssiiiiis";
-        mysqli_stmt_bind_param($insertStmt, $types, $id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $resolvido, $total_mensagens, $data_ultima_mensagem);
-        
+        // A variável $responsabilidade estava faltando na lista de parâmetros
+        mysqli_stmt_bind_param($insertStmt, $types, $id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem);
+       
         $executionSuccess = mysqli_stmt_execute($insertStmt);
         $affectedRows = mysqli_stmt_affected_rows($insertStmt);
         $errorMessage = mysqli_stmt_error($insertStmt);
@@ -129,7 +140,7 @@ try {
 
         $debugInfo = [
             'query' => $sql,
-            'params' => [$id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $resolvido, $total_mensagens, $data_ultima_mensagem],
+            'params' => [$id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem],
             'execution_success' => $executionSuccess,
             'affected_rows' => $affectedRows,
             'error_message' => $errorMessage
