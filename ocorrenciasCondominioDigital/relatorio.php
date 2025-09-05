@@ -69,6 +69,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relatório de Ocorrências</title>
+	
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -78,6 +79,7 @@ try {
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="p-6">
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Relatório de Ocorrências</h1>
+				<a href="https://www.toplifemiamibeach.com.br/area_restrita.aspx?id=w/wGkJW3ORpOcMRvFjzENg==&p1=a971d0e2-c12f-4d92-8359-947c67e11e14">Logar no Condominio Digital para funcionar os links das ocorrencias</a>
 
                 <!-- Formulário de Filtros -->
                 <form action="relatorio.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
