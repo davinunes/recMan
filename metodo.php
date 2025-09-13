@@ -62,7 +62,21 @@
             $ano = $_POST['ano'];
 
             $response = buscaNotificacoes($num, $ano);
-			echo $response;
+			$recursos = buscaRecursoParecer($num, $ano);
+			
+			// Prepara a resposta em formato JSON
+			$response = [
+				'success' => true,
+				'data' => [
+					'notificacoes' => $response,
+					'recursos' => $recursos
+				],
+				'timestamp' => date('Y-m-d H:i:s')
+			];
+			
+			header('Content-Type: application/json; charset=utf-8');
+			
+			echo json_encode($response, JSON_UNESCAPED_UNICODE);
             // var_dump($response);
             // var_dump($dados); 
             break;

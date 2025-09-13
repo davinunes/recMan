@@ -755,11 +755,28 @@ $(document).on('keyup', '#numero', function(event) {
             contentType: false,
 			dataType: 'json', // Defina o tipo de dados como JSON
             success: function(response) {
-					console.log(response);
-				if (response.length > 0 && response[0].ano) {
-					console.log("faz algo");
-					ajustaValores(response[0]);
-				}
+					if (response.data.notificacoes && response.data.notificacoes.length > 0) {
+                        console.log("Encontrada Notificação");
+                        ajustaValores(response.data.notificacoes[0]); // Passa a primeira notificação
+                    } else {
+                        console.log("Nenhuma notificação encontrada");
+                    }
+                    
+                    // Verifica se há recursos e exibe alerta
+                    if (response.data.recursos && response.data.recursos.length > 0) {
+                       // Filtra os recursos que têm número não nulo
+						const recursosValidos = response.data.recursos.filter(recurso => 
+							recurso.numero !== null && recurso.numero !== undefined && recurso.numero !== ''
+						);
+						
+						if (recursosValidos.length > 0) {
+							var qtdRecursos = recursosValidos.length;
+							var numero = $('#numero').val();
+							alert("Atenção! Recurso já cadastrado.");
+							console.log("Recursos válidos encontrados:", recursosValidos);
+							window.location.href = 'index.php?pag=recurso&rec=' + encodeURIComponent(numero);
+						}
+                    }
             },
             error: function(xhr, status, error) {
                 // Lida com erros

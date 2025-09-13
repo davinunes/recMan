@@ -423,7 +423,22 @@ function buscaNotificacoes($numero=1, $ano=2023) {
         }
     }
 
-    return json_encode($dados);
+    return $dados;
+}
+
+function buscaRecursoParecer($numero=1, $ano=2023) {
+    $sql = "select numero, count(p.id) as temParecer from recurso r left join parecer p on p.id = r.numero where r.numero='$numero/$ano'";
+	// echo $sql;
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
 }
 
 function verificarLogin($username, $password){
