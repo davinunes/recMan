@@ -27,7 +27,7 @@
 				}
 				
                 if($_GET[concluidos] == "true"){
-					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.data";
+					$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.id desc limit 50";
 
 				}elseif(isset($_GET[resumo]) and  $_GET[resumo] == "true"){
 					$sql1 = "SELECT r.numero, f.texto FROM recurso r left join fase f on f.id = r.fase where f.id < 4 order by r.numero";
