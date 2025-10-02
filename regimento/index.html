@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Busca no Regimento Interno</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main>
+        <h1>Busca Rápida no Regimento Interno</h1>
+        
+        <div class="search-mode-selector">
+            <label>
+                <input type="radio" name="searchMode" value="notation" checked>
+                Busca por Notação (ex: 6.20.a)
+            </label>
+            <label>
+                <input type="radio" name="searchMode" value="text">
+                Busca por Texto (ex: piscina)
+            </label>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Digite a notação aqui...">
+            <button id="searchButton">Buscar</button>
+        </div>
+
+        <div id="resultsContainer">
+            <p class="placeholder">Os resultados da busca aparecerão aqui.</p>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
