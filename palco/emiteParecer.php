@@ -63,6 +63,7 @@ $pdf['fato'] = $parecer["notificacao"];
 $pdf['analise'] = $parecer["analise"];
 $pdf['resultado'] = $parecer["resultado"];
 $pdf['parecer'] = $parecer["conclusao"];
+$pdf['data_emissao'] = date('Y-m-d', strtotime($parecer['data']));
 
 // dump($pdf);
 //Dados do e-mail a ser enviado:
@@ -143,6 +144,7 @@ if($parecerJaFoiEnviado) {
 	$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
 	echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
 	echo " <a class='btn blue' href='index.php'>Voltar para Recursos</a>";
+
 }
 
 ?>

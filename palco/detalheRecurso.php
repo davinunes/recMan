@@ -113,6 +113,7 @@ echo '<pre>'.$result['detalhes'].'</pre>';
 	if($parecer['concluido'] == 1){
 		$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];
 	echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
+	echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec='.$result['numero'].'">Parecer</a>';
 	}
 
 				
