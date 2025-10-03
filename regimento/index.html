@@ -3,33 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Busca no Regimento Interno</title>
+    <title>Gerador de Notação do Regimento</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <main>
-        <h1>Busca Rápida no Regimento Interno</h1>
-        
-        <div class="search-mode-selector">
-            <label>
-                <input type="radio" name="searchMode" value="notation" checked>
-                Busca por Notação (ex: 6.20.a)
-            </label>
-            <label>
-                <input type="radio" name="searchMode" value="text">
-                Busca por Texto (ex: piscina)
-            </label>
+        <h1>Gerador de Notação do Regimento</h1>
+        <p>Use o campo abaixo para encontrar e selecionar os trechos do regimento que fundamentam o seu parecer.</p>
+
+        <div class="search-wrapper">
+            <label for="searchInput">Buscar termo no regimento:</label>
+            <input type="text" id="searchInput" placeholder="Digite 'piscina', 'multa', 'animal'..." autocomplete="off">
+            
+            <div id="resultsContainer"></div>
         </div>
 
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Digite a notação aqui...">
-            <button id="searchButton">Buscar</button>
+        <div class="output-container">
+            <label for="notationOutput">Notações Selecionadas (para salvar no sistema):</label>
+            <input type="text" id="notationOutput" placeholder="As notações selecionadas aparecerão aqui..." disabled>
         </div>
 
-        <div id="resultsContainer">
-            <p class="placeholder">Os resultados da busca aparecerão aqui.</p>
-        </div>
     </main>
 
     <script src="script.js"></script>

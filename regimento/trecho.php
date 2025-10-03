@@ -1,40 +1,41 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-/**
- * Encontra o objeto bruto na hierarquia do JSON.
- */
+// --- Funções Auxiliares (sem alterações) ---
+
 function encontrarNoCaminho($dados, $notacao) {
-    if (!$dados || !isset($dados['artigos']) || !$notacao) {
-        return null;
-    }
-    $partes = explode('.', $notacao);
+    if (!$dados || !isset($dados['artigos']) || !$notacao) return null;
+    $partes = explode('.', strtolower($notacao));
     $artigoNumero = $partes[0];
-    if (!isset($dados['artigos'][$artigoNumero])) {
-        return null;
-    }
+    if (!isset($dados['artigos'][$artigoNumero])) return null;
     $resultado = $dados['artigos'][$artigoNumero];
     for ($i = 1; $i < count($partes); $i++) {
-        $chave = $partes[$i];
+        $parteDoCaminho = $partes[$i];
         $proximoNivelEncontrado = false;
-        $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
-        foreach ($ordemDeBusca as $subnivel) {
-            if (isset($resultado[$subnivel]) && isset($resultado[$subnivel][$chave])) {
-                $resultado = $resultado[$subnivel][$chave];
+        if (preg_match('/^([pia])(.+)$/', $parteDoCaminho, $matches)) {
+            $tipo = $matches[1]; $chave = $matches[2];
+            $mapaTipos = ['p' => 'paragrafos', 'i' => 'incisos', 'a' => 'alineas'];
+            $subnivelAlvo = $mapaTipos[$tipo];
+            if (isset($resultado[$subnivelAlvo]) && isset($resultado[$subnivelAlvo][$chave])) {
+                $resultado = $resultado[$subnivelAlvo][$chave];
                 $proximoNivelEncontrado = true;
-                break;
+            }
+        } else {
+            $chave = $parteDoCaminho;
+            $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
+            foreach ($ordemDeBusca as $subnivel) {
+                if (isset($resultado[$subnivel]) && isset($resultado[$subnivel][$chave])) {
+                    $resultado = $resultado[$subnivel][$chave];
+                    $proximoNivelEncontrado = true;
+                    break;
+                }
             }
         }
-        if (!$proximoNivelEncontrado) {
-            return null;
-        }
+        if (!$proximoNivelEncontrado) return null;
     }
     return $resultado;
 }
 
-/**
- * Processa seletores complexos como "[1-3,5]" ou "[a,c]".
- */
 function parsearSelecaoComplexa($seletor) {
     $chavesFinais = [];
     $partes = explode(',', $seletor);
@@ -43,37 +44,19 @@ function parsearSelecaoComplexa($seletor) {
         if (strpos($parte, '-') !== false) {
             list($inicio, $fim) = explode('-', $parte);
             $range = (is_numeric($inicio) && is_numeric($fim)) ? range((int)$inicio, (int)$fim) : range($inicio, $fim);
-            foreach ($range as $item) {
-                $chavesFinais[] = (string)$item;
-            }
-        } else {
-            $chavesFinais[] = $parte;
-        }
+            foreach ($range as $item) { $chavesFinais[] = (string)$item; }
+        } else { $chavesFinais[] = $parte; }
     }
     return $chavesFinais;
 }
 
-
-/**
- * NOVA FUNÇÃO DE FORMATAÇÃO: Gera o texto de um único item.
- * @param array $item - Um objeto de resultado individual.
- * @return string - O texto formatado para este item.
- */
 function formatarItemComoTexto($item) {
     $textoItem = "Referência: {$item['notacao_pesquisada']}\n";
-
     $gerarTextoRecursivo = function($objeto, $nivel = 0) use (&$gerarTextoRecursivo) {
         $bloco = "";
         $indentacao = str_repeat("  ", $nivel);
-
-        if (isset($objeto['titulo_artigo'])) {
-             $bloco .= $indentacao . mb_strtoupper($objeto['titulo_artigo'], 'UTF-8') . "\n";
-        }
-
-        if (isset($objeto['texto'])) {
-            $bloco .= $indentacao . $objeto['texto'] . "\n";
-        }
-        
+        if (isset($objeto['titulo_artigo'])) { $bloco .= $indentacao . mb_strtoupper($objeto['titulo_artigo'], 'UTF-8') . "\n"; }
+        if (isset($objeto['texto'])) { $bloco .= $indentacao . $objeto['texto'] . "\n"; }
         $subniveis = ['paragrafos', 'incisos', 'alineas'];
         foreach($subniveis as $subnivel) {
             if (isset($objeto[$subnivel])) {
@@ -82,7 +65,6 @@ function formatarItemComoTexto($item) {
                     if ($subnivel === 'paragrafos') $label = ($num === 'unico') ? 'Parágrafo único:' : "§ {$num}°:";
                     if ($subnivel === 'incisos') $label = "Inciso {$num}:";
                     if ($subnivel === 'alineas') $label = "Alínea {$num}):";
-                    
                     $bloco .= "\n" . $indentacao . $label . "\n";
                     $bloco .= $gerarTextoRecursivo($subObj, $nivel + 1);
                 }
@@ -90,18 +72,16 @@ function formatarItemComoTexto($item) {
         }
         return $bloco;
     };
-
     $textoItem .= $gerarTextoRecursivo($item['conteudo']);
     return $textoItem;
 }
 
-// --- LÓGICA PRINCIPAL DO ENDPOINT ---
+
+// --- LÓGICA PRINCIPAL DO ENDPOINT (TOTALMENTE REESTRUTURADA) ---
 try {
     $jsonString = file_get_contents('database.json');
     $database = json_decode($jsonString, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception('Erro ao ler ou decodificar o arquivo database.json.');
-    }
+    if (json_last_error() !== JSON_ERROR_NONE) { throw new Exception('Erro ao ler ou decodificar o arquivo database.json.'); }
 
     if (!isset($_GET['notacao'])) {
         http_response_code(400);
@@ -111,75 +91,76 @@ try {
 
     $notacaoCompleta = $_GET['notacao'];
     $formato = isset($_GET['formato']) ? $_GET['formato'] : 'estruturado';
-    $respostaFinal = null;
+    $respostaFinal = [];
 
-    if (preg_match('/(.*)\.\s*\[(.*)\]$/', $notacaoCompleta, $matches)) {
-        // Lógica de busca múltipla
-        $caminhoPai = $matches[1];
-        $seletor = $matches[2];
-        $objetoPai = encontrarNoCaminho($database, $caminhoPai);
+    // 1. Divide a consulta em uma lista de tarefas, separadas por vírgula.
+    $tarefasDeBusca = explode(',', $notacaoCompleta);
 
-        if ($objetoPai === null) {
-            http_response_code(404);
-            echo json_encode(['erro' => "O caminho base \"{$caminhoPai}\" da notação não foi encontrado."]);
-            exit;
-        }
+    // 2. Itera sobre cada tarefa.
+    foreach ($tarefasDeBusca as $tarefa) {
+        $tarefa = trim($tarefa);
+        if (empty($tarefa)) continue;
 
-        $chavesParaBuscar = parsearSelecaoComplexa($seletor);
-        $resultados = [];
-        foreach ($chavesParaBuscar as $chave) {
-            $itemEncontrado = null;
-            $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
-            foreach ($ordemDeBusca as $subnivel) {
-                if (isset($objetoPai[$subnivel]) && isset($objetoPai[$subnivel][$chave])) {
-                    $itemEncontrado = $objetoPai[$subnivel][$chave];
-                    break;
+        // 3. Para cada tarefa, verifica se é complexa (com colchetes) ou simples.
+        if (preg_match('/(.*)\.\s*\[(.*)\]$/', $tarefa, $matches)) {
+            // A tarefa é complexa (ex: "58.[10,7,9]")
+            $caminhoPai = $matches[1];
+            $seletor = $matches[2];
+            $objetoPai = encontrarNoCaminho($database, $caminhoPai);
+
+            if ($objetoPai) {
+                $chavesParaBuscar = parsearSelecaoComplexa($seletor);
+                foreach ($chavesParaBuscar as $chave) {
+                    $itemEncontrado = null;
+                    $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
+                    foreach ($ordemDeBusca as $subnivel) {
+                        if (isset($objetoPai[$subnivel]) && isset($objetoPai[$subnivel][$chave])) {
+                            $itemEncontrado = $objetoPai[$subnivel][$chave];
+                            break;
+                        }
+                    }
+                    if ($itemEncontrado) {
+                        $artigoNumero = explode('.', $caminhoPai)[0];
+                        $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
+                        $respostaFinal[] = ['notacao_pesquisada' => "{$caminhoPai}.{$chave}", 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
+                    }
                 }
             }
+        } else {
+            // A tarefa é simples (ex: "14.5")
+            $itemEncontrado = encontrarNoCaminho($database, $tarefa);
             if ($itemEncontrado) {
-                $artigoNumero = explode('.', $caminhoPai)[0];
+                $artigoNumero = explode('.', $tarefa)[0];
                 $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
-                $resultados[] = ['notacao_pesquisada' => "{$caminhoPai}.{$chave}", 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
+                $respostaFinal[] = ['notacao_pesquisada' => $tarefa, 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
             }
         }
-        $respostaFinal = $resultados;
-    } else {
-        // Lógica de busca simples
-        $resultadoUnico = encontrarNoCaminho($database, $notacaoCompleta);
-        if ($resultadoUnico === null) {
-            http_response_code(404);
-            echo json_encode(['erro' => "A notação \"{$notacaoCompleta}\" não foi encontrada."]);
-            exit;
-        }
-        $artigoNumero = explode('.', $notacaoCompleta)[0];
-        $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
-        $respostaFinal = [['notacao_pesquisada' => $notacaoCompleta, 'capitulo' => $capituloInfo, 'conteudo' => $resultadoUnico]];
     }
 
-    // LÓGICA DE FORMATAÇÃO ATUALIZADA
+    // 4. Se nenhum item foi encontrado em nenhuma das tarefas, retorna erro.
+    if (empty($respostaFinal)) {
+        http_response_code(404);
+        echo json_encode(['erro' => "Nenhum item válido encontrado para a notação \"{$notacaoCompleta}\"."]);
+        exit;
+    }
+
+    // 5. Formata a saída (já funciona com listas, então não precisa mudar)
     if ($formato === 'texto') {
-        $textoConcatenado = ""; #Fundamentação com base no Regimento Interno:\n\n
+        // ... (lógica de formatação de texto agrupada)
+        $textoConcatenado = "Fundamentação com base no Regimento Interno:\n\n";
         $agrupadoPorCapitulo = [];
-
-        // Agrupa todos os resultados pelo número do capítulo
-        foreach ($respostaFinal as $res) {
-            $agrupadoPorCapitulo[$res['capitulo']['numero']][] = $res;
-        }
-        ksort($agrupadoPorCapitulo); // Garante a ordem dos capítulos
-
-        // Itera sobre os grupos para gerar o texto
+        foreach ($respostaFinal as $res) { $agrupadoPorCapitulo[$res['capitulo']['numero']][] = $res; }
+        ksort($agrupadoPorCapitulo);
         foreach ($agrupadoPorCapitulo as $numCap => $itens) {
-            $textoConcatenado .= "Capítulo {$numCap}: {$itens[0]['capitulo']['titulo']}\n";
-            $textoConcatenado .= "\n"; #----------------------------------------
-            foreach ($itens as $item) {
-                $textoConcatenado .= formatarItemComoTexto($item) . "\n";
-            }
+            $textoConcatenado .= "Capítulo {$numCap}: {$itens[0]['capitulo']['titulo']}\n----------------------------------------\n";
+            foreach ($itens as $item) { $textoConcatenado .= formatarItemComoTexto($item) . "\n"; }
             $textoConcatenado .= "\n";
         }
         $respostaFinal = ['texto_formatado' => trim($textoConcatenado)];
+
     } else {
-        // Se a busca era simples, retorna um objeto, não um array de um item.
-        if (count($respostaFinal) === 1 && !preg_match('/\[.*\]/', $notacaoCompleta)) {
+        // Se a busca original era para um único item simples, retorna um objeto em vez de uma lista com um item.
+        if (count($respostaFinal) === 1 && strpos($notacaoCompleta, ',') === false && strpos($notacaoCompleta, '[') === false) {
             $respostaFinal = $respostaFinal[0];
         }
     }

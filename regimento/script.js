@@ -1,14 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
     const resultsContainer = document.getElementById('resultsContainer');
-    const searchModeRadios = document.querySelectorAll('input[name="searchMode"]');
+    const notationOutput = document.getElementById('notationOutput');
 
     let database = null;
-    let currentSearchMode = 'notation';
+    const selectedNotations = new Set();
 
-    // --- CARREGAMENTO DO BANCO DE DADOS ---
+    // --- CARREGAMENTO DO BANCO DE DADOS (sem alteração) ---
     async function loadDatabase() {
         try {
             const response = await fetch('database.json');
@@ -16,176 +15,240 @@ document.addEventListener('DOMContentLoaded', () => {
             database = await response.json();
             console.log("Banco de dados carregado.");
         } catch (error) {
-            resultsContainer.innerHTML = `<pre class="error">Falha ao carregar o database.json. Verifique o console.</pre>`;
+            searchInput.placeholder = "Erro ao carregar o banco de dados.";
             console.error(error);
         }
     }
 
     // --- FUNÇÕES DE BUSCA (sem alteração) ---
-
-    // Busca por Notação (ex: 6.20.a)
-    function buscarPorNotacao(dados, notacao) {
-        if (!dados || !dados.artigos || !notacao) return { erro: "Dados ou notação inválida." };
-        const partes = notacao.split('.');
-        const artigoNumero = partes[0];
-        let resultado = dados.artigos[artigoNumero];
-        if (!resultado) return { erro: `Artigo "${artigoNumero}" não encontrado.` };
-        for (let i = 1; i < partes.length; i++) {
-            const chave = partes[i];
-            let proximoNivelEncontrado = false;
-            const ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
-            for (const subnivel of ordemDeBusca) {
-                if (resultado[subnivel] && resultado[subnivel][chave]) {
-                    resultado = resultado[subnivel][chave];
-                    proximoNivelEncontrado = true;
-                    break;
-                }
-            }
-            if (!proximoNivelEncontrado) return { erro: `Hierarquia "${notacao}" inválida.` };
-        }
-        return resultado;
-    }
-
-    // Busca por Texto
-    function pesquisarPorTexto(dados, termo) {
+    function pesquisarPorTexto(termo) {
         const resultados = [];
         const termoBusca = termo.toLowerCase();
-        if (termoBusca.length < 3) return { erro: "O termo de busca deve ter pelo menos 3 caracteres." };
-        
-        function explorar(objeto, caminho, capituloInfo) {
+        if (termoBusca.length < 3) return [];
+        function explorar(objeto, caminho) {
             if (objeto.texto && objeto.texto.toLowerCase().includes(termoBusca)) {
+                const artigoNum = caminho.split('.')[0];
+                const capituloInfo = { numero: database.artigos[artigoNum].capitulo, titulo: database.capitulos[database.artigos[artigoNum].capitulo] };
                 resultados.push({ notacao: caminho, texto: objeto.texto, capitulo: capituloInfo });
             }
             for (const chave of ['paragrafos', 'incisos', 'alineas']) {
                 if (objeto[chave]) {
                     for (const subChave in objeto[chave]) {
-                        explorar(objeto[chave][subChave], `${caminho}.${subChave}`, capituloInfo);
+                        explorar(objeto[chave][subChave], `${caminho}.${subChave}`);
                     }
                 }
             }
         }
-
-        for (const artigoNum in dados.artigos) {
-            const artigo = dados.artigos[artigoNum];
-            const capituloInfo = { numero: artigo.capitulo, titulo: dados.capitulos[artigo.capitulo] };
-            explorar(artigo, artigoNum, capituloInfo);
+        for (const artigoNum in database.artigos) {
+            explorar(database.artigos[artigoNum], artigoNum);
         }
         return resultados;
     }
+	
+	/**
+     * NOVA FUNÇÃO: Pega um número de artigo e retorna uma lista de seus componentes (o artigo em si e seus parágrafos/incisos).
+     */
+    function buscarEstruturaDoArtigo(articleNum) {
+        const articleObj = encontrarNoCaminho(articleNum);
+        if (!articleObj) return [];
 
-    // --- FUNÇÃO DE EXIBIÇÃO (ATUALIZADA) ---
+        const items = [];
+        const capituloInfo = { numero: articleObj.capitulo, titulo: database.capitulos[articleObj.capitulo] };
 
-    function exibirResultados(resultado, termoBusca) {
-        resultsContainer.innerHTML = ''; // Limpa resultados anteriores
+        // Adiciona o próprio artigo como um item selecionável
+        items.push({
+            notacao: articleNum,
+            texto: articleObj.titulo_artigo || articleObj.texto || `Artigo ${articleNum} (texto principal)`,
+            capitulo: capituloInfo
+        });
 
-        if (resultado.erro) {
-            resultsContainer.innerHTML = `<pre class="error">${resultado.erro}</pre>`;
+        // Função auxiliar para processar os filhos de um objeto (parágrafos, incisos, etc.)
+        const processChildren = (children, typePrefix) => {
+            if (!children) return;
+            for (const key in children) {
+                const child = children[key];
+                // Gera a notação explícita (ex: 8.p1) para evitar ambiguidades na seleção
+                const notation = `${articleNum}.${typePrefix}${key}`;
+                items.push({
+                    notacao: notation,
+                    texto: child.texto || "Conteúdo aninhado",
+                    capitulo: capituloInfo
+                });
+            }
+        };
+
+        processChildren(articleObj.paragrafos, 'p');
+        processChildren(articleObj.incisos, 'i');
+
+        return items;
+    }
+    
+    function getItemsFromNotations(notationsSet) {
+        const items = [];
+        notationsSet.forEach(notation => {
+            const item = encontrarNoCaminho(notation);
+            if (item) {
+                const artigoNum = notation.split('.')[0];
+                const capituloInfo = { numero: database.artigos[artigoNum].capitulo, titulo: database.capitulos[database.artigos[artigoNum].capitulo] };
+                items.push({ notacao: notation, texto: item.texto || "Conteúdo aninhado", capitulo: capituloInfo });
+            }
+        });
+        return items;
+    }
+    
+    function encontrarNoCaminho(notacao) {
+        if (!database || !database.artigos || !notacao) return null;
+        const partes = notacao.split('.');
+        let resultado = database.artigos[partes[0]];
+        if (!resultado) return null;
+        for (let i = 1; i < partes.length; i++) {
+            let proximoNivelEncontrado = false;
+            for (const subnivel of ['incisos', 'paragrafos', 'alineas']) {
+                if (resultado[subnivel] && resultado[subnivel][partes[i]]) {
+                    resultado = resultado[subnivel][partes[i]];
+                    proximoNivelEncontrado = true;
+                    break;
+                }
+            }
+            if (!proximoNivelEncontrado) return null;
+        }
+        return resultado;
+    }
+
+    // --- FUNÇÕES DE RENDERIZAÇÃO E FORMATAÇÃO (ATUALIZADAS) ---
+
+    function renderResultsList(items) {
+        // ... (sem alteração)
+        resultsContainer.innerHTML = '';
+        if (items.length === 0) {
+            resultsContainer.innerHTML = '<div class="result-item"><span class="text">Nenhum resultado encontrado.</span></div>';
             return;
         }
-
-        // Se a busca for por notação, use o novo layout
-        if (currentSearchMode === 'notation') {
-            const artigoNum = termoBusca.split('.')[0];
-            const artigoBase = database.artigos[artigoNum];
-            const capituloInfo = {
-                numero: artigoBase.capitulo,
-                titulo: database.capitulos[artigoBase.capitulo]
-            };
-            
-            // Função recursiva para construir o HTML do conteúdo
-            function renderizarConteudo(obj) {
-                let html = '';
-                if (obj.texto) {
-                    html += `<p class="text">${obj.texto}</p>`;
-                }
-
-                if (obj.paragrafos || obj.incisos || obj.alineas) {
-                    html += '<div class="content-block">';
-                    
-                    if (obj.paragrafos) {
-                        for (const pNum in obj.paragrafos) {
-                            const pLabel = pNum === 'unico' ? 'Parágrafo único' : `§ ${pNum}°`;
-                            html += `<span class="item-label">${pLabel}:</span>`;
-                            html += renderizarConteudo(obj.paragrafos[pNum]);
-                        }
-                    }
-                    if (obj.incisos) {
-                         for (const iNum in obj.incisos) {
-                             html += `<span class="item-label">Inciso ${iNum}:</span>`;
-                             html += renderizarConteudo(obj.incisos[iNum]);
-                        }
-                    }
-                    if (obj.alineas) {
-                        for (const aLetra in obj.alineas) {
-                            html += `<span class="item-label">Alínea ${aLetra}):</span>`;
-                            html += renderizarConteudo(obj.alineas[aLetra]);
-                        }
-                    }
-                    html += '</div>';
-                }
-                return html;
-            }
-
+        items.forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'result-item';
+            itemDiv.dataset.notation = item.notacao;
+            if (selectedNotations.has(item.notacao)) {
+                itemDiv.classList.add('selected');
+            }
             itemDiv.innerHTML = `
-                <div class="notation">Resultado para: ${termoBusca}</div>
-                <span class="chapter">Capítulo ${capituloInfo.numero}: ${capituloInfo.titulo}</span>
-                ${renderizarConteudo(resultado)}
+                <span class="notation">${item.notacao}</span>
+                <p class="text">${item.texto}</p>
             `;
             resultsContainer.appendChild(itemDiv);
-
-        } else { // Lógica para busca por texto (permanece a mesma)
-            if (resultado.length === 0) {
-                resultsContainer.innerHTML = '<p class="placeholder">Nenhum resultado encontrado.</p>';
-                return;
-            }
-            const regex = new RegExp(termoBusca, 'gi');
-            resultado.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'result-item';
-                const textoDestacado = item.texto.replace(regex, '<mark>$&</mark>');
-                itemDiv.innerHTML = `
-                    <div class="notation">Referência: ${item.notacao}</div>
-                    <span class="chapter">Capítulo ${item.capitulo.numero}: ${item.capitulo.titulo}</span>
-                    <p class="text">${textoDestacado}</p>
-                `;
-                resultsContainer.appendChild(itemDiv);
-            });
-        }
-    }
-
-    // --- LÓGICA PRINCIPAL E EVENTOS (sem alteração) ---
-    function performSearch() {
-        if (!database) {
-            resultsContainer.innerHTML = `<pre class="error">O banco de dados ainda não foi carregado.</pre>`;
-            return;
-        }
-        const query = searchInput.value.trim();
-        if (!query) {
-            resultsContainer.innerHTML = '<p class="placeholder">Digite algo para buscar.</p>';
-            return;
-        }
-        let result;
-        if (currentSearchMode === 'notation') {
-            result = buscarPorNotacao(database, query);
-        } else {
-            result = pesquisarPorTexto(database, query);
-        }
-        exibirResultados(result, query);
-    }
-
-    searchModeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            currentSearchMode = e.target.value;
-            searchInput.placeholder = currentSearchMode === 'notation' ? "Digite a notação aqui..." : "Digite um termo para pesquisar...";
-            searchInput.focus();
         });
+    }
+
+    /**
+     * NOVA FUNÇÃO: Pega uma lista de notações e agrupa, gerando uma string compacta.
+     * Ex: ['58.7', '58.9'] se torna '58.[7,9]'
+     */
+    function compactarNotacoes(notationsArray) {
+        if (notationsArray.length === 0) return "";
+
+        const grouped = {};
+        // Agrupa as notações pelo seu "pai"
+        notationsArray.forEach(notation => {
+            const lastDotIndex = notation.lastIndexOf('.');
+            // Se não tem ponto, a notação é o próprio pai (ex: um artigo inteiro '6')
+            const parent = lastDotIndex === -1 ? notation : notation.substring(0, lastDotIndex);
+            const child = lastDotIndex === -1 ? null : notation.substring(lastDotIndex + 1);
+
+            if (!grouped[parent]) {
+                grouped[parent] = [];
+            }
+            if (child !== null) {
+                grouped[parent].push(child);
+            }
+        });
+
+        const finalParts = [];
+        // Remonta a string de forma compacta
+        for (const parent in grouped) {
+            const children = grouped[parent];
+            if (children.length === 0) { // É um artigo sozinho, ex: '6'
+                finalParts.push(parent);
+            } else if (children.length === 1) { // Apenas um filho, usa notação normal
+                finalParts.push(`${parent}.${children[0]}`);
+            } else { // Múltiplos filhos, usa a notação compacta com colchetes
+                finalParts.push(`${parent}.[${children.join(',')}]`);
+            }
+        }
+        
+        return finalParts.sort().join(',');
+    }
+    
+    // ATUALIZADO: Chama a nova função de compactação
+    function updateNotationOutput() {
+        const sortedNotations = Array.from(selectedNotations).sort();
+        // Chama a função para compactar antes de exibir
+        const compactedString = compactarNotacoes(sortedNotations);
+        notationOutput.value = compactedString;
+    }
+
+    // --- EVENTOS DA INTERFACE (ATUALIZADOS) ---
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim();
+        let results = [];
+
+        // NOVO: Verifica se a busca é um número ou um texto
+        if (/^\d+$/.test(query)) {
+            // Se for um número, busca pela estrutura do artigo
+            results = buscarEstruturaDoArtigo(query);
+        } else if (query.length >= 3) {
+            // Se for texto, faz a busca por palavra-chave
+            results = pesquisarPorTexto(query);
+        }
+
+        // Lógica para exibir ou esconder a lista
+        if (query.length > 0) {
+             renderResultsList(results);
+             resultsContainer.style.display = 'block';
+        } else {
+            // Se o campo esvaziar, mostra os selecionados ou esconde
+            if (selectedNotations.size > 0) {
+                const selectedItems = getItemsFromNotations(selectedNotations);
+                renderResultsList(selectedItems);
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContainer.style.display = 'none';
+            }
+        }
     });
 
-    searchButton.addEventListener('click', performSearch);
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') performSearch();
+    resultsContainer.addEventListener('click', (event) => {
+        const clickedItem = event.target.closest('.result-item');
+        if (clickedItem && clickedItem.dataset.notation) {
+            const notation = clickedItem.dataset.notation;
+            if (selectedNotations.has(notation)) {
+                selectedNotations.delete(notation);
+            } else {
+                selectedNotations.add(notation);
+            }
+            clickedItem.classList.toggle('selected');
+            updateNotationOutput();
+        }
+    });
+    
+    searchInput.addEventListener('focus', () => {
+        // Apenas mostra a lista se houver algo nela ou se tiver itens selecionados
+        if (resultsContainer.innerHTML !== "" || selectedNotations.size > 0) {
+             if (searchInput.value.length < 3 && selectedNotations.size > 0) {
+                const selectedItems = getItemsFromNotations(selectedNotations);
+                renderResultsList(selectedItems);
+            }
+            resultsContainer.style.display = 'block';
+        }
+    });
+
+    // CORREÇÃO DO BUG: A lista só some se clicar fora do componente de busca
+    document.addEventListener('click', (event) => {
+        const searchWrapper = document.querySelector('.search-wrapper');
+        // Se o elemento clicado NÃO está dentro do .search-wrapper, esconde a lista
+        if (!searchWrapper.contains(event.target)) {
+            resultsContainer.style.display = 'none';
+        }
     });
 
     loadDatabase();
