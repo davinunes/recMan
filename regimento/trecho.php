@@ -1,21 +1,17 @@
 <?php
-// Define o cabeçalho da resposta como JSON.
 header('Content-Type: application/json; charset=utf-8');
 
 /**
- * Função de busca por notação (sem alteração).
- * @param array $dados O array associativo completo do banco de dados.
- * @param string $notacao A notação a ser buscada (ex: "6.20.a").
- * @return array O objeto encontrado ou um array de erro.
+ * Encontra o objeto bruto na hierarquia do JSON.
  */
-function buscarPorNotacao($dados, $notacao) {
+function encontrarNoCaminho($dados, $notacao) {
     if (!$dados || !isset($dados['artigos']) || !$notacao) {
-        return ['erro' => 'Dados ou notação inválida.'];
+        return null;
     }
     $partes = explode('.', $notacao);
     $artigoNumero = $partes[0];
     if (!isset($dados['artigos'][$artigoNumero])) {
-        return ['erro' => "Artigo \"{$artigoNumero}\" não encontrado."];
+        return null;
     }
     $resultado = $dados['artigos'][$artigoNumero];
     for ($i = 1; $i < count($partes); $i++) {
@@ -30,69 +26,76 @@ function buscarPorNotacao($dados, $notacao) {
             }
         }
         if (!$proximoNivelEncontrado) {
-            return ['erro' => "Hierarquia \"{$notacao}\" inválida."];
+            return null;
         }
     }
-    $capituloInfo = [
-        'numero' => $dados['artigos'][$artigoNumero]['capitulo'],
-        'titulo' => $dados['capitulos'][$dados['artigos'][$artigoNumero]['capitulo']]
-    ];
-    return [
-        'notacao_pesquisada' => $notacao,
-        'capitulo' => $capituloInfo,
-        'conteudo' => $resultado
-    ];
+    return $resultado;
 }
 
 /**
- * NOVA FUNÇÃO: Formata o resultado estruturado em um texto único e legível.
- * @param array $resultado - O resultado da função buscarPorNotacao.
- * @return string - O texto formatado.
+ * Processa seletores complexos como "[1-3,5]" ou "[a,c]".
  */
-function formatarResultadoComoTexto($resultado) {
-    $textoFinal = "Fundamentação com base no Regimento Interno:\n\n";
-    $textoFinal .= "Referência: {$resultado['notacao_pesquisada']}\n";
-    $textoFinal .= "Capítulo {$resultado['capitulo']['numero']}: {$resultado['capitulo']['titulo']}\n";
-    $textoFinal .= "----------------------------------------\n";
-
-    // Função interna e recursiva para varrer o conteúdo
-    $gerarTextoRecursivo = function($objeto, $nivel = 0) use (&$gerarTextoRecursivo) {
-        $textoBloco = "";
-        $indentacao = str_repeat("  ", $nivel); // Adiciona 2 espaços por nível de profundidade
-
-        if (isset($objeto['texto'])) {
-            $textoBloco .= $indentacao . $objeto['texto'] . "\n";
-        }
-
-        if (isset($objeto['paragrafos'])) {
-            foreach ($objeto['paragrafos'] as $num => $p) {
-                $label = ($num === 'unico') ? 'Parágrafo único:' : "§ {$num}°:";
-                $textoBloco .= "\n" . $indentacao . $label . "\n";
-                $textoBloco .= $gerarTextoRecursivo($p, $nivel + 1);
+function parsearSelecaoComplexa($seletor) {
+    $chavesFinais = [];
+    $partes = explode(',', $seletor);
+    foreach ($partes as $parte) {
+        $parte = trim($parte);
+        if (strpos($parte, '-') !== false) {
+            list($inicio, $fim) = explode('-', $parte);
+            $range = (is_numeric($inicio) && is_numeric($fim)) ? range((int)$inicio, (int)$fim) : range($inicio, $fim);
+            foreach ($range as $item) {
+                $chavesFinais[] = (string)$item;
             }
+        } else {
+            $chavesFinais[] = $parte;
         }
-        if (isset($objeto['incisos'])) {
-            foreach ($objeto['incisos'] as $num => $i) {
-                $textoBloco .= "\n" . $indentacao . "Inciso {$num}:\n";
-                $textoBloco .= $gerarTextoRecursivo($i, $nivel + 1);
-            }
-        }
-        if (isset($objeto['alineas'])) {
-            foreach ($objeto['alineas'] as $letra => $a) {
-                $textoBloco .= "\n" . $indentacao . "Alínea {$letra}):\n";
-                $textoBloco .= $gerarTextoRecursivo($a, $nivel + 1);
-            }
-        }
-        return $textoBloco;
-    };
-
-    $textoFinal .= $gerarTextoRecursivo($resultado['conteudo']);
-    return $textoFinal;
+    }
+    return $chavesFinais;
 }
 
 
-// --- LÓGICA PRINCIPAL DO ENDPOINT ---
+/**
+ * NOVA FUNÇÃO DE FORMATAÇÃO: Gera o texto de um único item.
+ * @param array $item - Um objeto de resultado individual.
+ * @return string - O texto formatado para este item.
+ */
+function formatarItemComoTexto($item) {
+    $textoItem = "Referência: {$item['notacao_pesquisada']}\n";
 
+    $gerarTextoRecursivo = function($objeto, $nivel = 0) use (&$gerarTextoRecursivo) {
+        $bloco = "";
+        $indentacao = str_repeat("  ", $nivel);
+
+        if (isset($objeto['titulo_artigo'])) {
+             $bloco .= $indentacao . mb_strtoupper($objeto['titulo_artigo'], 'UTF-8') . "\n";
+        }
+
+        if (isset($objeto['texto'])) {
+            $bloco .= $indentacao . $objeto['texto'] . "\n";
+        }
+        
+        $subniveis = ['paragrafos', 'incisos', 'alineas'];
+        foreach($subniveis as $subnivel) {
+            if (isset($objeto[$subnivel])) {
+                foreach ($objeto[$subnivel] as $num => $subObj) {
+                    $label = "";
+                    if ($subnivel === 'paragrafos') $label = ($num === 'unico') ? 'Parágrafo único:' : "§ {$num}°:";
+                    if ($subnivel === 'incisos') $label = "Inciso {$num}:";
+                    if ($subnivel === 'alineas') $label = "Alínea {$num}):";
+                    
+                    $bloco .= "\n" . $indentacao . $label . "\n";
+                    $bloco .= $gerarTextoRecursivo($subObj, $nivel + 1);
+                }
+            }
+        }
+        return $bloco;
+    };
+
+    $textoItem .= $gerarTextoRecursivo($item['conteudo']);
+    return $textoItem;
+}
+
+// --- LÓGICA PRINCIPAL DO ENDPOINT ---
 try {
     $jsonString = file_get_contents('database.json');
     $database = json_decode($jsonString, true);
@@ -101,37 +104,90 @@ try {
     }
 
     if (!isset($_GET['notacao'])) {
-        http_response_code(400); // Bad Request
+        http_response_code(400);
         echo json_encode(['erro' => "Parâmetro 'notacao' é obrigatório."]);
         exit;
     }
-    
-    $notacao = $_GET['notacao'];
-    // NOVO: Verifica o parâmetro de formato. O padrão é 'estruturado'.
-    $formato = isset($_GET['formato']) ? $_GET['formato'] : 'estruturado';
 
-    $resultado = buscarPorNotacao($database, $notacao);
-    
-    if (isset($resultado['conteudo']['erro']) || isset($resultado['erro'])) {
-        http_response_code(404); // Not Found
-        echo json_encode($resultado);
-        exit;
-    }
-    
-    // NOVO: Decide o que responder com base no formato solicitado
-    if ($formato === 'texto') {
-        $textoFormatado = formatarResultadoComoTexto($resultado);
-        $respostaFinal = ['texto_formatado' => $textoFormatado];
+    $notacaoCompleta = $_GET['notacao'];
+    $formato = isset($_GET['formato']) ? $_GET['formato'] : 'estruturado';
+    $respostaFinal = null;
+
+    if (preg_match('/(.*)\.\s*\[(.*)\]$/', $notacaoCompleta, $matches)) {
+        // Lógica de busca múltipla
+        $caminhoPai = $matches[1];
+        $seletor = $matches[2];
+        $objetoPai = encontrarNoCaminho($database, $caminhoPai);
+
+        if ($objetoPai === null) {
+            http_response_code(404);
+            echo json_encode(['erro' => "O caminho base \"{$caminhoPai}\" da notação não foi encontrado."]);
+            exit;
+        }
+
+        $chavesParaBuscar = parsearSelecaoComplexa($seletor);
+        $resultados = [];
+        foreach ($chavesParaBuscar as $chave) {
+            $itemEncontrado = null;
+            $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
+            foreach ($ordemDeBusca as $subnivel) {
+                if (isset($objetoPai[$subnivel]) && isset($objetoPai[$subnivel][$chave])) {
+                    $itemEncontrado = $objetoPai[$subnivel][$chave];
+                    break;
+                }
+            }
+            if ($itemEncontrado) {
+                $artigoNumero = explode('.', $caminhoPai)[0];
+                $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
+                $resultados[] = ['notacao_pesquisada' => "{$caminhoPai}.{$chave}", 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
+            }
+        }
+        $respostaFinal = $resultados;
     } else {
-        $respostaFinal = $resultado;
+        // Lógica de busca simples
+        $resultadoUnico = encontrarNoCaminho($database, $notacaoCompleta);
+        if ($resultadoUnico === null) {
+            http_response_code(404);
+            echo json_encode(['erro' => "A notação \"{$notacaoCompleta}\" não foi encontrada."]);
+            exit;
+        }
+        $artigoNumero = explode('.', $notacaoCompleta)[0];
+        $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
+        $respostaFinal = [['notacao_pesquisada' => $notacaoCompleta, 'capitulo' => $capituloInfo, 'conteudo' => $resultadoUnico]];
     }
-    
-    // Envia a resposta final
+
+    // LÓGICA DE FORMATAÇÃO ATUALIZADA
+    if ($formato === 'texto') {
+        $textoConcatenado = ""; #Fundamentação com base no Regimento Interno:\n\n
+        $agrupadoPorCapitulo = [];
+
+        // Agrupa todos os resultados pelo número do capítulo
+        foreach ($respostaFinal as $res) {
+            $agrupadoPorCapitulo[$res['capitulo']['numero']][] = $res;
+        }
+        ksort($agrupadoPorCapitulo); // Garante a ordem dos capítulos
+
+        // Itera sobre os grupos para gerar o texto
+        foreach ($agrupadoPorCapitulo as $numCap => $itens) {
+            $textoConcatenado .= "Capítulo {$numCap}: {$itens[0]['capitulo']['titulo']}\n";
+            $textoConcatenado .= "\n"; #----------------------------------------
+            foreach ($itens as $item) {
+                $textoConcatenado .= formatarItemComoTexto($item) . "\n";
+            }
+            $textoConcatenado .= "\n";
+        }
+        $respostaFinal = ['texto_formatado' => trim($textoConcatenado)];
+    } else {
+        // Se a busca era simples, retorna um objeto, não um array de um item.
+        if (count($respostaFinal) === 1 && !preg_match('/\[.*\]/', $notacaoCompleta)) {
+            $respostaFinal = $respostaFinal[0];
+        }
+    }
+
     echo json_encode($respostaFinal, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    http_response_code(500); // Internal Server Error
+    http_response_code(500);
     echo json_encode(['erro' => 'Ocorreu um erro interno no servidor.', 'detalhes' => $e->getMessage()]);
 }
-
 ?>
