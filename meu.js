@@ -891,7 +891,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function(e) {
 function jsonToTable(jsonData) {
 	// console.log(jsonData);
 	const missingValueReplacement = '';
-      var tableHtml = '<table class="centered striped recurso case-headers">';
+      var tableHtml = '<table class="centered striped case-headers">';
       
       // Cabeçalho da tabela
       tableHtml += '<thead><tr>';
@@ -904,7 +904,8 @@ function jsonToTable(jsonData) {
       // Corpo da tabela
       tableHtml += '<tbody>';
       for (var i = 0; i < jsonData.length; i++) {
-        tableHtml += '<tr>';
+		let rec = jsonData[i].numero_ano_virtual;
+        tableHtml += '<tr class="recurso" rec="'+rec+'">';
 		tableHtml += '<td>' + (i+1) + '</td>';
         for (var key in jsonData[i]) {
 		  let valor = jsonData[i][key] === null ? missingValueReplacement : jsonData[i][key];
