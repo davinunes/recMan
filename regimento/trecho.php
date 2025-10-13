@@ -52,10 +52,17 @@ function parsearSelecaoComplexa($seletor) {
 
 function formatarItemComoTexto($item) {
     $textoItem = "Referência: {$item['notacao_pesquisada']}\n";
+    $conteudo = $item['conteudo'];
+    if (isset($conteudo['texto_artigo_pai'])) {
+        $textoItem .= ($conteudo['titulo_artigo_pai'] ? mb_strtoupper($conteudo['titulo_artigo_pai'], 'UTF-8') . "\n" : "") . $conteudo['texto_artigo_pai'] . "\n";
+        $conteudoParaRecursao = $conteudo['item_especifico'];
+    } else {
+        $conteudoParaRecursao = $conteudo;
+    }
     $gerarTextoRecursivo = function($objeto, $nivel = 0) use (&$gerarTextoRecursivo) {
         $bloco = "";
         $indentacao = str_repeat("  ", $nivel);
-        if (isset($objeto['titulo_artigo'])) { $bloco .= $indentacao . mb_strtoupper($objeto['titulo_artigo'], 'UTF-8') . "\n"; }
+        if (isset($objeto['titulo_artigo']) && $nivel == 0) { $bloco .= $indentacao . mb_strtoupper($objeto['titulo_artigo'], 'UTF-8') . "\n"; }
         if (isset($objeto['texto'])) { $bloco .= $indentacao . $objeto['texto'] . "\n"; }
         $subniveis = ['paragrafos', 'incisos', 'alineas'];
         foreach($subniveis as $subnivel) {
@@ -72,17 +79,15 @@ function formatarItemComoTexto($item) {
         }
         return $bloco;
     };
-    $textoItem .= $gerarTextoRecursivo($item['conteudo']);
+    $textoItem .= $gerarTextoRecursivo($conteudoParaRecursao);
     return $textoItem;
 }
-
 
 // --- LÓGICA PRINCIPAL DO ENDPOINT (TOTALMENTE REESTRUTURADA) ---
 try {
     $jsonString = file_get_contents('database.json');
     $database = json_decode($jsonString, true);
     if (json_last_error() !== JSON_ERROR_NONE) { throw new Exception('Erro ao ler ou decodificar o arquivo database.json.'); }
-
     if (!isset($_GET['notacao'])) {
         http_response_code(400);
         echo json_encode(['erro' => "Parâmetro 'notacao' é obrigatório."]);
@@ -93,31 +98,34 @@ try {
     $formato = isset($_GET['formato']) ? $_GET['formato'] : 'estruturado';
     $respostaFinal = [];
 
-    // 1. Divide a consulta em uma lista de tarefas, separadas por vírgula.
+    // Roteamento da busca
     $tarefasDeBusca = explode(',', $notacaoCompleta);
-
-    // 2. Itera sobre cada tarefa.
-    foreach ($tarefasDeBusca as $tarefa) {
-        $tarefa = trim($tarefa);
-        if (empty($tarefa)) continue;
-
-        // 3. Para cada tarefa, verifica se é complexa (com colchetes) ou simples.
+    if (count($tarefasDeBusca) > 1 && strpos($notacaoCompleta, '[') === false) {
+        // Busca em lote (ex: 14.5,47,49)
+        foreach ($tarefasDeBusca as $tarefa) {
+            $tarefa = trim($tarefa);
+            if(empty($tarefa)) continue;
+            $itemEncontrado = encontrarNoCaminho($database, $tarefa);
+            if ($itemEncontrado) {
+                $artigoNumero = explode('.', $tarefa)[0];
+                $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
+                $respostaFinal[] = ['notacao_pesquisada' => $tarefa, 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
+            }
+        }
+    } else {
+        // Busca simples ou com colchetes (trata como uma única tarefa)
+        $tarefa = $notacaoCompleta;
         if (preg_match('/(.*)\.\s*\[(.*)\]$/', $tarefa, $matches)) {
-            // A tarefa é complexa (ex: "58.[10,7,9]")
             $caminhoPai = $matches[1];
             $seletor = $matches[2];
             $objetoPai = encontrarNoCaminho($database, $caminhoPai);
-
             if ($objetoPai) {
                 $chavesParaBuscar = parsearSelecaoComplexa($seletor);
                 foreach ($chavesParaBuscar as $chave) {
                     $itemEncontrado = null;
                     $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
                     foreach ($ordemDeBusca as $subnivel) {
-                        if (isset($objetoPai[$subnivel]) && isset($objetoPai[$subnivel][$chave])) {
-                            $itemEncontrado = $objetoPai[$subnivel][$chave];
-                            break;
-                        }
+                        if (isset($objetoPai[$subnivel]) && isset($objetoPai[$subnivel][$chave])) { $itemEncontrado = $objetoPai[$subnivel][$chave]; break; }
                     }
                     if ($itemEncontrado) {
                         $artigoNumero = explode('.', $caminhoPai)[0];
@@ -127,39 +135,40 @@ try {
                 }
             }
         } else {
-            // A tarefa é simples (ex: "14.5")
-            $itemEncontrado = encontrarNoCaminho($database, $tarefa);
-            if ($itemEncontrado) {
-                $artigoNumero = explode('.', $tarefa)[0];
+            $itemEspecifico = encontrarNoCaminho($database, $tarefa);
+            if ($itemEspecifico) {
+                $partes = explode('.', $tarefa);
+                $artigoNumero = $partes[0];
                 $capituloInfo = ['numero' => $database['artigos'][$artigoNumero]['capitulo'], 'titulo' => $database['capitulos'][$database['artigos'][$artigoNumero]['capitulo']]];
-                $respostaFinal[] = ['notacao_pesquisada' => $tarefa, 'capitulo' => $capituloInfo, 'conteudo' => $itemEncontrado];
+                $conteudoFinal = $itemEspecifico;
+                if (count($partes) > 1) {
+                    $artigoPai = encontrarNoCaminho($database, $artigoNumero);
+                    $conteudoFinal = ['texto_artigo_pai' => $artigoPai['texto'] ?? null, 'titulo_artigo_pai' => $artigoPai['titulo_artigo'] ?? null, 'item_especifico' => $itemEspecifico];
+                }
+                $respostaFinal[] = ['notacao_pesquisada' => $tarefa, 'capitulo' => $capituloInfo, 'conteudo' => $conteudoFinal];
             }
         }
     }
-
-    // 4. Se nenhum item foi encontrado em nenhuma das tarefas, retorna erro.
+    
     if (empty($respostaFinal)) {
         http_response_code(404);
         echo json_encode(['erro' => "Nenhum item válido encontrado para a notação \"{$notacaoCompleta}\"."]);
         exit;
     }
 
-    // 5. Formata a saída (já funciona com listas, então não precisa mudar)
+    // LÓGICA DE FORMATAÇÃO (AGORA COMPLETA)
     if ($formato === 'texto') {
-        // ... (lógica de formatação de texto agrupada)
-        $textoConcatenado = "Fundamentação com base no Regimento Interno:\n\n";
+        $textoConcatenado = "";
         $agrupadoPorCapitulo = [];
         foreach ($respostaFinal as $res) { $agrupadoPorCapitulo[$res['capitulo']['numero']][] = $res; }
         ksort($agrupadoPorCapitulo);
         foreach ($agrupadoPorCapitulo as $numCap => $itens) {
-            $textoConcatenado .= "Capítulo {$numCap}: {$itens[0]['capitulo']['titulo']}\n----------------------------------------\n";
+            $textoConcatenado .= "Capítulo {$numCap}: {$itens[0]['capitulo']['titulo']}\n";
             foreach ($itens as $item) { $textoConcatenado .= formatarItemComoTexto($item) . "\n"; }
             $textoConcatenado .= "\n";
         }
         $respostaFinal = ['texto_formatado' => trim($textoConcatenado)];
-
     } else {
-        // Se a busca original era para um único item simples, retorna um objeto em vez de uma lista com um item.
         if (count($respostaFinal) === 1 && strpos($notacaoCompleta, ',') === false && strpos($notacaoCompleta, '[') === false) {
             $respostaFinal = $respostaFinal[0];
         }

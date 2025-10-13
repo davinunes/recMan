@@ -288,25 +288,139 @@ function getNotificacoes($unidade, $torre) {
 }
 
 function getAllNotificacoes() {
-    $sql = "select n.numero
-					,n.torre
-					,n.unidade
-					,DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email
-					,DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio
-					,DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido
-					,n.assunto
-					,n.notificacao
-					,n.ano
-					,n.numero_ano_virtual
-					,n.cobranca
-					,n.status
-					,n.obs
-					,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
-					,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
-					,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
-					,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
-	from notificacoes n left join DatasDeRetirada d on d.virtual = n.numero_ano_virtual order by n.ano asc, n.numero desc";
+    $sql = "SELECT n.numero
+                    ,n.torre
+                    ,n.unidade
+                    ,DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email
+                    ,DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio
+                    ,DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido
+                    ,n.assunto
+                    ,n.notificacao
+                    ,n.ano
+                    ,n.numero_ano_virtual
+                    ,n.cobranca
+                    ,n.status
+                    ,n.obs
+                    ,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
+                    ,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
+                    ,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
+                    ,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
+                    ,mc.valor
+                    ,DATE_FORMAT(mc.data_vencimento, '%d/%m/%Y') AS data_vencimento
+                    ,DATE_FORMAT(mc.data_pagamento, '%d/%m/%Y') AS data_pagamento
+                    ,CASE WHEN mc.numero IS NOT NULL THEN 'Sim' ELSE 'Não' END AS multa_cobrada
+            FROM notificacoes n 
+            LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
+            LEFT JOIN multas_cobradas mc ON mc.numero = n.numero AND mc.ano = n.ano
+            ORDER BY n.ano ASC, n.numero DESC";
 
+    $result = DBExecute($sql);
+    $dados = array();
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
+function getNotificacaoByNumeroAno($numero, $ano) {
+    $sql = "SELECT * FROM notificacoes WHERE numero = '$numero' AND ano = '$ano'";
+    $result = DBExecute($sql);
+    
+    if (mysqli_num_rows($result) > 0) {
+        return mysqli_fetch_assoc($result);
+    }
+    
+    return false;
+}
+
+function upsertMultaCobrada($data) {
+    // Preparar valores para NULL
+    $data_vencimento = $data['data_vencimento'];
+    $data_pagamento = $data['data_pagamento'] ? "'{$data['data_pagamento']}'" : "NULL";
+    $valor = $data['valor'];
+    
+    // Verificar se já existe registro
+    $check_sql = "SELECT id FROM multas_cobradas WHERE numero = '{$data['numero']}' AND ano = '{$data['ano']}'";
+    $check_result = DBExecute($check_sql);
+    
+    if (mysqli_num_rows($check_result) > 0) {
+        // UPDATE
+        $sql = "UPDATE multas_cobradas SET 
+                valor = '{$valor}',
+                data_vencimento = '{$data_vencimento}',
+                data_pagamento = {$data_pagamento},
+                updated_at = NOW()
+                WHERE numero = '{$data['numero']}' AND ano = '{$data['ano']}'";
+    } else {
+        // INSERT
+        $sql = "INSERT INTO multas_cobradas 
+                (unidade, bloco, data_vencimento, data_pagamento, valor, numero, ano, created_at, updated_at)
+                VALUES 
+                ('{$data['unidade']}', '{$data['bloco']}', '{$data_vencimento}', {$data_pagamento}, 
+                 '{$valor}', '{$data['numero']}', '{$data['ano']}', NOW(), NOW())";
+    }
+    
+    $result = DBExecute($sql);
+    return $result ? "ok" : "error";
+}
+
+function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bloco = null) {
+    $sql = "SELECT n.numero
+                    ,n.torre
+                    ,n.unidade
+                    ,DATE_FORMAT(n.data_email, '%d/%m/%Y') AS data_email
+                    ,DATE_FORMAT(n.data_envio, '%d/%m/%Y') AS data_envio
+                    ,DATE_FORMAT(n.data_ocorrido, '%d/%m/%Y') AS data_ocorrido
+                    ,n.assunto
+                    ,n.notificacao
+                    ,n.ano
+                    ,n.numero_ano_virtual
+                    ,n.cobranca
+                    ,n.status
+                    ,n.obs
+                    ,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
+                    ,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
+                    ,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
+                    ,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
+                    ,mc.valor
+                    ,DATE_FORMAT(mc.data_vencimento, '%d/%m/%Y') AS data_vencimento
+                    ,DATE_FORMAT(mc.data_pagamento, '%d/%m/%Y') AS data_pagamento
+                    ,CASE WHEN mc.numero IS NOT NULL THEN 'Sim' ELSE 'Não' END AS multa_cobrada
+            FROM notificacoes n 
+            LEFT JOIN DatasDeRetirada d ON d.virtual = n.numero_ano_virtual 
+            LEFT JOIN multas_cobradas mc ON mc.numero = n.numero AND mc.ano = n.ano
+            WHERE 1=1";
+    
+    // Filtro por ano
+    if ($ano !== null) {
+        $ano = DBEscape($ano);
+        $sql .= " AND n.ano = '$ano'";
+    }
+    
+    // Filtro por status
+    if ($status !== null) {
+        $status = DBEscape($status);
+        $sql .= " AND n.status = '$status'";
+    }
+    
+    // Filtro por tipo de notificação
+    if ($tipo !== null) {
+        $tipo = DBEscape($tipo);
+        $sql .= " AND n.notificacao = '$tipo'";
+    }
+    
+    // Filtro por bloco
+    if ($bloco !== null) {
+        $bloco = DBEscape($bloco);
+        $sql .= " AND n.torre = '$bloco'";
+    }
+    
+    $sql .= " ORDER BY n.ano ASC, n.numero DESC";
+    
     $result = DBExecute($sql);
     $dados = array();
 

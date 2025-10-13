@@ -115,7 +115,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return resultado;
     }
 
-    // --- FUNÇÕES DE RENDERIZAÇÃO E FORMATAÇÃO (ATUALIZADAS) ---
+    // --- NOVAS FUNÇÕES PARA CONSULTA DE TRECHOS ---
+
+/**
+ * Função para buscar o texto completo das notações selecionadas
+ */
+async function fetchNotationText(notationsString) {
+    if (!notationsString) {
+        document.getElementById('notationResult').value = "";
+        return;
+    }
+
+    try {
+        const response = await fetch(`trecho.php?notacao=${encodeURIComponent(notationsString)}&formato=texto`);
+        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.erro) {
+            document.getElementById('notationResult').value = `Erro: ${data.erro}`;
+        } else if (data.texto_formatado) {
+            document.getElementById('notationResult').value = data.texto_formatado;
+        } else {
+            document.getElementById('notationResult').value = "Formato de resposta inesperado.";
+        }
+    } catch (error) {
+        console.error("Erro ao buscar texto da notação:", error);
+        document.getElementById('notationResult').value = "Erro ao carregar o texto. Verifique a conexão.";
+    }
+}
+	
+	// --- FUNÇÕES DE RENDERIZAÇÃO E FORMATAÇÃO (ATUALIZADAS) ---
 
     function renderResultsList(items) {
         // ... (sem alteração)
@@ -184,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Chama a função para compactar antes de exibir
         const compactedString = compactarNotacoes(sortedNotations);
         notationOutput.value = compactedString;
+		
     }
 
     // --- EVENTOS DA INTERFACE (ATUALIZADOS) ---
@@ -215,6 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultsContainer.style.display = 'none';
             }
         }
+    });
+    
+	notationOutput.addEventListener('input', () => {
+		console.log("...");
+        fetchNotationText(document.getElementById('notationOutput').value);
     });
 
     resultsContainer.addEventListener('click', (event) => {

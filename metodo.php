@@ -126,6 +126,40 @@
 			echo $response;
 			// var_dump($dados);
             break;
+		case "upsertMultaCobrada":
+			session_start();
+			$dados = $_POST;
+			
+			// Extrair número e ano do ID (formato: numero/ano)
+			$aux = explode("/", $dados['id']);
+			$data['numero'] = $aux[0];
+			$data['ano'] = $aux[1];
+			$data['valor'] = $dados['valor'];
+			$data['data_vencimento'] = $dados['data_vencimento'];
+			
+			// Data de pagamento pode ser NULL se estiver vazia
+			$data['data_pagamento'] = !empty($dados['data_pagamento']) ? $dados['data_pagamento'] : null;
+			
+			// Validações
+			if (empty($data['valor']) || empty($data['data_vencimento'])) {
+				echo "Valor e Data de Vencimento são obrigatórios";
+				break;
+			}
+			
+			// Buscar unidade e bloco da notificação original
+			$notificacao = getNotificacaoByNumeroAno($data['numero'], $data['ano']);
+			if ($notificacao) {
+				$data['unidade'] = $notificacao['unidade'];
+				$data['bloco'] = $notificacao['torre'];
+			} else {
+				echo "Notificação não encontrada";
+				break;
+			}
+			
+			$try = upsertMultaCobrada($data);
+			if ($try === "ok") echo "success";
+			else echo "Erro no banco de dados";
+			break;
 		case "mudaFase":
 			session_start();
 			

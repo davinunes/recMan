@@ -865,6 +865,136 @@ $(document).on('dblclick', '.edit-retirado', function(e) {
 	});
 });
 
+$(document).on('dblclick', '.edit-multa-cobrada', function(e) {
+    var row = $(this).closest('tr');
+    var id = row.data('id');
+    var numero = row.find('td:eq(0)').text();
+    var ano = row.find('td:eq(1)').text();
+    var unidade = row.find('td:eq(2)').text();
+    var bloco = row.find('td:eq(3)').text();
+    
+    // Preencher o modal com os dados existentes
+    $('#modal-multa-numero').text(numero + '/' + ano);
+    $('#modal-multa-unidade').text(unidade);
+    $('#modal-multa-bloco').text(bloco);
+    $('#modal-multa-id').val(id);
+    
+    // Se já existir dados de multa, preencher os campos
+    var valorAtual = row.find('td:eq(11)').text();
+    var dataVencAtual = row.find('td:eq(12)').text();
+    var dataPagAtual = row.find('td:eq(13)').text();
+    
+    if (valorAtual !== '-' && valorAtual !== '') {
+        $('#valor-multa').val(valorAtual.replace('R$ ', '').replace('.', '').replace(',', '.'));
+    }
+    
+    if (dataVencAtual !== '-' && dataVencAtual !== '') {
+        $('#data-vencimento').val(dataVencAtual.split('/').reverse().join('-'));
+    }
+    
+    if (dataPagAtual !== '-' && dataPagAtual !== '') {
+        $('#data-pagamento').val(dataPagAtual.split('/').reverse().join('-'));
+    }
+    
+    // Abrir o modal
+    $('#modal-multa').modal('open');
+});
+
+
+// Função para salvar os dados da multa
+$(document).on('click', '#salvar-multa', function(e) {
+    var id = $('#modal-multa-id').val();
+    var valor = $('#valor-multa').val();
+    var dataVencimento = $('#data-vencimento').val();
+    var dataPagamento = $('#data-pagamento').val();
+    
+    // Validação básica - apenas valor e data de vencimento são obrigatórios
+    if (!valor || !dataVencimento) {
+        M.toast({html: 'Valor e Data de Vencimento são obrigatórios!', classes: 'red rounded'});
+        return;
+    }
+    
+    // Enviar dados para o servidor
+    $.ajax({
+        url: 'metodo.php?metodo=upsertMultaCobrada',
+        method: 'POST',
+        data: { 
+            id: id,
+            valor: valor,
+            data_vencimento: dataVencimento,
+            data_pagamento: dataPagamento || '' // Envia string vazia se não preenchido
+        },
+        success: function(response) {
+            if (response === 'success') {
+                M.toast({html: 'Multa salva com sucesso!', classes: 'green rounded'});
+                $('#modal-multa').modal('close');
+                location.reload();
+            } else {
+                M.toast({html: 'Erro ao salvar: ' + response, classes: 'red rounded'});
+            }
+        },
+        error: function(xhr, status, error) {
+            M.toast({html: 'Erro de conexão: ' + error, classes: 'red rounded'});
+        }
+    });
+});
+
+$(document).on('click', '.parecer', function(e) {
+    var $this = $(this);
+    
+    // Inicializar ou incrementar contador
+    if (!$this.data('clickCount')) {
+        $this.data('clickCount', 1);
+        
+        // Resetar após 1 segundo
+        setTimeout(function() {
+            $this.data('clickCount', 0);
+        }, 1000);
+        
+    } else {
+        $this.data('clickCount', $this.data('clickCount') + 1);
+    }
+    
+    // Se for triplo clique
+    if ($this.data('clickCount') === 3) {
+        var valorParecer = $this.text().trim();
+        
+        if (valorParecer !== '') {
+            // Contar quantas linhas serão removidas
+            var count = 0;
+            $('.parecer').each(function() {
+                if ($(this).text().trim() === valorParecer) {
+                    count++;
+                }
+            });
+            
+            // Remover todas as linhas com o mesmo parecer
+            $('.parecer').each(function() {
+                if ($(this).text().trim() === valorParecer) {
+                    $(this).closest('tr').fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }
+            });
+            
+            M.toast({
+                html: '✂️ Removidas ' + count + ' linhas com parecer: "' + valorParecer + '"',
+                classes: 'orange rounded',
+                displayLength: 4000
+            });
+            
+        } else {
+            M.toast({
+                html: '⚠️ Parecer vazio!',
+                classes: 'red rounded'
+            });
+        }
+        
+        // Resetar contador imediatamente
+        $this.data('clickCount', 0);
+    }
+});
+
 $(document).on('click', '#buscaHistoricoUnidade', function(e) {
 	
 	var unidade = $("#unidade").val();
