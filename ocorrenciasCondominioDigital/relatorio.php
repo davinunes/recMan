@@ -7,6 +7,7 @@ require_once '../classes/database.php';
 // Pega os valores dos filtros da URL (via GET)
 $bloco_filter = $_GET['bloco'] ?? '';
 $resolvido_filter = $_GET['resolvido'] ?? ''; // Filtro para resolvido (1) ou não resolvido (0)
+$responsabilidade_filter = $_GET['responsabilidade'] ?? ''; // <-- NOVO FILTRO
 $mes_filter = $_GET['mes'] ?? date('n'); // Padrão: mês atual
 $ano_filter = $_GET['ano'] ?? date('Y'); // Padrão: ano atual
 
@@ -26,11 +27,61 @@ if ($resolvido_filter !== '') {
     $params[] = $resolvido_filter;
     $types .= 'i';
 }
-if (!empty($mes_filter) && !empty($ano_filter)) {
-    $where_conditions .= " AND ((YEAR(abertura) = ? AND MONTH(abertura) = ?) OR (YEAR(data_ultima_mensagem) = ? AND MONTH(data_ultima_mensagem) = ?))";
-    $params = array_merge($params, [$ano_filter, $mes_filter, $ano_filter, $mes_filter]);
-    $types .= 'iiii';
+
+// <-- LÓGICA DO NOVO FILTRO -->
+if (!empty($responsabilidade_filter)) {
+    if ($responsabilidade_filter === 'nenhum') {
+        $where_conditions .= " AND responsabilidade IS NULL";
+    } else {
+        $where_conditions .= " AND responsabilidade = ?";
+        $params[] = $responsabilidade_filter;
+        $types .= 's';
+    }
 }
+// <-- FIM DA NOVA LÓGICA -->
+
+// --- LÓGICA DE FILTRO DE DATA ATUALIZADA ---
+// Removemos o bloco if anterior
+$abertura_conditions = [];
+$abertura_params = [];
+$abertura_types = '';
+
+$ult_msg_conditions = [];
+$ult_msg_params = [];
+$ult_msg_types = '';
+
+if (!empty($ano_filter)) {
+    $abertura_conditions[] = "YEAR(abertura) = ?";
+    $abertura_params[] = $ano_filter;
+    $abertura_types .= 'i';
+
+    $ult_msg_conditions[] = "YEAR(data_ultima_mensagem) = ?";
+    $ult_msg_params[] = $ano_filter;
+    $ult_msg_types .= 'i';
+}
+
+if (!empty($mes_filter)) {
+    $abertura_conditions[] = "MONTH(abertura) = ?";
+    $abertura_params[] = $mes_filter;
+    $abertura_types .= 'i';
+
+    $ult_msg_conditions[] = "MONTH(data_ultima_mensagem) = ?";
+    $ult_msg_params[] = $mes_filter;
+    $ult_msg_types .= 'i';
+}
+
+// Se houver qualquer filtro de data (mês ou ano)
+if (!empty($abertura_conditions)) {
+    $abertura_sql = "(" . implode(' AND ', $abertura_conditions) . ")";
+    $ult_msg_sql = "(" . implode(' AND ', $ult_msg_conditions) . ")";
+    
+    $where_conditions .= " AND ($abertura_sql OR $ult_msg_sql)";
+    
+    $params = array_merge($params, $abertura_params, $ult_msg_params);
+    $types .= $abertura_types . $ult_msg_types;
+}
+// --- FIM DA LÓGICA DE FILTRO DE DATA ---
+
 
 // --- Query para buscar os dados ---
 $sql = "SELECT * FROM ocorrencias $where_conditions ORDER BY abertura DESC";
@@ -82,10 +133,11 @@ try {
 				<a href="https://www.toplifemiamibeach.com.br/area_restrita.aspx?id=w/wGkJW3ORpOcMRvFjzENg==&p1=a971d0e2-c12f-4d92-8359-947c67e11e14">Logar no Condominio Digital para funcionar os links das ocorrencias</a>
 
                 <!-- Formulário de Filtros -->
-                <form action="relatorio.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <form action="relatorio.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
                     <div>
                         <label for="mes" class="block text-sm font-medium text-gray-700">Mês</label>
                         <select name="mes" id="mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="" <?= $mes_filter === '' ? 'selected' : '' ?>>Todos</option>
                             <?php
                                 $meses_pt = [1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril', 5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto', 9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'];
                                 foreach ($meses_pt as $num => $nome) {
@@ -97,6 +149,7 @@ try {
                      <div>
                         <label for="ano" class="block text-sm font-medium text-gray-700">Ano</label>
                         <select name="ano" id="ano" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="" <?= $ano_filter === '' ? 'selected' : '' ?>>Todos</option>
                             <?php
                                 for ($a = date('Y'); $a >= date('Y') - 5; $a--) {
                                     echo '<option value="' . $a . '"' . ($ano_filter == $a ? ' selected' : '') . '>' . $a . '</option>';
@@ -119,6 +172,16 @@ try {
                             <option value="">Todos</option>
                             <option value="1" <?= $resolvido_filter === '1' ? 'selected' : '' ?>>Resolvidos</option>
                             <option value="0" <?= $resolvido_filter === '0' ? 'selected' : '' ?>>Não Resolvidos</option>
+                        </select>
+                    </div>
+                    <!-- NOVO FILTRO DE RESPONSÁVEL -->
+                    <div>
+                        <label for="responsabilidade" class="block text-sm font-medium text-gray-700">Responsável</label>
+                        <select name="responsabilidade" id="responsabilidade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Todos</option>
+                            <option value="sindico" <?= $responsabilidade_filter === 'sindico' ? 'selected' : '' ?>>Síndico</option>
+                            <option value="sub" <?= $responsabilidade_filter === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
+                            <option value="nenhum" <?= $responsabilidade_filter === 'nenhum' ? 'selected' : '' ?>>Não classificado</option>
                         </select>
                     </div>
                     <div class="self-end">
