@@ -7,6 +7,7 @@ require_once '../classes/database.php';
 // Pega os valores dos filtros da URL (via GET)
 $bloco_filter = $_GET['bloco'] ?? '';
 $status_filter = $_GET['status'] ?? '';
+$responsabilidade_filter = $_GET['responsabilidade'] ?? ''; // <-- NOVO
 // Define o filtro de mês, com o padrão sendo o mês e ano atuais
 $mes_filter = $_GET['mes'] ?? date('Y-m');
 
@@ -25,6 +26,17 @@ if (!empty($status_filter)) {
     $params[] = $status_filter;
     $types .= 's';
 }
+// --- LÓGICA DO NOVO FILTRO ---
+if (!empty($responsabilidade_filter)) {
+    if ($responsabilidade_filter === 'nenhum') {
+        $where_conditions .= " AND responsabilidade IS NULL";
+    } else {
+        $where_conditions .= " AND responsabilidade = ?";
+        $params[] = $responsabilidade_filter;
+        $types .= 's';
+    }
+}
+// --- FIM DA LÓGICA ---
 if (!empty($mes_filter)) {
     list($ano, $mes) = explode('-', $mes_filter);
     $where_conditions .= " AND ((YEAR(abertura) = ? AND MONTH(abertura) = ?) OR (YEAR(data_ultima_mensagem) = ? AND MONTH(data_ultima_mensagem) = ?))";
@@ -40,7 +52,10 @@ $sql_blocos = "
         SUM(sindico) AS total_sindico,
         SUM(sub) AS total_sub,
         SUM(adm) AS total_adm,
-        SUM(resolvido) AS total_resolvido
+        SUM(resolvido) AS total_resolvido,
+        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS total_resp_sindico,
+        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS total_resp_sub,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS total_interacao_responsavel
     FROM ocorrencias
     $where_conditions
     GROUP BY bloco
@@ -53,7 +68,10 @@ $sql_total = "
         SUM(sindico) AS total_sindico,
         SUM(sub) AS total_sub,
         SUM(adm) AS total_adm,
-        SUM(resolvido) AS total_resolvido
+        SUM(resolvido) AS total_resolvido,
+        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS total_resp_sindico,
+        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS total_resp_sub,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS total_interacao_responsavel
     FROM ocorrencias
     $where_conditions";
 
@@ -111,12 +129,12 @@ try {
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Relatório Quantitativo</h1>
 
                 <!-- Formulário de Filtros -->
-                <form action="quantitativos.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <form action="quantitativos.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                     <div>
                         <label for="mes" class="block text-sm font-medium text-gray-700">Mês</label>
                         <select name="mes" id="mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                             <?php
-                                // --- MUDANÇA PARA GARANTIR PORTUGUÊS ---
+                                // --- MUDANÇA PARA GARANTIR PORTUGÊS ---
                                 $meses_pt = [
                                     1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
                                     5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
@@ -152,6 +170,16 @@ try {
                             <option value="Fechado" <?= $status_filter == 'Fechado' ? 'selected' : '' ?>>Fechado</option>
                         </select>
                     </div>
+                    <!-- NOVO FILTRO DE RESPONSÁVEL -->
+                    <div>
+                        <label for="responsabilidade" class="block text-sm font-medium text-gray-700">Responsável</label>
+                        <select name="responsabilidade" id="responsabilidade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Todos</option>
+                            <option value="sindico" <?= $responsabilidade_filter == 'sindico' ? 'selected' : '' ?>>Síndico</option>
+                            <option value="sub" <?= $responsabilidade_filter == 'sub' ? 'selected' : '' ?>>Subsíndico</option>
+                            <option value="nenhum" <?= $responsabilidade_filter == 'nenhum' ? 'selected' : '' ?>>Não classificado</option>
+                        </select>
+                    </div>
                     <div class="self-end">
                         <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Filtrar
@@ -161,45 +189,59 @@ try {
 
                 <!-- Tabela de Resultados -->
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
                         <thead class="bg-gray-50">
+                            <!-- CABEÇALHO AGRUPADO -->
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bloco</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Ocorr.</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Síndico</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sub</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Adm</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Resolvidos</th>
+                                <th scope="col" rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Bloco</th>
+                                <th scope="col" rowspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Total Ocorrências</th>
+                                <th scope="col" colspan="3" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 bg-gray-100">Participação</th>
+                                <th scope="col" rowspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Considerado Resolvido</th>
+                                <th scope="col" colspan="3" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Responsabilidade</th>
+                            </tr>
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100">Síndico</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100">Subsíndico</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 bg-gray-100">Administração</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Síndico</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Subsíndico</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Tratado pelo Responsável</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php if (empty($dados_blocos)): ?>
                                 <tr>
-                                    <td colspan="6" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                         Nenhum dado encontrado com os filtros selecionados.
                                     </td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($dados_blocos as $bloco_data): ?>
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?= htmlspecialchars($bloco_data['bloco']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($bloco_data['total_ocorrencias']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($bloco_data['total_sindico']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($bloco_data['total_sub']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($bloco_data['total_adm']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"><?= htmlspecialchars($bloco_data['total_resolvido']) ?></td>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200"><?= htmlspecialchars($bloco_data['bloco']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200"><?= htmlspecialchars($bloco_data['total_ocorrencias']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-50"><?= htmlspecialchars($bloco_data['total_sindico']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-50"><?= htmlspecialchars($bloco_data['total_sub']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200 bg-gray-50"><?= htmlspecialchars($bloco_data['total_adm']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200"><?= htmlspecialchars($bloco_data['total_resolvido']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_resp_sindico']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_resp_sub']) ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_interacao_responsavel']) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>
-                        <tfoot class="bg-gray-100">
+                        <tfoot class="bg-gray-100 border-t-2 border-gray-300">
                             <tr class="font-bold text-gray-700">
-                                <td class="px-6 py-3 text-left text-sm uppercase">Total Geral</td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_ocorrencias'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-left text-sm uppercase border-r border-gray-200">Total Geral</td>
+                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_ocorrencias'] ?? 0) ?></td>
                                 <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_sindico'] ?? 0) ?></td>
                                 <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_sub'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_adm'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_resolvido'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_adm'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_resolvido'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_resp_sindico'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_resp_sub'] ?? 0) ?></td>
+                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_interacao_responsavel'] ?? 0) ?></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -210,3 +252,6 @@ try {
 
 </body>
 </html>
+
+
+
