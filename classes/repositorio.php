@@ -185,6 +185,24 @@ function getMensagens($recurso) {
     return $dados;
 }
 
+function getDiligencias($recurso) {
+    $sql = "SELECT m.*, u.avatar 
+            FROM conselho.diligencia m
+			left join conselho.usuarios u on u.id = m.id_usuario
+            WHERE id_recurso = '$recurso'";
+
+    $result = DBExecute($sql);
+    $dados = array(); // Inicializa a variável $dados como um array vazio
+
+    if (mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+
+    return $dados;
+}
+
 function getEstatisticas($mes = null, $ano = null) {
     // Se $ano não for fornecido, define-o como o ano atual
     if ($ano === null) {
@@ -845,6 +863,22 @@ function upsertComentario($dados) {
     $mensagem = DBEscape($dados['messageText']); 
 
     $sql  = "INSERT INTO conselho.mensagem ";
+    $sql .= "(id_usuario, id_recurso, texto) ";
+    $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
+    
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function upsertDiligencia($dados) {
+    $id_recurso = $dados['id_recurso'];
+    $id_usuario = $dados['user_id']; // Supondo que você tenha o ID do usuário na sessão
+    $mensagem = DBEscape($dados['messageText']); 
+
+    $sql  = "INSERT INTO conselho.diligencia ";
     $sql .= "(id_usuario, id_recurso, texto) ";
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
     

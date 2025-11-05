@@ -14,6 +14,7 @@ $esseRecurso = $result['id'];
 // dump($result);
 
 $mensagens = getMensagens($esseRecurso);
+$diligencias = getDiligencias($esseRecurso);
 $votos = getVotos($esseRecurso);
 
 //Verifica se Recurso está no Prazo
@@ -130,6 +131,29 @@ echo '<div class="row">
 echo   '</ul>
     </div>
 </div>';
+
+echo "<h6><b>Análise da Diligência</b></h6>";
+
+echo '<div class="row">
+    <div class="">
+        <ul class="collection with-header">
+            ';
+            foreach ($diligencias as $mensagem) {
+				$dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
+				$mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
+				if($_SESSION["user_id"] == $mensagem["id_usuario"]){
+					$actions = "<span class='actions'><a class='editDiligence modal-trigger' href='#editaDiligencia' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
+				}else{
+					$actions = "<span class='actions'>$dataFormatada</span>";
+				}
+                echo '<li class="collection-item avatar">
+				<img src="'.$mensagem['avatar'].'" alt="" class="circle">
+				' .$actions."<p>". $mensagem['texto'] . '</p>
+				</li>';
+            }
+echo   '</ul>';
+
+
 echo "<h6><b>Comentários</b></h6>";
 
 echo '<div class="row">
@@ -159,7 +183,7 @@ foreach($vaga as $vg){
 }
 
 
-echo "<h6>Histórico da unidade</h6>";
+echo "<h6><b>Histórico da unidade</b></h6>";
 
 echo '<table class="striped">';
 		echo "<div id=\"popup\" class=\"popup\">
@@ -205,6 +229,7 @@ echo '      </div>
                 <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
                 <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a>
                 <a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a>
+                <a class="modal-trigger btn orange black-3" href="#addiligencia">Adicionar Diligencia</a>
 				';
 				
 if($result['fase'] == 4) echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec='.$result['numero'].'">Parecer</a>';
@@ -241,6 +266,22 @@ echo 				'
     </div>
     <div class="modal-footer">
         <a id="comentar" class="modal-close waves-effect waves-green btn-flat">Enviar</a>
+    </div>
+</div>
+<!-- Modal de Diligencia -->
+<div id="addiligencia" class="modal">
+    <div class="modal-content">
+        <h4>Nova Diligencia</h4>
+        <p>Relate como se deu a apuração do fato até finalização da notificação. Quanto mais detalhes melhor.</p>
+		<form id="postDiligenciaForm">
+            <div class="input-field">
+                <textarea id="messageText" class="materialize-textarea" name="messageText" required></textarea>
+                <label for="messageText">Mensagem</label>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a id="diligenciar" class="modal-close waves-effect waves-green btn-flat">Anotar</a>
     </div>
 </div>
 <!-- Modal de Nova Mensagem -->

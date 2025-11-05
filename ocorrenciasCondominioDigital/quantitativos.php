@@ -4,12 +4,34 @@ require_once '../classes/database.php';
 
 // --- LÓGICA DE BUSCA E FILTRO ---
 
+// Lista de meses para os selects
+$meses_pt = [
+    1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+    5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+    9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+];
+
 // Pega os valores dos filtros da URL (via GET)
 $bloco_filter = $_GET['bloco'] ?? '';
+$unidade_filter = $_GET['unidade'] ?? '';
 $status_filter = $_GET['status'] ?? '';
-$responsabilidade_filter = $_GET['responsabilidade'] ?? ''; // <-- NOVO
-// Define o filtro de mês, com o padrão sendo o mês e ano atuais
-$mes_filter = $_GET['mes'] ?? date('Y-m');
+$responsabilidade_filter = $_GET['responsabilidade'] ?? '';
+$agrupar_filter = $_GET['agrupar'] ?? 'total'; // --- NOVO FILTRO ---
+
+// --- LÓGICA DE FILTRO DE DATA (RANGE) ---
+$default_mes = date('n');
+$default_ano = date('Y');
+
+$mes_ini_filter = $_GET['mes_ini'] ?? $default_mes;
+$ano_ini_filter = $_GET['ano_ini'] ?? $default_ano;
+$mes_fim_filter = $_GET['mes_fim'] ?? $default_mes;
+$ano_fim_filter = $_GET['ano_fim'] ?? $default_ano;
+
+// Monta as datas de início e fim
+$data_inicio = date('Y-m-d H:i:s', strtotime("{$ano_ini_filter}-{$mes_ini_filter}-01 00:00:00"));
+// Pega o último dia do mês final
+$data_fim = date('Y-m-t 23:59:59', strtotime("{$ano_fim_filter}-{$mes_fim_filter}-01"));
+
 
 // --- Montagem da Cláusula WHERE ---
 $where_conditions = " WHERE 1=1";
@@ -21,12 +43,16 @@ if (!empty($bloco_filter)) {
     $params[] = $bloco_filter;
     $types .= 's';
 }
+if (!empty($unidade_filter)) {
+    $where_conditions .= " AND unidade = ?";
+    $params[] = $unidade_filter;
+    $types .= 's';
+}
 if (!empty($status_filter)) {
     $where_conditions .= " AND status = ?";
     $params[] = $status_filter;
     $types .= 's';
 }
-// --- LÓGICA DO NOVO FILTRO ---
 if (!empty($responsabilidade_filter)) {
     if ($responsabilidade_filter === 'nenhum') {
         $where_conditions .= " AND responsabilidade IS NULL";
@@ -36,73 +62,76 @@ if (!empty($responsabilidade_filter)) {
         $types .= 's';
     }
 }
-// --- FIM DA LÓGICA ---
-if (!empty($mes_filter)) {
-    list($ano, $mes) = explode('-', $mes_filter);
-    $where_conditions .= " AND ((YEAR(abertura) = ? AND MONTH(abertura) = ?) OR (YEAR(data_ultima_mensagem) = ? AND MONTH(data_ultima_mensagem) = ?))";
-    $params = array_merge($params, [$ano, $mes, $ano, $mes]);
-    $types .= 'iiii';
-}
 
-// --- Query para dados por Bloco ---
-$sql_blocos = "
-    SELECT
+// --- NOVA CONDIÇÃO DE FILTRO DE DATA ---
+$where_conditions .= " AND ( (abertura BETWEEN ? AND ?) OR (data_ultima_mensagem BETWEEN ? AND ?) )";
+$params[] = $data_inicio;
+$params[] = $data_fim;
+$params[] = $data_inicio;
+$params[] = $data_fim;
+$types .= 'ssss';
+
+
+// --- Query para o Relatório (Condicional) ---
+
+$sql_select_fields = "";
+$sql_group_by = "";
+
+if ($agrupar_filter === 'bloco') {
+    // Agrupa por bloco
+    $sql_select_fields = "
         bloco,
         COUNT(id) AS total_ocorrencias,
-        SUM(sindico) AS total_sindico,
-        SUM(sub) AS total_sub,
-        SUM(adm) AS total_adm,
+        SUM(sindico) AS inter_sindico_total,
+        SUM(sub) AS inter_sub_total,
+        SUM(adm) AS inter_adm_total,
         SUM(resolvido) AS total_resolvido,
-        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS total_resp_sindico,
-        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS total_resp_sub,
-        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS total_interacao_responsavel
-    FROM ocorrencias
-    $where_conditions
-    GROUP BY bloco
-    ORDER BY bloco ASC";
-
-// --- Query para o Total Geral ---
-$sql_total = "
-    SELECT
+        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS resp_sindico_total,
+        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS resp_sub_total,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 ELSE 0 END) AS inter_sindico_na_sua_resp,
+        SUM(CASE WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS inter_sub_na_sua_resp,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sub = 1 THEN 1 ELSE 0 END) AS inter_sub_na_resp_sindico,
+        SUM(CASE WHEN responsabilidade = 'sub' AND sindico = 1 THEN 1 ELSE 0 END) AS inter_sindico_na_resp_sub
+    ";
+    $sql_group_by = "GROUP BY bloco ORDER BY bloco";
+} else {
+    // Total Geral
+    $sql_select_fields = "
         COUNT(id) AS total_ocorrencias,
-        SUM(sindico) AS total_sindico,
-        SUM(sub) AS total_sub,
-        SUM(adm) AS total_adm,
+        SUM(sindico) AS inter_sindico_total,
+        SUM(sub) AS inter_sub_total,
+        SUM(adm) AS inter_adm_total,
         SUM(resolvido) AS total_resolvido,
-        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS total_resp_sindico,
-        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS total_resp_sub,
-        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS total_interacao_responsavel
-    FROM ocorrencias
-    $where_conditions";
+        SUM(CASE WHEN responsabilidade = 'sindico' THEN 1 ELSE 0 END) AS resp_sindico_total,
+        SUM(CASE WHEN responsabilidade = 'sub' THEN 1 ELSE 0 END) AS resp_sub_total,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sindico = 1 THEN 1 ELSE 0 END) AS inter_sindico_na_sua_resp,
+        SUM(CASE WHEN responsabilidade = 'sub' AND sub = 1 THEN 1 ELSE 0 END) AS inter_sub_na_sua_resp,
+        SUM(CASE WHEN responsabilidade = 'sindico' AND sub = 1 THEN 1 ELSE 0 END) AS inter_sub_na_resp_sindico,
+        SUM(CASE WHEN responsabilidade = 'sub' AND sindico = 1 THEN 1 ELSE 0 END) AS inter_sindico_na_resp_sub
+    ";
+    $sql_group_by = ""; // Sem group by para total geral
+}
+
+$sql_query = "SELECT $sql_select_fields FROM ocorrencias $where_conditions $sql_group_by";
+
 
 $link = null;
-$dados_blocos = [];
-$dados_total = [];
+$dados_relatorio = [];
 
 try {
     $link = DBConnect();
 
-    // Executa a query por blocos
-    $stmt_blocos = mysqli_prepare($link, $sql_blocos);
+    $stmt_geral = mysqli_prepare($link, $sql_query);
     if (!empty($types)) {
-        mysqli_stmt_bind_param($stmt_blocos, $types, ...$params);
+        mysqli_stmt_bind_param($stmt_geral, $types, ...$params);
     }
-    mysqli_stmt_execute($stmt_blocos);
-    $result_blocos = mysqli_stmt_get_result($stmt_blocos);
-    while ($row = mysqli_fetch_assoc($result_blocos)) {
-        $dados_blocos[] = $row;
+    mysqli_stmt_execute($stmt_geral);
+    $result_geral = mysqli_stmt_get_result($stmt_geral);
+    
+    while ($row = mysqli_fetch_assoc($result_geral)) {
+         $dados_relatorio[] = $row;
     }
-    mysqli_stmt_close($stmt_blocos);
-
-    // Executa a query do total geral
-    $stmt_total = mysqli_prepare($link, $sql_total);
-    if (!empty($types)) {
-        mysqli_stmt_bind_param($stmt_total, $types, ...$params);
-    }
-    mysqli_stmt_execute($stmt_total);
-    $result_total = mysqli_stmt_get_result($stmt_total);
-    $dados_total = mysqli_fetch_assoc($result_total);
-    mysqli_stmt_close($stmt_total);
+    mysqli_stmt_close($stmt_geral);
 
 } catch (Exception $e) {
     die("Erro ao buscar dados: " . $e->getMessage());
@@ -111,6 +140,10 @@ try {
         DBClose($link);
     }
 }
+
+// --- GERAÇÃO DO TEXTO DINÂMICO ---
+$periodo_label = "de " . $meses_pt[(int)$mes_ini_filter] . "/" . $ano_ini_filter . " até " . $meses_pt[(int)$mes_fim_filter] . "/" . $ano_fim_filter;
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -129,129 +162,214 @@ try {
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Relatório Quantitativo</h1>
 
                 <!-- Formulário de Filtros -->
-                <form action="quantitativos.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                    <div>
-                        <label for="mes" class="block text-sm font-medium text-gray-700">Mês</label>
-                        <select name="mes" id="mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                            <?php
-                                // --- MUDANÇA PARA GARANTIR PORTUGÊS ---
-                                $meses_pt = [
-                                    1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
-                                    5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
-                                    9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
-                                ];
+                <form action="quantitativos.php" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    
+                    <!-- Filtros de Data Inicial -->
+                    <fieldset class="col-span-1 sm:col-span-2 lg:col-span-1 p-3 border rounded-md">
+                        <legend class="text-sm font-medium text-gray-700 px-1">Data Inicial</legend>
+                        <div class="flex gap-2">
+                            <select name="mes_ini" class="mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <?php foreach ($meses_pt as $num => $nome): ?>
+                                    <option value="<?= $num ?>" <?= $mes_ini_filter == $num ? 'selected' : '' ?>><?= substr($nome, 0, 3) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="ano_ini" class="mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <?php for ($ano = date('Y'); $ano >= date('Y') - 5; $ano--): ?>
+                                    <option value="<?= $ano ?>" <?= $ano_ini_filter == $ano ? 'selected' : '' ?>><?= $ano ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                    </fieldset>
+                    
+                    <!-- Filtros de Data Final -->
+                     <fieldset class="col-span-1 sm:col-span-2 lg:col-span-1 p-3 border rounded-md">
+                        <legend class="text-sm font-medium text-gray-700 px-1">Data Final</legend>
+                        <div class="flex gap-2">
+                            <select name="mes_fim" class="mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <?php foreach ($meses_pt as $num => $nome): ?>
+                                    <option value="<?= $num ?>" <?= $mes_fim_filter == $num ? 'selected' : '' ?>><?= substr($nome, 0, 3) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="ano_fim" class="mt-1 block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <?php for ($ano = date('Y'); $ano >= date('Y') - 5; $ano--): ?>
+                                    <option value="<?= $ano ?>" <?= $ano_fim_filter == $ano ? 'selected' : '' ?>><?= $ano ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                    </fieldset>
 
-                                for ($i = 0; $i <= 12; $i++) {
-                                    $time = strtotime(date("Y-m-01") . " -$i months");
-                                    $value = date("Y-m", $time);
-                                    $mes_num = (int)date('n', $time);
-                                    $ano_num = date('Y', $time);
-                                    $label = $meses_pt[$mes_num] . ' de ' . $ano_num;
-                                    echo '<option value="' . $value . '"' . ($mes_filter == $value ? ' selected' : '') . '>' . $label . '</option>';
-                                }
-                            ?>
-                        </select>
+                    <!-- Outros Filtros -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-3 col-span-1 sm:col-span-2 lg:col-span-1 gap-4">
+                        <!-- NOVO FILTRO DE AGRUPAMENTO -->
+                        <div class="col-span-2 sm:col-span-4 lg:col-span-3">
+                            <label for="agrupar" class="block text-sm font-medium text-gray-700">Agrupamento</label>
+                            <select name="agrupar" id="agrupar" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="total" <?= $agrupar_filter == 'total' ? 'selected' : '' ?>>Total Geral</option>
+                                <option value="bloco" <?= $agrupar_filter == 'bloco' ? 'selected' : '' ?>>Por Bloco</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="bloco" class="block text-sm font-medium text-gray-700">Bloco</label>
+                            <select name="bloco" id="bloco" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="">Todos</option>
+                                <?php foreach (['A', 'B', 'C', 'D', 'E', 'F', 'Z'] as $b): ?>
+                                    <option value="<?= $b ?>" <?= $bloco_filter == $b ? 'selected' : '' ?>><?= $b ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="unidade" class="block text-sm font-medium text-gray-700">Unidade</label>
+                            <input type="text" name="unidade" id="unidade" value="<?= htmlspecialchars($unidade_filter) ?>" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" placeholder="Ex: 101">
+                        </div>
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                            <select name="status" id="status" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="">Todos</D>
+                                <option value="Aberto" <?= $status_filter == 'Aberto' ? 'selected' : '' ?>>Aberto</option>
+                                <option value="Em andamento" <?= $status_filter == 'Em andamento' ? 'selected' : '' ?>>Em andamento</option>
+                                <option value="Fechado" <?= $status_filter == 'Fechado' ? 'selected' : '' ?>>Fechado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="responsabilidade" class="block text-sm font-medium text-gray-700">Responsável</label>
+                            <select name="responsabilidade" id="responsabilidade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="">Todos</option>
+                                <option value="sindico" <?= $responsabilidade_filter == 'sindico' ? 'selected' : '' ?>>Síndico</option>
+                                <option value="sub" <?= $responsabilidade_filter == 'sub' ? 'selected' : '' ?>>Subsíndico</option>
+                                <option value="nenhum" <?= $responsabilidade_filter == 'nenhum' ? 'selected' : '' ?>>Não classificado</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label for="bloco" class="block text-sm font-medium text-gray-700">Bloco</label>
-                        <select name="bloco" id="bloco" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                            <option value="">Todos</option>
-                            <?php foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $b): ?>
-                                <option value="<?= $b ?>" <?= $bloco_filter == $b ? 'selected' : '' ?>><?= $b ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="status" id="status" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                            <option value="">Todos</option>
-                            <option value="Aberto" <?= $status_filter == 'Aberto' ? 'selected' : '' ?>>Aberto</option>
-                            <option value="Em andamento" <?= $status_filter == 'Em andamento' ? 'selected' : '' ?>>Em andamento</option>
-                            <option value="Fechado" <?= $status_filter == 'Fechado' ? 'selected' : '' ?>>Fechado</option>
-                        </select>
-                    </div>
-                    <!-- NOVO FILTRO DE RESPONSÁVEL -->
-                    <div>
-                        <label for="responsabilidade" class="block text-sm font-medium text-gray-700">Responsável</label>
-                        <select name="responsabilidade" id="responsabilidade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                            <option value="">Todos</option>
-                            <option value="sindico" <?= $responsabilidade_filter == 'sindico' ? 'selected' : '' ?>>Síndico</option>
-                            <option value="sub" <?= $responsabilidade_filter == 'sub' ? 'selected' : '' ?>>Subsíndico</option>
-                            <option value="nenhum" <?= $responsabilidade_filter == 'nenhum' ? 'selected' : '' ?>>Não classificado</option>
-                        </select>
-                    </div>
-                    <div class="self-end">
-                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+
+                    <!-- Botão de Filtro -->
+                    <div class="col-span-1 sm:col-span-2 lg:col-span-1 self-end">
+                        <button type="submit" class="w-full h-10 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Filtrar
                         </button>
                     </div>
                 </form>
 
-                <!-- Tabela de Resultados -->
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                        <thead class="bg-gray-50">
-                            <!-- CABEÇALHO AGRUPADO -->
-                            <tr>
-                                <th scope="col" rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Bloco</th>
-                                <th scope="col" rowspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Total Ocorrências</th>
-                                <th scope="col" colspan="3" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 bg-gray-100">Participação</th>
-                                <th scope="col" rowspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-r border-gray-200">Considerado Resolvido</th>
-                                <th scope="col" colspan="3" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Responsabilidade</th>
-                            </tr>
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100">Síndico</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-100">Subsíndico</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 bg-gray-100">Administração</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Síndico</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Subsíndico</th>
-                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-200">Tratado pelo Responsável</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <?php if (empty($dados_blocos)): ?>
+                <!-- Tabela Matriz -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">Matriz Quantitativa</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border">
+                            <thead class="bg-gray-50">
                                 <tr>
-                                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                    <!-- NOVA COLUNA DE CABEÇALHO DA TABELA -->
+                                    <th rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                                        <?= $agrupar_filter === 'bloco' ? 'Bloco' : 'Agrupamento' ?>
+                                    </th>
+                                    <th rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Total</th>
+                                    <th colspan="3" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-100">Participação</th>
+                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-200">Responsabilidade</th>
+                                    <th rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Considerado Resolvido</th>
+                                    <th rowspan="2" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratado pelo Responsável</th>
+                                </tr>
+                                <tr class="bg-gray-50">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-100">Síndico</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-100">Subsíndico</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-100">Administração</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-200">Síndico</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r bg-gray-200">Subsíndico</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php if (empty($dados_relatorio) || ($agrupar_filter === 'total' && empty($dados_relatorio[0]['total_ocorrencias']))): ?>
+                                <tr>
+                                    <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">
                                         Nenhum dado encontrado com os filtros selecionados.
                                     </td>
                                 </tr>
-                            <?php else: ?>
-                                <?php foreach ($dados_blocos as $bloco_data): ?>
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200"><?= htmlspecialchars($bloco_data['bloco']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200"><?= htmlspecialchars($bloco_data['total_ocorrencias']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-50"><?= htmlspecialchars($bloco_data['total_sindico']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-50"><?= htmlspecialchars($bloco_data['total_sub']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200 bg-gray-50"><?= htmlspecialchars($bloco_data['total_adm']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center border-r border-gray-200"><?= htmlspecialchars($bloco_data['total_resolvido']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_resp_sindico']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_resp_sub']) ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center bg-gray-100"><?= htmlspecialchars($bloco_data['total_interacao_responsavel']) ?></td>
+                                <?php else: ?>
+                                    <?php foreach ($dados_relatorio as $data): ?>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-700 border-r">
+                                            <?= $agrupar_filter === 'bloco' ? htmlspecialchars($data['bloco']) : 'Total Geral' ?>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r"><?= $data['total_ocorrencias'] ?></td>
+                                        
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r bg-gray-50"><?= $data['inter_sindico_total'] ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r bg-gray-50"><?= $data['inter_sub_total'] ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r bg-gray-50"><?= $data['inter_adm_total'] ?></td>
+                                        
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r bg-gray-100"><?= $data['resp_sindico_total'] ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r bg-gray-100"><?= $data['resp_sub_total'] ?></td>
+                                        
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r"><?= $data['total_resolvido'] ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?= $data['inter_sindico_na_sua_resp'] + $data['inter_sub_na_sua_resp'] ?></td>
                                     </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                        <tfoot class="bg-gray-100 border-t-2 border-gray-300">
-                            <tr class="font-bold text-gray-700">
-                                <td class="px-6 py-3 text-left text-sm uppercase border-r border-gray-200">Total Geral</td>
-                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_ocorrencias'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_sindico'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_sub'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_adm'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm border-r border-gray-200"><?= htmlspecialchars($dados_total['total_resolvido'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_resp_sindico'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_resp_sub'] ?? 0) ?></td>
-                                <td class="px-6 py-3 text-center text-sm"><?= htmlspecialchars($dados_total['total_interacao_responsavel'] ?? 0) ?></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- Relatório Descritivo -->
+                <div class="border-t border-gray-200 pt-6 mt-6">
+                    <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">Relatório Descritivo</h2>
+                    
+                    <?php if (empty($dados_relatorio) || ($agrupar_filter === 'total' && empty($dados_relatorio[0]['total_ocorrencias']))): ?>
+                        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <p class="text-gray-700 leading-relaxed text-base sm:text-lg">
+                                Nenhum dado encontrado com os filtros selecionados para gerar o relatório.
+                            </p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($dados_relatorio as $data): ?>
+                            <?php
+                                // --- GERAÇÃO DO TEXTO DINÂMICO ---
+                                
+                                if ($agrupar_filter === 'bloco') {
+                                    $bloco_label = "o bloco " . htmlspecialchars($data['bloco']);
+                                    $texto_relatorio = "<b class='text-lg text-indigo-700'>Bloco " . htmlspecialchars($data['bloco']) . ":</b> Em auditoria, constatou-se que no período $periodo_label, ";
+                                } else {
+                                    $bloco_label = "todos os blocos";
+                                    if (!empty($bloco_filter)) {
+                                        $bloco_label = "o bloco " . htmlspecialchars($bloco_filter);
+                                    }
+                                    if (!empty($unidade_filter)) {
+                                        $bloco_label .= " (unidade " . htmlspecialchars($unidade_filter) . ")";
+                                    }
+                                    $texto_relatorio = "Em auditoria, constatou-se que no período $periodo_label, para $bloco_label, ";
+                                }
+
+                                $texto_relatorio .= "foram registradas {$data['total_ocorrencias']} ocorrências, das quais, ";
+                                $texto_relatorio .= "{$data['inter_sub_total']} foram movimentadas pelo subsíndico, ";
+                                $texto_relatorio .= "{$data['inter_sindico_total']} foram movimentadas pelo síndico, e ";
+                                $texto_relatorio .= "{$data['inter_adm_total']} foram movimentadas por colaboradores (administração). ";
+                                
+                                $texto_relatorio .= "Ainda, {$data['resp_sindico_total']} eram demandas do síndico e {$data['resp_sub_total']} eram demandas do subsíndico. ";
+                                
+                                $texto_relatorio .= "Dessas demandas, o síndico interagiu com {$data['inter_sindico_na_sua_resp']} das {$data['resp_sindico_total']} que lhe competiam, ";
+                                $texto_relatorio .= "e o subsíndico interagiu com {$data['inter_sub_na_sua_resp']} das {$data['resp_sub_total']} que lhe competiam. ";
+
+                                if ($data['inter_sub_na_resp_sindico'] > 0) {
+                                    $plural = $data['inter_sub_na_resp_sindico'] > 1 ? 'demandas' : 'demanda';
+                                    $texto_relatorio .= "Destaca-se que o subsíndico ainda auxiliou no andamento de {$data['inter_sub_na_resp_sindico']} $plural que competiam ao síndico. ";
+                                }
+                                if ($data['inter_sindico_na_resp_sub'] > 0) {
+                                    $plural = $data['inter_sindico_na_resp_sub'] > 1 ? 'demandas' : 'demanda';
+                                    $texto_relatorio .= "O síndico, por sua vez, auxiliou em {$data['inter_sindico_na_resp_sub']} $plural de responsabilidade do subsíndico. ";
+                                }
+
+                                $texto_relatorio .= "Este conselho considerou que, do total filtrado, {$data['total_resolvido']} ocorrências foram resolvidas, por terem alcançado o objetivo ou por não se ter mais o que relatar no chamado.";
+                            ?>
+                            
+                            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-4">
+                                <p class="text-gray-700 leading-relaxed text-base sm:text-lg">
+                                    <?= $texto_relatorio ?>
+                                </p>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+                
             </div>
         </div>
     </div>
 
 </body>
 </html>
-
-
-

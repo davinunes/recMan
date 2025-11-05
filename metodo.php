@@ -89,6 +89,15 @@
             $response = upsertComentario($dados);
 			echo $response;
             break;
+		case "novaDiligencia":
+			session_start();
+			
+            $dados = $_POST;
+			$dados["user_id"] = $_SESSION["user_id"];
+
+            $response = upsertDiligencia($dados);
+			echo $response;
+            break;
 		case "editaComentario":
 			session_start();
 			
