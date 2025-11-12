@@ -70,7 +70,7 @@ $pdf['data_emissao'] = date('Y-m-d', strtotime($parecer['data']));
 $assunto = "Parecer do Conselho ".$parecer["id"];
 $destinatarios = $result["email"];
 $cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
-$bcc = "admcond@solucoesdf.com.br, juridico@solucoesdf.com.br";
+// $bcc = "admcond@solucoesdf.com.br, juridico@solucoesdf.com.br";
 $mensagem = "Prezados,<br/>
 Segue parecer do conselho referente ao recurso {$pdf['notificacao']}, da unidade {$pdf['unidade']}.";
 $nomeAnexo = "Parecer Recurso ".str_replace("/","-",$pdf['notificacao']).".pdf";

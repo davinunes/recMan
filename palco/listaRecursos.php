@@ -107,9 +107,9 @@
 					//Dados do e-mail a ser enviado:
 					$assunto = "Relação de Notificações com o Conselho";
 					$assunto = "=?UTF-8?B?".base64_encode($assunto)."?=";
-					$destinatarios = "juridico@solucoesdf.com.br, admcond@solucoesdf.com.br, erisvaldo.soares@solucoesdf.com.br";
+					$destinatarios = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
 					// $destinatarios = "davi.nunes@gmail.com";
-					$cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
+					// $cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
 					// $bcc = "admcond@solucoesdf.com.br";
 					
 					$mime .= "Content-Type: text/html; charset=UTF-8\n";
