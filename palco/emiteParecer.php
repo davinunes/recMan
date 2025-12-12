@@ -138,7 +138,7 @@ if($gmail["status"] && $gmail["resta"] > 59){
 	include("/var/www/html/gmail/refresh.php");
 }
 
-if(!$parecerJaFoiEnviado) echo "<a class='btn blue right' id='btnAlterarParecer'>Quero alterar dados do parecer</a>";
+if(!$parecerJaFoiEnviado || $_GET[edit]) echo "<a class='btn blue right' id='btnAlterarParecer'>Quero alterar dados do parecer</a>";
 
 if($parecerJaFoiEnviado) {
 	$link = "https://mail.google.com/mail/#inbox/".$parecer['mailId'];

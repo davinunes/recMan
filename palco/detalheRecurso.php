@@ -310,14 +310,14 @@ echo 				'
 <table>
     <tr>
         <td class="opVoto" voto="manter">
-            <div class="chip">Manter</div>
+            <div class="chip red darken-4 white-text">Manter</div>
         </td>
         <td class="opVoto" voto="revogar">
-            <div class="chip">Revogar</div>
+            <div class="chip teal  white-text">Revogar</div>
         </td>
-        <td class="opVoto" voto="converter">
+        <!-- <td class="opVoto" voto="converter">
             <div class="chip">Converter</div>
-        </td>
+        </td> -->
     </tr>
 </table>
 
