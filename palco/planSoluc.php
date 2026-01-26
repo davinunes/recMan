@@ -44,6 +44,15 @@ require "classes/repositorio.php";
                 ?>
             </select>
         </div>
+        
+        <div class="col s12 m2">
+            <label for="cobrada">Multa Cobrada:</label>
+            <select id="cobrada" name="cobrada">
+                <option value="todos" <?php echo (!isset($_GET['cobrada']) || $_GET['cobrada'] == 'todos') ? 'selected' : ''; ?>>Todos</option>
+                <option value="Sim" <?php echo (isset($_GET['cobrada']) && $_GET['cobrada'] == 'Sim') ? 'selected' : ''; ?>>Sim</option>
+                <option value="Nao" <?php echo (isset($_GET['cobrada']) && $_GET['cobrada'] == 'Nao') ? 'selected' : ''; ?>>Não</option>
+            </select>
+        </div>
 
         <div class="col s12 m2">
             <label for="tipo">Filtrar por Tipo:</label>
@@ -131,13 +140,13 @@ require "classes/repositorio.php";
 
 <?php
 // Lógica para buscar dados com filtros
-if (isset($_GET['ano']) || isset($_GET['status']) || isset($_GET['tipo']) || isset($_GET['bloco'])) {
+if (isset($_GET['ano']) || isset($_GET['status']) || isset($_GET['tipo']) || isset($_GET['bloco']) || isset($_GET['cobrada'])) {
     $ano = isset($_GET['ano']) && $_GET['ano'] != 'todos' ? $_GET['ano'] : null;
     $status = isset($_GET['status']) && $_GET['status'] != 'todos' ? $_GET['status'] : null;
     $tipo = isset($_GET['tipo']) && $_GET['tipo'] != 'todos' ? $_GET['tipo'] : null;
     $bloco = isset($_GET['bloco']) && $_GET['bloco'] != 'todos' ? $_GET['bloco'] : null;
-    
-    $lista = getNotificacoesByFilters($ano, $status, $tipo, $bloco);
+    $multa_cobrada = isset($_GET['cobrada']) && $_GET['cobrada'] != 'todos' ? $_GET['cobrada'] : null;
+    $lista = getNotificacoesByFilters($ano, $status, $tipo, $bloco, $multa_cobrada);
 } else {
     $lista = getAllNotificacoes();
 }

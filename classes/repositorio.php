@@ -386,7 +386,7 @@ function upsertMultaCobrada($data) {
     return $result ? "ok" : "error";
 }
 
-function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bloco = null) {
+function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bloco = null, $multa_cobrada = null) {
     $sql = "SELECT n.numero
                     ,n.torre
                     ,n.unidade
@@ -435,6 +435,19 @@ function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bl
     if ($bloco !== null) {
         $bloco = DBEscape($bloco);
         $sql .= " AND n.torre = '$bloco'";
+    }
+
+    // Filtro por multa cobrada
+    if ($multa_cobrada !== null) {
+        $multa_cobrada = DBEscape($multa_cobrada);
+        if (strtolower($multa_cobrada) === 'sim') {
+            $sql .= " AND mc.numero IS NOT NULL";
+        } elseif (strtolower($multa_cobrada) === 'não' || strtolower($multa_cobrada) === 'nao') {
+            $sql .= " AND mc.numero IS NULL";
+        } else {
+            // Se passar um valor diferente, usa a verificação da CASE
+            $sql .= " AND CASE WHEN mc.numero IS NOT NULL THEN 'Sim' ELSE 'Não' END = '$multa_cobrada'";
+        }
     }
     
     $sql .= " ORDER BY n.ano ASC, n.numero DESC";
