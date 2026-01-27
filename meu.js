@@ -960,7 +960,8 @@ $(document).on('click', '#salvar-multa', function(e) {
             if (response === 'success') {
                 M.toast({html: 'Multa salva com sucesso!', classes: 'green rounded'});
                 $('#modal-multa').modal('close');
-                location.reload();
+                $(`tr[data-id="${id}"]`).remove();
+                // location.reload();
             } else {
                 M.toast({html: 'Erro ao salvar: ' + response, classes: 'red rounded'});
             }
@@ -973,6 +974,11 @@ $(document).on('click', '#salvar-multa', function(e) {
 
 $(document).on('click', '.parecer', function(e) {
     var $this = $(this);
+    var total = -1;
+
+    $("#listaSolucoes tr").each(function() {
+        total++;
+    });
     
     // Inicializar ou incrementar contador
     if (!$this.data('clickCount')) {
@@ -1014,6 +1020,10 @@ $(document).on('click', '.parecer', function(e) {
                 classes: 'orange rounded',
                 displayLength: 4000
             });
+
+            total = total - count;
+
+            $("#listaSolucoes_info").html("Total de itens: "+ total);
             
         } else {
             M.toast({
