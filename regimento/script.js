@@ -214,6 +214,7 @@ async function fetchNotationText(notationsString) {
         // Chama a função para compactar antes de exibir
         const compactedString = compactarNotacoes(sortedNotations);
         notationOutput.value = compactedString;
+        fetchNotationText(document.getElementById('notationOutput').value);
 		
     }
 
