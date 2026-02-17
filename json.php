@@ -181,7 +181,7 @@ if ($jsonData === null) {
         $linha = []; // Inicializa o array vazio a cada iteração
         
         // Verifica e seta o valor de 'ano'
-        if (isset($row[''])) {
+        if (isset($row['NOT'])) {
 			$numeroParts = explode("/", preg_replace('/[^\d\/]/', '', $row['']));
 			if (isset($numeroParts[1])) {
 				$linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
@@ -232,10 +232,10 @@ if ($jsonData === null) {
 		
 		if(sizeof($linha) > 2){
 			upsertNotificacao($linha);
-			// var_dump($linha);
+			var_dump($linha);
 			
 		}
-        // echo "<br>";
+        echo "<br>";
 
         // Verifica e seta os valores para 'dados'
         if (isset($linha["numero"]) && isset($linha["ano"]) && isset($row["RECEBIMENTO FISICO"]) && isset($linha["torre"]) && isset($linha["unidade"])) {
