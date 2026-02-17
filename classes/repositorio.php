@@ -3,7 +3,7 @@ require "/var/www/html/classes/database.php";
 
 function dump($el){
 	echo "<pre>";
-		var_dump($el);
+		print_r($el);
 	echo "</pre>";
 }
 
@@ -788,8 +788,8 @@ function upsertNotificacao($dados) {
         return $value !== null ? "'" . DBEscape($value) . "'" : 'NULL';
     }, $dados));
 
-    $sql = "INSERT INTO notificacoes ($fields) VALUES ($values) ";
-    $sql .= "ON DUPLICATE KEY UPDATE ";
+    $sql = "INSERT INTO notificacoes \n ($fields) \n VALUES \n ($values) \n";
+    $sql .= "ON DUPLICATE KEY UPDATE \n";
     
     foreach ($dados as $key => $value) {
         if ($value !== null) {

@@ -5,6 +5,7 @@
 		$dataFormat = "d/m/Y";
 	}
 	require("classes/repositorio.php");
+
 		
 if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 	
@@ -38,7 +39,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 ?>
 
 
-	<!DOCTYPE html>
+	<!-- <!DOCTYPE html>
 	<html>
 	<head>
 		<title>Conversor JSON</title>
@@ -58,8 +59,8 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 			<button id="processar">Processar</button>
 			<br>
 			<pre id="json1"></pre>
-		</div>
-
+		</div> -->
+<!-- 
 	<script>
 		var dataArray1; // Declarando a variável dataArray1 global
 		$(document).ready(function() {
@@ -135,7 +136,7 @@ if(isset($_POST['processar']) && $_POST['processar'] === 'sim') {
 	</script>
 
 	</body>
-	</html>
+	</html> -->
 
 
 <?php
@@ -177,12 +178,13 @@ if ($jsonData === null) {
     echo "Erro ao obter o JSON da URL.";
 } else {
     foreach ($jsonData as $row) {
-		// var_dump($row);
+		// dump($row);
         $linha = []; // Inicializa o array vazio a cada iteração
         
         // Verifica e seta o valor de 'ano'
         if (isset($row['NOT'])) {
-			$numeroParts = explode("/", preg_replace('/[^\d\/]/', '', $row['']));
+			$numeroParts = explode("/", preg_replace('/[^\d\/]/', '', $row['NOT']));
+			// dump($numeroParts);
 			if (isset($numeroParts[1])) {
 				$linha["ano"] = "20" . substr($numeroParts[1], 0, 2);
 			}
@@ -232,7 +234,7 @@ if ($jsonData === null) {
 		
 		if(sizeof($linha) > 2){
 			upsertNotificacao($linha);
-			var_dump($linha);
+			// var_dump($linha);
 			
 		}
         echo "<br>";
@@ -261,7 +263,5 @@ if ($jsonData === null) {
 
 
 <?php
-echo "<br>Importando da Magnacom";
-
-
+	// echo "<br>Importando da Magnacom";	
 ?>
