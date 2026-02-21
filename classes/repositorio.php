@@ -7,6 +7,46 @@ function dump($el){
 	echo "</pre>";
 }
 
+function styledDump($sql) {
+    // Cores para o "Carnaval" do Debug
+    $keywords = ['INSERT INTO', 'VALUES', 'ON DUPLICATE KEY UPDATE', 'NULL'];
+    $highlightedSql = $sql;
+
+    foreach ($keywords as $word) {
+        $highlightedSql = str_replace($word, "<b style='color: #ff79c6;'>$word</b>", $highlightedSql);
+    }
+
+    echo "
+    <style>
+        .debug-card {
+            background-color: #282a36;
+            color: #f8f8f2;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 5px solid #50fa7b;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            overflow-x: auto;
+            line-height: 1.4;
+        }
+        .debug-label {
+            color: #6272a4;
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+            font-weight: bold;
+        }
+    </style>
+    <div class='debug-card'>
+        <span class='debug-label'>[SQL Query - " . date('H:i:s') . "]</span>
+        <pre style='margin: 0; white-space: pre-wrap;'>" . $highlightedSql . "</pre>
+    </div>
+    ";
+}
+
 function getUsuarios($id=1){
 	$sql  = " SELECT id, email, senha, nome, status, unidade, avatar ";
 	$sql .= " FROM conselho.usuarios" ;
@@ -798,7 +838,8 @@ function upsertNotificacao($dados) {
     }
     // Remova a última vírgula e espaço desnecessários
     $sql = rtrim($sql, ', ');
-	dump($sql);
+    
+	styledDump($sql);
     // Execute a consulta
     if (DBExecute($sql)) {
         return "ok";
