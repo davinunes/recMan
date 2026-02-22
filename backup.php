@@ -93,7 +93,7 @@ if (isset($_GET['action'])) {
         exec($cmd, $output, $ret);
 
         if ($ret === 0) {
-            echo json_encode(['success' => true, 'file' => $outName]);
+            echo json_encode(['success' => true, 'file' => $webBase . $outName]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Falha na descriptografia. Verifique o arquivo e a senha.']);
         }
