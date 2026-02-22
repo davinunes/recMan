@@ -9,8 +9,17 @@ $database = DB_DATABASE; // Nome do banco de dados
 
 // Caminho base para backups
 $backupBase = __DIR__ . '/storage/backups/';
-if (!is_dir($backupBase))
-    mkdir($backupBase, 0777, true);
+$webBase = 'storage/backups/';
+
+// Tenta criar o diretório silenciando avisos. Se falhar ou não for gravável, usaremos o diretório atual.
+if (!is_dir($backupBase)) {
+    @mkdir($backupBase, 0777, true);
+}
+
+if (!is_writable($backupBase)) {
+    $backupBase = __DIR__ . '/';
+    $webBase = '';
+}
 
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
@@ -230,7 +239,7 @@ rsort($backupList);
                                         <tr>
                                             <td><?php echo $file; ?></td>
                                             <td>
-                                                <a href="storage/backups/<?php echo $file; ?>" download
+                                                <a href="<?php echo $webBase . $file; ?>" download
                                                     class="btn-small waves-effect waves-light blue">
                                                     <i class="material-icons">cloud_download</i>
                                                 </a>
