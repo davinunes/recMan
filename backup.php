@@ -101,13 +101,28 @@ if (isset($_GET['action'])) {
     }
 }
 
-// Listar backups existentes
-$backups = glob($backupBase . "*.sql.tar.gz.enc");
+// Listar backups existentes em ambos os locais possiveis
+$possiblePaths = [
+    __DIR__ . '/storage/backups/' => 'storage/backups/',
+    __DIR__ . '/' => ''
+];
+
 $backupList = [];
-foreach ($backups as $b) {
-    $backupList[] = basename($b);
+foreach ($possiblePaths as $absPath => $relPath) {
+    if (is_dir($absPath)) {
+        $found = glob($absPath . "*.sql.tar.gz.enc");
+        if ($found) {
+            foreach ($found as $f) {
+                $bName = basename($f);
+                // Evita duplicatas se o arquivo estiver em ambos por algum motivo
+                if (!isset($backupList[$bName])) {
+                    $backupList[$bName] = $relPath . $bName;
+                }
+            }
+        }
+    }
 }
-rsort($backupList);
+krsort($backupList); // Ordena por nome (data) decrescente
 ?>
 
 <!DOCTYPE html>
@@ -235,11 +250,11 @@ rsort($backupList);
                                         <td colspan="2">Nenhum backup encontrado.</td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($backupList as $file): ?>
+                                    <?php foreach ($backupList as $fileName => $webPath): ?>
                                         <tr>
-                                            <td><?php echo $file; ?></td>
+                                            <td><?php echo $fileName; ?></td>
                                             <td>
-                                                <a href="<?php echo $webBase . $file; ?>" download
+                                                <a href="<?php echo $webPath; ?>" download
                                                     class="btn-small waves-effect waves-light blue">
                                                     <i class="material-icons">cloud_download</i>
                                                 </a>
