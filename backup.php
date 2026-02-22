@@ -110,7 +110,7 @@ $possiblePaths = [
 $backupList = [];
 foreach ($possiblePaths as $absPath => $relPath) {
     if (is_dir($absPath)) {
-        $found = glob($absPath . "*.sql.tar.gz.enc");
+        $found = glob($absPath . "*tar.gz.enc");
         if ($found) {
             foreach ($found as $f) {
                 $bName = basename($f);
