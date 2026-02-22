@@ -11,6 +11,12 @@ $database = DB_DATABASE; // Nome do banco de dados
 $backupBase = __DIR__ . '/storage/backups/';
 $webBase = 'storage/backups/';
 
+// Listar backups existentes em ambos os locais possiveis
+$possiblePaths = [
+    __DIR__ . '/storage/backups/' => 'storage/backups/',
+    __DIR__ . '/' => ''
+];
+
 // Tenta criar o diretório silenciando avisos. Se falhar ou não for gravável, usaremos o diretório atual.
 if (!is_dir($backupBase)) {
     @mkdir($backupBase, 0777, true);
@@ -99,30 +105,57 @@ if (isset($_GET['action'])) {
         }
         exit;
     }
+
+    if ($_GET['action'] == 'delete' && isset($_GET['file'])) {
+        $fileToDelete = $_GET['file'];
+        // Segurança: Impede sair da pasta de backups
+        $safeName = basename($fileToDelete);
+
+        $deleted = false;
+        foreach ($possiblePaths as $absPath => $relPath) {
+            $fullPath = $absPath . $safeName;
+            if (file_exists($fullPath)) {
+                if (unlink($fullPath)) {
+                    $deleted = true;
+                }
+            }
+        }
+
+        echo json_encode(['success' => $deleted]);
+        exit;
+    }
 }
 
 // Listar backups existentes em ambos os locais possiveis
-$possiblePaths = [
-    __DIR__ . '/storage/backups/' => 'storage/backups/',
-    __DIR__ . '/' => ''
-];
-
 $backupList = [];
+$decryptList = [];
+
 foreach ($possiblePaths as $absPath => $relPath) {
     if (is_dir($absPath)) {
-        $found = glob($absPath . "*tar.gz.enc");
-        if ($found) {
-            foreach ($found as $f) {
+        // Busca Backups
+        $foundBackups = glob($absPath . "*tar.gz.enc");
+        if ($foundBackups) {
+            foreach ($foundBackups as $f) {
                 $bName = basename($f);
-                // Evita duplicatas se o arquivo estiver em ambos por algum motivo
                 if (!isset($backupList[$bName])) {
                     $backupList[$bName] = $relPath . $bName;
                 }
             }
         }
+        // Busca Descriptografados
+        $foundDecrypted = glob($absPath . "*.decrypted.tar.gz");
+        if ($foundDecrypted) {
+            foreach ($foundDecrypted as $f) {
+                $dName = basename($f);
+                if (!isset($decryptList[$dName])) {
+                    $decryptList[$dName] = $relPath . $dName;
+                }
+            }
+        }
     }
 }
-krsort($backupList); // Ordena por nome (data) decrescente
+krsort($backupList);
+krsort($decryptList);
 ?>
 
 <!DOCTYPE html>
@@ -233,31 +266,67 @@ krsort($backupList); // Ordena por nome (data) decrescente
 
         <!-- Lista de Backups -->
         <div class="row">
-            <div class="col s12">
+            <div class="col s12 l6">
                 <div class="card">
                     <div class="card-content">
-                        <span class="card-title">Arquivos Disponíveis no Servidor</span>
+                        <span class="card-title">Backups Criptografados (.enc)</span>
                         <table class="striped">
                             <thead>
                                 <tr>
-                                    <th>Nome do Arquivo</th>
+                                    <th>Arquivo</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($backupList)): ?>
-                                    <tr>
-                                        <td colspan="2">Nenhum backup encontrado.</td>
-                                    </tr>
+                                    <tr><td colspan="2">Nenhum backup encontrado.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($backupList as $fileName => $webPath): ?>
-                                        <tr>
+                                        <tr id="row-<?php echo md5($fileName); ?>">
                                             <td><?php echo $fileName; ?></td>
                                             <td>
-                                                <a href="<?php echo $webPath; ?>" download
-                                                    class="btn-small waves-effect waves-light blue">
+                                                <a href="<?php echo $webPath; ?>" download class="btn-small blue">
                                                     <i class="material-icons">cloud_download</i>
                                                 </a>
+                                                <button class="btn-small red btn-delete" data-file="<?php echo $fileName; ?>">
+                                                    <i class="material-icons">delete</i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Descriptografados -->
+            <div class="col s12 l6">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">Arquivos Descriptografados (.tar.gz)</span>
+                        <table class="striped">
+                            <thead>
+                                <tr>
+                                    <th>Arquivo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($decryptList)): ?>
+                                    <tr><td colspan="2">Nenhum arquivo descriptografado.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($decryptList as $fileName => $webPath): ?>
+                                        <tr id="row-<?php echo md5($fileName); ?>">
+                                            <td><?php echo $fileName; ?></td>
+                                            <td>
+                                                <a href="<?php echo $webPath; ?>" download class="btn-small teal">
+                                                    <i class="material-icons">cloud_download</i>
+                                                </a>
+                                                <button class="btn-small red btn-delete" data-file="<?php echo $fileName; ?>">
+                                                    <i class="material-icons">delete</i>
+                                                </button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -349,6 +418,29 @@ krsort($backupList); // Ordena por nome (data) decrescente
                         $status.html('<p class="red-text">Erro na solicitação.</p>');
                     }
                 });
+            });
+
+            // Lógica para Apagar Arquivos
+            $(document).on('click', '.btn-delete', function() {
+                const fileName = $(this).data('file');
+                const rowId = '#row-' + btoa(unescape(encodeURIComponent(fileName))).replace(/=/g, '').replace(/\//g, '').replace(/\+/g, '');
+                
+                // Usando md5 no PHP para o ID da linha para ser mais seguro e simples
+                // Mas como usei md5($fileName) no PHP, vamos usar um seletor mais genérico ou recarregar
+                if (confirm('Tem certeza que deseja apagar o arquivo ' + fileName + '?')) {
+                    $.ajax({
+                        url: 'backup.php?action=delete&file=' + encodeURIComponent(fileName),
+                        method: 'GET',
+                        success: function(res) {
+                            if (res.success) {
+                                M.toast({html: 'Arquivo apagado!', classes: 'green'});
+                                location.reload(); // Recarrega para atualizar ambas as listas
+                            } else {
+                                M.toast({html: 'Erro ao apagar arquivo', classes: 'red'});
+                            }
+                        }
+                    });
+                }
             });
         });
     </script>
