@@ -2,7 +2,7 @@
 // Define as ferramentas e suas categorias para facilitar a manutenção
 $tools = [
     'Sincronização' => [
-        ['label' => 'Importar Planilha Soluções', 'url' => 'json.php?importar_magnacom=1', 'icon' => 'grid_on', 'target' => '_self', 'color' => 'blue'],
+        ['label' => 'Importar Planilha de Multas', 'url' => 'json.php?importar_magnacom=1', 'icon' => 'grid_on', 'target' => '_self', 'color' => 'blue'],
         ['label' => 'GIT Deploy', 'url' => 'git.php', 'icon' => 'cloud_sync', 'target' => '_blank', 'color' => 'black'],
     ],
     'Segurança e Sistema' => [
@@ -33,19 +33,23 @@ $tools = [
         padding: 20px !important;
         margin-bottom: 20px;
     }
+
     .tool-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
     }
+
     .tool-card i {
         font-size: 3rem;
         margin-bottom: 10px;
     }
+
     .tool-card .card-title {
         font-size: 1.1rem !important;
         font-weight: 500;
         line-height: 1.2;
     }
+
     .section-title {
         margin-top: 30px;
         margin-bottom: 15px;
@@ -65,20 +69,20 @@ $tools = [
     </div>
 
     <?php foreach ($tools as $category => $items): ?>
-            <div class="row">
-                <div class="col s12">
-                    <h5 class="section-title"><?php echo $category; ?></h5>
-                </div>
-                <?php foreach ($items as $tool): ?>
-                        <div class="col s12 m6 l3">
-                            <a href="<?php echo $tool['url']; ?>" target="<?php echo $tool['target']; ?>">
-                                <div class="card tool-card waves-effect waves-light <?php echo $tool['color']; ?> white-text">
-                                    <i class="material-icons"><?php echo $tool['icon']; ?></i>
-                                    <span class="card-title"><?php echo $tool['label']; ?></span>
-                                </div>
-                            </a>
-                        </div>
-                <?php endforeach; ?>
+        <div class="row">
+            <div class="col s12">
+                <h5 class="section-title"><?php echo $category; ?></h5>
             </div>
+            <?php foreach ($items as $tool): ?>
+                <div class="col s12 m6 l3">
+                    <a href="<?php echo $tool['url']; ?>" target="<?php echo $tool['target']; ?>">
+                        <div class="card tool-card waves-effect waves-light <?php echo $tool['color']; ?> white-text">
+                            <i class="material-icons"><?php echo $tool['icon']; ?></i>
+                            <span class="card-title"><?php echo $tool['label']; ?></span>
+                        </div>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
     <?php endforeach; ?>
 </div>
