@@ -182,7 +182,7 @@ $meses_pt = [
                     </div>
                 </form>
             </div>
-            <a class="btn" href="https://www.toplifemiamibeach.com.br/area_restrita.aspx?id=w/wGkJW3ORpOcMRvFjzENg==&p1=a971d0e2-c12f-4d92-8359-947c67e11e14">Link pra logar no sistema</a>
+            <a class="btn" href="https://www.toplifemiamibeach.com.br/area_restrita.aspx?id=w/wGkJW3ORpOcMRvFjzENg==&p1=a971d0e2-c12f-4d92-8359-947c67e11e14">Antes de clicar nos links dos chamados, esteja logado no Condominio Digital. <br>Clique aqui para logar caso ainda não esteja com a sessão estabelecida. </a>
             <!-- Tabela de Resultados (Layout de Lista) -->
             <div class="overflow-x-auto">
                 <div class="min-w-full">
