@@ -7,8 +7,10 @@ $username = DB_USERNAME; // Nome de usuário do banco de dados
 $password = DB_PASSWORD; // Senha do banco de dados  
 $database = DB_DATABASE; // Nome do banco de dados
 
-// Caminho base para backups (mantendo compatibilidade com o servidor remoto)
-$backupBase = '/var/www/html/';
+// Caminho base para backups
+$backupBase = __DIR__ . '/storage/backups/';
+if (!is_dir($backupBase))
+    mkdir($backupBase, 0777, true);
 
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
@@ -16,42 +18,52 @@ if (isset($_GET['action'])) {
     if ($_GET['action'] == 'run') {
         $timestamp = date('Ymd_His');
         $fileName = "backup_{$database}_{$timestamp}";
-        $backupSql = $backupBase . $fileName . ".sql";
-        $backupTar = $backupSql . ".tar";
+
+        $backupSchema = $backupBase . $fileName . "_schema.sql";
+        $backupData = $backupBase . $fileName . "_data.sql";
+        $backupTar = $backupBase . $fileName . ".tar";
         $backupGz = $backupTar . ".gz";
         $backupEnc = $backupGz . ".enc";
 
         $steps = [];
 
-        // Passo 1: MySQL Dump
-        $cmd1 = "mysqldump --host=$host --user=$username --password=$password --databases $database > " . escapeshellarg($backupSql);
-        exec($cmd1, $output, $ret1);
-        $steps['dump'] = ($ret1 === 0);
+        // Passo 1: MySQL Dump - ESTRUTURA
+        $cmdSchema = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-data > " . escapeshellarg($backupSchema);
+        exec($cmdSchema, $output, $retSchema);
+        $steps['schema'] = ($retSchema === 0);
 
-        if ($steps['dump']) {
-            // Passo 2: Tar
-            $cmd2 = "tar -C " . escapeshellarg($backupBase) . " -cvf " . escapeshellarg($backupTar) . " " . escapeshellarg($fileName . ".sql");
-            exec($cmd2, $output, $ret2);
-            $steps['tar'] = ($ret2 === 0);
+        if ($steps['schema']) {
+            // Passo 2: MySQL Dump - DADOS
+            $cmdData = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-create-info --skip-triggers > " . escapeshellarg($backupData);
+            exec($cmdData, $output, $retData);
+            $steps['data'] = ($retData === 0);
 
-            // Passo 3: Gzip
-            if ($steps['tar']) {
-                $cmd3 = "gzip " . escapeshellarg($backupTar);
-                exec($cmd3, $output, $ret3);
-                $steps['gzip'] = ($ret3 === 0);
+            if ($steps['data']) {
+                // Passo 3: Tar (incluindo ambos os arquivos)
+                // Usando caminho relativo para os arquivos dentro do tar
+                $cmdTar = "tar -C " . escapeshellarg($backupBase) . " -cvf " . escapeshellarg($backupTar) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
+                exec($cmdTar, $output, $retTar);
+                $steps['tar'] = ($retTar === 0);
+
+                // Passo 4: Gzip
+                if ($steps['tar']) {
+                    $cmdGzip = "gzip " . escapeshellarg($backupTar);
+                    exec($cmdGzip, $output, $retGzip);
+                    $steps['gzip'] = ($retGzip === 0);
+                }
+
+                // Passo 5: Encrypt
+                if ($steps['gzip']) {
+                    $cmdEnc = "openssl enc -aes-256-cbc -salt -in " . escapeshellarg($backupGz) . " -out " . escapeshellarg($backupEnc) . " -pass pass:" . escapeshellarg($password);
+                    exec($cmdEnc, $output, $retEnc);
+                    $steps['encrypt'] = ($retEnc === 0);
+                }
+
+                // Passo 6: Cleanup
+                $cmdClean = "rm -f " . escapeshellarg($backupSchema) . " " . escapeshellarg($backupData) . " " . escapeshellarg($backupTar) . " " . escapeshellarg($backupGz);
+                exec($cmdClean, $output, $retClean);
+                $steps['cleanup'] = ($retClean === 0);
             }
-
-            // Passo 4: Encrypt
-            if ($steps['gzip']) {
-                $cmd4 = "openssl enc -aes-256-cbc -salt -in " . escapeshellarg($backupGz) . " -out " . escapeshellarg($backupEnc) . " -pass pass:" . escapeshellarg($password);
-                exec($cmd4, $output, $ret4);
-                $steps['encrypt'] = ($ret4 === 0);
-            }
-
-            // Passo 5: Cleanup
-            $cmd5 = "rm -f " . escapeshellarg($backupSql) . " " . escapeshellarg($backupTar) . " " . escapeshellarg($backupGz);
-            exec($cmd5, $output, $ret5);
-            $steps['cleanup'] = ($ret5 === 0);
         }
 
         $success = isset($steps['encrypt']) && $steps['encrypt'];
@@ -148,7 +160,8 @@ rsort($backupList);
                 <div class="card white">
                     <div class="card-content">
                         <span class="card-title">Gerar Novo Backup</span>
-                        <p>Isso criará um dump do banco de dados <b><?php echo $database; ?></b>, compactará e
+                        <p>Isso criará dois dumps do banco <b><?php echo $database; ?></b> (estrutura e dados
+                            separadamente), compactará e
                             criptografará com AES-256.</p>
                         <br>
                         <button id="btnRunBackup" class="btn waves-effect waves-light teal">
@@ -217,7 +230,7 @@ rsort($backupList);
                                         <tr>
                                             <td><?php echo $file; ?></td>
                                             <td>
-                                                <a href="<?php echo $file; ?>" download
+                                                <a href="storage/backups/<?php echo $file; ?>" download
                                                     class="btn-small waves-effect waves-light blue">
                                                     <i class="material-icons">cloud_download</i>
                                                 </a>
@@ -259,7 +272,8 @@ rsort($backupList);
                     method: 'GET',
                     success: function (res) {
                         if (res.steps) {
-                            addLog('Dump do Banco: ' + (res.steps.dump ? 'OK' : 'FALHA'), res.steps.dump);
+                            addLog('Exportando Estrutura: ' + (res.steps.schema ? 'OK' : 'FALHA'), res.steps.schema);
+                            addLog('Exportando Dados: ' + (res.steps.data ? 'OK' : 'FALHA'), res.steps.data);
                             addLog('Compactação TAR: ' + (res.steps.tar ? 'OK' : 'FALHA'), res.steps.tar);
                             addLog('Compressão GZIP: ' + (res.steps.gzip ? 'OK' : 'FALHA'), res.steps.gzip);
                             addLog('Criptografia AES-256: ' + (res.steps.encrypt ? 'OK' : 'FALHA'), res.steps.encrypt);
