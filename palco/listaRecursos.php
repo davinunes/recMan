@@ -122,17 +122,15 @@
 		</div>
 	</div>
 
-	<!-- Loop para exibir os recursos -->
 	<?php
-	if ($_GET['concluidos'] == "true") {
+	// Carregamento dos dados
+	if (isset($_GET['concluidos']) && $_GET['concluidos'] == "true") {
 		$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.id desc limit 50";
-
 	} else {
 		$sql = "SELECT r.id as recurso, r.*, f.*, n.notificacao as tipo FROM recurso r left join fase f on f.id = r.fase left join notificacoes n on n.numero_ano_virtual = r.numero where f.id != 5 order by r.data";
 	}
 
 	$result = DBExecute($sql);
-
 	?>
 	<!-- Barra de Estatísticas Compacta -->
 	<?php
@@ -356,10 +354,10 @@
 	</div>
 
 	<script>
-		$(document).ready(function() {
+		$(document).ready(function () {
 			$('.modal').modal();
 		});
 	</script>
-<?php
-// Fim do arquivo
-?>
+	<?php
+	// Fim do arquivo
+	?>
