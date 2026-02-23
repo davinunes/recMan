@@ -36,7 +36,8 @@ $esseUsuario = $_SESSION["user_id"];
 $meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
 
-switch ($_GET['pag']) {
+$pag = isset($_GET['pag']) ? $_GET['pag'] : '';
+switch ($pag) {
 	case "recurso":
 		include "palco/detalheRecurso.php";
 		break;

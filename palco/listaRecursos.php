@@ -254,12 +254,14 @@
 			$historico = sizeof(getNotificacoes($row['unidade'], $row['bloco']));
 			$vt = '';
 			foreach ($votos as $v) {
-				$classeVoto = match ($v['voto']) {
-					'revogar' => 'green accent-2',
-					'manter' => 'red accent-2',
-					'converter' => 'amber accent-1',
-					default => 'grey'
-				};
+				$classeVoto = 'grey';
+				if ($v['voto'] == 'revogar') {
+					$classeVoto = 'green accent-2';
+				} elseif ($v['voto'] == 'manter') {
+					$classeVoto = 'red accent-2';
+				} elseif ($v['voto'] == 'converter') {
+					$classeVoto = 'amber accent-1';
+				}
 				$vt .= '<div class="chip ' . $classeVoto . '" style="margin:2px"><img src="' . $v['avatar'] . '"></div>';
 			}
 			?>
