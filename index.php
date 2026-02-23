@@ -72,6 +72,9 @@ switch ($_GET['pag']) {
 	case "statsSoluc":
 		include "palco/statsSoluc.php";
 		break;
+	case "dashboard":
+		include "palco/dashboard.php";
+		break;
 	default:
 		include "palco/listaRecursos.php";
 
