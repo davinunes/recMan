@@ -1,157 +1,157 @@
-$(document).ready(function(){
-	
-	if (window.screen.orientation.type.includes("portrait")) {
-		console.log("Monitor na orientação vertical");
-		// Remove a classe "container" e adiciona o atributo "data-custom" ao elemento
-		$(".container").removeClass("container").addClass("exContainer");
+$(document).ready(function () {
 
-	} else {
-		console.log("Monitor na orientação horizontal");
-		$(".exContainer").removeClass("exContainer").addClass("container");
-	}
+    if (window.screen.orientation.type.includes("portrait")) {
+        console.log("Monitor na orientação vertical");
+        // Remove a classe "container" e adiciona o atributo "data-custom" ao elemento
+        $(".container").removeClass("container").addClass("exContainer");
 
-	if (window.innerHeight > window.innerWidth) {
-		console.log("Monitor na orientação vertical");
-		$(".container").removeClass("container").addClass("exContainer");
-	} else {
-		console.log("Monitor na orientação horizontal");
-		$(".exContainer").removeClass("exContainer").addClass("container");
-	}
+    } else {
+        console.log("Monitor na orientação horizontal");
+        $(".exContainer").removeClass("exContainer").addClass("container");
+    }
 
-	
-	$('select').formSelect();
-	$('.modal').modal();
-	$('.chips').chips();
-	$('.sidenav').sidenav();
-	$('#listaRecursos').DataTable({
+    if (window.innerHeight > window.innerWidth) {
+        console.log("Monitor na orientação vertical");
+        $(".container").removeClass("container").addClass("exContainer");
+    } else {
+        console.log("Monitor na orientação horizontal");
+        $(".exContainer").removeClass("exContainer").addClass("container");
+    }
+
+
+    $('select').formSelect();
+    $('.modal').modal();
+    $('.chips').chips();
+    $('.sidenav').sidenav();
+    $('#listaRecursos').DataTable({
         searching: false, // Oculta o campo de busca
         paging: false, // Desativa a paginação
-		select: true,
-		"order": [
-			[2, 'desc'], // Ordenação inicial pela primeira coluna em ordem ascendente
-			[3, 'desc']
-		],
-		dom: '<"top"fl>rt<"bottom"ip><"clear">',
-		language: {
-			url:"datatable_br.json"
-		}
+        select: true,
+        "order": [
+            [2, 'desc'], // Ordenação inicial pela primeira coluna em ordem ascendente
+            [3, 'desc']
+        ],
+        dom: '<"top"fl>rt<"bottom"ip><"clear">',
+        language: {
+            url: "datatable_br.json"
+        }
     });
-	$('#listaSolucoes').DataTable({
+    $('#listaSolucoes').DataTable({
         searching: true, // Oculta o campo de busca
         paging: false, // Desativa a paginação
-		"order": [
-			[1, 'desc'],
-			[0, 'asc']
-		],
-		pageLength: 25,
-		"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tudo"]], // permite listar todos os itens
-		dom: '<"top"lf>rt<"bottom"ip><"clear">',
-		language: {
-			url:"datatable_br.json"
-		},
-			initComplete: function () {
-                // Adiciona estilo para posicionar a caixa de pesquisa à esquerda
-                $('.dataTables_filter').css('text-align', 'left');
-                
-                // Ajusta a altura das linhas após a inicialização
-                $('.dataTables_filter tbody tr').css('height', '5px');
-            }
+        "order": [
+            [1, 'desc'],
+            [0, 'asc']
+        ],
+        pageLength: 25,
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tudo"]], // permite listar todos os itens
+        dom: '<"top"lf>rt<"bottom"ip><"clear">',
+        language: {
+            url: "datatable_br.json"
+        },
+        initComplete: function () {
+            // Adiciona estilo para posicionar a caixa de pesquisa à esquerda
+            $('.dataTables_filter').css('text-align', 'left');
+
+            // Ajusta a altura das linhas após a inicialização
+            $('.dataTables_filter tbody tr').css('height', '5px');
+        }
     });
-	
-	$('#avatar').on('change', function() {
+
+    $('#avatar').on('change', function () {
         var file = $(this)[0].files[0]; // Obtém o arquivo selecionado
 
         // if (file) {
-            // var reader = new FileReader();
-            // reader.onload = function(e) {
-                // var base64Data = e.target.result.split(',')[1]; // Remove o cabeçalho de data URI
-                // $('#updateThisUser').data('avatar', base64Data); // Armazena a base64 nos dados do formulário
-            // };
-            // reader.readAsDataURL(file); // Lê o arquivo como data URL
+        // var reader = new FileReader();
+        // reader.onload = function(e) {
+        // var base64Data = e.target.result.split(',')[1]; // Remove o cabeçalho de data URI
+        // $('#updateThisUser').data('avatar', base64Data); // Armazena a base64 nos dados do formulário
+        // };
+        // reader.readAsDataURL(file); // Lê o arquivo como data URL
         // }
     });
-	
-  var $popup = $('#popup');
-  var $popupContent = $('#popup-content');
 
-  $('.recurso').on('mouseenter', function () {
-    var data = {
-      "numero": $(this).data('numero'),
-      "status": $(this).data('status'),
-      "cobranca": $(this).data('cobranca'),
-      "obs": $(this).data('obs'),
-      "assunto": $(this).data('assunto'),
-      "tipo": $(this).data('tipo'),
-      "data_envio": $(this).data('data_envio'),
-      "data_email": $(this).data('data_email'),
-      "data_ocorrido": $(this).data('data-ocorrido'),
-    };
+    var $popup = $('#popup');
+    var $popupContent = $('#popup-content');
 
-    var content = '<h5>Informações Adicionais</h5>' +
-      '<p>Número: ' + data.numero + '</p>' +
-      '<p>Tipo: ' + data.tipo + '</p>' +
-      '<p>Status: ' + data.status + '</p>' +
-      '<p>Cobrança: ' + data.cobranca + '</p>' +
-      '<p>Observações: ' + data.obs + '</p>' +
-      '<p>Assunto: ' + data.assunto + '</p>' +
-      '<p>Data de Email: ' + data.data_email + '</p>' +
-      '<p>Data de Envio: ' + data.data_envio + '</p>' +
-      '<p>Data de Ocorrência: ' + data.data_ocorrido + '</p>';
+    $('.recurso').on('mouseenter', function () {
+        var data = {
+            "numero": $(this).data('numero'),
+            "status": $(this).data('status'),
+            "cobranca": $(this).data('cobranca'),
+            "obs": $(this).data('obs'),
+            "assunto": $(this).data('assunto'),
+            "tipo": $(this).data('tipo'),
+            "data_envio": $(this).data('data_envio'),
+            "data_email": $(this).data('data_email'),
+            "data_ocorrido": $(this).data('data-ocorrido'),
+        };
 
-    $popupContent.html(content);
-	
-		$popup.css({
-		  display: 'block',
-		  left: $(this).offset().left + 'px',
-		  top: ($(this).offset().top - $popup.height()*1.38) + 'px'
-		});
+        var content = '<h5>Informações Adicionais</h5>' +
+            '<p>Número: ' + data.numero + '</p>' +
+            '<p>Tipo: ' + data.tipo + '</p>' +
+            '<p>Status: ' + data.status + '</p>' +
+            '<p>Cobrança: ' + data.cobranca + '</p>' +
+            '<p>Observações: ' + data.obs + '</p>' +
+            '<p>Assunto: ' + data.assunto + '</p>' +
+            '<p>Data de Email: ' + data.data_email + '</p>' +
+            '<p>Data de Envio: ' + data.data_envio + '</p>' +
+            '<p>Data de Ocorrência: ' + data.data_ocorrido + '</p>';
 
-  });
+        $popupContent.html(content);
 
-  $('.recurso').on('mouseleave', function () {
-    $popup.css('display', 'none');
-  });
-	
+        $popup.css({
+            display: 'block',
+            left: $(this).offset().left + 'px',
+            top: ($(this).offset().top - $popup.height() * 1.38) + 'px'
+        });
+
+    });
+
+    $('.recurso').on('mouseleave', function () {
+        $popup.css('display', 'none');
+    });
+
 });
 
-$(document).on('click', '.edit-user', function() {
+$(document).on('click', '.edit-user', function () {
     const userId = $(this).attr('userid-data');
-    
+
     // Carrega os dados do usuário via AJAX
     $.ajax({
         url: 'metodo.php?metodo=carregarUsuario&id=' + userId,
         method: "GET",
-        success: function(response) {
+        success: function (response) {
             try {
                 const usuario = JSON.parse(response);
-				console.log(usuario);
-                
+                console.log(usuario);
+
                 // Localiza o formulário de edição e preenche os campos
                 const $form = $('#formEditUser');
-                
+
                 $form.find('#edit_id').val(usuario.id);
                 $form.find('#edit_nome').val(usuario.nome);
                 $form.find('#edit_email').val(usuario.email);
                 $form.find('#edit_unidade').val(usuario.unidade);
-                
+
                 // Para o campo de status (select)
                 $form.find('#edit_status').val(usuario.status ? '1' : '0');
                 $form.find('select').formSelect(); // Atualiza o select do Materialize
-                
+
                 // Limpa o campo de senha (opcional)
                 $form.find('#edit_senha').val('');
-                
+
                 // Abre o modal (ajuste conforme sua implementação de modal)
                 $('#modalEditarUsuario').modal('open');
-                
+
             } catch (e) {
                 console.error("Erro ao parsear resposta:", e, response);
-                M.toast({html: 'Erro ao carregar usuário', classes: 'rounded red'});
+                M.toast({ html: 'Erro ao carregar usuário', classes: 'rounded red' });
             }
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus, errorThrown);
-            M.toast({html: 'Erro ao carregar usuário', classes: 'rounded red'});
+            M.toast({ html: 'Erro ao carregar usuário', classes: 'rounded red' });
         }
     });
 });
@@ -198,28 +198,28 @@ $(document).on('click', '#salvarEdicao', function () {
 
 
 
-$(document).on('click', '#novoUsuario', function() { // Inserir novo Usuário
+$(document).on('click', '#novoUsuario', function () { // Inserir novo Usuário
     let metodo = "novoUsuario";
-	const formData = $("#formNewUser").serializeArray();
-	console.log(formData);
-    
+    const formData = $("#formNewUser").serializeArray();
+    console.log(formData);
+
     // Realizar a solicitação GET para obter os dados desejados
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
         url: url,
         method: "POST", // Defina o método como POST
         data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-            M.toast({html: responseData, classes: 'rounded'});
+        success: function (responseData) {
+            M.toast({ html: responseData, classes: 'rounded' });
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
 });
 
-$(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
+$(document).on('click', '#newRecurso', function () { // Inserir novo Usuário
     let metodo = "novoRecurso";
     const formData = $("#formNewRecurso").serializeArray();
     console.log(formData);
@@ -227,15 +227,15 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
     // Verificar se os campos obrigatórios estão preenchidos
     let camposObrigatorios = ["unidade", "bloco", "numero", "fase", "data"]; // Adicione aqui os nomes dos campos obrigatórios
 
-    let camposVazios = camposObrigatorios.filter(function(campo) {
-        return formData.find(function(item) {
+    let camposVazios = camposObrigatorios.filter(function (campo) {
+        return formData.find(function (item) {
             return item.name === campo && item.value === "";
         });
     });
 
     if (camposVazios.length > 0) {
         // Exibir um toast informando que os campos obrigatórios não foram preenchidos
-        M.toast({html: 'Por favor, preencha todos os campos obrigatórios.', classes: 'rounded red'});
+        M.toast({ html: 'Por favor, preencha todos os campos obrigatórios.', classes: 'rounded red' });
         return; // Impedir o envio da solicitação AJAX
     }
 
@@ -245,25 +245,25 @@ $(document).on('click', '#newRecurso', function() { // Inserir novo Usuário
         url: url,
         method: "POST", // Defina o método como POST
         data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-            M.toast({html: responseData, classes: 'rounded'});
+        success: function (responseData) {
+            M.toast({ html: responseData, classes: 'rounded' });
             window.location.href = "index.php";
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
 });
 
-$(document).on('click', '#testeEnvioParecer', function() {
+$(document).on('click', '#testeEnvioParecer', function () {
     // Adiciona um prompt de confirmação
     const userConfirmation = window.confirm("Nesse teste, o e-mail será enviado para o endereço do usuário logado. Você deseja continuar?");
 
     // Verifica se o usuário confirmou
     if (userConfirmation) {
         const mimeContent = $("#mime").text();
-        
+
         let url = 'gmail/sendMailParecer.php';
         $.ajax({
             url: url,
@@ -271,11 +271,11 @@ $(document).on('click', '#testeEnvioParecer', function() {
             data: {
                 mime: mimeContent
             },
-            success: function(responseData) {
-                M.toast({html: responseData, classes: 'rounded'});
+            success: function (responseData) {
+                M.toast({ html: responseData, classes: 'rounded' });
                 $("#mime").text(responseData);
             },
-            error: function(jqXHR, textStatus, errorThrown) {
+            error: function (jqXHR, textStatus, errorThrown) {
                 console.log("Erro na solicitação AJAX: " + textStatus);
                 console.log("Detalhes do erro: " + errorThrown);
             }
@@ -286,14 +286,14 @@ $(document).on('click', '#testeEnvioParecer', function() {
     }
 });
 
-$(document).on('click', '#EnviaRelatorioJuridico', function() {
+$(document).on('click', '#EnviaRelatorioJuridico', function () {
     // Adiciona um prompt de confirmação
     const userConfirmation = window.confirm("Será enviado relatório de notificações com o Conselho. Você deseja continuar?");
 
     // Verifica se o usuário confirmou
     if (userConfirmation) {
         const mimeContent = $("#mime").html();
-        
+
         let url = 'gmail/sendMailParecer.php';
         $.ajax({
             url: url,
@@ -301,11 +301,11 @@ $(document).on('click', '#EnviaRelatorioJuridico', function() {
             data: {
                 mime: mimeContent
             },
-            success: function(responseData) {
-                M.toast({html: responseData, classes: 'rounded'});
+            success: function (responseData) {
+                M.toast({ html: responseData, classes: 'rounded' });
                 $("#mime").text(responseData);
             },
-            error: function(jqXHR, textStatus, errorThrown) {
+            error: function (jqXHR, textStatus, errorThrown) {
                 console.log("Erro na solicitação AJAX: " + textStatus);
                 console.log("Detalhes do erro: " + errorThrown);
             }
@@ -316,7 +316,7 @@ $(document).on('click', '#EnviaRelatorioJuridico', function() {
     }
 });
 
-$(document).on('click', '#finalizaEnviaParecer', function() {
+$(document).on('click', '#finalizaEnviaParecer', function () {
     // Adiciona um prompt de confirmação
     const userConfirmation = window.confirm("Será enviado o parecer abaixo por email para o endereço cadastrado no recurso, com cópia para o síndico e cópia oculta para a soluções. Depois disso, o status será ajustado para finalizado, não será mais possível editar este parecer. A fase do recurso também será alterada para 'Concluido'. Você deseja continuar?");
 
@@ -332,11 +332,11 @@ $(document).on('click', '#finalizaEnviaParecer', function() {
             data: {
                 mime: mimeContent
             },
-            success: function(responseData) {
-				// console.log(responseData);
+            success: function (responseData) {
+                // console.log(responseData);
                 try {
                     const responseJson = JSON.parse(responseData);
-					console.log(responseJson);
+                    console.log(responseJson);
 
                     // Verifica se a resposta possui um 'mailId'
                     if (responseJson.id) {
@@ -350,38 +350,38 @@ $(document).on('click', '#finalizaEnviaParecer', function() {
                                 id_parecer: idParecer,
                                 mailId: mailId
                             },
-                            success: function(finalizaResponse) {
+                            success: function (finalizaResponse) {
                                 // Verifica se a resposta da segunda chamada é 'ok'
                                 if (finalizaResponse.trim().toLowerCase() === 'ok') {
                                     // Se 'ok', atualiza a página
                                     location.reload();
                                 } else {
                                     // Exibe um toast informando que algo deu errado
-                                    M.toast({html: 'Erro ao finalizar o parecer.', classes: 'rounded'});
+                                    M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded' });
                                 }
                             },
-                            error: function(jqXHR, textStatus, errorThrown) {
+                            error: function (jqXHR, textStatus, errorThrown) {
                                 console.log("Erro na segunda solicitação AJAX: " + textStatus);
                                 console.log("Detalhes do erro: " + errorThrown);
                                 // Exibe um toast informando que algo deu errado
-                                M.toast({html: 'Erro ao finalizar o parecer.', classes: 'rounded'});
+                                M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded' });
                             }
                         });
                     } else {
                         // Se 'mailId' não existe, exibe um toast informando que algo deu errado
-                        M.toast({html: 'Erro ao enviar o e-mail. Resposta inválida.', classes: 'rounded'});
+                        M.toast({ html: 'Erro ao enviar o e-mail. Resposta inválida.', classes: 'rounded' });
                     }
                 } catch (error) {
                     // Exibe um toast informando que algo deu errado ao analisar a resposta JSON
-                    M.toast({html: 'Erro ao analisar a resposta JSON.', classes: 'rounded'});
+                    M.toast({ html: 'Erro ao analisar a resposta JSON.', classes: 'rounded' });
                     console.log("Erro ao analisar a resposta JSON: " + error);
                 }
             },
-            error: function(jqXHR, textStatus, errorThrown) {
+            error: function (jqXHR, textStatus, errorThrown) {
                 console.log("Erro na primeira solicitação AJAX: " + textStatus);
                 console.log("Detalhes do erro: " + errorThrown);
                 // Exibe um toast informando que algo deu errado
-                M.toast({html: 'Erro ao enviar o e-mail.', classes: 'rounded'});
+                M.toast({ html: 'Erro ao enviar o e-mail.', classes: 'rounded' });
             }
         });
     } else {
@@ -390,366 +390,366 @@ $(document).on('click', '#finalizaEnviaParecer', function() {
     }
 });
 
-$(document).on('click', '#btnAlterarParecer', function() { // Enviar e-mail
-	$("#previaPDF").hide();
-	$("#formParecer").removeClass("hide");
-	$(this).remove();
-	$("#testeEnvioParecer").remove();
-	$("#finalizaEnviaParecer").remove();
-	
+$(document).on('click', '#btnAlterarParecer', function () { // Enviar e-mail
+    $("#previaPDF").hide();
+    $("#formParecer").removeClass("hide");
+    $(this).remove();
+    $("#testeEnvioParecer").remove();
+    $("#finalizaEnviaParecer").remove();
+
 });
 
-$(document).on('click', '#btnSalvarParecer', function() { // Enviar e-mail
-	let formData = $("#formParecer form").serializeArray();
-	console.log(formData);
-	
+$(document).on('click', '#btnSalvarParecer', function () { // Enviar e-mail
+    let formData = $("#formParecer form").serializeArray();
+    console.log(formData);
+
     $.ajax({
         url: "metodo.php?metodo=editaParecer",
         method: "POST", // Defina o método como POST
-		data: formData,
+        data: formData,
         // data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
 
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
-	
+
 });
 
-$(document).on('click', '.editComment', function() { // Enviar e-mail
+$(document).on('click', '.editComment', function () { // Enviar e-mail
 
 
-	function ajustarAlturaTextarea() {
-		let textarea = $("#messageTextComment")[0];
-		textarea.style.height = "auto"; // Redefinir a altura para auto
-		textarea.style.height = textarea.scrollHeight + "px"; // Definir a altura com base no conteúdo
-	}
-	
+    function ajustarAlturaTextarea() {
+        let textarea = $("#messageTextComment")[0];
+        textarea.style.height = "auto"; // Redefinir a altura para auto
+        textarea.style.height = textarea.scrollHeight + "px"; // Definir a altura com base no conteúdo
+    }
+
     let comentario = $(this).closest("li.collection-item").find("p").html();
-	
-	
-	comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
-	console.log(comentario);
-	$("#messageTextComment").val(comentario);
-	
-	ajustarAlturaTextarea();
-	
-	$("#messageTextComment").attr("message_id",$(this).attr("comment"));
-	
-	
+
+
+    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    console.log(comentario);
+    $("#messageTextComment").val(comentario);
+
+    ajustarAlturaTextarea();
+
+    $("#messageTextComment").attr("message_id", $(this).attr("comment"));
+
+
 });
 
-$(document).on('click', '#updateComment', function() { // Enviar e-mail
+$(document).on('click', '#updateComment', function () { // Enviar e-mail
     let comentario = $("#messageTextComment").val();
-	let id_comentario = $("#messageTextComment").attr("message_id");
-	
-	const formData = { 
-		id_comentario: id_comentario,
-		comentario:comentario
-	};
-	console.log(formData);
+    let id_comentario = $("#messageTextComment").attr("message_id");
+
+    const formData = {
+        id_comentario: id_comentario,
+        comentario: comentario
+    };
+    console.log(formData);
     $.ajax({
         url: "metodo.php?metodo=editaComentario",
         method: "POST", // Defina o método como POST
-		data: formData,
+        data: formData,
         // data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
 
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
-	
-	
+
+
 });
 
-$(document).on('click', '#logon', function() { // Logar Usuario
+$(document).on('click', '#logon', function () { // Logar Usuario
     let metodo = "logon";
-	const formData = $("#loginForm").serializeArray();
-	console.log(formData);
-    
+    const formData = $("#loginForm").serializeArray();
+    console.log(formData);
+
     // Realizar a solicitação GET para obter os dados desejados
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
         url: url,
         method: "POST", // Defina o método como POST
         data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
 });
 
-$(document).on('click', '#logout', function() { // DesLogar Usuario
+$(document).on('click', '#logout', function () { // DesLogar Usuario
     let metodo = "logout";
-	    
+
     // Realizar a solicitação GET para obter os dados desejados
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
         url: url,
         method: "GET", // Defina o método como POST
         // data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			window.location.reload();
+        success: function (responseData) {
+            window.location.reload();
 
         },
-        error: function(jqXHR, textStatus, errorThrown) {
+        error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
             console.log("Detalhes do erro: " + errorThrown);
         }
     });
 });
 
-$(document).on('click', '#comentar', function() { // Inserir mensagem no Recurso
+$(document).on('click', '#comentar', function () { // Inserir mensagem no Recurso
     let metodo = "novoComentario";
-	let idRec = $('#idRecurso').attr('idRec');
-	const formData = $("#postMessageForm").serializeArray();
-	formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
-	console.log(formData);
-	    
+    let idRec = $('#idRecurso').attr('idRec');
+    const formData = $("#postMessageForm").serializeArray();
+    formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
+    console.log(formData);
+
     // Realizar a solicitação GET para obter os dados desejados
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
         url: url,
         method: "POST", // Defina o método como POST
-		data: formData,
+        data: formData,
         // data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
 
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
-});
-
-$(document).on('click', '#diligenciar', function() { // Inserir diligencia no Recurso
-    let metodo = "novaDiligencia";
-	let idRec = $('#idRecurso').attr('idRec');
-	const formData = $("#postDiligenciaForm").serializeArray();
-	formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
-	console.log(formData);
-	    
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'metodo.php?metodo=' + metodo;
-    $.ajax({
-        url: url,
-        method: "POST", // Defina o método como POST
-		data: formData,
-        // data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
-
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
-});
-
-$(document).on('click', '.opVoto', function() { // Inserir mensagem no Recurso
-    let metodo = "votar";
-	let idRec = $('#idRecurso').attr('idRec');
-	let voto = $(this).attr('voto');
-	const formData = { 
-				voto: voto,
-				idRec:idRec
-			};
-	console.log(formData);
-	    
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'metodo.php?metodo=' + metodo;
-    $.ajax({
-        url: url,
-        method: "POST", // Defina o método como POST
-		data: formData,
-        data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
-
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
-});
-
-$(document).on('click', '.recFase', function() { // Altera a fase do recurso
-    let metodo = "mudaFase";
-	let idRec = $('#idRecurso').attr('idRec');
-	let fase = $(this).attr('fase');
-	const formData = { 
-				fase: fase,
-				idRec:idRec
-			};
-	console.log(formData);
-	    
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'metodo.php?metodo=' + metodo;
-    $.ajax({
-        url: url,
-        method: "POST", // Defina o método como POST
-		data: formData,
-        data: formData, // Adicione o objeto 'data' aqui
-        success: function(responseData) {
-			if(responseData === "ok"){
-				M.toast({html: responseData, classes: 'rounded'});
-				window.location.reload();
-			}else{
-				M.toast({html: responseData, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
-
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
-});
-
-$(document).on('dblclick', '.recurso', function() { // Inserir novo Usuário
-    let metodo = "recurso";
-	let recurso  = $(this).attr("rec");
-    
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'index.php?pag=' + metodo+'&rec='+recurso;
-	console.log(url);
-	
-	window.location.href = url;
-
-});
-
-$(document).on('click', '.recurso', function() { // Inserir novo Usuário
-    M.toast({html: "Clique duplo para entrar ", classes: 'rounded'});
-
-});
-
-$(document).on('submit', '#changePasswordForm', function(event) {
-        event.preventDefault();
-        
-        var currentPassword = $('#currentPassword').val();
-        var newPassword = $('#newPassword').val();
-        var confirmPassword = $('#confirmPassword').val();
-		
-		if(newPassword != confirmPassword){
-			M.toast({html: "Nova senha e confirmação não são iguais ", classes: 'rounded'});
-			return;
-		}
-		
-        // Exemplo de chamada AJAX para enviar os dados ao servidor
-        $.post('metodo.php?metodo=trocaSenha', {
-            currentPassword: currentPassword,
-            newPassword: newPassword
-        }, function(response) {
-			if(response === "ok"){
-				M.toast({html: response, classes: 'rounded'});
-				// window.location.reload();
-			}else{
-				M.toast({html: response, classes: 'rounded'});
-				// window.location.reload();
-				
-			}
-        });
-    });
-
-$(document).on('submit', '#updateThisUser', function(e) {
-         e.preventDefault(); // Impede o envio padrão do formulário
-        
-        // Obtém os dados do formulário
-        var formData = new FormData(this);
-
-        // Obtém a base64 do avatar dos dados do formulário
-        // var avatarBase64 = $(this).data('avatar');
-        // if (avatarBase64) {
-            // formData.append('avatarBase64', avatarBase64); // Adiciona a base64 aos dados do formulário
-        // }
-
-        // Envia os dados usando AJAX
-        $.ajax({
-            type: 'POST',
-            url: 'metodo.php?metodo=updateThisUser',
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function(response) {
-				if(response === "ok"){
-					M.toast({html: response, classes: 'rounded'});
-					window.location.reload();
-				}else{
-					M.toast({html: response, classes: 'rounded'});
-					// window.location.reload();
-					
-				}
-            },
-            error: function(xhr, status, error) {
-                // Lida com erros
-                console.error(error);
             }
-        });
+
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
 });
 
-$(document).on('keyup','#unidade', function(event) {
-	
-	var unidadeValue = $(this).val().toUpperCase();
+$(document).on('click', '#diligenciar', function () { // Inserir diligencia no Recurso
+    let metodo = "novaDiligencia";
+    let idRec = $('#idRecurso').attr('idRec');
+    const formData = $("#postDiligenciaForm").serializeArray();
+    formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
+    console.log(formData);
+
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'metodo.php?metodo=' + metodo;
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+        data: formData,
+        // data: formData, // Adicione o objeto 'data' aqui
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
+
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
+$(document).on('click', '.opVoto', function () { // Inserir mensagem no Recurso
+    let metodo = "votar";
+    let idRec = $('#idRecurso').attr('idRec');
+    let voto = $(this).attr('voto');
+    const formData = {
+        voto: voto,
+        idRec: idRec
+    };
+    console.log(formData);
+
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'metodo.php?metodo=' + metodo;
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+        data: formData,
+        data: formData, // Adicione o objeto 'data' aqui
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
+
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
+$(document).on('click', '.recFase', function () { // Altera a fase do recurso
+    let metodo = "mudaFase";
+    let idRec = $('#idRecurso').attr('idRec');
+    let fase = $(this).attr('fase');
+    const formData = {
+        fase: fase,
+        idRec: idRec
+    };
+    console.log(formData);
+
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'metodo.php?metodo=' + metodo;
+    $.ajax({
+        url: url,
+        method: "POST", // Defina o método como POST
+        data: formData,
+        data: formData, // Adicione o objeto 'data' aqui
+        success: function (responseData) {
+            if (responseData === "ok") {
+                M.toast({ html: responseData, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded' });
+                // window.location.reload();
+
+            }
+
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log("Erro na solicitação AJAX: " + textStatus);
+            console.log("Detalhes do erro: " + errorThrown);
+        }
+    });
+});
+
+$(document).on('dblclick', '.recurso', function () { // Inserir novo Usuário
+    let metodo = "recurso";
+    let recurso = $(this).attr("rec");
+
+    // Realizar a solicitação GET para obter os dados desejados
+    let url = 'index.php?pag=' + metodo + '&rec=' + recurso;
+    console.log(url);
+
+    window.location.href = url;
+
+});
+
+$(document).on('click', '.recurso', function () { // Inserir novo Usuário
+    M.toast({ html: "Clique duplo para entrar ", classes: 'rounded' });
+
+});
+
+$(document).on('submit', '#changePasswordForm', function (event) {
+    event.preventDefault();
+
+    var currentPassword = $('#currentPassword').val();
+    var newPassword = $('#newPassword').val();
+    var confirmPassword = $('#confirmPassword').val();
+
+    if (newPassword != confirmPassword) {
+        M.toast({ html: "Nova senha e confirmação não são iguais ", classes: 'rounded' });
+        return;
+    }
+
+    // Exemplo de chamada AJAX para enviar os dados ao servidor
+    $.post('metodo.php?metodo=trocaSenha', {
+        currentPassword: currentPassword,
+        newPassword: newPassword
+    }, function (response) {
+        if (response === "ok") {
+            M.toast({ html: response, classes: 'rounded' });
+            // window.location.reload();
+        } else {
+            M.toast({ html: response, classes: 'rounded' });
+            // window.location.reload();
+
+        }
+    });
+});
+
+$(document).on('submit', '#updateThisUser', function (e) {
+    e.preventDefault(); // Impede o envio padrão do formulário
+
+    // Obtém os dados do formulário
+    var formData = new FormData(this);
+
+    // Obtém a base64 do avatar dos dados do formulário
+    // var avatarBase64 = $(this).data('avatar');
+    // if (avatarBase64) {
+    // formData.append('avatarBase64', avatarBase64); // Adiciona a base64 aos dados do formulário
+    // }
+
+    // Envia os dados usando AJAX
+    $.ajax({
+        type: 'POST',
+        url: 'metodo.php?metodo=updateThisUser',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (response) {
+            if (response === "ok") {
+                M.toast({ html: response, classes: 'rounded' });
+                window.location.reload();
+            } else {
+                M.toast({ html: response, classes: 'rounded' });
+                // window.location.reload();
+
+            }
+        },
+        error: function (xhr, status, error) {
+            // Lida com erros
+            console.error(error);
+        }
+    });
+});
+
+$(document).on('keyup', '#unidade', function (event) {
+
+    var unidadeValue = $(this).val().toUpperCase();
     var letra = unidadeValue.match(/[A-F]/);
     if (letra) {
         letra = letra[0]; // Pega a primeira letra encontrada
@@ -757,11 +757,11 @@ $(document).on('keyup','#unidade', function(event) {
         $("#bloco").val(letra);
         M.FormSelect.init(document.querySelector("#bloco"));
     }
-	unidadeValue = unidadeValue.replace(/[^0-9]/g, '');
-	$(this).val(unidadeValue);
+    unidadeValue = unidadeValue.replace(/[^0-9]/g, '');
+    $(this).val(unidadeValue);
 });
 
-$(document).on('keyup', '#numero', function(event) {
+$(document).on('keyup', '#numero', function (event) {
     var entrada = $(this).val();
     var formData = new FormData();
 
@@ -785,32 +785,32 @@ $(document).on('keyup', '#numero', function(event) {
             data: formData,
             processData: false,
             contentType: false,
-			dataType: 'json', // Defina o tipo de dados como JSON
-            success: function(response) {
-					if (response.data.notificacoes && response.data.notificacoes.length > 0) {
-                        console.log("Encontrada Notificação");
-                        ajustaValores(response.data.notificacoes[0]); // Passa a primeira notificação
-                    } else {
-                        console.log("Nenhuma notificação encontrada");
+            dataType: 'json', // Defina o tipo de dados como JSON
+            success: function (response) {
+                if (response.data.notificacoes && response.data.notificacoes.length > 0) {
+                    console.log("Encontrada Notificação");
+                    ajustaValores(response.data.notificacoes[0]); // Passa a primeira notificação
+                } else {
+                    console.log("Nenhuma notificação encontrada");
+                }
+
+                // Verifica se há recursos e exibe alerta
+                if (response.data.recursos && response.data.recursos.length > 0) {
+                    // Filtra os recursos que têm número não nulo
+                    const recursosValidos = response.data.recursos.filter(recurso =>
+                        recurso.numero !== null && recurso.numero !== undefined && recurso.numero !== ''
+                    );
+
+                    if (recursosValidos.length > 0) {
+                        var qtdRecursos = recursosValidos.length;
+                        var numero = $('#numero').val();
+                        alert("Atenção! Recurso já cadastrado.");
+                        console.log("Recursos válidos encontrados:", recursosValidos);
+                        window.location.href = 'index.php?pag=recurso&rec=' + encodeURIComponent(numero);
                     }
-                    
-                    // Verifica se há recursos e exibe alerta
-                    if (response.data.recursos && response.data.recursos.length > 0) {
-                       // Filtra os recursos que têm número não nulo
-						const recursosValidos = response.data.recursos.filter(recurso => 
-							recurso.numero !== null && recurso.numero !== undefined && recurso.numero !== ''
-						);
-						
-						if (recursosValidos.length > 0) {
-							var qtdRecursos = recursosValidos.length;
-							var numero = $('#numero').val();
-							alert("Atenção! Recurso já cadastrado.");
-							console.log("Recursos válidos encontrados:", recursosValidos);
-							window.location.href = 'index.php?pag=recurso&rec=' + encodeURIComponent(numero);
-						}
-                    }
+                }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 // Lida com erros
                 console.error(error);
             }
@@ -818,7 +818,7 @@ $(document).on('keyup', '#numero', function(event) {
     }
 });
 
-$(document).on('keyup', '.fato', function(event) {
+$(document).on('keyup', '.fato', function (event) {
     var entrada = $(this).val();
 
     // Remover quebras de linha e manter apenas um espaço entre palavras
@@ -829,192 +829,192 @@ $(document).on('keyup', '.fato', function(event) {
 });
 
 
-$(document).on('submit', '#atualizarRecursoForm', function(e) {
-         e.preventDefault(); // Impede o envio padrão do formulário
-        
-        // Obtém os dados do formulário
-		
-        var formData = new FormData(this);
-		var numeroValue = formData.get('numero');
-        // Envia os dados usando AJAX
-        $.ajax({
-            type: 'POST',
-            url: 'metodo.php?metodo=atualizarRecurso',
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function(response) {
-				if(response === "ok"){
-					M.toast({html: response, classes: 'rounded'});
-					window.location.href = "index.php?pag=recurso&rec=" + numeroValue;
-				}else{
-					M.toast({html: response, classes: 'rounded'});
-					// window.location.reload();
-					
-				}
-            },
-            error: function(xhr, status, error) {
-                // Lida com erros
-                console.error(error);
+$(document).on('submit', '#atualizarRecursoForm', function (e) {
+    e.preventDefault(); // Impede o envio padrão do formulário
+
+    // Obtém os dados do formulário
+
+    var formData = new FormData(this);
+    var numeroValue = formData.get('numero');
+    // Envia os dados usando AJAX
+    $.ajax({
+        type: 'POST',
+        url: 'metodo.php?metodo=atualizarRecurso',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (response) {
+            if (response === "ok") {
+                M.toast({ html: response, classes: 'rounded' });
+                window.location.href = "index.php?pag=recurso&rec=" + numeroValue;
+            } else {
+                M.toast({ html: response, classes: 'rounded' });
+                // window.location.reload();
+
             }
-        });
+        },
+        error: function (xhr, status, error) {
+            // Lida com erros
+            console.error(error);
+        }
+    });
 });
 
-$(document).on('dblclick', '.edit-retirado', function(e) {
-	var id = $(this).data('id');
-	var originalValue = $(this).text();
-	var formattedDate = originalValue.split('/').reverse().join('-');
-	
-	// Substituir a célula pelo input
-	$(this).html('<input type="date" class="edit-retirado-input" value="' + formattedDate  + '">');
-	$('.edit-retirado-input').focus();
-	
-	// Adicionar evento para tratar Enter e perda de foco
-	$('.edit-retirado-input').on('blur keypress', function (e) {
-		if (e.type === 'blur' || (e.type === 'keypress' && e.which === 13)) {
-			var newValue = $(this).val();
+$(document).on('dblclick', '.edit-retirado', function (e) {
+    var id = $(this).data('id');
+    var originalValue = $(this).text();
+    var formattedDate = originalValue.split('/').reverse().join('-');
 
-			// Enviar dados para o servidor usando AJAX
-			$.ajax({
-				url: 'metodo.php?metodo=atualizaDataRetiradaNotificacao',
-				method: 'POST',
-				data: { virtual: id, dia_retirada: newValue },
-				success: function (response) {
-					M.toast({html: response, classes: 'rounded'});
-					// Atualizar a célula com o novo valor se a atualização for bem-sucedida
-					if (response === 'success') {
-						$('.edit-retirado[data-id="' + id + '"]').text(newValue);
-					} else {
-						// Lidar com erros, se necessário
-						console.log('Erro ao atualizar');
-					}
-				},
-				error: function () {
-					console.log('Erro de requisição AJAX');
-				}
-			});
-		}
-	});
+    // Substituir a célula pelo input
+    $(this).html('<input type="date" class="edit-retirado-input" value="' + formattedDate + '">');
+    $('.edit-retirado-input').focus();
+
+    // Adicionar evento para tratar Enter e perda de foco
+    $('.edit-retirado-input').on('blur keypress', function (e) {
+        if (e.type === 'blur' || (e.type === 'keypress' && e.which === 13)) {
+            var newValue = $(this).val();
+
+            // Enviar dados para o servidor usando AJAX
+            $.ajax({
+                url: 'metodo.php?metodo=atualizaDataRetiradaNotificacao',
+                method: 'POST',
+                data: { virtual: id, dia_retirada: newValue },
+                success: function (response) {
+                    M.toast({ html: response, classes: 'rounded' });
+                    // Atualizar a célula com o novo valor se a atualização for bem-sucedida
+                    if (response === 'success') {
+                        $('.edit-retirado[data-id="' + id + '"]').text(newValue);
+                    } else {
+                        // Lidar com erros, se necessário
+                        console.log('Erro ao atualizar');
+                    }
+                },
+                error: function () {
+                    console.log('Erro de requisição AJAX');
+                }
+            });
+        }
+    });
 });
 
-$(document).on('dblclick', '.edit-multa-cobrada', function(e) {
+$(document).on('dblclick', '.edit-multa-cobrada', function (e) {
     var row = $(this).closest('tr');
     var id = row.data('id');
     var numero = row.find('td:eq(0)').text();
     var ano = row.find('td:eq(1)').text();
     var unidade = row.find('td:eq(2)').text();
     var bloco = row.find('td:eq(3)').text();
-    
+
     // Preencher o modal com os dados existentes
     $('#modal-multa-numero').text(numero + '/' + ano);
     $('#modal-multa-unidade').text(unidade);
     $('#modal-multa-bloco').text(bloco);
     $('#modal-multa-id').val(id);
-    
+
     // Se já existir dados de multa, preencher os campos
     var valorAtual = row.find('td:eq(11)').text();
     var dataVencAtual = row.find('td:eq(12)').text();
     var dataPagAtual = row.find('td:eq(13)').text();
-    
+
     if (valorAtual !== '-' && valorAtual !== '') {
         $('#valor-multa').val(valorAtual.replace('R$ ', '').replace('.', '').replace(',', '.'));
     }
-    
+
     if (dataVencAtual !== '-' && dataVencAtual !== '') {
         $('#data-vencimento').val(dataVencAtual.split('/').reverse().join('-'));
     }
-    
+
     if (dataPagAtual !== '-' && dataPagAtual !== '') {
         $('#data-pagamento').val(dataPagAtual.split('/').reverse().join('-'));
     }
-    
+
     // Abrir o modal
     $('#modal-multa').modal('open');
 });
 
 
 // Função para salvar os dados da multa
-$(document).on('click', '#salvar-multa', function(e) {
+$(document).on('click', '#salvar-multa', function (e) {
     var id = $('#modal-multa-id').val();
     var valor = $('#valor-multa').val();
     var dataVencimento = $('#data-vencimento').val();
     var dataPagamento = $('#data-pagamento').val();
-    
+
     // Validação básica - apenas valor e data de vencimento são obrigatórios
     if (!valor || !dataVencimento) {
-        M.toast({html: 'Valor e Data de Vencimento são obrigatórios!', classes: 'red rounded'});
+        M.toast({ html: 'Valor e Data de Vencimento são obrigatórios!', classes: 'red rounded' });
         return;
     }
-    
+
     // Enviar dados para o servidor
     $.ajax({
         url: 'metodo.php?metodo=upsertMultaCobrada',
         method: 'POST',
-        data: { 
+        data: {
             id: id,
             valor: valor,
             data_vencimento: dataVencimento,
             data_pagamento: dataPagamento || '' // Envia string vazia se não preenchido
         },
-        success: function(response) {
+        success: function (response) {
             if (response === 'success') {
-                M.toast({html: 'Multa salva com sucesso!', classes: 'green rounded'});
+                M.toast({ html: 'Multa salva com sucesso!', classes: 'green rounded' });
                 $('#modal-multa').modal('close');
                 $(`tr[data-id="${id}"]`).remove();
                 // location.reload();
             } else {
-                M.toast({html: 'Erro ao salvar: ' + response, classes: 'red rounded'});
+                M.toast({ html: 'Erro ao salvar: ' + response, classes: 'red rounded' });
             }
         },
-        error: function(xhr, status, error) {
-            M.toast({html: 'Erro de conexão: ' + error, classes: 'red rounded'});
+        error: function (xhr, status, error) {
+            M.toast({ html: 'Erro de conexão: ' + error, classes: 'red rounded' });
         }
     });
 });
 
-$(document).on('click', '.parecer', function(e) {
+$(document).on('click', '.parecer', function (e) {
     var $this = $(this);
     var total = -1;
 
-    $("#listaSolucoes tr").each(function() {
+    $("#listaSolucoes tr").each(function () {
         total++;
     });
-    
+
     // Inicializar ou incrementar contador
     if (!$this.data('clickCount')) {
         $this.data('clickCount', 1);
-        
+
         // Resetar após 1 segundo
-        setTimeout(function() {
+        setTimeout(function () {
             $this.data('clickCount', 0);
         }, 1000);
-        
+
     } else {
         $this.data('clickCount', $this.data('clickCount') + 1);
     }
-    
+
     // Se for triplo clique
     if ($this.data('clickCount') === 3) {
         var valorParecer = $this.text().trim();
-        
+
         if (valorParecer !== '') {
             // Contar quantas linhas serão removidas
             var count = 0;
-            $('.parecer').each(function() {
+            $('.parecer').each(function () {
                 if ($(this).text().trim() === valorParecer) {
                     count++;
                 }
             });
-            
+
             // Remover todas as linhas com o mesmo parecer
-            $('.parecer').each(function() {
+            $('.parecer').each(function () {
                 if ($(this).text().trim() === valorParecer) {
-                    $(this).closest('tr').fadeOut(300, function() {
+                    $(this).closest('tr').fadeOut(300, function () {
                         $(this).remove();
                     });
                 }
             });
-            
+
             M.toast({
                 html: '✂️ Removidas ' + count + ' linhas com parecer: "' + valorParecer + '"',
                 classes: 'orange rounded',
@@ -1023,80 +1023,185 @@ $(document).on('click', '.parecer', function(e) {
 
             total = total - count;
 
-            $("#listaSolucoes_info").html("Total de itens: "+ total);
-            
+            $("#listaSolucoes_info").html("Total de itens: " + total);
+
         } else {
             M.toast({
                 html: '⚠️ Parecer vazio!',
                 classes: 'red rounded'
             });
         }
-        
+
         // Resetar contador imediatamente
         $this.data('clickCount', 0);
     }
 });
 
-$(document).on('click', '#buscaHistoricoUnidade', function(e) {
-	
-	var unidade = $("#unidade").val();
-	var bloco = $("#bloco").val();
-	
-	$.ajax({
-		url: 'metodo.php?metodo=historicoPorUnidade&unidade='+unidade+'&torre='+bloco,
-		method: 'POST',
-		data: "",
-		dataType: 'json',
-		success: function (response) {
-			// M.toast({html: response, classes: 'rounded'});
-			let tableHtml = jsonToTable(response);
-			console.log(tableHtml);
-			$('#listaRetorno1').html(tableHtml);
-			
-		},
-		error: function () {
-			console.log('Erro de requisição AJAX');
-		}
-	});
-});
+$(document).on('click', '#buscaHistoricoUnidade', function (e) {
+    var unidade = $("#unidade").val();
+    var bloco = $("#bloco").val();
 
-function jsonToTable(jsonData) {
-	// console.log(jsonData);
-	const missingValueReplacement = '';
-      var tableHtml = '<table class="centered striped case-headers">';
-      
-      // Cabeçalho da tabela
-      tableHtml += '<thead><tr>';
-	  tableHtml += '<th>Seq.</th>';
-      for (var key in jsonData[0]) {
-        tableHtml += '<th>' + key + '</th>';
-      }
-      tableHtml += '</tr></thead>';
-
-      // Corpo da tabela
-      tableHtml += '<tbody>';
-      for (var i = 0; i < jsonData.length; i++) {
-		let rec = jsonData[i].numero_ano_virtual;
-        tableHtml += '<tr class="recurso" rec="'+rec+'">';
-		tableHtml += '<td>' + (i+1) + '</td>';
-        for (var key in jsonData[i]) {
-		  let valor = jsonData[i][key] === null ? missingValueReplacement : jsonData[i][key];
-          tableHtml += '<td>' + valor + '</td>';
-        }
-        tableHtml += '</tr>';
-      }
-      tableHtml += '</tbody>';
-
-      tableHtml += '</table>';
-      return tableHtml;
+    if (!unidade || !bloco) {
+        M.toast({ html: 'Informe unidade e bloco!', classes: 'orange' });
+        return;
     }
 
+    $('#unitBrief').addClass('hide');
+    $('#listaRetornoCards').html('<div class="col s12 center-align"><div class="preloader-wrapper big active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p>Buscando histórico...</p></div>');
+
+    $.ajax({
+        url: 'metodo.php?metodo=historicoPorUnidade&unidade=' + unidade + '&torre=' + bloco,
+        method: 'POST',
+        data: "",
+        dataType: 'json',
+        success: function (response) {
+            if (response && response.length > 0) {
+                renderHistoricoCards(response);
+            } else {
+                $('#unitBrief').addClass('hide');
+                $('#listaRetornoCards').html('<div class="col s12 center-align grey-text" style="padding: 50px;"><i class="material-icons" style="font-size: 5rem; opacity: 0.2;">search_off</i><p>Nenhum registro encontrado para esta unidade.</p></div>');
+            }
+        },
+        error: function () {
+            console.log('Erro de requisição AJAX');
+        }
+    });
+});
+
+function renderHistoricoCards(data) {
+    // 1. Processar Estatísticas (Dash-Brief)
+    let totalNotif = data.length;
+    let totalRecursos = data.filter(d => d.recurso === 'Sim').length;
+    let motivos = {};
+
+    data.forEach(d => {
+        let motivo = d.assunto || 'Não Informado';
+        motivos[motivo] = (motivos[motivo] || 0) + 1;
+    });
+
+    // Pegar top 3 motivos
+    let topMotivos = Object.entries(motivos)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(m => `<span class="chip blue-grey white-text">${m[0]} (${m[1]})</span>`)
+        .join(' ');
+
+    let briefHtml = `
+        <div class="col s12 m4">
+            <div class="card-panel indigo darken-1 white-text center-align">
+                <h5>${totalNotif}</h5>
+                <p>Total de Notificações</p>
+            </div>
+        </div>
+        <div class="col s12 m4">
+            <div class="card-panel teal darken-1 white-text center-align">
+                <h5>${totalRecursos}</h5>
+                <p>Recursos Interpostos</p>
+            </div>
+        </div>
+        <div class="col s12 m4">
+            <div class="card-panel blue-grey darken-3 white-text">
+                <p style="margin-top:0"><b>Top Temas:</b></p>
+                ${topMotivos}
+            </div>
+        </div>
+    `;
+    $('#unitBrief').html(briefHtml).removeClass('hide');
+
+    // 2. Renderizar Cards
+    let cardsHtml = '';
+    data.forEach((d, index) => {
+        let tipoClass = (d.notificacao || '').toUpperCase();
+        if (d.recurso === 'Sim') tipoClass += ' RECURSO';
+
+        let linkRecurso = d.recurso === 'Sim' ?
+            `<a href="index.php?pag=recurso&rec=${encodeURIComponent(d.numero_ano_virtual)}" class="btn-small blue waves-effect waves-light"><i class="material-icons left">visibility</i>Ver Recurso</a>` : '';
+
+        cardsHtml += `
+            <div class="col s12 m6 l4">
+                <div class="card hoverable card-notificacao ${tipoClass}">
+                    <div class="card-content">
+                        <span class="grey-text right" style="font-size: 0.8rem;">#${d.numero_ano_virtual}</span>
+                        <span class="card-title" style="font-size: 1.1rem; font-weight: 500; margin-bottom: 10px;">
+                            ${d.assunto || 'Sem Assunto'}
+                        </span>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <span class="badge ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text left" style="margin-left:0; border-radius:4px;">
+                                ${d.notificacao || 'N/A'}
+                            </span>
+                            ${d.recurso === 'Sim' ? '<span class="badge blue white-text left" style="border-radius:4px;">COM RECURSO</span>' : ''}
+                            <div class="clearfix" style="clear:both"></div>
+                        </div>
+
+                        <p style="font-size: 0.9rem;">
+                            <i class="material-icons tiny">calendar_today</i> <b>Ocorrido:</b> ${d.data_ocorrido || '-'}<br>
+                            <i class="material-icons tiny">email</i> <b>E-mail:</b> ${d.data_email || '-'}<br>
+                            <i class="material-icons tiny">assignment_returned</i> <b>Retirada:</b> ${d.dia_retirada || '-'}
+                        </p>
+                        
+                        ${d.parecer ? `<div class="divider" style="margin:10px 0"></div><p style="font-size: 0.85rem; font-style: italic;"><b>Parecer:</b> ${d.parecer}</p>` : ''}
+                    </div>
+                    <div class="card-action right-align">
+                        ${linkRecurso}
+                        <button class="btn-small btn-flat waves-effect info-trigger recurso" 
+                            data-numero="${d.numero_ano_virtual}" 
+                            data-status="${d.status}" 
+                            data-cobranca="${d.cobranca}" 
+                            data-obs="${d.obs_soluções}" 
+                            data-assunto="${d.assunto}" 
+                            data-tipo="${d.notificacao}" 
+                            data-data_envio="${d.data_envio}" 
+                            data-data_email="${d.data_email}" 
+                            data-data-ocorrido="${d.data_ocorrido}">
+                            Detalhes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    $('#listaRetornoCards').html(cardsHtml);
+}
+
+function jsonToTable(jsonData) {
+    // console.log(jsonData);
+    const missingValueReplacement = '';
+    var tableHtml = '<table class="centered striped case-headers">';
+
+    // Cabeçalho da tabela
+    tableHtml += '<thead><tr>';
+    tableHtml += '<th>Seq.</th>';
+    for (var key in jsonData[0]) {
+        tableHtml += '<th>' + key + '</th>';
+    }
+    tableHtml += '</tr></thead>';
+
+    // Corpo da tabela
+    tableHtml += '<tbody>';
+    for (var i = 0; i < jsonData.length; i++) {
+        let rec = jsonData[i].numero_ano_virtual;
+        tableHtml += '<tr class="recurso" rec="' + rec + '">';
+        tableHtml += '<td>' + (i + 1) + '</td>';
+        for (var key in jsonData[i]) {
+            let valor = jsonData[i][key] === null ? missingValueReplacement : jsonData[i][key];
+            tableHtml += '<td>' + valor + '</td>';
+        }
+        tableHtml += '</tr>';
+    }
+    tableHtml += '</tbody>';
+
+    tableHtml += '</table>';
+    return tableHtml;
+}
+
 function ajustaValores(data) {
-	console.log(data);
+    console.log(data);
     let bloco = $("#bloco");
     let unidade = $("#unidade");
     let titulo = $("#titulo");
-	
+
     bloco.val(data.torre);
     unidade.val(data.unidade);
     titulo.val(data.assunto);
