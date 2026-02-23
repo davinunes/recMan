@@ -33,18 +33,18 @@ require "classes/repositorio.php";
 				</select>
 				<label>Bloco / Torre</label>
 			</div>
-			<div class="col s12 m4" style="padding-top: 15px;">
+			<div class="col s12 m2" style="padding-top: 15px;">
 				<button class="btn waves-effect waves-light blue darken-2" id="buscaHistoricoUnidade"
 					style="width: 100%;">
-					<i class="material-icons left">search</i>Procurar Histórico
+					<i class="material-icons">search</i>
 				</button>
 			</div>
 		</div>
-	</div>
 
-	<!-- Área do Brief (Dashboard da Unidade) - Preenchida via JS -->
-	<div id="unitBrief" class="row hide" style="margin-top: 30px;">
-		<!-- Injetado via JS -->
+		<!-- Área do Brief (Dashboard da Unidade) - Compacto -->
+		<div id="unitBrief" class="row hide" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+			<!-- Injetado via JS -->
+		</div>
 	</div>
 
 	<!-- Área de Resultados (Cards) -->
@@ -54,6 +54,9 @@ require "classes/repositorio.php";
 			<p>Informe a unidade e o bloco para visualizar o histórico de notificações.</p>
 		</div>
 	</div>
+
+	<!-- Paginação -->
+	<div id="historyPagination" class="center-align" style="margin-bottom: 30px;"></div>
 </div>
 
 <style>
@@ -87,9 +90,21 @@ require "classes/repositorio.php";
 	}
 
 	/* Cores de Fundo por Parecer */
-	.parecer-manter { background-color: #ffebee !important; }    /* Vermelho clarinho */
-	.parecer-converter { background-color: #fff3e0 !important; } /* Laranja clarinho */
-	.parecer-revogar { background-color: #e8f5e9 !important; }   /* Verde clarinho */
+	.parecer-manter {
+		background-color: #ffebee !important;
+	}
+
+	/* Vermelho clarinho */
+	.parecer-converter {
+		background-color: #fff3e0 !important;
+	}
+
+	/* Laranja clarinho */
+	.parecer-revogar {
+		background-color: #e8f5e9 !important;
+	}
+
+	/* Verde clarinho */
 
 	/* Layout Híbrido */
 	@media only screen and (min-width: 993px) {

@@ -1037,6 +1037,10 @@ $(document).on('click', '.parecer', function (e) {
     }
 });
 
+// --- Histórico por Unidade ---
+window.globalHistoryData = [];
+window.historyPageSize = 10; // Aumentado para 10 por página
+
 $(document).on('click', '#buscaHistoricoUnidade', function (e) {
     var unidade = $("#unidade").val();
     var bloco = $("#bloco").val();
@@ -1046,7 +1050,8 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
         return;
     }
 
-    $('#unitBrief').addClass('hide');
+    $('#containerBriefBtn').addClass('hide');
+    $('#historyPagination').html('');
     $('#listaRetornoCards').html('<div class="col s12 center-align"><div class="preloader-wrapper big active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p>Buscando histórico...</p></div>');
 
     $.ajax({
@@ -1056,9 +1061,11 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
         dataType: 'json',
         success: function (response) {
             if (response && response.length > 0) {
-                renderHistoricoCards(response);
+                window.globalHistoryData = response;
+                window.setupHistoryBrief(response);
+                window.renderHistoryPage(1);
             } else {
-                $('#unitBrief').addClass('hide');
+                $('#historyPagination').html('');
                 $('#listaRetornoCards').html('<div class="col s12 center-align grey-text" style="padding: 50px;"><i class="material-icons" style="font-size: 5rem; opacity: 0.2;">search_off</i><p>Nenhum registro encontrado para esta unidade.</p></div>');
             }
         },
@@ -1068,8 +1075,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
     });
 });
 
-function renderHistoricoCards(data) {
-    // 1. Processar Estatísticas (Dash-Brief)
+window.setupHistoryBrief = function (data) {
     let totalNotif = data.length;
     let totalRecursos = data.filter(d => d.recurso === 'Sim').length;
     let motivos = {};
@@ -1079,42 +1085,46 @@ function renderHistoricoCards(data) {
         motivos[motivo] = (motivos[motivo] || 0) + 1;
     });
 
-    // Pegar top 3 motivos
     let topMotivos = Object.entries(motivos)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(m => `<span class="chip blue-grey white-text">${m[0]} (${m[1]})</span>`)
-        .join(' ');
+        .map(m => `<span class="badge-mini blue-grey lighten-4 blue-grey-text" style="margin:2px">${m[0]} (${m[1]})</span>`)
+        .join('');
 
     let briefHtml = `
-        <div class="col s12 m4">
-            <div class="card-panel indigo darken-1 white-text center-align">
-                <h5>${totalNotif}</h5>
-                <p>Total de Notificações</p>
-            </div>
+        <div class="col s12 m4 center-align" style="border-right: 1px solid #eee;">
+            <b class="indigo-text" style="font-size: 1.2rem;">${totalNotif}</b>
+            <div class="grey-text" style="font-size: 0.8rem; text-transform: uppercase;">Notificações</div>
+        </div>
+        <div class="col s12 m4 center-align" style="border-right: 1px solid #eee;">
+            <b class="teal-text" style="font-size: 1.2rem;">${totalRecursos}</b>
+            <div class="grey-text" style="font-size: 0.8rem; text-transform: uppercase;">Recursos</div>
         </div>
         <div class="col s12 m4">
-            <div class="card-panel teal darken-1 white-text center-align">
-                <h5>${totalRecursos}</h5>
-                <p>Recursos Interpostos</p>
-            </div>
-        </div>
-        <div class="col s12 m4">
-            <div class="card-panel blue-grey darken-3 white-text">
-                <p style="margin-top:0"><b>Top Temas:</b></p>
-                ${topMotivos}
-            </div>
+            <div class="grey-text" style="font-size: 0.7rem; text-transform: uppercase; margin-bottom: 5px;">Principais Ocorrências:</div>
+            ${topMotivos}
         </div>
     `;
     $('#unitBrief').html(briefHtml).removeClass('hide');
+}
 
-    // 2. Renderizar Cards
+window.renderHistoryPage = function (page) {
+    let totalItems = window.globalHistoryData.length;
+    let totalPages = Math.ceil(totalItems / window.historyPageSize);
+    let start = (page - 1) * window.historyPageSize;
+    let end = start + window.historyPageSize;
+    let dataSlice = window.globalHistoryData.slice(start, end);
+
+    window.renderHistoryCardsLayout(dataSlice);
+    window.renderHistoryPagination(page, totalPages);
+};
+
+window.renderHistoryCardsLayout = function (data) {
     let cardsHtml = '';
-    data.forEach((d, index) => {
+    data.forEach((d) => {
         let tipoClass = (d.notificacao || '').toUpperCase();
         if (d.recurso === 'Sim') tipoClass += ' RECURSO';
 
-        // Lógica de cor de fundo baseada no parecer
         let bgStyle = '';
         if (d.parecer) {
             let p = d.parecer.toUpperCase();
@@ -1131,24 +1141,14 @@ function renderHistoricoCards(data) {
                 <div class="card hoverable card-notificacao ${tipoClass} ${bgStyle}" style="margin: 0.5rem 0;">
                     <div class="card-content" style="padding: 10px 20px;">
                         <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
-                            
-                            <!-- ID e Tipo (Pequeno) -->
                             <div class="col s12 m1 center-align">
-                                <span class="badge-mini ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text" style="display:block; margin-bottom:5px">
-                                    ${d.notificacao || 'N/A'}
-                                </span>
+                                <span class="badge-mini ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text" style="display:block; margin-bottom:5px">${d.notificacao || 'N/A'}</span>
                                 <span class="grey-text" style="font-size: 0.75rem;">#${d.numero_ano_virtual}</span>
                             </div>
-                            
-                            <!-- Assunto/Título (Destaque) -->
                             <div class="col s12 m5">
-                                <span class="card-title truncate" style="font-size: 1.05rem; font-weight: 500; margin: 0;" title="${d.assunto || ''}">
-                                    ${d.assunto || 'Sem Assunto'}
-                                </span>
+                                <span class="card-title truncate" style="font-size: 1.05rem; font-weight: 500; margin: 0;">${d.assunto || 'Sem Assunto'}</span>
                                 ${d.recurso === 'Sim' ? '<small class="blue-text" style="font-weight:bold">POSSUI RECURSO</small>' : ''}
                             </div>
-
-                            <!-- Datas (Resumidas) -->
                             <div class="col s12 m4">
                                 <div style="font-size: 0.9rem;" class="grey-text text-darken-2">
                                     <i class="material-icons tiny">calendar_today</i> <b>Ocorrido:</b> ${d.data_ocorrido || '-'}
@@ -1158,21 +1158,35 @@ function renderHistoricoCards(data) {
                                 </div>
                                 ${d.parecer ? `<div class="truncate grey-text text-darken-3" style="font-size: 0.85rem; font-weight: 500;"><b>Resultado:</b> ${d.parecer}</div>` : ''}
                             </div>
-
-                            <!-- Ações (Direita) -->
-                            <div class="col s12 m2 right-align">
-                                ${linkRecurso}
-                            </div>
-
+                            <div class="col s12 m2 right-align">${linkRecurso}</div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
     });
-
     $('#listaRetornoCards').html(cardsHtml);
 }
+
+window.renderHistoryPagination = function (currentPage, totalPages) {
+    if (totalPages <= 1) {
+        $('#historyPagination').html('');
+        return;
+    }
+
+    let paginationHtml = '<ul class="pagination">';
+    paginationHtml += `<li class="${currentPage === 1 ? 'disabled' : 'waves-effect'}"><a href="#!" onclick="${currentPage === 1 ? '' : 'window.renderHistoryPage(' + (currentPage - 1) + ')'}"><i class="material-icons">chevron_left</i></a></li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += `<li class="${i === currentPage ? 'active blue' : 'waves-effect'}"><a href="#!" onclick="window.renderHistoryPage(${i})">${i}</a></li>`;
+    }
+
+    paginationHtml += `<li class="${currentPage === totalPages ? 'disabled' : 'waves-effect'}"><a href="#!" onclick="${currentPage === totalPages ? '' : 'window.renderHistoryPage(' + (currentPage + 1) + ')'}"><i class="material-icons">chevron_right</i></a></li>`;
+    paginationHtml += '</ul>';
+
+    $('#historyPagination').html(paginationHtml);
+}
+
 
 function jsonToTable(jsonData) {
     // console.log(jsonData);
