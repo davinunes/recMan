@@ -18,6 +18,25 @@
 		<div class="modal-content">
 			<h5>Relatório para o Jurídico</h5>
 			<?php
+			if (!function_exists('calcularDiasPassados')) {
+				function calcularDiasPassados($dataInformada)
+				{
+					// Converte a data informada em um objeto DateTime
+					$dataInformadaObj = new DateTime($dataInformada);
+
+					// Obtém a data atual
+					$dataAtualObj = new DateTime();
+
+					// Calcula a diferença entre as datas
+					$diferenca = $dataAtualObj->diff($dataInformadaObj);
+
+					// Obtém o número de dias passados
+					$diasPassados = $diferenca->days;
+
+					return $diasPassados;
+				}
+			}
+
 			require_once "classes/repositorio.php";
 
 			$gmail = verificarToken();
@@ -327,24 +346,6 @@
 		}
 		echo '</div>';
 
-		if (!function_exists('calcularDiasPassados')) {
-			function calcularDiasPassados($dataInformada)
-			{
-				// Converte a data informada em um objeto DateTime
-				$dataInformadaObj = new DateTime($dataInformada);
-
-				// Obtém a data atual
-				$dataAtualObj = new DateTime();
-
-				// Calcula a diferença entre as datas
-				$diferenca = $dataAtualObj->diff($dataInformadaObj);
-
-				// Obtém o número de dias passados
-				$diasPassados = $diferenca->days;
-
-				return $diasPassados;
-			}
-		}
 		?>
 
 
