@@ -18,20 +18,13 @@
 		<div class="modal-content">
 			<h5>Relatório para o Jurídico</h5>
 			<?php
-			require "classes/repositorio.php"; // Certifique-se de incluir o arquivo de conexão com o banco de dados
-			
+			require_once "classes/repositorio.php";
+
 			$gmail = verificarToken();
 			$token = $gmail["tkn"];
 
 			if ($gmail["status"] && $gmail["resta"] > 59) {
-				// echo "Temos Token, válido por: ".$gmail['resta']."s<br/>";
-			} else {
-				// echo "Não temos token Gmail!<br/>";
-				// echo "Clique no Link para obter um Token!<br/>";
-				// echo "É necessário o token para enviar e-mails!<br/>";
-				// echo "Se abrir uma tela solicitando logar com google, logue apenas com a conta do conselho!<br/>";
-				// echo "<a class='btn' target='_blank' href='/gmail/checkToken.php'>Obter Token</a>";
-				// include("/var/www/html/gmail/refresh.php");
+				// OK
 			}
 
 			$sql1 = "SELECT r.numero, f.texto FROM recurso r left join fase f on f.id = r.fase where f.id < 4 order by r.numero";
@@ -101,13 +94,13 @@
 			$assunto = "Relação de Notificações com o Conselho";
 			$assunto = "=?UTF-8?B?" . base64_encode($assunto) . "?=";
 			$destinatarios = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
-			// $destinatarios = "davi.nunes@gmail.com";
-			// $cc = "sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com";
-			// $bcc = "admcond@solucoesdf.com.br";
-			
+			$cc = "";
+
 			$mime = "Content-Type: text/html; charset=UTF-8\n";
 			$mime .= "to: " . $destinatarios . "\n";
-			$mime .= "cc: " . $cc . "\n";
+			if (!empty($cc)) {
+				$mime .= "cc: " . $cc . "\n";
+			}
 			// $mime .= "bcc: ".$bcc."\n";
 			$mime .= "subject: $assunto" . "\n" . "\n";
 			$mime .= $mensagem . "\n";
@@ -332,21 +325,23 @@
 		}
 		echo '</div>';
 
-		function calcularDiasPassados($dataInformada)
-		{
-			// Converte a data informada em um objeto DateTime
-			$dataInformadaObj = new DateTime($dataInformada);
+		if (!function_exists('calcularDiasPassados')) {
+			function calcularDiasPassados($dataInformada)
+			{
+				// Converte a data informada em um objeto DateTime
+				$dataInformadaObj = new DateTime($dataInformada);
 
-			// Obtém a data atual
-			$dataAtualObj = new DateTime();
+				// Obtém a data atual
+				$dataAtualObj = new DateTime();
 
-			// Calcula a diferença entre as datas
-			$diferenca = $dataAtualObj->diff($dataInformadaObj);
+				// Calcula a diferença entre as datas
+				$diferenca = $dataAtualObj->diff($dataInformadaObj);
 
-			// Obtém o número de dias passados
-			$diasPassados = $diferenca->days;
+				// Obtém o número de dias passados
+				$diasPassados = $diferenca->days;
 
-			return $diasPassados;
+				return $diasPassados;
+			}
 		}
 		?>
 
