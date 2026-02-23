@@ -1115,47 +1115,59 @@ function renderHistoricoCards(data) {
         if (d.recurso === 'Sim') tipoClass += ' RECURSO';
 
         let linkRecurso = d.recurso === 'Sim' ?
-            `<a href="index.php?pag=recurso&rec=${encodeURIComponent(d.numero_ano_virtual)}" class="btn-small blue waves-effect waves-light"><i class="material-icons left">visibility</i>Ver Recurso</a>` : '';
+            `<a href="index.php?pag=recurso&rec=${encodeURIComponent(d.numero_ano_virtual)}" class="btn-small blue waves-effect waves-light" style="margin-right:5px"><i class="material-icons left" style="margin-right:0">visibility</i></a>` : '';
 
         cardsHtml += `
-            <div class="col s12 m6 l4">
-                <div class="card hoverable card-notificacao ${tipoClass}">
-                    <div class="card-content">
-                        <span class="grey-text right" style="font-size: 0.8rem;">#${d.numero_ano_virtual}</span>
-                        <span class="card-title" style="font-size: 1.1rem; font-weight: 500; margin-bottom: 10px;">
-                            ${d.assunto || 'Sem Assunto'}
-                        </span>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <span class="badge ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text left" style="margin-left:0; border-radius:4px;">
-                                ${d.notificacao || 'N/A'}
-                            </span>
-                            ${d.recurso === 'Sim' ? '<span class="badge blue white-text left" style="border-radius:4px;">COM RECURSO</span>' : ''}
-                            <div class="clearfix" style="clear:both"></div>
-                        </div>
+            <div class="col s12">
+                <div class="card hoverable card-notificacao ${tipoClass}" style="margin: 0.5rem 0;">
+                    <div class="card-content" style="padding: 10px 20px;">
+                        <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
+                            
+                            <!-- ID e Tipo (Pequeno) -->
+                            <div class="col s12 m1 center-align">
+                                <span class="badge-mini ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text" style="display:block; margin-bottom:5px">
+                                    ${d.notificacao || 'N/A'}
+                                </span>
+                                <span class="grey-text" style="font-size: 0.75rem;">#${d.numero_ano_virtual}</span>
+                            </div>
+                            
+                            <!-- Assunto/Título (Destaque) -->
+                            <div class="col s12 m4">
+                                <span class="card-title truncate" style="font-size: 1.05rem; font-weight: 500; margin: 0;" title="${d.assunto || ''}">
+                                    ${d.assunto || 'Sem Assunto'}
+                                </span>
+                                ${d.recurso === 'Sim' ? '<small class="blue-text" style="font-weight:bold">POSSUI RECURSO</small>' : ''}
+                            </div>
 
-                        <p style="font-size: 0.9rem;">
-                            <i class="material-icons tiny">calendar_today</i> <b>Ocorrido:</b> ${d.data_ocorrido || '-'}<br>
-                            <i class="material-icons tiny">email</i> <b>E-mail:</b> ${d.data_email || '-'}<br>
-                            <i class="material-icons tiny">assignment_returned</i> <b>Retirada:</b> ${d.dia_retirada || '-'}
-                        </p>
-                        
-                        ${d.parecer ? `<div class="divider" style="margin:10px 0"></div><p style="font-size: 0.85rem; font-style: italic;"><b>Parecer:</b> ${d.parecer}</p>` : ''}
-                    </div>
-                    <div class="card-action right-align">
-                        ${linkRecurso}
-                        <button class="btn-small btn-flat waves-effect info-trigger recurso" 
-                            data-numero="${d.numero_ano_virtual}" 
-                            data-status="${d.status}" 
-                            data-cobranca="${d.cobranca}" 
-                            data-obs="${d.obs_soluções}" 
-                            data-assunto="${d.assunto}" 
-                            data-tipo="${d.notificacao}" 
-                            data-data_envio="${d.data_envio}" 
-                            data-data_email="${d.data_email}" 
-                            data-data-ocorrido="${d.data_ocorrido}">
-                            Detalhes
-                        </button>
+                            <!-- Datas (Resumidas) -->
+                            <div class="col s12 m4">
+                                <div style="font-size: 0.9rem;" class="grey-text text-darken-2">
+                                    <i class="material-icons tiny">calendar_today</i> <b>Ocorrido:</b> ${d.data_ocorrido || '-'}
+                                    <span class="hide-on-small-only"> | </span> 
+                                    <br class="hide-on-med-and-up">
+                                    <i class="material-icons tiny">assignment_returned</i> <b>Retirada:</b> ${d.dia_retirada || '-'}
+                                </div>
+                                ${d.parecer ? `<div class="truncate grey-text" style="font-size: 0.8rem; font-style: italic;">${d.parecer}</div>` : ''}
+                            </div>
+
+                            <!-- Ações (Direita) -->
+                            <div class="col s12 m3 right-align">
+                                ${linkRecurso}
+                                <button class="btn-small btn-flat waves-effect info-trigger recurso" 
+                                    data-numero="${d.numero_ano_virtual}" 
+                                    data-status="${d.status}" 
+                                    data-cobranca="${d.cobranca}" 
+                                    data-obs="${d.obs_soluções}" 
+                                    data-assunto="${d.assunto}" 
+                                    data-tipo="${d.notificacao}" 
+                                    data-data_envio="${d.data_envio}" 
+                                    data-data_email="${d.data_email}" 
+                                    data-data-ocorrido="${d.data_ocorrido}">
+                                    <i class="material-icons">more_vert</i>
+                                </button>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>

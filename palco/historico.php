@@ -66,10 +66,11 @@ require "classes/repositorio.php";
 	.card-notificacao {
 		border-left: 5px solid #ccc;
 		transition: all 0.3s ease;
+		margin: 0.5rem 0 !important;
 	}
 
 	.card-notificacao:hover {
-		transform: scale(1.02);
+		transform: scale(1.01);
 		z-depth: 3;
 	}
 
@@ -83,6 +84,33 @@ require "classes/repositorio.php";
 
 	.card-notificacao.RECURSO {
 		border-left-color: #2196f3;
+	}
+
+	/* Layout Híbrido */
+	@media only screen and (min-width: 993px) {
+		.flex-responsive {
+			display: flex !important;
+			flex-direction: row;
+			align-items: center;
+		}
+	}
+
+	@media only screen and (max-width: 992px) {
+		.flex-responsive {
+			display: block !important;
+		}
+
+		.flex-responsive .col {
+			margin-bottom: 10px;
+		}
+	}
+
+	.badge-mini {
+		padding: 2px 6px;
+		border-radius: 3px;
+		font-size: 0.7rem;
+		font-weight: bold;
+		display: inline-block;
 	}
 </style>
 
