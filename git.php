@@ -28,6 +28,20 @@ if (isset($_GET['action'])) {
 		echo json_encode(['success' => true, 'output' => $output]);
 		exit;
 	}
+
+	if ($_GET['action'] == 'pull') {
+		$mensagem = isset($_POST['msg']) && !empty($_POST['msg']) ? $_POST['msg'] : "Atualização automática via Painel";
+
+		// Comando encadeado para Deploy
+		$gitCmd = "cd $htmlPath && git pull";
+
+		// Executa via script SSH Python existente no projeto
+		$fullCmd = "$pythonPath $sshScript '$gitCmd'";
+
+		$output = shell_exec($fullCmd);
+		echo json_encode(['success' => true, 'output' => $output]);
+		exit;
+	}
 }
 ?>
 
@@ -97,6 +111,10 @@ if (isset($_GET['action'])) {
 							<label for="msg">Mensagem do Commit</label>
 						</div>
 
+						<button id="btnPull" class="btn btn-large waves-effect waves-light black btn-deploy">
+							<i class="material-icons left">refresh</i> Atualizar
+						</button>
+
 						<button id="btnPush" class="btn btn-large waves-effect waves-light black btn-deploy">
 							<i class="material-icons left">publish</i> Enviar para Produção
 						</button>
@@ -158,6 +176,26 @@ if (isset($_GET['action'])) {
 				}).always(() => $('#loader').hide());
 			});
 
+			$('#btnPull').click(function () {
+				const msg = $('#msg').val();
+
+				$('#loader').show();
+				$('#btnPull').addClass('disabled');
+				log('Iniciando sequência de pull...');
+
+				$.post('git.php?action=pull', { msg: msg }, function (res) {
+					$('#terminal').append('\n' + res.output);
+					log('Processo de pull concluído.');
+					$('#msg').val('');
+					M.toast({ html: 'Pull finalizado com sucesso!', classes: 'green' });
+				}).fail(function () {
+					log('ERRO: Falha na comunicação com o servidor.');
+				}).always(() => {
+					$('#loader').hide();
+					$('#btnPull').removeClass('disabled');
+				});
+			});
+
 			$('#btnPush').click(function () {
 				const msg = $('#msg').val();
 				if (!msg) {
@@ -169,13 +207,13 @@ if (isset($_GET['action'])) {
 
 				$('#loader').show();
 				$('#btnPush').addClass('disabled');
-				log('Iniciando sequência de deploy...');
+				log('Iniciando sequência de push...');
 
 				$.post('git.php?action=push', { msg: msg }, function (res) {
 					$('#terminal').append('\n' + res.output);
-					log('Processo de deploy concluído.');
+					log('Processo de push concluído.');
 					$('#msg').val('');
-					M.toast({ html: 'Deploy finalizado com sucesso!', classes: 'green' });
+					M.toast({ html: 'Push finalizado com sucesso!', classes: 'green' });
 				}).fail(function () {
 					log('ERRO: Falha na comunicação com o servidor.');
 				}).always(() => {
