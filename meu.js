@@ -1114,12 +1114,21 @@ function renderHistoricoCards(data) {
         let tipoClass = (d.notificacao || '').toUpperCase();
         if (d.recurso === 'Sim') tipoClass += ' RECURSO';
 
+        // Lógica de cor de fundo baseada no parecer
+        let bgStyle = '';
+        if (d.parecer) {
+            let p = d.parecer.toUpperCase();
+            if (p.includes('MANTER')) bgStyle = 'parecer-manter';
+            else if (p.includes('CONVERTER')) bgStyle = 'parecer-converter';
+            else if (p.includes('REVOGAR')) bgStyle = 'parecer-revogar';
+        }
+
         let linkRecurso = d.recurso === 'Sim' ?
             `<a href="index.php?pag=recurso&rec=${encodeURIComponent(d.numero_ano_virtual)}" class="btn-small blue waves-effect waves-light" style="margin-right:5px"><i class="material-icons left" style="margin-right:0">visibility</i></a>` : '';
 
         cardsHtml += `
             <div class="col s12">
-                <div class="card hoverable card-notificacao ${tipoClass}" style="margin: 0.5rem 0;">
+                <div class="card hoverable card-notificacao ${tipoClass} ${bgStyle}" style="margin: 0.5rem 0;">
                     <div class="card-content" style="padding: 10px 20px;">
                         <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
                             
@@ -1132,7 +1141,7 @@ function renderHistoricoCards(data) {
                             </div>
                             
                             <!-- Assunto/Título (Destaque) -->
-                            <div class="col s12 m4">
+                            <div class="col s12 m5">
                                 <span class="card-title truncate" style="font-size: 1.05rem; font-weight: 500; margin: 0;" title="${d.assunto || ''}">
                                     ${d.assunto || 'Sem Assunto'}
                                 </span>
@@ -1147,24 +1156,12 @@ function renderHistoricoCards(data) {
                                     <br class="hide-on-med-and-up">
                                     <i class="material-icons tiny">assignment_returned</i> <b>Retirada:</b> ${d.dia_retirada || '-'}
                                 </div>
-                                ${d.parecer ? `<div class="truncate grey-text" style="font-size: 0.8rem; font-style: italic;">${d.parecer}</div>` : ''}
+                                ${d.parecer ? `<div class="truncate grey-text text-darken-3" style="font-size: 0.85rem; font-weight: 500;"><b>Resultado:</b> ${d.parecer}</div>` : ''}
                             </div>
 
                             <!-- Ações (Direita) -->
-                            <div class="col s12 m3 right-align">
+                            <div class="col s12 m2 right-align">
                                 ${linkRecurso}
-                                <button class="btn-small btn-flat waves-effect info-trigger recurso" 
-                                    data-numero="${d.numero_ano_virtual}" 
-                                    data-status="${d.status}" 
-                                    data-cobranca="${d.cobranca}" 
-                                    data-obs="${d.obs_soluções}" 
-                                    data-assunto="${d.assunto}" 
-                                    data-tipo="${d.notificacao}" 
-                                    data-data_envio="${d.data_envio}" 
-                                    data-data_email="${d.data_email}" 
-                                    data-data-ocorrido="${d.data_ocorrido}">
-                                    <i class="material-icons">more_vert</i>
-                                </button>
                             </div>
 
                         </div>

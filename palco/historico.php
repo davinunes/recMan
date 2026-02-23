@@ -86,6 +86,11 @@ require "classes/repositorio.php";
 		border-left-color: #2196f3;
 	}
 
+	/* Cores de Fundo por Parecer */
+	.parecer-manter { background-color: #ffebee !important; }    /* Vermelho clarinho */
+	.parecer-converter { background-color: #fff3e0 !important; } /* Laranja clarinho */
+	.parecer-revogar { background-color: #e8f5e9 !important; }   /* Verde clarinho */
+
 	/* Layout Híbrido */
 	@media only screen and (min-width: 993px) {
 		.flex-responsive {
