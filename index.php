@@ -22,7 +22,8 @@
 </head>
 
 <?php
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Content-Type: text/html; charset=UTF-8");
 session_start();
 // Verificar se o usuário está logado
