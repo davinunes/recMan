@@ -102,7 +102,7 @@ $meses = [
     <div class="row">
         <div class="col s12 m6 l3">
             <div class="card gradient-45deg-light-blue-cyan gradient-shadow white-text card-resumo">
-                <div class="padding-4">
+                <div class="padding-4 row" style="margin-bottom: 0;">
                     <div class="col s7">
                         <i class="material-icons background-round mt-5">assignment</i>
                         <p>Recursos</p>
@@ -118,7 +118,7 @@ $meses = [
         </div>
         <div class="col s12 m6 l3">
             <div class="card gradient-45deg-red-pink gradient-shadow white-text card-resumo">
-                <div class="padding-4">
+                <div class="padding-4 row" style="margin-bottom: 0;">
                     <div class="col s7">
                         <i class="material-icons background-round mt-5">pending_actions</i>
                         <p>Em Aberto</p>
@@ -134,7 +134,7 @@ $meses = [
         </div>
         <div class="col s12 m6 l3">
             <div class="card gradient-45deg-amber-amber gradient-shadow white-text card-resumo">
-                <div class="padding-4">
+                <div class="padding-4 row" style="margin-bottom: 0;">
                     <div class="col s7">
                         <i class="material-icons background-round mt-5">description</i>
                         <p>Pareceres</p>
@@ -152,7 +152,7 @@ $meses = [
         </div>
         <div class="col s12 m6 l3">
             <div class="card gradient-45deg-green-teal gradient-shadow white-text card-resumo">
-                <div class="padding-4">
+                <div class="padding-4 row" style="margin-bottom: 0;">
                     <div class="col s7">
                         <i class="material-icons background-round mt-5">notifications</i>
                         <p>Notificações</p>
@@ -277,32 +277,33 @@ $meses = [
                 name: 'Conclusão',
                 colorByPoint: true,
                 data: <?php echo json_encode($dadosPareceres); ?>
-        }],
+            }],
             credits: { enabled: false }
-    });
+        });
 
-    // Gráfico de Temas (Barras Empilhadas)
-    Highcharts.chart('chartTemas', {
-        chart: { type: 'bar', backgroundColor: null },
-        title: { text: null },
-        xAxis: { categories: <?php echo json_encode($categoriasNotificacoes); ?>, title: { text: null }
-    },
-        yAxis: { min: 0, title: { text: 'Total', align: 'high' }, labels: { overflow: 'justify' } },
-        tooltip: { valueSuffix: ' casos' },
-        plotOptions: {
-        bar: { dataLabels: { enabled: true }, stacking: 'normal' }
-    },
-        legend: { enabled: true },
-        series: [{
-            name: 'Multas',
-            color: '#ef5350',
-            data: <?php echo json_encode($dadosNotificacoesMultas); ?>
-        }, {
-            name: 'Advertências',
-            color: '#66bb6a',
-            data: <?php echo json_encode($dadosNotificacoesAdvs); ?>
-        }],
-        credits: { enabled: false }
+        // Gráfico de Temas (Barras Empilhadas)
+        Highcharts.chart('chartTemas', {
+            chart: { type: 'bar', backgroundColor: null },
+            title: { text: null },
+            xAxis: {
+                categories: <?php echo json_encode($categoriasNotificacoes); ?>, title: { text: null }
+            },
+            yAxis: { min: 0, title: { text: 'Total', align: 'high' }, labels: { overflow: 'justify' } },
+            tooltip: { valueSuffix: ' casos' },
+            plotOptions: {
+                bar: { dataLabels: { enabled: true }, stacking: 'normal' }
+            },
+            legend: { enabled: true },
+            series: [{
+                name: 'Multas',
+                color: '#ef5350',
+                data: <?php echo json_encode($dadosNotificacoesMultas); ?>
+            }, {
+                name: 'Advertências',
+                color: '#66bb6a',
+                data: <?php echo json_encode($dadosNotificacoesAdvs); ?>
+            }],
+            credits: { enabled: false }
+        });
     });
-});
 </script>
