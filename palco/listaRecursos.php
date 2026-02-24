@@ -307,7 +307,7 @@
 								<span class="recurso-header">Tipo / Espera</span>
 								<span class="badge-mini blue white-text"
 									style="padding:2px 5px; border-radius:3px; font-size:0.75rem"><?php echo $row['tipo']; ?></span><br>
-								<span class="grey-text" style="font-size:0.9rem"><i class="material-icons tiny">timer</i>
+								<span class="grey-text tooltipped" data-position="top" data-tooltip="Dias desde a abertura do recurso" style="font-size:0.9rem; cursor:help;"><i class="material-icons tiny">timer</i>
 									<?php echo calcularDiasPassados($row['data']); ?> dias</span>
 							</div>
 
@@ -326,11 +326,12 @@
 								<span class="badge-mini grey darken-1 white-text"
 									style="padding:2px 5px; border-radius:3px; font-size:0.75rem"><?php echo $row['texto']; ?></span>
 								<div style="margin-top:5px">
-									<i class="material-icons tiny grey-text">history</i> <span
-										class="grey-text"><?php echo $historico; ?></span>
+									<span class="tooltipped" data-position="top" data-tooltip="Quantidade de notificações que a unidade possui" style="cursor:help;">
+										<i class="material-icons tiny grey-text">history</i> <span class="grey-text"><?php echo $historico; ?></span>
+									</span>
 									<?php if ($delayEmDias !== ""): ?>
-										<span class="delay-badge <?php echo $pontoDeAtencao; ?>" style="margin-left:10px"
-											title="Dias entre retirada e recurso"><?php echo $delayEmDias; ?></span>
+										<span class="delay-badge <?php echo $pontoDeAtencao; ?> tooltipped" data-position="top" style="margin-left:10px; cursor:help;"
+											data-tooltip="Dias entre apresentar o recurso e a data de ciência da notificação"><?php echo $delayEmDias; ?></span>
 									<?php endif; ?>
 								</div>
 							</div>
@@ -387,6 +388,7 @@
 	<script>
 		$(document).ready(function () {
 			$('.modal').modal();
+			$('.tooltipped').tooltip();
 		});
 	</script>
 	<?php
