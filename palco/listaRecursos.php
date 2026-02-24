@@ -136,8 +136,13 @@
 
 	<?php
 	// Carregamento dos dados
-	if (isset($_GET['concluidos']) && $_GET['concluidos'] == "true") {
-		$sql = "SELECT r.id as recurso, r.*, f.* FROM recurso r left join fase f on f.id = r.fase where f.id = 5 order by r.id desc limit 50";
+	$isConcluidos = isset($_GET['concluidos']) && $_GET['concluidos'] == "true";
+	$pg = isset($_GET['pg']) ? (int) $_GET['pg'] : 1;
+	$limit = 20;
+
+	if ($isConcluidos) {
+		$offset = ($pg - 1) * $limit;
+		$sql = "SELECT r.id as recurso, r.*, f.*, n.notificacao as tipo FROM recurso r left join fase f on f.id = r.fase left join notificacoes n on n.numero_ano_virtual = r.numero where f.id = 5 order by r.id desc limit $limit offset $offset";
 	} else {
 		$sql = "SELECT r.id as recurso, r.*, f.*, n.notificacao as tipo FROM recurso r left join fase f on f.id = r.fase left join notificacoes n on n.numero_ano_virtual = r.numero where f.id != 5 order by r.data";
 	}
@@ -344,8 +349,36 @@
 			</div>
 			<?php
 		}
-		echo '</div>';
+		echo '</div>'; // Fim da div row dos cards
+		
+		// Renderização da Paginação
+		if ($isConcluidos && $counts['5'] > $limit) {
+			$totalPages = ceil($counts['5'] / $limit);
+			echo '<ul class="pagination center-align" style="margin-top: 30px; margin-bottom: 40px;">';
 
+			// Botão Anterior
+			$prevClass = ($pg <= 1) ? 'disabled' : 'waves-effect';
+			$prevLink = ($pg <= 1) ? '#!' : '?concluidos=true&pg=' . ($pg - 1);
+			echo '<li class="' . $prevClass . '"><a href="' . $prevLink . '"><i class="material-icons">chevron_left</i></a></li>';
+
+			// Lógica Simplificada de Paginação (exibirá até 5 botões próximos)
+			$startPage = max(1, $pg - 2);
+			$endPage = min($totalPages, $startPage + 4);
+			$startPage = max(1, $endPage - 4); // Ajusta caso esteja nas últimas páginas
+		
+			for ($i = $startPage; $i <= $endPage; $i++) {
+				$activeClass = ($pg == $i) ? 'active blue' : 'waves-effect';
+				echo '<li class="' . $activeClass . '"><a href="?concluidos=true&pg=' . $i . '">' . $i . '</a></li>';
+			}
+
+			// Botão Próximo
+			$nextClass = ($pg >= $totalPages) ? 'disabled' : 'waves-effect';
+			$nextLink = ($pg >= $totalPages) ? '#!' : '?concluidos=true&pg=' . ($pg + 1);
+			echo '<li class="' . $nextClass . '"><a href="' . $nextLink . '"><i class="material-icons">chevron_right</i></a></li>';
+
+			echo '</ul>';
+			echo '<div class="center-align grey-text" style="font-size:0.8rem">Você está na página ' . $pg . ' de ' . $totalPages . '</div>';
+		}
 		?>
 
 
