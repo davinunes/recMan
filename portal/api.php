@@ -171,4 +171,139 @@ if ($action == 'submit') {
     exit;
 }
 
+if ($action == 'login') {
+    $numero = $_POST['numero'] ?? '';
+    $ano = $_POST['ano'] ?? '';
+    $senha = $_POST['senha'] ?? '';
+
+    $numeroCompleto = $numero . '/' . $ano;
+    $sql = "SELECT id, fase, token FROM recurso WHERE numero = '" . DBEscape($numeroCompleto) . "'";
+    $res = DBExecute($sql);
+
+    if ($res && mysqli_num_rows($res) > 0) {
+        $rec = mysqli_fetch_assoc($res);
+        if ($rec['token'] === $senha) {
+            $_SESSION['portal_auth'] = $numeroCompleto;
+            echo json_encode(['success' => true]);
+            exit;
+        }
+    }
+    echo json_encode(['success' => false, 'error' => 'Notificação ou senha não encontrados.']);
+    exit;
+}
+
+// Rotas protegidas abaixo
+if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_attachments' || $action == 'get_anexo' || $action == 'download_parecer') {
+    if (empty($_SESSION['portal_auth'])) {
+        echo json_encode(['success' => false, 'error' => 'Não autorizado.']);
+        exit;
+    }
+
+    $numeroRec = $_SESSION['portal_auth'];
+
+    if ($action == 'my_resource') {
+        $sql = "SELECT r.*, f.texto as fase_texto, p.concluido as parecer_concluido 
+                FROM recurso r 
+                LEFT JOIN fase f ON r.fase = f.id 
+                LEFT JOIN parecer p ON p.id = r.numero 
+                WHERE r.numero = '" . DBEscape($numeroRec) . "'";
+        $res = DBExecute($sql);
+        $recurso = mysqli_fetch_assoc($res);
+
+        $anexos = getAnexos($numeroRec);
+
+        // Remove campos sensiveis
+        unset($recurso['token']);
+
+        echo json_encode([
+            'success' => true,
+            'recurso' => $recurso,
+            'anexos' => $anexos
+        ]);
+        exit;
+    }
+
+    if ($action == 'add_comment') {
+        $texto = $_POST['comentario'] ?? '';
+        if (trim($texto) != '') {
+            $dataHoje = date('d/m/Y H:i');
+            $append = "\n\n----------------------------\n[$dataHoje] Condômino adicionou:\n$texto";
+            $sql = "UPDATE recurso SET detalhes = CONCAT(detalhes, '" . DBEscape($append) . "') WHERE numero = '" . DBEscape($numeroRec) . "'";
+            DBExecute($sql);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Comentário vazio.']);
+        }
+        exit;
+    }
+
+    if ($action == 'add_attachments') {
+        $storageDir = __DIR__ . '/../storage/anexos/';
+        if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
+            foreach ($_FILES['anexos']['name'] as $key => $name) {
+                $tmp = $_FILES['anexos']['tmp_name'][$key];
+                $ext = pathinfo($name, PATHINFO_EXTENSION);
+                $newName = uniqid() . '_' . time() . '.' . $ext;
+                $dest = $storageDir . $newName;
+
+                if (move_uploaded_file($tmp, $dest)) {
+                    $sqlAnexo = "INSERT INTO recurso_anexos (numero_recurso, nome_arquivo, caminho_arquivo) VALUES (
+                        '" . DBEscape($numeroRec) . "',
+                        '" . DBEscape($name) . "',
+                        '" . DBEscape($newName) . "'
+                    )";
+                    DBExecute($sqlAnexo);
+                }
+            }
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    if ($action == 'get_anexo') {
+        $idAnexo = (int) ($_GET['id'] ?? 0);
+        $sql = "SELECT * FROM recurso_anexos WHERE id = $idAnexo AND numero_recurso = '" . DBEscape($numeroRec) . "'";
+        $res = DBExecute($sql);
+        if ($res && mysqli_num_rows($res) > 0) {
+            $anexo = mysqli_fetch_assoc($res);
+            $file = __DIR__ . '/../storage/anexos/' . $anexo['caminho_arquivo'];
+            if (file_exists($file)) {
+                header('Content-Type: application/octet-stream');
+                header('Content-Disposition: attachment; filename="' . basename($anexo['nome_arquivo']) . '"');
+                readfile($file);
+                exit;
+            }
+        }
+        die("Arquivo não encontrado.");
+    }
+
+    if ($action == 'download_parecer') {
+        $sql = "SELECT r.*, p.* FROM recurso r JOIN parecer p ON r.numero = p.id WHERE r.numero = '" . DBEscape($numeroRec) . "' AND p.concluido = 1";
+        $res = DBExecute($sql);
+        if ($res && mysqli_num_rows($res) > 0) {
+            $parecer = mysqli_fetch_assoc($res);
+            include_once "../classes/pdfParecer.php";
+            $pdfData = [
+                'notificacao' => $parecer['id'],
+                'unidade' => $parecer['unidade'],
+                'assunto' => $parecer['assunto'],
+                'fato' => $parecer['notificacao'],
+                'analise' => $parecer['analise'],
+                'resultado' => $parecer['resultado'],
+                'parecer' => $parecer['conclusao'],
+                'data_emissao' => date('Y-m-d', strtotime($parecer['data']))
+            ];
+
+            $resp = json_decode(getParecerPdf($pdfData), true);
+            if (isset($resp['pdf_base64'])) {
+                header("Content-type: application/pdf");
+                header('Content-Disposition: attachment; filename="Parecer_' . str_replace('/', '-', $numeroRec) . '.pdf"');
+                echo base64_decode($resp['pdf_base64']);
+                exit;
+            }
+        }
+        die("Parecer não disponível.");
+    }
+}
+
 echo json_encode(['error' => 'Ação inválida.']);

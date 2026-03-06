@@ -1262,4 +1262,17 @@ function getResumoGeral($ano = null)
     return $resumo;
 }
 
+function getAnexos($numero)
+{
+    $sql = "SELECT * FROM recurso_anexos WHERE numero_recurso = '" . DBEscape($numero) . "' ORDER BY data_envio ASC";
+    $result = DBExecute($sql);
+    $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
 ?>

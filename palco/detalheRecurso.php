@@ -16,6 +16,7 @@ $esseRecurso = $result['id'];
 $mensagens = getMensagens($esseRecurso);
 $diligencias = getDiligencias($esseRecurso);
 $votos = getVotos($esseRecurso);
+$anexos = getAnexos($_GET['rec']);
 
 //Verifica se Recurso está no Prazo
 $dataRetirada = getDatasDeRetiradaByID($_GET['rec']);
@@ -110,6 +111,15 @@ if ($esseRecurso == null) {
                 
             ';
     echo '<pre>' . $result['detalhes'] . '</pre>';
+
+    if (!empty($anexos)) {
+        echo '<h6><b>Anexos do Condômino</b></h6>';
+        echo '<div class="collection">';
+        foreach ($anexos as $anx) {
+            echo '<a href="portal/api.php?action=get_anexo&id=' . $anx['id'] . '" target="_blank" class="collection-item"> <i class="material-icons left">attach_file</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+        }
+        echo '</div>';
+    }
 
     if ($parecer['concluido'] == 1) {
         $link = "https://mail.google.com/mail/#inbox/" . $parecer['mailId'];

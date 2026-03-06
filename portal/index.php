@@ -42,10 +42,10 @@
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:-translate-y-1">
                         Apresentar Novo Recurso
                     </button>
-                    <!-- Funcionalidade futura -->
-                    <button
-                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm transition duration-200 cursor-not-allowed opacity-70">
-                        Consultar Recurso Existente
+                    <!-- Funcionalidade de consultar -->
+                    <button @click="etapa = 7"
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm transition duration-200">
+                        Acompanhar Recurso Existente
                     </button>
                 </div>
             </div>
@@ -103,9 +103,8 @@
 
                 <button @click="etapa = 0"
                     class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg mr-2 transition">Início</button>
-                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition"
-                    disabled title="Função ainda não concluída para consultar existente.">
-                    Solicitar Acesso (Em breve)
+                <button @click="etapa = 7" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition" title="Ir para acessar recurso">
+                    Acessar Recurso
                 </button>
             </div>
 
@@ -270,6 +269,95 @@
                 </button>
             </div>
 
+            <!-- ETAPA 7: Login Recurso Existente -->
+            <div x-show="etapa === 7" x-transition class="p-6 sm:p-8" style="display: none;">
+                <h3 class="text-xl font-bold mb-2">Acesso ao Recurso</h3>
+                <p class="text-sm text-gray-500 mb-6">Informe o número do auto e sua senha (código recebido por e-mail no registro).</p>
+                
+                <form @submit.prevent="loginExisting()">
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-1/2">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
+                            <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
+                            <input x-model="anoStr" type="text" placeholder="Ex: 2026" required class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Senha (Código Verificador)</label>
+                        <input x-model="senhaAcesso" type="password" required class="shadow border rounded-lg w-full py-3 px-4 text-center text-lg tracking-widest text-gray-700">
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-8">
+                        <button type="button" @click="etapa = 0" class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                        <button type="submit" :disabled="carregando" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition">
+                            <span x-show="!carregando">Entrar</span>
+                            <span x-show="carregando">Processando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ETAPA 8: Dashboard / Acompanhamento -->
+            <div x-show="etapa === 8" x-transition class="p-6 sm:p-8" style="display: none;">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-900">Acompanhamento de Recurso</h3>
+                        <p class="text-sm text-gray-600">Autos: <b><span x-text="dadosRecurso.numero || ''"></span></b></p>
+                    </div>
+                    <button @click="location.reload()" class="text-gray-500 hover:text-red-500 text-sm"><span class="material-icons align-middle mr-1">Sair</span></button>
+                </div>
+
+                <div class="mb-6">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Status Atual</span>
+                    <div class="inline-block bg-orange-100 text-orange-800 font-semibold px-4 py-2 rounded-full border border-orange-200" x-text="dadosRecurso.fase_texto || 'Carregando...'"></div>
+                </div>
+
+                <template x-if="dadosRecurso.parecer_concluido == 1">
+                    <div class="bg-green-50 border border-green-200 p-4 rounded-lg mb-6 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-green-800 mb-1">Decisão do Conselho (Parecer)</p>
+                            <p class="text-xs text-green-700">O seu recurso já foi julgado. Baixe o PDF oficial com o parecer.</p>
+                        </div>
+                        <a href="api.php?action=download_parecer" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm font-bold whitespace-nowrap shadow transition" target="_blank">Baixar Parecer</a>
+                    </div>
+                </template>
+
+                <div class="mb-6">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Argumentação Registrada</span>
+                    <div class="bg-gray-50 p-4 rounded-lg border text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto" x-text="dadosRecurso.detalhes || ''"></div>
+                </div>
+                
+                <div class="mb-6" x-show="listaAnexos && listaAnexos.length > 0">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Arquivos e Provas</span>
+                    <ul class="space-y-2">
+                        <template x-for="anx in listaAnexos" :key="anx.id">
+                            <li class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 bg-white">
+                                <span class="text-sm truncate mr-4 text-blue-600 font-medium" x-text="anx.nome_arquivo"></span>
+                                <a :href="'api.php?action=get_anexo&id='+anx.id" target="_blank" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded whitespace-nowrap">Baixar</a>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <!-- Adicionar Complementos -->
+                <div class="mt-8 border-t pt-6" x-show="dadosRecurso.fase < 5">
+                    <h4 class="font-bold mb-4 text-gray-800">Adicionar Complemento</h4>
+                    <form @submit.prevent="appendComment()" class="mb-4">
+                        <textarea x-model="novoComentario" required rows="3" class="shadow border rounded w-full py-2 px-3 text-gray-700 text-sm mb-2" placeholder="Escreva aqui novas informações, alegações ou justificativas..."></textarea>
+                        <button type="submit" :disabled="carregandoAcao" class="bg-gray-800 text-white py-2 px-4 rounded text-sm shadow hover:bg-gray-900 transition w-full">Apensar Texto</button>
+                    </form>
+
+                    <form @submit.prevent="addAttachments()" class="mt-6 border border-dashed rounded-lg p-4 bg-blue-50">
+                        <p class="text-sm font-bold text-blue-800 mb-2">Enviar Mais Documentos</p>
+                        <input type="file" id="novosAnexosInput" multiple required class="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700 cursor-pointer">
+                        <button type="submit" :disabled="carregandoAcao" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm shadow transition w-full">Fazer Upload</button>
+                    </form>
+                </div>
+            </div>
+
         </div>
 
         <div class="text-center mt-8 pt-4">
@@ -292,7 +380,12 @@
                 anoStr: new Date().getFullYear().toString(),
 
                 emailContato: '',
-                codigoValidacao: '',
+                senhaAcesso: '',
+                novoComentario: '',
+                
+                dadosRecurso: {},
+                listaAnexos: [],
+                carregandoAcao: false,
 
                 dados: {
                     bloco: '',
@@ -431,6 +524,100 @@
                         this.mostraErro("Interrupção grave no armazenamento!");
                     } finally {
                         this.carregando = false;
+                    }
+                },
+                
+                async loginExisting() {
+                    if (!this.notificacaoStr || !this.anoStr || !this.senhaAcesso) return;
+                    this.carregando = true;
+                    this.erro = false;
+
+                    let fd = new FormData();
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+                    fd.append('senha', this.senhaAcesso);
+
+                    try {
+                        let req = await fetch('api.php?action=login', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.success) {
+                            this.etapa = 8;
+                            await this.loadMyResource();
+                        } else {
+                            this.mostraErro(res.error || "Acesso negado.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Falha no login.");
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+                
+                async loadMyResource() {
+                    try {
+                        let req = await fetch('api.php?action=my_resource');
+                        let res = await req.json();
+                        
+                        if (res.success) {
+                            this.dadosRecurso = res.recurso;
+                            this.listaAnexos = res.anexos;
+                        } else {
+                            this.mostraErro(res.error || "Erro ao carregar os dados do recurso.");
+                        }
+                    } catch(e) {
+                        this.mostraErro("Problema de rede.");
+                    }
+                },
+                
+                async appendComment() {
+                    if(!this.novoComentario) return;
+                    this.carregandoAcao = true;
+                    
+                    let fd = new FormData();
+                    fd.append('comentario', this.novoComentario);
+                    
+                    try {
+                        let req = await fetch('api.php?action=add_comment', { method: 'POST', body: fd });
+                        let res = await req.json();
+                        if (res.success) {
+                            this.novoComentario = '';
+                            alert("Comentário adicionado com sucesso!");
+                            await this.loadMyResource();
+                        } else {
+                            this.mostraErro("Erro ao salvar comentário.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Problema de rede ao apensar comentário.");
+                    } finally {
+                        this.carregandoAcao = false;
+                    }
+                },
+                
+                async addAttachments() {
+                    const inp = document.getElementById("novosAnexosInput");
+                    if(inp.files.length === 0) return;
+                    
+                    this.carregandoAcao = true;
+                    let fd = new FormData();
+                    for(let i=0; i < inp.files.length; i++){
+                        fd.append('anexos[]', inp.files[i]);
+                    }
+                    
+                    try {
+                        let req = await fetch('api.php?action=add_attachments', { method: 'POST', body: fd });
+                        let res = await req.json();
+                        if (res.success) {
+                            inp.value = '';
+                            alert("Arquivos anexados com sucesso!");
+                            await this.loadMyResource();
+                        } else {
+                            this.mostraErro("Erro ao fazer upload dos arquivos.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Falha na rede durante o upload.");
+                    } finally {
+                        this.carregandoAcao = false;
                     }
                 }
             }
