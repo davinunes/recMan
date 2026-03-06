@@ -73,13 +73,12 @@ if ($esseRecurso == null) {
     <?php
     ?>
     <!-- Corpo da página -->
-    <main>
-        <?php
-        echo '<div class="container" style="margin-top: 20px;">
+    <?php
+    echo '<div class="container" style="margin-top: 20px;">
     <div class="row">
     <div class="col s12">
         <div class="card">';
-        echo '
+    echo '
 <nav class="header-navbar orange darken-2">
     <div class="nav-wrapper">
         <ul class="left">
@@ -97,7 +96,7 @@ if ($esseRecurso == null) {
 
 	';
 
-        echo '      <div class="card-content">
+    echo '      <div class="card-content">
                 <h6 class="">' . $result['titulo'] . '</h6>
                 <div class="' . $pontoDeAtencao . '">
                     <p>Dias transcorridos entre a data de retirada e apresentação do Recurso: ' . $delayEmDias . '</p>
@@ -110,98 +109,98 @@ if ($esseRecurso == null) {
                 <h6 class=""><b>Argumentação</b></h6>
                 
             ';
-        echo '<pre>' . $result['detalhes'] . '</pre>';
+    echo '<pre>' . $result['detalhes'] . '</pre>';
 
-        if ($parecer['concluido'] == 1) {
-            $link = "https://mail.google.com/mail/#inbox/" . $parecer['mailId'];
-            echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
-            echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
-        }
+    if ($parecer['concluido'] == 1) {
+        $link = "https://mail.google.com/mail/#inbox/" . $parecer['mailId'];
+        echo "<a class='btn' href='{$link}'>Email de Entrega do Parecer (abrir como conselho)</a>";
+        echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
+    }
 
 
-        echo '<div class="row">
+    echo '<div class="row">
     <div class="">
         <ul class="collection with-header">
             ';
-        foreach ($votos as $voto) {
-            echo '<li class="collection-item avatar">
+    foreach ($votos as $voto) {
+        echo '<li class="collection-item avatar">
 				<img src="' . $voto['avatar'] . '" alt="" class="circle">
 				' . $voto['voto'] . '
 				</li>';
-        }
-        echo '</ul>
+    }
+    echo '</ul>
     </div>
 </div>';
 
-        echo "<h6><b>Análise da Diligência</b></h6>";
+    echo "<h6><b>Análise da Diligência</b></h6>";
 
-        echo '<div class="row">
+    echo '<div class="row">
     <div class="">
         <ul class="collection with-header">
             ';
-        foreach ($diligencias as $mensagem) {
-            $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
-            $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
-            if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
-                $actions = "<span class='actions'><a class='editDiligence modal-trigger' href='#editaDiligencia' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
-            } else {
-                $actions = "<span class='actions'>$dataFormatada</span>";
-            }
-            echo '<li class="collection-item avatar">
+    foreach ($diligencias as $mensagem) {
+        $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
+        $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
+        if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
+            $actions = "<span class='actions'><a class='editDiligence modal-trigger' href='#editaDiligencia' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
+        } else {
+            $actions = "<span class='actions'>$dataFormatada</span>";
+        }
+        echo '<li class="collection-item avatar">
 				<img src="' . $mensagem['avatar'] . '" alt="" class="circle">
 				' . $actions . "<p>" . $mensagem['texto'] . '</p>
 				</li>';
-        }
-        echo '</ul>';
+    }
+    echo '</ul>';
 
 
-        echo "<h6><b>Comentários</b></h6>";
+    echo "<h6><b>Comentários</b></h6>";
 
-        echo '<div class="row">
+    echo '<div class="row">
     <div class="">
         <ul class="collection with-header">
             ';
-        foreach ($mensagens as $mensagem) {
-            $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
-            $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
-            if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
-                $actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
-            } else {
-                $actions = "<span class='actions'>$dataFormatada</span>";
-            }
-            echo '<li class="collection-item avatar">
+    foreach ($mensagens as $mensagem) {
+        $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
+        $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
+        if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
+            $actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
+        } else {
+            $actions = "<span class='actions'>$dataFormatada</span>";
+        }
+        echo '<li class="collection-item avatar">
 				<img src="' . $mensagem['avatar'] . '" alt="" class="circle">
 				' . $actions . "<p>" . $mensagem['texto'] . '</p>
 				</li>';
-        }
-        echo '</ul>';
-        // dump($mensagens);
-        
-        $vaga = getEstacionamento($result['bloco'], $result['unidade']);
+    }
+    echo '</ul>';
+    // dump($mensagens);
+    
+    $vaga = getEstacionamento($result['bloco'], $result['unidade']);
 
-        foreach ($vaga as $vg) {
-            echo "<div class='chip'>Vaga " . $vg['id_estacionamento'] . " " . $vg['local'] . " </div>";
-        }
+    foreach ($vaga as $vg) {
+        echo "<div class='chip'>Vaga " . $vg['id_estacionamento'] . " " . $vg['local'] . " </div>";
+    }
 
 
-        echo "<h6><b>Histórico da unidade</b></h6>";
+    echo "<h6><b>Histórico da unidade</b></h6>";
 
-        echo '<table class="striped">';
-        echo "<div id=\"popup\" class=\"popup\">
+    echo '<table class="striped">';
+    echo "<div id=\"popup\" class=\"popup\">
 				  <div id=\"popup-content\" class=\"popup-content\">
 					Popup
 				  </div>
 				</div>";
-        foreach ($historico as $h) {
-            $votos = "";
-            // var_dump($result);
-            $rst = getVotos($h['numero_ano_virtual']);
-            // dump($rst);
-            foreach ($rst as $v) {
-                $votos .= $v['voto'] . "<br>";
-            }
-            $classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
-            echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
+    foreach ($historico as $h) {
+        $votos = "";
+        // var_dump($result);
+        $rst = getVotos($h['numero_ano_virtual']);
+        // dump($rst);
+        foreach ($rst as $v) {
+            $votos .= $v['voto'] . "<br>";
+        }
+        $classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
+        echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
           data-numero="' . $h['numero_ano_virtual'] . '" 
           data-data_email="' . $h['data_email'] . '" 
           data-data_envio="' . $h['data_envio'] . '" 
@@ -212,20 +211,20 @@ if ($esseRecurso == null) {
           data-assunto="' . $h['assunto'] . '" 
           data-data-ocorrido="' . $h['data_ocorrido'] . '">';
 
-            echo "<td>" . $h['numero_ano_virtual'] . "</td>";
-            echo "<td>" . $h['notificacao'] . "</td>";
-            echo "<td>" . $h['assunto'] . "</td>";
-            echo "<td>Ocorreu " . $h['data_ocorrido'] . "</td>";
-            echo "<td>$votos</td>";
+        echo "<td>" . $h['numero_ano_virtual'] . "</td>";
+        echo "<td>" . $h['notificacao'] . "</td>";
+        echo "<td>" . $h['assunto'] . "</td>";
+        echo "<td>Ocorreu " . $h['data_ocorrido'] . "</td>";
+        echo "<td>$votos</td>";
 
-            echo '</tr>';
-        }
-        echo '</table>';
+        echo '</tr>';
+    }
+    echo '</table>';
 
 
-        echo '    </div>
+    echo '    </div>
 </div>';
-        echo '      </div>
+    echo '      </div>
             <div class="card-action">
                 <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
                 <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a>
@@ -233,10 +232,10 @@ if ($esseRecurso == null) {
                 <a class="modal-trigger btn orange black-3" href="#addiligencia">Adicionar Diligencia</a>
 				';
 
-        if ($result['fase'] == 4)
-            echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
+    if ($result['fase'] == 4)
+        echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
 
-        echo '
+    echo '
                 <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
         </div>
@@ -245,8 +244,7 @@ if ($esseRecurso == null) {
 </div>';
 
 
-        ?>
-    </main>
+    ?>
 
     <!-- Inclua os scripts do Materialize CSS e outros recursos -->
     <!-- Inclua seu código JavaScript para controlar os modais, eventos, etc. -->

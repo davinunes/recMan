@@ -13,7 +13,7 @@ $avatarUrl = !empty($usuarioLogado['avatar']) ? $usuarioLogado['avatar'] : 'http
 $usuarios = getUsuarios();
 ?>
 
-<div class="container">
+<div style="padding: 20px; width: 100%; max-width: 1400px; margin: 0 auto;">
     <div class="row">
         <div class="col s12">
             <h4 class="center-align" style="margin-top: 2rem; margin-bottom: 2rem; font-weight: 300;">Gestão de Conta

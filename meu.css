@@ -1,55 +1,78 @@
 /* Esconde o trigger em telas grandes, o Materialize CSS faz isso por padrão se não for sobreposto */
 /* Regras de Layout para Sidenav Fixo */
 @media only screen and (min-width : 993px) {
-  header, main, footer {
+
+  header,
+  main,
+  footer {
     padding-left: 300px;
+  }
+
+  .container {
+    width: 95% !important;
+    max-width: 1400px !important;
   }
 }
 
 @media only screen and (max-width : 992px) {
-  header, main, footer {
+
+  header,
+  main,
+  footer {
     padding-left: 0;
+  }
+
+  .container {
+    width: 95% !important;
   }
 }
 
 .auto-height-textarea {
-    overflow: hidden;
-	height: 12em;
-    transition: height 0.2s; /* Adiciona uma transição suave de altura */
+  overflow: hidden;
+  height: 12em;
+  transition: height 0.2s;
+  /* Adiciona uma transição suave de altura */
 }
 
 .auto-height-textarea:focus {
-    height: auto; /* Define a altura da textarea para auto quando em foco */
+  height: auto;
+  /* Define a altura da textarea para auto quando em foco */
 }
 
-.recurso td{
-	padding: 2px!important;
-	border-bottom:1px solid teal!important;
+.recurso td {
+  padding: 2px !important;
+  border-bottom: 1px solid teal !important;
 }
 
-.historico td{
-	padding: 2px!important;
-	/* border-bottom:1px solid teal!important; */
+.historico td {
+  padding: 2px !important;
+  /* border-bottom:1px solid teal!important; */
 }
 
 .uppercase-headers th {
   text-transform: uppercase;
 }
 
-#listaSolucoes td{
-	padding: 1px!important;
+#listaSolucoes td {
+  padding: 1px !important;
 }
 
 .chip {
-  white-space: nowrap; /* Impede quebrar linhas */
-  overflow: hidden; /* Oculta qualquer conteúdo que transborde */
-  text-overflow: ellipsis; /* Adiciona reticências (...) quando o texto não couber */
+  white-space: nowrap;
+  /* Impede quebrar linhas */
+  overflow: hidden;
+  /* Oculta qualquer conteúdo que transborde */
+  text-overflow: ellipsis;
+  /* Adiciona reticências (...) quando o texto não couber */
 }
 
 pre {
-    overflow: auto; /* Adiciona barras de rolagem quando necessário */
-	white-space: pre-wrap; /* Quebras de linha automáticas e preservação de espaços em branco */
-	max-width: 100%; /* Limita a largura do elemento a 100% do contêiner pai */
+  overflow: auto;
+  /* Adiciona barras de rolagem quando necessário */
+  white-space: pre-wrap;
+  /* Quebras de linha automáticas e preservação de espaços em branco */
+  max-width: 100%;
+  /* Limita a largura do elemento a 100% do contêiner pai */
 }
 
 
@@ -61,18 +84,18 @@ pre {
   border-radius: 10px;
   padding: 10px;
   z-index: 1000;
-  top: -100%; /* Posicione o popup acima da linha da tabela */
-  left: 0; /* Ajuste a posição horizontal conforme necessário */
+  top: -100%;
+  /* Posicione o popup acima da linha da tabela */
+  left: 0;
+  /* Ajuste a posição horizontal conforme necessário */
 }
 
 #popup-content {
-  border-radius: 10px; /* Cantos arredondados */
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Efeito de sombra */
+  border-radius: 10px;
+  /* Cantos arredondados */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  /* Efeito de sombra */
   padding: 10px;
   background-color: #fff;
   /* Outros estilos desejados para o conteúdo do popup */
 }
-
-
-
-
