@@ -4,7 +4,8 @@ require "classes/repositorio.php";
 $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, r.titulo, r.data 
         FROM conselho.recurso r
         LEFT JOIN conselho.parecer p ON p.id = r.numero
-        WHERE r.fase = 5 AND (p.mailId IS NULL OR p.mailId = '')";
+        WHERE r.fase = 5 AND (p.mailId IS NULL OR p.mailId = '')
+        ORDER BY r.data DESC, r.id DESC";
 
 $result = DBExecute($sql);
 $recursos = [];
@@ -76,8 +77,8 @@ if ($result && mysqli_num_rows($result) > 0) {
                                     <?php echo htmlspecialchars($r['data']); ?>
                                 </td>
                                 <td>
-                                    <a href="index.php?pag=recurso&numero=<?php echo urlencode($r['numero']); ?>"
-                                        class="btn blue btn-small" target="_blank">
+                                    <a href="index.php?pag=recurso&rec=<?php echo $r['numero']; ?>" class="btn blue btn-small"
+                                        target="_blank">
                                         <i class="material-icons left">visibility</i> Resolver
                                     </a>
                                 </td>
