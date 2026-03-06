@@ -185,22 +185,21 @@ if ($esseRecurso == null) {
 
     echo "<h6><b>Histórico da unidade</b></h6>";
 
-    echo '<table class="striped">';
     echo "<div id=\"popup\" class=\"popup\">
-				  <div id=\"popup-content\" class=\"popup-content\">
-					Popup
-				  </div>
-				</div>";
+                  <div id=\"popup-content\" class=\"popup-content\">
+                    Popup
+                  </div>
+                </div>";
+    echo '<div class="collection">';
+
     foreach ($historico as $h) {
         $votos = "";
-        // var_dump($result);
         $rst = getVotos($h['numero_ano_virtual']);
-        // dump($rst);
         foreach ($rst as $v) {
-            $votos .= $v['voto'] . "<br>";
+            $votos .= "<span class='chip' style='padding: 0 8px; height: 24px; line-height: 24px; margin: 2px;'>" . $v['voto'] . "</span>";
         }
-        $classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange darken-1" : "";
-        echo '<tr class="recurso ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
+        $classe = $result['numero'] == $h['numero_ano_virtual'] ? "orange lighten-4" : "";
+        echo '<a class="collection-item recurso black-text ' . $classe . '" rec="' . $h['numero_ano_virtual'] . '" 
           data-numero="' . $h['numero_ano_virtual'] . '" 
           data-data_email="' . $h['data_email'] . '" 
           data-data_envio="' . $h['data_envio'] . '" 
@@ -209,17 +208,17 @@ if ($esseRecurso == null) {
           data-tipo="' . $h['notificacao'] . '" 
           data-obs="' . $h['obs'] . '" 
           data-assunto="' . $h['assunto'] . '" 
-          data-data-ocorrido="' . $h['data_ocorrido'] . '">';
+          data-data-ocorrido="' . $h['data_ocorrido'] . '" style="cursor: pointer; display: block;">';
 
-        echo "<td>" . $h['numero_ano_virtual'] . "</td>";
-        echo "<td>" . $h['notificacao'] . "</td>";
-        echo "<td>" . $h['assunto'] . "</td>";
-        echo "<td>Ocorreu " . $h['data_ocorrido'] . "</td>";
-        echo "<td>$votos</td>";
+        echo "<div class='row' style='margin-bottom: 0px; display: flex; flex-wrap: wrap; align-items: center;'>";
+        echo "<div class='col s12 m2'><h6><b class='blue-text text-darken-2'>" . $h['numero_ano_virtual'] . "</b></h6><span class='badge-mini grey white-text left' style='padding:2px 5px; border-radius:3px; font-size:0.75rem'>" . $h['notificacao'] . "</span></div>";
+        echo "<div class='col s12 m6'><span style='font-weight: 500;'>" . $h['assunto'] . "</span><br><span class='grey-text' style='font-size: 0.8rem;'><i class='material-icons tiny'>event</i> Ocorreu em " . date('d/m/Y', strtotime($h['data_ocorrido'])) . "</span></div>";
+        echo "<div class='col s12 m4 right-align' style='margin-top: 5px;'>" . $votos . "</div>";
+        echo "</div>";
 
-        echo '</tr>';
+        echo '</a>';
     }
-    echo '</table>';
+    echo '</div>';
 
 
     echo '    </div>
