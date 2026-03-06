@@ -290,8 +290,17 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
             $anexo = mysqli_fetch_assoc($res);
             $file = __DIR__ . '/../storage/anexos/' . $anexo['caminho_arquivo'];
             if (file_exists($file)) {
-                header('Content-Type: application/octet-stream');
-                header('Content-Disposition: attachment; filename="' . basename($anexo['nome_arquivo']) . '"');
+                $isView = isset($_GET['view']) && $_GET['view'] == '1';
+                $mime = mime_content_type($file);
+
+                header('Content-Type: ' . ($mime ? $mime : 'application/octet-stream'));
+
+                if ($isView && strpos($mime, 'image/') === 0 || strpos($mime, 'video/') === 0 || strpos($mime, 'audio/') === 0) {
+                    header('Content-Disposition: inline; filename="' . basename($anexo['nome_arquivo']) . '"');
+                } else {
+                    header('Content-Disposition: attachment; filename="' . basename($anexo['nome_arquivo']) . '"');
+                }
+
                 readfile($file);
                 exit;
             }

@@ -116,7 +116,28 @@ if ($esseRecurso == null) {
     if (!empty($anexos)) {
         echo '<div class="collection">';
         foreach ($anexos as $anx) {
-            echo '<a href="portal/api.php?action=get_anexo&id=' . $anx['id'] . '" target="_blank" class="collection-item"> <i class="material-icons left">attach_file</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+            $ext = strtolower(pathinfo($anx['nome_arquivo'], PATHINFO_EXTENSION));
+            $urlDownload = 'portal/api.php?action=get_anexo&id=' . $anx['id'];
+            $urlView = $urlDownload . '&view=1';
+
+            echo '<div class="collection-item">';
+
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                echo '<div style="margin-bottom: 10px;"><img src="' . $urlView . '" style="max-width: 100%; max-height: 400px; border-radius: 4px; border: 1px solid #ccc;"></div>';
+                echo '<a href="' . $urlDownload . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px;"><i class="material-icons left">image</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+            } elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])) {
+                echo '<div style="margin-bottom: 10px;"><video controls style="max-width: 100%; max-height: 400px; border-radius: 4px; border: 1px solid #ccc; background: #000;"><source src="' . $urlView . '" type="video/' . ($ext == 'mov' ? 'mp4' : $ext) . '">Seu navegador não suporta vídeos.</video></div>';
+                echo '<a href="' . $urlDownload . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px;"><i class="material-icons left">videocam</i> Baixar Vídeo Original (' . htmlspecialchars($anx['nome_arquivo']) . ')</a>';
+            } elseif (in_array($ext, ['mp3', 'wav', 'aac'])) {
+                echo '<div style="margin-bottom: 10px;"><audio controls style="width: 100%;"><source src="' . $urlView . '" type="audio/' . ($ext == 'mp3' ? 'mpeg' : $ext) . '">Seu navegador não suporta áudio.</audio></div>';
+                echo '<a href="' . $urlDownload . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px;"><i class="material-icons left">audiotrack</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+            } elseif ($ext === 'pdf') {
+                echo '<a href="' . $urlView . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px; display:block;"><i class="material-icons left text-red">picture_as_pdf</i> Abrir/Baixar ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+            } else {
+                echo '<a href="' . $urlDownload . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px; display:block;"><i class="material-icons left">attach_file</i> Baixar ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
+            }
+
+            echo '</div>';
         }
         echo '</div>';
     } else {
