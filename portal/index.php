@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente de Recursos - Conselho</title>
+    <!-- Tailwind CSS (via CDN para módulo independente) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <div x-data="assistenteData()"
+        class="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[90vh]">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-blue-900 border-b-4 border-orange-500 inline-block pb-2">Central de
+                Recursos</h1>
+            <p class="text-gray-600 mt-2 text-lg">Conselho Consultivo</p>
+        </div>
+
+        <!-- Feedback Messages -->
+        <div x-show="erro" x-transition
+            class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-sm"
+            style="display: none;">
+            <p x-text="erroMensagem"></p>
+        </div>
+
+        <!-- Card Principal -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+
+            <!-- ETAPA 0: Bem vindo -->
+            <div x-show="etapa === 0" x-transition class="p-8 text-center" style="display: none;">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Bem-vindo(a)!</h2>
+                <p class="mb-8 text-gray-600">Este é o assistente oficial para interposição de recursos contra
+                    notificações aplicadas ao seu condomínio.</p>
+
+                <div class="space-y-4">
+                    <button @click="iniciarNovo()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:-translate-y-1">
+                        Apresentar Novo Recurso
+                    </button>
+                    <!-- Funcionalidade futura -->
+                    <button
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-sm transition duration-200 cursor-not-allowed opacity-70">
+                        Consultar Recurso Existente
+                    </button>
+                </div>
+            </div>
+
+            <!-- ETAPA 1: Número da Notificação -->
+            <div x-show="etapa === 1" x-transition class="p-6 sm:p-8" style="display: none;">
+                <h3 class="text-xl font-bold mb-2">Identificação da Notificação</h3>
+                <p class="text-sm text-gray-500 mb-6">Informe os números exatamente como constam no documento recebido.
+                </p>
+
+                <form @submit.prevent="checarNotificacao()">
+                    <div class="flex gap-4 mb-6">
+                        <div class="w-2/3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
+                            <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required
+                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                        </div>
+                        <div class="w-1/3 text-center pt-8 text-2xl text-gray-400">/</div>
+                        <div class="w-2/3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
+                            <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
+                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-8">
+                        <button type="button" @click="etapa = 0"
+                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                        <button type="submit" :disabled="carregando"
+                            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
+                            <span x-show="!carregando">Continuar</span>
+                            <span x-show="carregando">Processando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ETAPA 2: Já Existe -->
+            <div x-show="etapa === 2" x-transition class="p-6 sm:p-8 text-center" style="display: none;">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 text-orange-500 mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2 text-gray-800">Recurso já registrado</h3>
+                <p class="text-gray-600 mb-6">Já constamos em nossa base um recurso ativo para a notificação <b><span
+                            x-text="notificacaoStr + '/' + anoStr"></span></b>.</p>
+
+                <div class="bg-gray-50 p-4 rounded-lg border mb-6 text-sm text-gray-700 text-left">
+                    Se você é o proprietário e precisa acessar, você pode gerar um novo token de acesso que será enviado
+                    para o e-mail atrelado a ele.
+                </div>
+
+                <button @click="etapa = 0"
+                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg mr-2 transition">Início</button>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition"
+                    disabled title="Função ainda não concluída para consultar existente.">
+                    Solicitar Acesso (Em breve)
+                </button>
+            </div>
+
+            <!-- ETAPA 3: Coletar Email e Enviar Código -->
+            <div x-show="etapa === 3" x-transition class="p-6 sm:p-8" style="display: none;">
+                <h3 class="text-xl font-bold mb-2">Comunicação</h3>
+                <p class="text-sm text-gray-500 mb-6">Para sua segurança e envio do veredito final, precisamos de um
+                    e-mail válido com o qual entraremos em contato.</p>
+
+                <form @submit.prevent="enviarCodigo()">
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Seu e-mail</label>
+                        <input x-model="emailContato" type="email" required
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="voce@email.com">
+                    </div>
+
+                    <div class="flex justify-between items-center mt-8">
+                        <button type="button" @click="etapa = 1"
+                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                        <button type="submit" :disabled="carregando"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition">
+                            <span x-show="!carregando">Enviar Código Seguro</span>
+                            <span x-show="carregando">Enviando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ETAPA 4: Validar Código -->
+            <div x-show="etapa === 4" x-transition class="p-6 sm:p-8" style="display: none;">
+                <h3 class="text-xl font-bold mb-2">Verificação</h3>
+                <p class="text-sm text-gray-600 mb-6">Enviamos um código de 6 dígitos para o e-mail <b><span
+                            x-text="emailContato"></span></b>.</p>
+
+                <form @submit.prevent="validarCodigo()">
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2 text-center">Código recebido</label>
+                        <input x-model="codigoValidacao" type="text" maxlength="6" required
+                            class="shadow appearance-none border rounded-lg w-full max-w-[200px] mx-auto block py-3 px-4 text-center tracking-widest text-2xl text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="000000">
+                    </div>
+
+                    <p class="text-center text-xs text-gray-400 mb-6 cursor-pointer" @click="enviarCodigo()">Não
+                        recebeu? Reenviar código</p>
+
+                    <div class="flex justify-between items-center mt-8">
+                        <button type="button" @click="etapa = 3"
+                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                        <button type="submit" :disabled="carregando"
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition">
+                            <span x-show="!carregando">Validar</span>
+                            <span x-show="carregando">Validando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ETAPA 5: O Formulário Real de Redação -->
+            <div x-show="etapa === 5" x-transition class="p-6 sm:p-8" style="display: none;">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-r">
+                    <p class="text-sm text-blue-800">Assunto: <b>Recurso para Notificação <span
+                                x-text="notificacaoStr+'/'+anoStr"></span></b></p>
+                </div>
+
+                <form @submit.prevent="enviarRecursoFinal()">
+                    <!-- Dados auto-preenchidos ou solicitados -->
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-1/2">
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Bloco</label>
+                            <select x-model="dados.bloco" required
+                                class="shadow border rounded w-full py-2 px-3 text-gray-700 text-sm bg-gray-100">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                            </select>
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Unidade</label>
+                            <input x-model="dados.unidade" type="number" required
+                                class="shadow border rounded w-full py-2 px-3 text-gray-700 text-sm bg-gray-100"
+                                placeholder="Ex: 504">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-bold mb-2">Fundamentação (Texto do Recurso)</label>
+                        <textarea x-model="dados.detalhes" required rows="6"
+                            class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Redija aqui os motivos pelos quais solicita reavaliação ou cancelamento..."></textarea>
+                    </div>
+
+                    <!-- Sessão Crítica: Uploads -->
+                    <div class="mb-6 p-4 border border-dashed border-gray-400 rounded-lg bg-gray-50 relative">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Anexar Documentos e Provas</label>
+                        <p class="text-xs text-gray-500 mb-3">Tamanho máximo total: 15MB. Formatos comuns aceitos: PDF,
+                            JPEG, PNG.</p>
+
+                        <input type="file" id="anexosInput" name="anexos" multiple
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+
+                        <div class="mt-3 p-3 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
+                            <b>⚠️ ATENÇÃO E PRÉ-REQUISITO:</b><br>
+                            Você DEVE anexar uma foto ou scan da Cópia da Notificação recebida.<br>
+                            O Conselho <b>não tem acesso aos documentos originais retidos pela Sindicância</b>, logo, é
+                            sua obrigação instruir seu recurso com essas cópias.
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="flex items-start">
+                            <input type="checkbox" required
+                                class="mt-1 mr-2 cursor-pointer h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <span class="text-xs text-gray-600">Compreendo que o Conselho apenas avalia. Caso existam
+                                imagens de gravação envolvidas (CFTV), fui informado que devo contactar a gerência
+                                condominial para assistir presencialmente antes de entrar com este recurso. Declaro ter
+                                anexado cópia da notificação.</span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t">
+                        <button type="submit" :disabled="carregando"
+                            class="w-full bg-blue-600 hover:bg-blue-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition">
+                            <span x-show="!carregando">Finalizar e Protocolar Recurso</span>
+                            <span x-show="carregando">Processando e Enviando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ETAPA 6: Sucesso Oficial -->
+            <div x-show="etapa === 6" x-transition class="p-8 text-center" style="display: none;">
+                <div
+                    class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-500 mb-6 shadow">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-bold mb-4 text-gray-800">Protocolado com Sucesso!</h2>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 text-left">
+                    <p class="mb-3 text-gray-700">Seu recurso de número <b><span
+                                x-text="notificacaoStr + '/' + anoStr"></span></b> foi oficializado com sucesso pela
+                        Central.</p>
+                    <p class="mb-3 text-gray-700">O seu e-mail atrelado já é a principal garantia de rastreabilidade. O
+                        código validado servirá como senha no futuro da sua área restrita.</p>
+                    <p class="text-sm font-bold text-blue-800 mt-4"><i
+                            class="material-icons align-bottom text-base mr-1">timer</i> Prazo Regimental</p>
+                    <p class="text-sm text-gray-600 mt-1">Conforme protocolo, a comissão de conselheiros tem até 15 dias
+                        corridos para analisar toda a documentação, fatos exarados e emitir um parecer oficial (Voto
+                        Consolidado).</p>
+                    <p class="text-sm text-gray-600 mt-2">Você receberá e-mail com a deliberação quando for findada a
+                        fase investigatória.</p>
+                </div>
+
+                <button @click="location.reload()"
+                    class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-lg shadow transition">
+                    Voltar ao Início
+                </button>
+            </div>
+
+        </div>
+
+        <div class="text-center mt-8 pt-4">
+            <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">&copy;
+                <?= date("Y") ?> - Conselho de Adm
+            </p>
+        </div>
+    </div>
+
+    <!-- Script de Gestão Global Vue/Alpine -->
+    <script>
+        function assistenteData() {
+            return {
+                etapa: 0,
+                carregando: false,
+                erro: false,
+                erroMensagem: '',
+
+                notificacaoStr: '',
+                anoStr: new Date().getFullYear().toString(),
+
+                emailContato: '',
+                codigoValidacao: '',
+
+                dados: {
+                    bloco: '',
+                    unidade: '',
+                    detalhes: ''
+                },
+                notificacaoData: null,
+
+                mostraErro(msg) {
+                    this.erroMensagem = msg;
+                    this.erro = true;
+                    // Auto-hide
+                    setTimeout(() => { this.erro = false; }, 5000);
+                },
+
+                iniciarNovo() {
+                    this.erro = false;
+                    this.etapa = 1;
+                },
+
+                async checarNotificacao() {
+                    if (!this.notificacaoStr || !this.anoStr) return;
+                    this.carregando = true;
+                    this.erro = false;
+
+                    let fd = new FormData();
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+
+                    try {
+                        let req = await fetch('api.php?action=check_notification', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.exists) {
+                            // Ja tem
+                            this.etapa = 2; // Tela de "Ja foi recebido"
+                        } else {
+                            // Continuar fluxo de cadastro. 
+                            if (res.notificacao) {
+                                // Temos na listagem geral do sindico -> auto preencher
+                                this.dados.bloco = res.notificacao.bloco;
+                                this.dados.unidade = res.notificacao.unidade;
+                                this.notificacaoData = res.notificacao;
+                            }
+                            this.etapa = 3; // Solicitar email
+                        }
+                    } catch (e) {
+                        this.mostraErro("Erro ao consultar os servidores da central.");
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+
+                async enviarCodigo() {
+                    if (!this.emailContato) return;
+                    this.carregando = true;
+                    this.erro = false;
+
+                    let fd = new FormData();
+                    fd.append('email', this.emailContato);
+
+                    try {
+                        let req = await fetch('api.php?action=send_token', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.success) {
+                            this.etapa = 4;
+                            this.codigoValidacao = ''; // reset do input
+                        } else {
+                            this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Comunicação falhou.");
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+
+                async validarCodigo() {
+                    if (this.codigoValidacao.length < 5) return;
+                    this.carregando = true;
+                    this.erro = false;
+
+                    let fd = new FormData();
+                    fd.append('token', this.codigoValidacao);
+
+                    try {
+                        let req = await fetch('api.php?action=verify_token', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.success) {
+                            this.etapa = 5; // Vai formulário real
+                        } else {
+                            this.mostraErro(res.error || "Token fornecido inválido.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Problema ao contatar o validador.");
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+
+                async enviarRecursoFinal() {
+                    this.carregando = true;
+                    this.erro = false;
+
+                    let fd = new FormData();
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+                    fd.append('bloco', this.dados.bloco);
+                    fd.append('unidade', this.dados.unidade);
+                    fd.append('detalhes', this.dados.detalhes);
+
+                    // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
+                    fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação. Sem versão eletrificada original.');
+
+                    // Upload files logic
+                    const inputFile = document.getElementById("anexosInput");
+                    if (inputFile.files.length > 0) {
+                        for (let i = 0; i < inputFile.files.length; i++) {
+                            fd.append('anexos[]', inputFile.files[i]);
+                        }
+                    }
+
+                    try {
+                        let req = await fetch('api.php?action=submit', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.success) {
+                            this.etapa = 6;
+                        } else {
+                            this.mostraErro(res.error || "Sua solicitação não pôde ser salva.");
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        this.mostraErro("Interrupção grave no armazenamento!");
+                    } finally {
+                        this.carregando = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
