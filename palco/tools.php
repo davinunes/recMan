@@ -1,6 +1,10 @@
 <?php
 // Define as ferramentas e suas categorias para facilitar a manutenção
 $tools = [
+    'Recursos e Pareceres' => [
+        ['label' => 'Recursos Sem E-mail', 'url' => 'recursosSemEmail.php', 'icon' => 'warning', 'target' => '_self', 'color' => 'deep-orange'],
+        ['label' => 'Sincronizar Enviados', 'url' => 'finalizarPareceresEnviados.php', 'icon' => 'done_all', 'target' => '_self', 'color' => 'green darken-2'],
+    ],
     'Sincronização' => [
         ['label' => 'Importar Planilha de Multas', 'url' => 'json.php?importar_magnacom=1', 'icon' => 'grid_on', 'target' => '_self', 'color' => 'blue'],
         ['label' => 'GIT Deploy', 'url' => 'git.php', 'icon' => 'cloud_sync', 'target' => '_blank', 'color' => 'black'],
