@@ -192,14 +192,28 @@ if ($action == 'login') {
     exit;
 }
 
-// Rotas protegidas abaixo
-if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_attachments' || $action == 'get_anexo' || $action == 'download_parecer') {
-    if (empty($_SESSION['portal_auth'])) {
-        echo json_encode(['success' => false, 'error' => 'Não autorizado.']);
+// Rotas protegidas para Portal (moradores) e algumas para Conselho
+if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_attachments' || $action == 'download_parecer' || $action == 'get_anexo') {
+
+    // get_anexo é a única que o conselho pode bater diretamente daqui
+    $isCouncil = !empty($_SESSION['user_id']);
+    $isPortal = !empty($_SESSION['portal_auth']);
+
+    if (!$isPortal && !$isCouncil) {
+        if ($action == 'get_anexo') {
+            die("Não autorizado.");
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Não autorizado.']);
+            exit;
+        }
+    }
+
+    if (!$isPortal && $action != 'get_anexo') {
+        echo json_encode(['success' => false, 'error' => 'Não autorizado para conselheiros aqui.']);
         exit;
     }
 
-    $numeroRec = $_SESSION['portal_auth'];
+    $numeroRec = $isPortal ? $_SESSION['portal_auth'] : null;
 
     if ($action == 'my_resource') {
         $sql = "SELECT r.*, f.texto as fase_texto, p.concluido as parecer_concluido 
@@ -239,6 +253,9 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
 
     if ($action == 'add_attachments') {
         $storageDir = __DIR__ . '/../storage/anexos/';
+        if (!is_dir($storageDir)) {
+            @mkdir($storageDir, 0777, true);
+        }
         if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
             foreach ($_FILES['anexos']['name'] as $key => $name) {
                 $tmp = $_FILES['anexos']['tmp_name'][$key];
@@ -262,7 +279,12 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
 
     if ($action == 'get_anexo') {
         $idAnexo = (int) ($_GET['id'] ?? 0);
-        $sql = "SELECT * FROM recurso_anexos WHERE id = $idAnexo AND numero_recurso = '" . DBEscape($numeroRec) . "'";
+        $sql = "SELECT * FROM recurso_anexos WHERE id = $idAnexo";
+
+        if ($isPortal && !$isCouncil) {
+            $sql .= " AND numero_recurso = '" . DBEscape($numeroRec) . "'";
+        }
+
         $res = DBExecute($sql);
         if ($res && mysqli_num_rows($res) > 0) {
             $anexo = mysqli_fetch_assoc($res);

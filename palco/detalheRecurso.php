@@ -112,13 +112,15 @@ if ($esseRecurso == null) {
             ';
     echo '<pre>' . $result['detalhes'] . '</pre>';
 
+    echo '<h6><b>Anexos do Condômino (Enviados via Portal)</b></h6>';
     if (!empty($anexos)) {
-        echo '<h6><b>Anexos do Condômino</b></h6>';
         echo '<div class="collection">';
         foreach ($anexos as $anx) {
             echo '<a href="portal/api.php?action=get_anexo&id=' . $anx['id'] . '" target="_blank" class="collection-item"> <i class="material-icons left">attach_file</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
         }
         echo '</div>';
+    } else {
+        echo '<p class="grey-text">Nenhum anexo extra fornecido.</p>';
     }
 
     if ($parecer['concluido'] == 1) {
