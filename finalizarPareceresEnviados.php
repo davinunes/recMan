@@ -1,5 +1,5 @@
 <?php
-require "../classes/repositorio.php";
+require "classes/repositorio.php";
 
 // Ação em massa: sincroniza e finaliza (fase 5 / concluido 1) 
 // todos os recursos que possuem parentescos com pareceres e um mailId válido.
@@ -64,7 +64,8 @@ if ($result) {
                 <?php echo $msg; ?>
             </p>
             <br>
-            <a href="tools.php" class="btn-large blue darken-1 waves-effect waves-light" style="border-radius: 20px;">
+            <a href="index.php?pag=tools" class="btn-large blue darken-1 waves-effect waves-light"
+                style="border-radius: 20px;">
                 <i class="material-icons left">arrow_back</i> Voltar para Ferramentas
             </a>
         </div>

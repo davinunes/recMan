@@ -1,5 +1,5 @@
 <?php
-require "../classes/repositorio.php";
+require "classes/repositorio.php";
 
 $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, r.titulo, r.data 
         FROM conselho.recurso r
@@ -76,7 +76,7 @@ if ($result && mysqli_num_rows($result) > 0) {
                                     <?php echo htmlspecialchars($r['data']); ?>
                                 </td>
                                 <td>
-                                    <a href="detalheRecurso.php?numero=<?php echo urlencode($r['numero']); ?>"
+                                    <a href="index.php?pag=recurso&numero=<?php echo urlencode($r['numero']); ?>"
                                         class="btn blue btn-small" target="_blank">
                                         <i class="material-icons left">visibility</i> Resolver
                                     </a>
@@ -88,7 +88,7 @@ if ($result && mysqli_num_rows($result) > 0) {
             <?php endif; ?>
 
             <div class="center-align" style="margin-top: 30px;">
-                <a href="tools.php" class="btn grey waves-effect waves-light"><i
+                <a href="index.php?pag=tools" class="btn grey waves-effect waves-light"><i
                         class="material-icons left">arrow_back</i> Voltar</a>
             </div>
         </div>
