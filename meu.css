@@ -1,7 +1,14 @@
-/* Mantém o ícone do menu visível em todas as telas */
-@media (min-width: 992px) {
-  .sidenav-trigger {
-    display: block !important;
+/* Esconde o trigger em telas grandes, o Materialize CSS faz isso por padrão se não for sobreposto */
+/* Regras de Layout para Sidenav Fixo */
+@media only screen and (min-width : 993px) {
+  header, main, footer {
+    padding-left: 300px;
+  }
+}
+
+@media only screen and (max-width : 992px) {
+  header, main, footer {
+    padding-left: 0;
   }
 }
 

@@ -37,6 +37,7 @@ $meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
 
 $pag = isset($_GET['pag']) ? $_GET['pag'] : '';
+echo "<main>";
 switch ($pag) {
 	case "recurso":
 		include "palco/detalheRecurso.php";
@@ -81,6 +82,7 @@ switch ($pag) {
 		include "palco/listaRecursos.php";
 
 }
+echo "</main>";
 
 require_once "classes/repositorio.php";
 $gmail = verificarToken();
