@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $tabelasDependentes = [
             "DELETE FROM recurso_anexos WHERE numero_recurso = '$numeroCompleto'",
             "DELETE FROM votos WHERE id_recurso IN (SELECT id FROM recurso WHERE numero = '$numeroCompleto')",
-            "DELETE FROM diligencia WHERE recurso IN (SELECT id FROM recurso WHERE numero = '$numeroCompleto')",
-            "DELETE FROM mensagens WHERE recurso IN (SELECT id FROM recurso WHERE numero = '$numeroCompleto')",
+            "DELETE FROM diligencia WHERE id_recurso IN (SELECT id FROM recurso WHERE numero = '$numeroCompleto')",
+            "DELETE FROM mensagem WHERE id_recurso IN (SELECT id FROM recurso WHERE numero = '$numeroCompleto')",
             "DELETE FROM parecer WHERE id = '$numeroCompleto'",
             "DELETE FROM recurso WHERE numero = '$numeroCompleto'"
         ];
