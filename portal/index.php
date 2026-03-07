@@ -474,6 +474,8 @@
 
                     let fd = new FormData();
                     fd.append('email', this.emailContato);
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
 
                     try {
                         let req = await fetch('api.php?action=send_token', { method: 'POST', body: fd });

@@ -50,10 +50,16 @@ if ($action == 'send_token') {
     // Envia email via API do Gmail
     $gmail = verificarToken();
     if ($gmail["status"]) {
-        $assunto = "Código de verificação - Conselho Consultivo";
+        $numeroStr = isset($_POST['numero']) && isset($_POST['ano'])
+            ? filter_var($_POST['numero'], FILTER_SANITIZE_STRING) . '/' . filter_var($_POST['ano'], FILTER_SANITIZE_STRING)
+            : '';
+
+        $assunto = "Código de verificação" . ($numeroStr ? " - Notificação $numeroStr" : " - Conselho Consultivo");
         $assunto_encoded = "=?UTF-8?B?" . base64_encode($assunto) . "?=";
 
-        $mensagem = "Seu código de verificação para o assistente de recursos é: <b>$tokenNum</b><br><br>Não compartilhe este código com ninguém. Ele servirá de senha para acesso futuro ao recurso.";
+        $mensagem = "Referência: Notificação / Recurso <b>" . ($numeroStr ? $numeroStr : "Não informada") . "</b><br><br>";
+        $mensagem .= "Seu código de verificação para o assistente de recursos é: <b>$tokenNum</b><br><br>";
+        $mensagem .= "<b>Não compartilhe este código com ninguém.</b> Ele servirá de senha para acesso futuro ao recurso no painel de acompanhamento.";
 
         $mime = "Content-Type: text/html; charset=UTF-8\r\n";
         $mime .= "to: " . $email . "\r\n";
