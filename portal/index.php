@@ -390,7 +390,7 @@
 
         <div class="text-center mt-8 pt-4">
             <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">&copy;
-                <?= date("Y") ?> - Conselho de Adm
+                <?= date("Y") ?> - Conselho Fiscal Miami
             </p>
         </div>
     </div>
@@ -528,7 +528,7 @@
                     fd.append('detalhes', this.dados.detalhes);
 
                     // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
-                    fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação. Sem versão eletrificada original.');
+                    fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação.');
 
                     // Upload files logic
                     const inputFile = document.getElementById("anexosInput");
