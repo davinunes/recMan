@@ -207,9 +207,10 @@
                     <div class="mb-6 p-4 border border-dashed border-gray-400 rounded-lg bg-gray-50 relative">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Anexar Documentos e Provas</label>
                         <p class="text-xs text-gray-500 mb-3">Tamanho máximo total: 15MB. Formatos comuns aceitos: PDF,
-                            JPEG, PNG.</p>
+                            JPEG, PNG. <b>(Selecione vários arquivos de uma vez segurando no celular ou PC)</b></p>
 
-                        <input type="file" id="anexosInput" name="anexos" multiple
+                        <input type="file" id="anexosInput" name="anexos[]" multiple="multiple"
+                            accept="image/*,application/pdf"
                             class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
 
                         <div class="mt-3 p-3 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
@@ -377,7 +378,10 @@
                     <form @submit.prevent="addAttachments()"
                         class="mt-6 border border-dashed rounded-lg p-4 bg-blue-50">
                         <p class="text-sm font-bold text-blue-800 mb-2">Enviar Mais Documentos</p>
-                        <input type="file" id="novosAnexosInput" multiple required
+                        <p class="text-xs text-gray-500 mb-2">Você pode selecionar várias imagens ou PDFs ao mesmo
+                            tempo.</p>
+                        <input type="file" id="novosAnexosInput" name="anexos[]" multiple="multiple"
+                            accept="image/*,application/pdf" required
                             class="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700 cursor-pointer">
                         <button type="submit" :disabled="carregandoAcao"
                             class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm shadow transition w-full">Fazer
