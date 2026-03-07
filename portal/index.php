@@ -225,8 +225,8 @@
                         <label class="flex items-start">
                             <input type="checkbox" required
                                 class="mt-1 mr-2 cursor-pointer h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <span class="text-xs text-gray-600">Compreendo que o Conselho apenas avalia. <br> Declaro
-                                ter ciência de que posso agendar com o subssindico do meu bloco ao com a administração,
+                            <span class="text-xs text-gray-600">Compreendo que o Conselho apenas avalia. Declaro
+                                ter ciência de que posso agendar com o subsíndico do meu bloco ou com a administração,
                                 o acesso a sala de CFTV para visualizar as imagens que por ventura tenham sido
                                 vinculadas a minha notificação.</span>
                         </label>
