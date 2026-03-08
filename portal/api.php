@@ -2,6 +2,9 @@
 session_start();
 require_once "../classes/repositorio.php";
 
+// Constantes
+define('EMAIL_SINDICO_NOTIFICACAO', 'sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com');
+
 $action = $_GET['action'] ?? '';
 
 if ($action == 'check_notification') {
@@ -150,6 +153,9 @@ if ($action == 'submit') {
         @mkdir($storageDir, 0777, true);
     }
 
+    $anexosAdicionados = []; // <--- array pra guardar rastros pros emails
+    $anexosGrandesPulos = 0; // Contar arquivos pesados 
+
     if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
         foreach ($_FILES['anexos']['name'] as $key => $name) {
             $tmp = $_FILES['anexos']['tmp_name'][$key];
@@ -165,8 +171,90 @@ if ($action == 'submit') {
                     '" . DBEscape($newName) . "'
                 )";
                 DBExecute($sqlAnexo);
+
+                // Track para email do síndico
+                $tamanhoMb = filesize($dest) / 1048576;
+                if ($tamanhoMb <= 10) {
+                    $anexosAdicionados[] = ['nome' => $name, 'caminho' => $dest, 'mime' => mime_content_type($dest)];
+                } else {
+                    $anexosGrandesPulos++;
+                    $anexosAdicionados[] = ['nome' => "[ARQUIVO GRANDE > 10MB - VEJA NO SISTEMA] " . $name]; // Apenas citação no texto
+                }
             }
         }
+    }
+
+    // --- ENVIAR EMAIL PARA SÍNDICO ---
+    $gmail = verificarToken();
+    if ($gmail["status"]) {
+        $assunto = "Novo Recurso Interposto - Notificação $numeroCompleto";
+        $assunto_encoded = "=?UTF-8?B?" . base64_encode($assunto) . "?=";
+
+        $msgHtml = "<h3>Novo Recurso Cadastrado ($numeroCompleto)</h3>";
+        $msgHtml .= "<p><b>Condômino:</b> $email<br>";
+        $msgHtml .= "<b>Unidade/Bloco:</b> {$unidade}{$bloco}<br>";
+        $msgHtml .= "<b>Data:</b> " . date('d/m/Y H:i') . "</p>";
+        $msgHtml .= "<h4>Alegações/Defesa:</h4>";
+        $msgHtml .= "<div style='padding: 15px; border: 1px solid #ccc; background: #f9f9f9;'>" . nl2br(htmlspecialchars($detalhes)) . "</div>";
+
+        $msgHtml .= "<br><b>Anexos Submetidos pelo Morador:</b><br>";
+        if (empty($anexosAdicionados)) {
+            $msgHtml .= "<i>Nenhum arquivo enviado ou detectado.</i><br>";
+        } else {
+            $msgHtml .= "<ul>";
+            foreach ($anexosAdicionados as $aa) {
+                $msgHtml .= "<li>" . htmlspecialchars($aa['nome']) . "</li>";
+            }
+            $msgHtml .= "</ul>";
+        }
+        $msgHtml .= "<br><br><small>Por favor, acesse o painel (recMan) para visualizar o recurso na íntegra.</small>";
+
+        // Multipart Email Configuration
+        $boundary = uniqid('np');
+        $mime = "To: " . EMAIL_SINDICO_NOTIFICACAO . "\r\n";
+        $mime .= "Subject: $assunto_encoded\r\n";
+        $mime .= "MIME-Version: 1.0\r\n";
+        $mime .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n\r\n";
+
+        // Corpo HTML
+        $mime .= "--$boundary\r\n";
+        $mime .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
+        $mime .= $msgHtml . "\r\n\r\n";
+
+        // Anexos Físicos (só os que tem caminho, que passaram na regra dos < 10mb)
+        foreach ($anexosAdicionados as $aa) {
+            if (isset($aa['caminho']) && file_exists($aa['caminho'])) {
+                $file_content = file_get_contents($aa['caminho']);
+                $b64 = chunk_split(base64_encode($file_content));
+                $mimeType = $aa['mime'] ?: 'application/octet-stream';
+
+                $mime .= "--$boundary\r\n";
+                $mime .= "Content-Type: $mimeType; name=\"" . htmlspecialchars($aa['nome']) . "\"\r\n";
+                $mime .= "Content-Disposition: attachment; filename=\"" . htmlspecialchars($aa['nome']) . "\"\r\n";
+                $mime .= "Content-Transfer-Encoding: base64\r\n\r\n";
+                $mime .= $b64 . "\r\n\r\n";
+            }
+        }
+        $mime .= "--$boundary--\r\n";
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://www.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $mime,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: message/rfc822',
+                'Authorization: Bearer ' . $gmail["tkn"]
+            ),
+        ));
+        curl_exec($curl); // dispara de boa  no background e ignora o retorno dele
+        curl_close($curl);
     }
 
     // Finaliza sessão de verificação
