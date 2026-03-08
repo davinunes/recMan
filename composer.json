@@ -1,6 +1,6 @@
 {
     "require": {
         "thiagoalessio/tesseract_ocr": "^2.13",
-        "minishlink/web-push": "^10.0"
+        "minishlink/web-push": "^7.0"
     }
 }

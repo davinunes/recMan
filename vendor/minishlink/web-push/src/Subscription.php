@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 /*
  * This file is part of the WebPush library.
  *
@@ -12,34 +15,39 @@ namespace Minishlink\WebPush;
 
 class Subscription implements SubscriptionInterface
 {
-    public const defaultContentEncoding = ContentEncoding::aesgcm; // Default for legacy input. The next major will use "aes128gcm" as defined to rfc8291.
-    protected ?ContentEncoding $contentEncoding = null;
+    /** @var string */
+    private $endpoint;
+
+    /** @var null|string */
+    private $publicKey;
+
+    /** @var null|string */
+    private $authToken;
+
+    /** @var null|string */
+    private $contentEncoding;
 
     /**
-     * This is a data class. No key validation is done.
-     * @param string|\Minishlink\WebPush\ContentEncoding|null $contentEncoding (Optional) defaults to "aesgcm". The next major will use "aes128gcm" as defined to rfc8291.
+     * @param string|null $contentEncoding (Optional) Must be "aesgcm"
+     * @throws \ErrorException
      */
     public function __construct(
-        private string  $endpoint,
-        private ?string $publicKey = null,
-        private ?string $authToken = null,
-        ContentEncoding|string|null $contentEncoding = null,
+        string $endpoint,
+        ?string $publicKey = null,
+        ?string $authToken = null,
+        ?string $contentEncoding = null
     ) {
+        $this->endpoint = $endpoint;
+
         if ($publicKey || $authToken || $contentEncoding) {
-            if (is_string($contentEncoding)) {
-                try {
-                    if (empty($contentEncoding)) {
-                        $contentEncoding = self::defaultContentEncoding;
-                    } else {
-                        $contentEncoding = ContentEncoding::from($contentEncoding);
-                    }
-                } catch (\ValueError) {
-                    throw new \ValueError('This content encoding ('.$contentEncoding.') is not supported.');
-                }
-            } elseif ($contentEncoding === null) {
-                $contentEncoding =  self::defaultContentEncoding;
+            $supportedContentEncodings = ['aesgcm', 'aes128gcm'];
+            if ($contentEncoding && !in_array($contentEncoding, $supportedContentEncodings)) {
+                throw new \ErrorException('This content encoding ('.$contentEncoding.') is not supported.');
             }
-            $this->contentEncoding = $contentEncoding;
+
+            $this->publicKey = $publicKey;
+            $this->authToken = $authToken;
+            $this->contentEncoding = $contentEncoding ?: "aesgcm";
         }
     }
 
@@ -54,7 +62,7 @@ class Subscription implements SubscriptionInterface
                 $associativeArray['endpoint'],
                 $associativeArray['keys']['p256dh'] ?? null,
                 $associativeArray['keys']['auth'] ?? null,
-                $associativeArray['contentEncoding'] ?? ContentEncoding::aesgcm,
+                $associativeArray['contentEncoding'] ?? "aesgcm"
             );
         }
 
@@ -63,7 +71,7 @@ class Subscription implements SubscriptionInterface
                 $associativeArray['endpoint'],
                 $associativeArray['publicKey'] ?? null,
                 $associativeArray['authToken'] ?? null,
-                $associativeArray['contentEncoding'] ?? ContentEncoding::aesgcm,
+                $associativeArray['contentEncoding'] ?? "aesgcm"
             );
         }
 
@@ -72,31 +80,34 @@ class Subscription implements SubscriptionInterface
         );
     }
 
-    #[\Override]
+    /**
+     * {@inheritDoc}
+     */
     public function getEndpoint(): string
     {
         return $this->endpoint;
     }
 
-    #[\Override]
+    /**
+     * {@inheritDoc}
+     */
     public function getPublicKey(): ?string
     {
         return $this->publicKey;
     }
 
-    #[\Override]
+    /**
+     * {@inheritDoc}
+     */
     public function getAuthToken(): ?string
     {
         return $this->authToken;
     }
 
-    #[\Override]
+    /**
+     * {@inheritDoc}
+     */
     public function getContentEncoding(): ?string
-    {
-        return $this->contentEncoding?->value;
-    }
-
-    public function getContentEncodingTyped(): ?ContentEncoding
     {
         return $this->contentEncoding;
     }
