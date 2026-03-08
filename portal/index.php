@@ -412,6 +412,7 @@
                 anoStr: new Date().getFullYear().toString(),
 
                 emailContato: '',
+                codigoValidacao: '',
                 senhaAcesso: '',
                 novoComentario: '',
 
