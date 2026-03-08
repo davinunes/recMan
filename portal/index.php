@@ -499,10 +499,10 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                             this.maskedEmailEncontrado = res.masked_email || '';
                             this.etapa = 2; // Tela de "Ja foi recebido"
                         } else {
-                            // Continuar fluxo de cadastro. 
+                            // Continuar fluxo de cadastro.
                             if (res.notificacao) {
                                 // Temos na listagem geral do sindico -> auto preencher
-                                this.dados.bloco = res.notificacao.bloco;
+                                this.dados.bloco = res.notificacao.torre || res.notificacao.bloco || '';
                                 this.dados.unidade = res.notificacao.unidade;
                                 this.notificacaoData = res.notificacao;
                             }
@@ -513,243 +513,244 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     } finally {
                         this.carregando = false;
                     }
-                },
+            },
 
                 async reenviarExistente() {
-                    if (!this.podeReenviar || this.carregandoAcao) return;
-                    this.erro = false;
-                    this.carregandoAcao = true;
+                if (!this.podeReenviar || this.carregandoAcao) return;
+                this.erro = false;
+                this.carregandoAcao = true;
 
-                    let fd = new FormData();
-                    fd.append('numero', this.notificacaoStr);
-                    fd.append('ano', this.anoStr);
+                let fd = new FormData();
+                fd.append('numero', this.notificacaoStr);
+                fd.append('ano', this.anoStr);
 
-                    try {
-                        let req = await fetch('api.php?action=resend_existing', { method: 'POST', body: fd });
-                        let res = await req.json();
+                try {
+                    let req = await fetch('api.php?action=resend_existing', { method: 'POST', body: fd });
+                    let res = await req.json();
 
-                        if (res.success) {
-                            // Iniciar timeout de 15 segundos
-                            this.podeReenviar = false;
-                            this.timerReenvio = 15;
-                            clearInterval(this.intervalReenvio);
-                            this.intervalReenvio = setInterval(() => {
-                                this.timerReenvio--;
-                                if (this.timerReenvio <= 0) {
-                                    this.podeReenviar = true;
-                                    clearInterval(this.intervalReenvio);
-                                }
-                            }, 1000);
+                    if (res.success) {
+                        // Iniciar timeout de 15 segundos
+                        this.podeReenviar = false;
+                        this.timerReenvio = 15;
+                        clearInterval(this.intervalReenvio);
+                        this.intervalReenvio = setInterval(() => {
+                            this.timerReenvio--;
+                            if (this.timerReenvio <= 0) {
+                                this.podeReenviar = true;
+                                clearInterval(this.intervalReenvio);
+                            }
+                        }, 1000);
 
-                            // Mostra tela de digitar o token do email
-                            this.etapa = 7;
-                            this.mostraErro("Código reenviado com sucesso. Verifique a caixa de entrada!");
-                            // Esconde a bagunça para verde em vez de erro
-                            this.erro = false;
-                        } else {
-                            this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Comunicação falhou.");
-                    } finally {
-                        this.carregandoAcao = false;
+                        // Mostra tela de digitar o token do email
+                        this.etapa = 7;
+                        this.mostraErro("Código reenviado com sucesso. Verifique a caixa de entrada!");
+                        // Esconde a bagunça para verde em vez de erro
+                        this.erro = false;
+                    } else {
+                        this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
                     }
-                },
+                } catch (e) {
+                    this.mostraErro("Comunicação falhou.");
+                } finally {
+                    this.carregandoAcao = false;
+                }
+            },
 
                 async enviarCodigo() {
-                    if (!this.emailContato) return;
-                    this.carregando = true;
-                    this.erro = false;
+                if (!this.emailContato) return;
+                this.carregando = true;
+                this.erro = false;
 
-                    let fd = new FormData();
-                    fd.append('email', this.emailContato);
-                    fd.append('numero', this.notificacaoStr);
-                    fd.append('ano', this.anoStr);
+                let fd = new FormData();
+                fd.append('email', this.emailContato);
+                fd.append('numero', this.notificacaoStr);
+                fd.append('ano', this.anoStr);
 
-                    try {
-                        let req = await fetch('api.php?action=send_token', { method: 'POST', body: fd });
-                        let res = await req.json();
+                try {
+                    let req = await fetch('api.php?action=send_token', { method: 'POST', body: fd });
+                    let res = await req.json();
 
-                        if (res.success) {
-                            this.etapa = 4;
-                            this.codigoValidacao = ''; // reset do input
-                        } else {
-                            this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Comunicação falhou.");
-                    } finally {
-                        this.carregando = false;
+                    if (res.success) {
+                        this.etapa = 4;
+                        this.codigoValidacao = ''; // reset do input
+                    } else {
+                        this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
                     }
-                },
+                } catch (e) {
+                    this.mostraErro("Comunicação falhou.");
+                } finally {
+                    this.carregando = false;
+                }
+            },
 
                 async validarCodigo() {
-                    if (this.codigoValidacao.length < 5) return;
-                    this.carregando = true;
-                    this.erro = false;
+                if (this.codigoValidacao.length < 5) return;
+                this.carregando = true;
+                this.erro = false;
 
-                    let fd = new FormData();
-                    fd.append('token', this.codigoValidacao);
+                let fd = new FormData();
+                fd.append('token', this.codigoValidacao);
 
-                    try {
-                        let req = await fetch('api.php?action=verify_token', { method: 'POST', body: fd });
-                        let res = await req.json();
+                try {
+                    let req = await fetch('api.php?action=verify_token', { method: 'POST', body: fd });
+                    let res = await req.json();
 
-                        if (res.success) {
-                            this.etapa = 5; // Vai formulário real
-                        } else {
-                            this.mostraErro(res.error || "Token fornecido inválido.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Problema ao contatar o validador.");
-                    } finally {
-                        this.carregando = false;
+                    if (res.success) {
+                        this.etapa = 5; // Vai formulário real
+                    } else {
+                        this.mostraErro(res.error || "Token fornecido inválido.");
                     }
-                },
+                } catch (e) {
+                    this.mostraErro("Problema ao contatar o validador.");
+                } finally {
+                    this.carregando = false;
+                }
+            },
 
                 async enviarRecursoFinal() {
-                    this.carregando = true;
-                    this.erro = false;
+                this.carregando = true;
+                this.erro = false;
 
-                    let fd = new FormData();
-                    fd.append('numero', this.notificacaoStr);
-                    fd.append('ano', this.anoStr);
-                    fd.append('bloco', this.dados.bloco);
-                    fd.append('unidade', this.dados.unidade);
-                    fd.append('detalhes', this.dados.detalhes);
+                let fd = new FormData();
+                fd.append('numero', this.notificacaoStr);
+                fd.append('ano', this.anoStr);
+                fd.append('bloco', this.dados.bloco);
+                fd.append('unidade', this.dados.unidade);
+                fd.append('detalhes', this.dados.detalhes);
+                fd.append('assunto', this.notificacaoData ? this.notificacaoData.assunto : '');
 
-                    // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
-                    fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação.');
+                // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
+                fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação.');
 
-                    // Upload files logic
-                    const inputFile = document.getElementById("anexosInput");
-                    if (inputFile.files.length > 0) {
-                        for (let i = 0; i < inputFile.files.length; i++) {
-                            fd.append('anexos[]', inputFile.files[i]);
-                        }
-                    }
-
-                    try {
-                        let req = await fetch('api.php?action=submit', { method: 'POST', body: fd });
-                        let res = await req.json();
-
-                        if (res.success) {
-                            this.etapa = 6;
-                        } else {
-                            this.mostraErro(res.error || "Sua solicitação não pôde ser salva.");
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        this.mostraErro("Interrupção grave no armazenamento!");
-                    } finally {
-                        this.carregando = false;
-                    }
-                },
-
-                async loginExisting() {
-                    if (!this.notificacaoStr || !this.anoStr || !this.senhaAcesso) return;
-                    this.carregando = true;
-                    this.erro = false;
-
-                    let fd = new FormData();
-                    fd.append('numero', this.notificacaoStr);
-                    fd.append('ano', this.anoStr);
-                    fd.append('senha', this.senhaAcesso);
-
-                    try {
-                        let req = await fetch('api.php?action=login', { method: 'POST', body: fd });
-                        let res = await req.json();
-
-                        if (res.success) {
-                            this.etapa = 8;
-                            await this.loadMyResource();
-                        } else {
-                            this.mostraErro(res.error || "Acesso negado.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Falha no login.");
-                    } finally {
-                        this.carregando = false;
-                    }
-                },
-
-                async efetuarLogout() {
-                    this.carregando = true;
-                    try {
-                        await fetch('api.php?action=logout');
-                        location.reload();
-                    } catch (e) {
-                        location.reload();
-                    }
-                },
-
-                async loadMyResource() {
-                    try {
-                        let req = await fetch('api.php?action=my_resource');
-                        let res = await req.json();
-
-                        if (res.success) {
-                            this.dadosRecurso = res.recurso;
-                            this.listaAnexos = res.anexos;
-                        } else {
-                            this.mostraErro(res.error || "Erro ao carregar os dados do recurso.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Problema de rede.");
-                    }
-                },
-
-                async appendComment() {
-                    if (!this.novoComentario) return;
-                    this.carregandoAcao = true;
-
-                    let fd = new FormData();
-                    fd.append('comentario', this.novoComentario);
-
-                    try {
-                        let req = await fetch('api.php?action=add_comment', { method: 'POST', body: fd });
-                        let res = await req.json();
-                        if (res.success) {
-                            this.novoComentario = '';
-                            alert("Comentário adicionado com sucesso!");
-                            await this.loadMyResource();
-                        } else {
-                            this.mostraErro("Erro ao salvar comentário.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Problema de rede ao apensar comentário.");
-                    } finally {
-                        this.carregandoAcao = false;
-                    }
-                },
-
-                async addAttachments() {
-                    const inp = document.getElementById("novosAnexosInput");
-                    if (inp.files.length === 0) return;
-
-                    this.carregandoAcao = true;
-                    let fd = new FormData();
-                    for (let i = 0; i < inp.files.length; i++) {
-                        fd.append('anexos[]', inp.files[i]);
-                    }
-
-                    try {
-                        let req = await fetch('api.php?action=add_attachments', { method: 'POST', body: fd });
-                        let res = await req.json();
-                        if (res.success) {
-                            inp.value = '';
-                            alert("Arquivos anexados com sucesso!");
-                            await this.loadMyResource();
-                        } else {
-                            this.mostraErro("Erro ao fazer upload dos arquivos.");
-                        }
-                    } catch (e) {
-                        this.mostraErro("Falha na rede durante o upload.");
-                    } finally {
-                        this.carregandoAcao = false;
+                // Upload files logic
+                const inputFile = document.getElementById("anexosInput");
+                if (inputFile.files.length > 0) {
+                    for (let i = 0; i < inputFile.files.length; i++) {
+                        fd.append('anexos[]', inputFile.files[i]);
                     }
                 }
+
+                try {
+                    let req = await fetch('api.php?action=submit', { method: 'POST', body: fd });
+                    let res = await req.json();
+
+                    if (res.success) {
+                        this.etapa = 6;
+                    } else {
+                        this.mostraErro(res.error || "Sua solicitação não pôde ser salva.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    this.mostraErro("Interrupção grave no armazenamento!");
+                } finally {
+                    this.carregando = false;
+                }
+            },
+
+                async loginExisting() {
+                if (!this.notificacaoStr || !this.anoStr || !this.senhaAcesso) return;
+                this.carregando = true;
+                this.erro = false;
+
+                let fd = new FormData();
+                fd.append('numero', this.notificacaoStr);
+                fd.append('ano', this.anoStr);
+                fd.append('senha', this.senhaAcesso);
+
+                try {
+                    let req = await fetch('api.php?action=login', { method: 'POST', body: fd });
+                    let res = await req.json();
+
+                    if (res.success) {
+                        this.etapa = 8;
+                        await this.loadMyResource();
+                    } else {
+                        this.mostraErro(res.error || "Acesso negado.");
+                    }
+                } catch (e) {
+                    this.mostraErro("Falha no login.");
+                } finally {
+                    this.carregando = false;
+                }
+            },
+
+                async efetuarLogout() {
+                this.carregando = true;
+                try {
+                    await fetch('api.php?action=logout');
+                    location.reload();
+                } catch (e) {
+                    location.reload();
+                }
+            },
+
+                async loadMyResource() {
+                try {
+                    let req = await fetch('api.php?action=my_resource');
+                    let res = await req.json();
+
+                    if (res.success) {
+                        this.dadosRecurso = res.recurso;
+                        this.listaAnexos = res.anexos;
+                    } else {
+                        this.mostraErro(res.error || "Erro ao carregar os dados do recurso.");
+                    }
+                } catch (e) {
+                    this.mostraErro("Problema de rede.");
+                }
+            },
+
+                async appendComment() {
+                if (!this.novoComentario) return;
+                this.carregandoAcao = true;
+
+                let fd = new FormData();
+                fd.append('comentario', this.novoComentario);
+
+                try {
+                    let req = await fetch('api.php?action=add_comment', { method: 'POST', body: fd });
+                    let res = await req.json();
+                    if (res.success) {
+                        this.novoComentario = '';
+                        alert("Comentário adicionado com sucesso!");
+                        await this.loadMyResource();
+                    } else {
+                        this.mostraErro("Erro ao salvar comentário.");
+                    }
+                } catch (e) {
+                    this.mostraErro("Problema de rede ao apensar comentário.");
+                } finally {
+                    this.carregandoAcao = false;
+                }
+            },
+
+                async addAttachments() {
+                const inp = document.getElementById("novosAnexosInput");
+                if (inp.files.length === 0) return;
+
+                this.carregandoAcao = true;
+                let fd = new FormData();
+                for (let i = 0; i < inp.files.length; i++) {
+                    fd.append('anexos[]', inp.files[i]);
+                }
+
+                try {
+                    let req = await fetch('api.php?action=add_attachments', { method: 'POST', body: fd });
+                    let res = await req.json();
+                    if (res.success) {
+                        inp.value = '';
+                        alert("Arquivos anexados com sucesso!");
+                        await this.loadMyResource();
+                    } else {
+                        this.mostraErro("Erro ao fazer upload dos arquivos.");
+                    }
+                } catch (e) {
+                    this.mostraErro("Falha na rede durante o upload.");
+                } finally {
+                    this.carregandoAcao = false;
+                }
             }
+        }
         }
     </script>
 </body>

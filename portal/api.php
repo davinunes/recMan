@@ -182,7 +182,7 @@ if ($action == 'submit') {
 
     // Define query
     $faseIncial = 1;
-    $titulo = "Recurso Condômino $numeroCompleto";
+    $titulo = !empty($_POST['assunto']) ? $_POST['assunto'] : "Recurso Condômino $numeroCompleto";
     $nome = "Condômino ($email)";
     $tokenDb = DBEscape($_SESSION['portal_token']['code']); // Token serve como senha
 

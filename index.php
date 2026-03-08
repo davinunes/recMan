@@ -17,7 +17,6 @@
 		src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
 	<script src="clip.js"></script>
 	<script defer src="meu.js?<?php echo time(); ?>"></script>
-	<script src="push_client.js?<?php echo time(); ?>"></script>
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 
 </head>
@@ -36,6 +35,7 @@ if (!isset($_SESSION['user_id'])) {
 $esseUsuario = $_SESSION["user_id"];
 $meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
+echo '<script src="push_client.js?' . time() . '"></script>';
 
 $pag = isset($_GET['pag']) ? $_GET['pag'] : '';
 echo "<main>";
