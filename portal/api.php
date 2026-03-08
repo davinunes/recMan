@@ -338,8 +338,15 @@ if ($action == 'login') {
             echo json_encode(['success' => true]);
             exit;
         }
+        }
     }
     echo json_encode(['success' => false, 'error' => 'Notificação ou senha não encontrados.']);
+    exit;
+}
+
+if ($action == 'logout') {
+    unset($_SESSION['portal_auth']);
+    echo json_encode(['success' => true]);
     exit;
 }
 

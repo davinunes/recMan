@@ -1,3 +1,7 @@
+<?php
+session_start();
+$sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -329,7 +333,7 @@
                         <p class="text-sm text-gray-600">Autos: <b><span x-text="dadosRecurso.numero || ''"></span></b>
                         </p>
                     </div>
-                    <button @click="location.reload()" class="text-gray-500 hover:text-red-500 text-sm"><span
+                    <button @click="efetuarLogout()" class="text-gray-500 hover:text-red-500 text-sm"><span
                             class="material-icons align-middle mr-1">Sair</span></button>
                 </div>
 
@@ -415,14 +419,28 @@
     <!-- Script de Gestão Global Vue/Alpine -->
     <script>
         function assistenteData() {
+            let sessInit = '<?= $sessaoAtiva ?>';
+            let initialEtapa = sessInit !== '' ? 8 : 0;
+            let initialNot = '';
+            let initialAno = new Date().getFullYear().toString();
+
+            if (sessInit !== '') {
+                // Separa o "154/2026"
+                let parts = sessInit.split('/');
+                if (parts.length == 2) {
+                    initialNot = parts[0];
+                    initialAno = parts[1];
+                }
+            }
+
             return {
-                etapa: 0,
+                etapa: initialEtapa,
                 carregando: false,
                 erro: false,
                 erroMensagem: '',
 
-                notificacaoStr: '',
-                anoStr: new Date().getFullYear().toString(),
+                notificacaoStr: initialNot,
+                anoStr: initialAno,
 
                 emailContato: '',
                 codigoValidacao: '',
@@ -443,6 +461,13 @@
                     detalhes: ''
                 },
                 notificacaoData: null,
+
+                init() {
+                    // Já tenta carregar as info se começou na etapa 8 por estar logado
+                    if (this.etapa === 8 && this.notificacaoStr !== '') {
+                        this.loadMyResource();
+                    }
+                },
 
                 mostraErro(msg) {
                     this.erroMensagem = msg;
@@ -645,6 +670,16 @@
                         this.mostraErro("Falha no login.");
                     } finally {
                         this.carregando = false;
+                    }
+                },
+
+                async efetuarLogout() {
+                    this.carregando = true;
+                    try {
+                        await fetch('api.php?action=logout');
+                        location.reload();
+                    } catch (e) {
+                        location.reload();
                     }
                 },
 
