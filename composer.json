@@ -2,5 +2,11 @@
     "require": {
         "thiagoalessio/tesseract_ocr": "^2.13",
         "minishlink/web-push": "^7.0"
+    },
+    "config": {
+        "platform-check": false,
+        "platform": {
+            "php": "7.4.33"
+        }
     }
 }
