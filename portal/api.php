@@ -19,8 +19,24 @@ if ($action == 'check_notification') {
 
     if ($resRec && mysqli_num_rows($resRec) > 0) {
         $rec = mysqli_fetch_assoc($resRec);
+
+        $email = $rec['email'];
+        $maskedEmail = '';
+        if (!empty($email) && strpos($email, '@') !== false) {
+            $parts = explode('@', $email);
+            if (count($parts) == 2) {
+                $alias = $parts[0];
+                $domain = $parts[1];
+                if (strlen($alias) > 3) {
+                    $maskedEmail = substr($alias, 0, 3) . str_repeat('*', strlen($alias) - 3) . '@' . $domain;
+                } else {
+                    $maskedEmail = substr($alias, 0, 1) . str_repeat('*', strlen($alias) - 1) . '@' . $domain;
+                }
+            }
+        }
+
         // Já existe um recurso
-        echo json_encode(['exists' => true, 'has_email' => !empty($rec['email'])]);
+        echo json_encode(['exists' => true, 'has_email' => !empty($rec['email']), 'masked_email' => $maskedEmail]);
         exit;
     }
 
@@ -35,6 +51,30 @@ if ($action == 'check_notification') {
         echo json_encode(['exists' => false, 'notificacao' => null]);
     }
     exit;
+}
+
+if ($action == 'resend_existing') {
+    $numero = $_POST['numero'] ?? '';
+    $ano = $_POST['ano'] ?? '';
+    $numeroCompleto = $numero . '/' . $ano;
+
+    $sqlRec = "SELECT id, email, token FROM recurso WHERE numero = '" . DBEscape($numeroCompleto) . "'";
+    $resRec = DBExecute($sqlRec);
+
+    if ($resRec && mysqli_num_rows($resRec) > 0) {
+        $rec = mysqli_fetch_assoc($resRec);
+        if (!empty($rec['email'])) {
+            // Seta o e-mail internamente para que o bloco action=send_token faça o envio
+            $_POST['email'] = $rec['email'];
+            $action = 'send_token';
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Recurso não possui e-mail cadastrado.']);
+            exit;
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Recurso não encontrado.']);
+        exit;
+    }
 }
 
 if ($action == 'send_token') {

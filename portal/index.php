@@ -97,17 +97,30 @@
                             x-text="notificacaoStr + '/' + anoStr"></span></b>.</p>
 
                 <div class="bg-gray-50 p-4 rounded-lg border mb-6 text-sm text-gray-700 text-left">
-                    Se você é o proprietário e precisa acessar, você pode gerar um novo token de acesso que será enviado
-                    para o e-mail atrelado a ele.
+                    Se você é o proprietário e precisa acessar, pode gerar um novo código de acesso que será enviado
+                    para o seu e-mail atrelado a este recurso <strong
+                        x-text="maskedEmailEncontrado !== '' ? '(' + maskedEmailEncontrado + ')' : ''"></strong>.
                 </div>
 
-                <button @click="etapa = 0"
-                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg mr-2 transition">Início</button>
-                <button @click="etapa = 7"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition"
-                    title="Ir para acessar recurso">
-                    Acessar Recurso
-                </button>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                    <button @click="etapa = 0"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg transition w-full sm:w-auto">Início</button>
+
+                    <button @click="reenviarExistente()" :disabled="!podeReenviar || carregandoAcao"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto flex flex-col items-center justify-center">
+                        <span x-show="podeReenviar && !carregandoAcao">Gerar Novo Código <span
+                                class="text-xs block font-normal">(Reenviar)</span></span>
+                        <span x-show="carregandoAcao">Enviando...</span>
+                        <span x-show="!podeReenviar && !carregandoAcao">Aguarde <span x-text="timerReenvio"></span>s
+                            para reenviar</span>
+                    </button>
+
+                    <button @click="etapa = 7"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition w-full sm:w-auto"
+                        title="Ir para acessar recurso">
+                        Já tenho um // Acessar
+                    </button>
+                </div>
             </div>
 
             <!-- ETAPA 3: Coletar Email e Enviar Código -->
@@ -415,6 +428,10 @@
                 codigoValidacao: '',
                 senhaAcesso: '',
                 novoComentario: '',
+                maskedEmailEncontrado: '',
+                podeReenviar: true,
+                timerReenvio: 0,
+                intervalReenvio: null,
 
                 dadosRecurso: {},
                 listaAnexos: [],
@@ -454,6 +471,7 @@
 
                         if (res.exists) {
                             // Ja tem
+                            this.maskedEmailEncontrado = res.masked_email || '';
                             this.etapa = 2; // Tela de "Ja foi recebido"
                         } else {
                             // Continuar fluxo de cadastro. 
@@ -469,6 +487,47 @@
                         this.mostraErro("Erro ao consultar os servidores da central.");
                     } finally {
                         this.carregando = false;
+                    }
+                },
+
+                async reenviarExistente() {
+                    if (!this.podeReenviar || this.carregandoAcao) return;
+                    this.erro = false;
+                    this.carregandoAcao = true;
+
+                    let fd = new FormData();
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+
+                    try {
+                        let req = await fetch('api.php?action=resend_existing', { method: 'POST', body: fd });
+                        let res = await req.json();
+
+                        if (res.success) {
+                            // Iniciar timeout de 15 segundos
+                            this.podeReenviar = false;
+                            this.timerReenvio = 15;
+                            clearInterval(this.intervalReenvio);
+                            this.intervalReenvio = setInterval(() => {
+                                this.timerReenvio--;
+                                if (this.timerReenvio <= 0) {
+                                    this.podeReenviar = true;
+                                    clearInterval(this.intervalReenvio);
+                                }
+                            }, 1000);
+
+                            // Mostra tela de digitar o token do email
+                            this.etapa = 7;
+                            this.mostraErro("Código reenviado com sucesso. Verifique a caixa de entrada!");
+                            // Esconde a bagunça para verde em vez de erro
+                            this.erro = false;
+                        } else {
+                            this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
+                        }
+                    } catch (e) {
+                        this.mostraErro("Comunicação falhou.");
+                    } finally {
+                        this.carregandoAcao = false;
                     }
                 },
 
