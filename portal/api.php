@@ -338,8 +338,8 @@ if ($action == 'login') {
             echo json_encode(['success' => true]);
             exit;
         }
-        }
     }
+
     echo json_encode(['success' => false, 'error' => 'Notificação ou senha não encontrados.']);
     exit;
 }
