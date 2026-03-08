@@ -17,6 +17,7 @@
 		src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
 	<script src="clip.js"></script>
 	<script defer src="meu.js?<?php echo time(); ?>"></script>
+	<script src="push_client.js?<?php echo time(); ?>"></script>
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 
 </head>

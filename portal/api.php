@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../classes/repositorio.php";
+require_once "../classes/push_helper.php";
 
 // Constantes
 define('EMAIL_SINDICO_NOTIFICACAO', 'sindicogeral.miami@gmail.com, centralderecursosmiamibeach@gmail.com');
@@ -62,7 +63,8 @@ if ($action == 'send_token') {
 
         $mensagem = "Referência: Notificação / Recurso <b>" . ($numeroStr ? $numeroStr : "Não informada") . "</b><br><br>";
         $mensagem .= "Seu código de verificação para o assistente de recursos é: <b>$tokenNum</b><br><br>";
-        $mensagem .= "<b>Não compartilhe este código com ninguém.</b> Ele servirá de senha para acesso futuro ao recurso no painel de acompanhamento.";
+        $mensagem .= "<b>Não compartilhe este código com ninguém.</b> Ele servirá de senha para acesso futuro ao recurso no
+painel de acompanhamento.";
 
         $mime = "Content-Type: text/html; charset=UTF-8\r\n";
         $mime .= "to: " . $email . "\r\n";
@@ -101,7 +103,8 @@ if ($action == 'verify_token') {
 
     if ($sess && $sess['code'] == $token && time() <= $sess['expires']) {
         $_SESSION['portal_verified'] = true;
-        echo json_encode(['success' => true]);
+        echo
+            json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => 'Código inválido ou expirado.']);
     }
@@ -137,15 +140,23 @@ if ($action == 'submit') {
     $nome = "Condômino ($email)";
     $tokenDb = DBEscape($_SESSION['portal_token']['code']); // Token serve como senha
 
-    $sqlInsert = "INSERT INTO conselho.recurso (unidade, bloco, numero, fase, email, Nome, detalhes, titulo, data, fato, token) 
-                  VALUES ($unidade, '" . DBEscape($bloco) . "', '" . DBEscape($numeroCompleto) . "', $faseIncial, 
-                  '" . DBEscape($email) . "', '" . DBEscape($nome) . "', '" . DBEscape($detalhes) . "', 
-                  '" . DBEscape($titulo) . "', '" . date('Y-m-d') . "', '" . DBEscape($fato) . "', '$tokenDb')";
+    $sqlInsert = "INSERT INTO conselho.recurso (unidade, bloco, numero, fase, email, Nome, detalhes, titulo, data, fato,
+    token)
+    VALUES ($unidade, '" . DBEscape($bloco) . "', '" . DBEscape($numeroCompleto) . "', $faseIncial,
+    '" . DBEscape($email) . "', '" . DBEscape($nome) . "', '" . DBEscape($detalhes) . "',
+    '" . DBEscape($titulo) . "', '" . date('Y-m-d') . "', '" . DBEscape($fato) . "', '$tokenDb')";
 
     if (!DBExecute($sqlInsert)) {
         echo json_encode(['success' => false, 'error' => 'Erro ao salvar o recurso no banco de dados.']);
         exit;
     }
+
+    // --- ENVIAR PUSH NOTIFICATION ---
+    @sendPushNotification(
+        "Novo Recurso ($numeroCompleto)",
+        "Bloco {$bloco}-{$unidade} protocolou nova defesa.",
+        "https://" . $_SERVER['HTTP_HOST'] . "/recMan/index.php"
+    );
 
     // Tratamento de Arquivos Anexados
     $storageDir = __DIR__ . '/../storage/anexos/';
@@ -153,8 +164,8 @@ if ($action == 'submit') {
         @mkdir($storageDir, 0777, true);
     }
 
-    $anexosAdicionados = []; // <--- array pra guardar rastros pros emails
-    $anexosGrandesPulos = 0; // Contar arquivos pesados 
+    $anexosAdicionados = [];
+    $anexosGrandesPulos = 0;
 
     if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
         foreach ($_FILES['anexos']['name'] as $key => $name) {
@@ -166,10 +177,10 @@ if ($action == 'submit') {
 
             if (move_uploaded_file($tmp, $dest)) {
                 $sqlAnexo = "INSERT INTO recurso_anexos (numero_recurso, nome_arquivo, caminho_arquivo) VALUES (
-                    '" . DBEscape($numeroCompleto) . "',
-                    '" . DBEscape($name) . "',
-                    '" . DBEscape($newName) . "'
-                )";
+        '" . DBEscape($numeroCompleto) . "',
+        '" . DBEscape($name) . "',
+        '" . DBEscape($newName) . "'
+        )";
                 DBExecute($sqlAnexo);
 
                 // Track para email do síndico
@@ -253,7 +264,7 @@ if ($action == 'submit') {
                 'Authorization: Bearer ' . $gmail["tkn"]
             ),
         ));
-        curl_exec($curl); // dispara de boa  no background e ignora o retorno dele
+        curl_exec($curl);
         curl_close($curl);
     }
 
@@ -287,7 +298,10 @@ if ($action == 'login') {
 }
 
 // Rotas protegidas para Portal (moradores) e algumas para Conselho
-if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_attachments' || $action == 'download_parecer' || $action == 'get_anexo') {
+if (
+    $action == 'my_resource' || $action == 'add_comment' || $action == 'add_attachments' || $action ==
+    'download_parecer' || $action == 'get_anexo'
+) {
 
     // get_anexo é a única que o conselho pode bater diretamente daqui
     $isCouncil = !empty($_SESSION['user_id']);
@@ -310,10 +324,10 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
     $numeroRec = $isPortal ? $_SESSION['portal_auth'] : null;
 
     if ($action == 'my_resource') {
-        $sql = "SELECT r.*, f.texto as fase_texto, p.concluido as parecer_concluido 
-                FROM recurso r 
-                LEFT JOIN fase f ON r.fase = f.id 
-                LEFT JOIN parecer p ON p.id = r.numero 
+        $sql = "SELECT r.*, f.texto as fase_texto, p.concluido as parecer_concluido
+                FROM recurso r
+                LEFT JOIN fase f ON r.fase = f.id
+                LEFT JOIN parecer p ON p.id = r.numero
                 WHERE r.numero = '" . DBEscape($numeroRec) . "'";
         $res = DBExecute($sql);
         $recurso = mysqli_fetch_assoc($res);
@@ -336,7 +350,8 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
         if (trim($texto) != '') {
             $dataHoje = date('d/m/Y H:i');
             $append = "\n\n----------------------------\n[$dataHoje] Condômino adicionou:\n$texto";
-            $sql = "UPDATE recurso SET detalhes = CONCAT(detalhes, '" . DBEscape($append) . "') WHERE numero = '" . DBEscape($numeroRec) . "'";
+            $sql = "UPDATE recurso SET detalhes = CONCAT(detalhes, '" . DBEscape($append) . "') WHERE numero = '" .
+                DBEscape($numeroRec) . "'";
             DBExecute($sql);
             echo json_encode(['success' => true]);
         } else {
@@ -359,10 +374,10 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
 
                 if (move_uploaded_file($tmp, $dest)) {
                     $sqlAnexo = "INSERT INTO recurso_anexos (numero_recurso, nome_arquivo, caminho_arquivo) VALUES (
-                        '" . DBEscape($numeroRec) . "',
-                        '" . DBEscape($name) . "',
-                        '" . DBEscape($newName) . "'
-                    )";
+                '" . DBEscape($numeroRec) . "',
+                '" . DBEscape($name) . "',
+                '" . DBEscape($newName) . "'
+                )";
                     DBExecute($sqlAnexo);
                 }
             }
@@ -389,7 +404,10 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
 
                 header('Content-Type: ' . ($mime ? $mime : 'application/octet-stream'));
 
-                if ($isView && strpos($mime, 'image/') === 0 || strpos($mime, 'video/') === 0 || strpos($mime, 'audio/') === 0) {
+                if (
+                    $isView && strpos($mime, 'image/') === 0 || strpos($mime, 'video/') === 0 || strpos($mime, 'audio/')
+                    === 0
+                ) {
                     header('Content-Disposition: inline; filename="' . basename($anexo['nome_arquivo']) . '"');
                 } else {
                     header('Content-Disposition: attachment; filename="' . basename($anexo['nome_arquivo']) . '"');
@@ -403,7 +421,8 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
     }
 
     if ($action == 'download_parecer') {
-        $sql = "SELECT r.*, p.* FROM recurso r JOIN parecer p ON r.numero = p.id WHERE r.numero = '" . DBEscape($numeroRec) . "' AND p.concluido = 1";
+        $sql = "SELECT r.*, p.* FROM recurso r JOIN parecer p ON r.numero = p.id WHERE r.numero = '" .
+            DBEscape($numeroRec) . "' AND p.concluido = 1";
         $res = DBExecute($sql);
         if ($res && mysqli_num_rows($res) > 0) {
             $parecer = mysqli_fetch_assoc($res);
@@ -422,7 +441,8 @@ if ($action == 'my_resource' || $action == 'add_comment' || $action == 'add_atta
             $resp = json_decode(getParecerPdf($pdfData), true);
             if (isset($resp['pdf_base64'])) {
                 header("Content-type: application/pdf");
-                header('Content-Disposition: attachment; filename="Parecer_' . str_replace('/', '-', $numeroRec) . '.pdf"');
+                header('Content-Disposition: attachment; filename="Parecer_' . str_replace('/', '-', $numeroRec) .
+                    '.pdf"');
                 echo base64_decode($resp['pdf_base64']);
                 exit;
             }
