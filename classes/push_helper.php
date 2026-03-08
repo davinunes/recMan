@@ -16,12 +16,16 @@ use Minishlink\WebPush\Subscription;
 function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
 {
     try {
-        if (!class_exists('Minishlink\WebPush\WebPush'))
+        if (!class_exists('Minishlink\WebPush\WebPush')) {
+            error_log("WebPush class does not exist");
             return false;
+        }
 
         $vapidPath = __DIR__ . '/vapid.json';
-        if (!file_exists($vapidPath))
+        if (!file_exists($vapidPath)) {
+            error_log("Vapid file does not exist at $vapidPath");
             return false;
+        }
 
         $vapid = json_decode(file_get_contents($vapidPath), true);
         $auth = [
@@ -50,8 +54,10 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
         }
 
         $res = DBExecute($sql);
-        if (!$res || mysqli_num_rows($res) == 0)
+        if (!$res || mysqli_num_rows($res) == 0) {
+            error_log("No push_subscriptions rows found");
             return false;
+        }
 
         $hasSubs = false;
         while ($row = mysqli_fetch_assoc($res)) {
