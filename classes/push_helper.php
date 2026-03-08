@@ -82,10 +82,9 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
             }
         }
         return true;
-        return true;
     } catch (\Throwable $e) {
         $msg = $e->getMessage();
         error_log("Erro de Push: " . $msg);
-        throw new \Exception($msg);
+        return false;
     }
 }
