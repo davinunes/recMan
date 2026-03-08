@@ -84,6 +84,7 @@ if ($action == 'send_token') {
         exit;
     }
 
+
     $tokenNum = rand(100000, 999999);
     $_SESSION['portal_token'] = [
         'email' => $email,
@@ -91,12 +92,17 @@ if ($action == 'send_token') {
         'expires' => time() + 3600
     ];
 
+    $numeroStr = isset($_POST['numero']) && isset($_POST['ano'])
+        ? filter_var($_POST['numero'], FILTER_SANITIZE_STRING) . '/' . filter_var($_POST['ano'], FILTER_SANITIZE_STRING)
+        : '';
+
+    if ($numeroStr !== '') {
+        DBExecute("UPDATE recurso SET token = '$tokenNum' WHERE numero = '" . DBEscape($numeroStr) . "'");
+    }
+
     // Envia email via API do Gmail
     $gmail = verificarToken();
     if ($gmail["status"]) {
-        $numeroStr = isset($_POST['numero']) && isset($_POST['ano'])
-            ? filter_var($_POST['numero'], FILTER_SANITIZE_STRING) . '/' . filter_var($_POST['ano'], FILTER_SANITIZE_STRING)
-            : '';
 
         $assunto = "Código de verificação" . ($numeroStr ? " - Notificação $numeroStr" : " - Conselho Consultivo");
         $assunto_encoded = "=?UTF-8?B?" . base64_encode($assunto) . "?=";
