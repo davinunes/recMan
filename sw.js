@@ -1,6 +1,16 @@
 self.addEventListener('push', function (event) {
     if (event.data) {
-        let data = event.data.json();
+        let data = {};
+        try {
+            data = event.data.json();
+        } catch (e) {
+            // Se o Payload não for JSON (como clicar no botão de Teste do Chrome)
+            data = {
+                title: 'Aviso',
+                body: event.data.text(),
+                url: '/'
+            };
+        }
 
         let options = {
             body: data.body,
