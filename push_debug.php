@@ -57,26 +57,27 @@ try {
     $webPush = new \Minishlink\WebPush\WebPush($auth);
     $payload = json_encode(['title' => 'Teste', 'body' => 'Corpo', 'url' => '/']);
 
+    echo "<h4>Resultados do Envio ao provedor (Google/Apple):</h4><ul>";
     foreach ($subs as $sub) {
         $subscription = \Minishlink\WebPush\Subscription::create([
             'endpoint' => $sub['endpoint'],
             'publicKey' => $sub['p256dh'],
             'authToken' => $sub['auth']
         ]);
-        $webPush->sendOneNotification($subscription, $payload);
-    }
 
-    $reports = $webPush->flush();
-    echo "<h4>Resultados do Envio ao provedor (Google/Apple):</h4><ul>";
-    $successCount = 0;
-    foreach ($reports as $report) {
-        if ($report->isSuccess()) {
-            echo "<li style='color:green;'>[OK] Notificação enviada. Seu celular TEVE que apitar.</li>";
-            $successCount++;
+        $report = $webPush->sendOneNotification($subscription, $payload);
+
+        if ($report) {
+            if ($report->isSuccess()) {
+                echo "<li style='color:green;'>[OK] Notificação enviada para ID {$sub['id']}.</li>";
+            } else {
+                echo "<li style='color:red;'>[FALHA] ID {$sub['id']} - Motivo: " . htmlentities($report->getReason()) . " (Código HTTP: " . $report->getResponse()->getStatusCode() . ")</li>";
+            }
         } else {
-            echo "<li style='color:red;'>[FALHA] Motivo: " . $report->getReason() . " (Código HTTP: " . $report->getResponse()->getStatusCode() . ")</li>";
+            echo "<li style='color:red;'>[FALHA] ID {$sub['id']} - O Google sequer retornou um relatório válido do envio.</li>";
         }
     }
+
     echo "</ul>";
 } catch (\Throwable $e) {
     echo "<h4 style='color:red;'>ALERTA CRÍTICO:</h4>";
