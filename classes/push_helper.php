@@ -82,9 +82,10 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
             }
         }
         return true;
+        return true;
     } catch (\Throwable $e) {
-        // Ignora erros drásticos de bibliotecas SSL/Push/GMP do PHP para não interromper a vida do usuário.
-        error_log("Erro de Push: " . $e->getMessage());
-        return false;
+        $msg = $e->getMessage();
+        error_log("Erro de Push: " . $msg);
+        throw new \Exception($msg);
     }
 }
