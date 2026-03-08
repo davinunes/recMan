@@ -44,12 +44,40 @@ try {
     echo "</ul>";
 
     echo "Disparando agora...<br>";
-    $sucesso = sendPushNotification("Push de Teste", "Seu servidor atirou com sucesso!", "https://" . $_SERVER['HTTP_HOST'] . "/recMan/index.php");
-    if ($sucesso) {
-        echo "<h4 style='color:green;'>Push disparado aos " . count($subs) . " conselheiros com sucesso!</h4>";
-    } else {
-        echo "<h4 style='color:orange;'>Função retornou FALSE. Se tudo acima estiver OK, pode ser que a consulta filtrada não encontrou o array de users (embora aqui mandemos pra todos).</h4>";
+
+    // Configurando WebPush direto aqui pra debugar o que o Google responde
+    $vapid = json_decode(file_get_contents(__DIR__ . '/classes/vapid.json'), true);
+    $auth = [
+        'VAPID' => [
+            'subject' => 'mailto:admin@recman.miami',
+            'publicKey' => $vapid['publicKey'],
+            'privateKey' => $vapid['privateKey'],
+        ],
+    ];
+    $webPush = new \Minishlink\WebPush\WebPush($auth);
+    $payload = json_encode(['title' => 'Teste', 'body' => 'Corpo', 'url' => '/']);
+
+    foreach ($subs as $sub) {
+        $subscription = \Minishlink\WebPush\Subscription::create([
+            'endpoint' => $sub['endpoint'],
+            'publicKey' => $sub['p256dh'],
+            'authToken' => $sub['auth']
+        ]);
+        $webPush->sendOneNotification($subscription, $payload);
     }
+
+    $reports = $webPush->flush();
+    echo "<h4>Resultados do Envio ao provedor (Google/Apple):</h4><ul>";
+    $successCount = 0;
+    foreach ($reports as $report) {
+        if ($report->isSuccess()) {
+            echo "<li style='color:green;'>[OK] Notificação enviada. Seu celular TEVE que apitar.</li>";
+            $successCount++;
+        } else {
+            echo "<li style='color:red;'>[FALHA] Motivo: " . $report->getReason() . " (Código HTTP: " . $report->getResponse()->getStatusCode() . ")</li>";
+        }
+    }
+    echo "</ul>";
 } catch (\Throwable $e) {
     echo "<h4 style='color:red;'>ALERTA CRÍTICO:</h4>";
     echo "<p><b>O Push morreu com a seguinte mensagem de erro do servidor:</b></p>";
