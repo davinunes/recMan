@@ -149,7 +149,7 @@ $usuarios = getUsuarios();
                         $uStatusClass = $u['status'] == 1 ? 'green' : 'red';
                         $uStatusText = $u['status'] == 1 ? 'Ativo' : 'Inativo';
                         ?>
-                        <div class="col s12 m6 l4">
+                        <div class="col s12 m6 l2">
                             <div class="card hoverable user-card">
                                 <div class="card-content">
                                     <div class="row valign-wrapper" style="margin-bottom: 0;">
