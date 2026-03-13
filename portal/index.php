@@ -12,6 +12,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <!-- Tailwind CSS (via CDN para módulo independente) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800">
@@ -298,19 +299,31 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <div class="flex gap-4 mb-4">
                         <div class="w-1/2">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
-                            <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required
+                            <input x-model="notificacaoStr" @input.debounce.500ms="verificarExistenciaLogin()" type="text" placeholder="Ex: 154" required
                                 class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
                         </div>
                         <div class="w-1/2">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
-                            <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
+                            <input x-model="anoStr" @input.debounce.500ms="verificarExistenciaLogin()" type="text" placeholder="Ex: 2026" required
                                 class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
                         </div>
                     </div>
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Senha (Código Verificador)</label>
-                        <input x-model="senhaAcesso" type="password" required
-                            class="shadow border rounded-lg w-full py-3 px-4 text-center text-lg tracking-widest text-gray-700">
+                        <div class="relative">
+                            <input x-model="senhaAcesso" :type="verSenha ? 'text' : 'password'" required
+                                class="shadow border rounded-lg w-full py-3 px-4 text-center text-lg tracking-widest text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="button" @click="verSenha = !verSenha"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                                <span class="material-icons" x-text="verSenha ? 'visibility_off' : 'visibility'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div x-show="resourceExisteLogin" x-transition class="mb-6 text-center">
+                        <p class="text-xs text-blue-600 hover:underline cursor-pointer" @click="reenviarExistente()">
+                            Esqueci minha senha / Reenviar código
+                        </p>
                     </div>
 
                     <div class="flex justify-between items-center mt-8">
@@ -450,6 +463,8 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 podeReenviar: true,
                 timerReenvio: 0,
                 intervalReenvio: null,
+                verSenha: false,
+                resourceExisteLogin: false,
 
                 dadosRecurso: {},
                 listaAnexos: [],
@@ -514,6 +529,29 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         this.carregando = false;
                     }
             },
+
+                async verificarExistenciaLogin() {
+                    if (this.etapa !== 7) return;
+                    if (!this.notificacaoStr || !this.anoStr) {
+                        this.resourceExisteLogin = false;
+                        return;
+                    }
+
+                    let fd = new FormData();
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+
+                    try {
+                        let req = await fetch('api.php?action=check_notification', { method: 'POST', body: fd });
+                        let res = await req.json();
+                        this.resourceExisteLogin = !!res.exists;
+                        if (res.exists) {
+                            this.maskedEmailEncontrado = res.masked_email || '';
+                        }
+                    } catch (e) {
+                        this.resourceExisteLogin = false;
+                    }
+                },
 
                 async reenviarExistente() {
                 if (!this.podeReenviar || this.carregandoAcao) return;
