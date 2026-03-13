@@ -327,9 +327,16 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     </div>
 
                     <div x-show="resourceExisteLogin" x-transition class="mb-6 text-center">
-                        <p class="text-xs text-blue-600 hover:underline cursor-pointer" @click="reenviarExistente()">
-                            Esqueci minha senha / Reenviar código
-                        </p>
+                        <template x-if="podeReenviar">
+                            <p class="text-xs text-blue-600 hover:underline cursor-pointer" @click="reenviarExistente()">
+                                Esqueci minha senha / Reenviar código
+                            </p>
+                        </template>
+                        <template x-if="!podeReenviar">
+                            <p class="text-xs text-gray-400">
+                                Aguarde <span class="font-bold" x-text="timerReenvio"></span>s para solicitar novamente
+                            </p>
+                        </template>
                     </div>
 
                     <div class="flex justify-between items-center mt-8">
@@ -584,9 +591,9 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     let res = await req.json();
 
                     if (res.success) {
-                        // Iniciar timeout de 15 segundos
+                        // Iniciar timeout de 10 segundos
                         this.podeReenviar = false;
-                        this.timerReenvio = 15;
+                        this.timerReenvio = 10;
                         clearInterval(this.intervalReenvio);
                         this.intervalReenvio = setInterval(() => {
                             this.timerReenvio--;
