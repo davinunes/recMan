@@ -33,6 +33,12 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
             <p x-text="erroMensagem"></p>
         </div>
 
+        <div x-show="sucesso" x-transition
+            class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-md shadow-sm"
+            style="display: none;">
+            <p x-text="sucessoMensagem"></p>
+        </div>
+
         <!-- Card Principal -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
 
@@ -451,6 +457,8 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 carregando: false,
                 erro: false,
                 erroMensagem: '',
+                sucesso: false,
+                sucessoMensagem: '',
 
                 notificacaoStr: initialNot,
                 anoStr: initialAno,
@@ -487,8 +495,17 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 mostraErro(msg) {
                     this.erroMensagem = msg;
                     this.erro = true;
+                    this.sucesso = false;
                     // Auto-hide
                     setTimeout(() => { this.erro = false; }, 5000);
+                },
+
+                mostraSucesso(msg) {
+                    this.sucessoMensagem = msg;
+                    this.sucesso = true;
+                    this.erro = false;
+                    // Auto-hide
+                    setTimeout(() => { this.sucesso = false; }, 8000);
                 },
 
                 iniciarNovo() {
@@ -581,9 +598,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 
                         // Mostra tela de digitar o token do email
                         this.etapa = 7;
-                        this.mostraErro("Código reenviado com sucesso. Verifique a caixa de entrada!");
-                        // Esconde a bagunça para verde em vez de erro
-                        this.erro = false;
+                        let msg = "Novo código enviado com sucesso!";
+                        if (this.maskedEmailEncontrado) {
+                            msg += " Verifique o e-mail: " + this.maskedEmailEncontrado;
+                        }
+                        this.mostraSucesso(msg);
                     } else {
                         this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
                     }
