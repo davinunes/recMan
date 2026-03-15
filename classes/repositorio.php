@@ -1059,9 +1059,28 @@ function getEstacionamento($bloco, $unidade)
     return $r;
 }
 
+function getNumeroRecurso($id_recurso)
+{
+    $sql2 = " select numero ";
+    $sql2 .= " FROM conselho.recurso  ";
+    $sql2 .= " WHERE id = $id_recurso  ";
+
+    $result = DBExecute($sql2);
+
+    if (!mysqli_num_rows($result)) {
+
+    } else {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $r[] = $retorno;
+        }
+    }
+    return $r[0]['numero'];
+}
+
 function upsertVoto($dados)
 {
     $id_recurso = $dados['idRec'];
+    $numero_recurso = getNumeroRecurso($id_recurso);
     $id_usuario = $dados['user_id'];
     $voto = $dados['voto'];
 
@@ -1113,15 +1132,13 @@ function upsertVoto($dados)
 
         }
 
-        // Dentro da função upsertVoto
-        $url = "http://localhost/recMan/classes/api_push_cli.php";
-        $postData = "user_id=$id_usuario&id_rec=$id_recurso";
+        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
+        $postData = "user_id=$id_usuario&id_rec=$numero_recurso";
 
-        // Comando cURL:
-        // -s: silencioso
-        // -d: dados via POST
-        // > /dev/null 2>&1 &: joga pro background e não espera resposta
-        $comando = "curl -s -d \"$postData\" \"$url\" > /dev/null 2>&1 &";
+        // Monta o comando cURL para rodar em background
+        // -H define o Host para o Apache saber qual VirtualHost abrir
+        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
+        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
 
         exec($comando);
 
