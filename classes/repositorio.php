@@ -1113,14 +1113,8 @@ function upsertVoto($dados)
 
         }
 
-        // require_once "classes/push_helper.php";
-
-        // $usuario = getUsuariosById($id_usuario);
-
-        // @sendPushNotification(
-        //     "Sistema de Recursos do Conselho",
-        //     "O conselheiro {$usuario['nome']} acabou de votar no recurso $id_recurso"
-        // );
+        $comando = "php disparar_push_cli.php $id_usuario $id_recurso > /dev/null 2>&1 &";
+        exec($comando);
 
         return "ok";
     } else {
