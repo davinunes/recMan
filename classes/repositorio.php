@@ -1113,7 +1113,16 @@ function upsertVoto($dados)
 
         }
 
-        $comando = "php disparar_push_cli.php $id_usuario $id_recurso > /dev/null 2>&1 &";
+        // Dentro da função upsertVoto
+        $url = "http://localhost/recMan/classes/api_push_cli.php";
+        $postData = "user_id=$id_usuario&id_rec=$id_recurso";
+
+        // Comando cURL:
+        // -s: silencioso
+        // -d: dados via POST
+        // > /dev/null 2>&1 &: joga pro background e não espera resposta
+        $comando = "curl -s -d \"$postData\" \"$url\" > /dev/null 2>&1 &";
+
         exec($comando);
 
         return "ok";
