@@ -1094,8 +1094,8 @@ function upsertVoto($dados)
 
     if (DBExecute($sql)) {
 
-        $sql2 = " SELECT voto, COUNT(*) AS total ";
-        $sql2 .= " FROM conselho.votos  ";
+        $sql2 = " SELECT voto, COUNT(*) AS total, fase ";
+        $sql2 .= " FROM conselho.votos left join conselho.recurso on conselho.votos.id_recurso = conselho.recurso.id  ";
         $sql2 .= " WHERE id_recurso = $id_recurso  ";
         $sql2 .= " GROUP BY voto  ";
         $sql2 .= " HAVING total >= 2 ";
@@ -1109,27 +1109,29 @@ function upsertVoto($dados)
                 $numVotos[] = $retorno;
             }
         }
+        if ($result[0]['fase'] != 5) {
+            // se a fase  não for 5 (concluido)
+            if (isset($numVotos[0]["total"]) && $numVotos[0]["total"] >= 2) {
+                // Se tem mais de 1 voto igual para este recurso, mude a fase para confecionar parecer
+                $sql3 = "update conselho.recurso ";
+                $sql3 .= "set ";
+                $sql3 .= "fase = 4 ";
+                $sql3 .= "where ";
+                $sql3 .= "id = '$id_recurso'";
 
-        if (isset($numVotos[0]["total"]) && $numVotos[0]["total"] >= 2) {
-            // Se tem mais de 1 voto igual para este recurso, mude a fase para confecionar parecer
-            $sql3 = "update conselho.recurso ";
-            $sql3 .= "set ";
-            $sql3 .= "fase = 4 ";
-            $sql3 .= "where ";
-            $sql3 .= "id = '$id_recurso'";
+                $result = DBExecute($sql3);
 
-            $result = DBExecute($sql3);
+            } else {
+                // Senão configura como em análise
+                $sql3 = "update conselho.recurso ";
+                $sql3 .= "set ";
+                $sql3 .= "fase = 3 ";
+                $sql3 .= "where ";
+                $sql3 .= "id = '$id_recurso'";
 
-        } else {
-            // Senão configura como em análise
-            $sql3 = "update conselho.recurso ";
-            $sql3 .= "set ";
-            $sql3 .= "fase = 3 ";
-            $sql3 .= "where ";
-            $sql3 .= "id = '$id_recurso'";
+                $result = DBExecute($sql3);
 
-            $result = DBExecute($sql3);
-
+            }
         }
 
         $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
