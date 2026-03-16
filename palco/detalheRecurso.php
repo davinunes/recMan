@@ -258,13 +258,12 @@ if ($esseRecurso == null) {
 </div>';
     echo '      </div>
             <div class="card-action">
-                <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a>
-                <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a>';
-    if ($result['fase   '] != 5) {
-        echo '<a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a>';
+                <a class="modal-trigger btn blue" href="#novaMensagemModal">Comentar</a> 
+                <a class="modal-trigger btn green darken-3" href="#alterarFaseModal">Fase</a> ';
+    if ($result['fase'] != 5) {
+        echo '<a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a> ';
     }
-    echo '          <a class="modal-trigger btn orange black-3" href="#addiligencia">Adicionar Diligencia</a>
-                ';
+    echo '<a class="modal-trigger btn orange black-3" href="#addiligencia">Adicionar Diligencia</a> ';
 
     if ($result['fase'] == 4)
         echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
