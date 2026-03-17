@@ -1101,18 +1101,22 @@ function upsertVoto($dados)
         $sql2 .= " HAVING total >= 2 ";
 
         $result = DBExecute($sql2);
-
-        if (!mysqli_num_rows($result)) {
-
-        } else {
-            while ($retorno = mysqli_fetch_assoc($result)) {
-                $numVotos[] = $retorno;
-            }
+        
+        $numVotos = array();
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $numVotos[] = $retorno;
         }
-        if ($result[0]['fase'] != 5) {
-            // se a fase  não for 5 (concluido)
+
+        // Buscamos a fase atual do recurso para saber se podemos alterá-la
+        // Não usamos o $result do count de votos pois ele pode vir vazio se não houver consenso
+        $sql_fase = "SELECT fase FROM conselho.recurso WHERE id = '$id_recurso'";
+        $res_fase = DBExecute($sql_fase);
+        $recurso_info = mysqli_fetch_assoc($res_fase);
+
+        if ($recurso_info['fase'] != 5) {
+            // se a fase não for 5 (concluido)
             if (isset($numVotos[0]["total"]) && $numVotos[0]["total"] >= 2) {
-                // Se tem mais de 1 voto igual para este recurso, mude a fase para confecionar parecer
+                // Se tem mais de 1 voto igual para este recurso, mude a fase para confeccionar parecer
                 $sql3 = "update conselho.recurso ";
                 $sql3 .= "set ";
                 $sql3 .= "fase = 4 ";
