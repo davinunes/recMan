@@ -197,12 +197,15 @@ if ($action == 'submit') {
         exit;
     }
 
-    // --- ENVIAR PUSH NOTIFICATION ---
-    @sendPushNotification(
-        "Novo Recurso ($numeroCompleto)",
-        "Bloco {$bloco}-{$unidade} protocolou nova defesa.",
-        "https://" . $_SERVER['HTTP_HOST'] . "/recMan/index.php"
-    );
+    // --- ENVIAR PUSH NOTIFICATION (Background) ---
+    $tituloPush = "Novo Recurso ($numeroCompleto)";
+    $mensagemPush = "Bloco {$bloco}-{$unidade} protocolou nova defesa.";
+    $urlPush = "https://" . $_SERVER['HTTP_HOST'] . "/recMan/index.php";
+    $domain = "mini.davinunes.eti.br";
+
+    $postData = "titulo=" . urlencode($tituloPush) . "&mensagem=" . urlencode($mensagemPush) . "&url=" . urlencode($urlPush);
+    $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
+    exec($comando);
 
     // Tratamento de Arquivos Anexados
     $storageDir = __DIR__ . '/../storage/anexos/';
