@@ -938,6 +938,15 @@ function upsertRecurso($dados)
 
     // Execute a consulta
     if (DBExecute($sql)) {
+        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
+        $postData = "user_id=$id_usuario&id_rec=$numero_recurso";
+
+        // Monta o comando cURL para rodar em background
+        // -H define o Host para o Apache saber qual VirtualHost abrir
+        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
+        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli_novo_recurso.php > /dev/null 2>&1 &";
+
+        exec($comando);
         return "ok";
     } else {
         return "Erro na execução da consulta.";
@@ -955,6 +964,16 @@ function upsertComentario($dados)
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
 
     if (DBExecute($sql)) {
+        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
+        $postData = "user_id=$id_usuario&id_rec=$id_recurso&comentario=$mensagem";
+
+
+        // Monta o comando cURL para rodar em background
+        // -H define o Host para o Apache saber qual VirtualHost abrir
+        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
+        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli_comentario.php > /dev/null 2>&1 &";
+
+        exec($comando);
         return "ok";
     } else {
         return "erro";
@@ -1101,7 +1120,7 @@ function upsertVoto($dados)
         $sql2 .= " HAVING total >= 2 ";
 
         $result = DBExecute($sql2);
-        
+
         $numVotos = array();
         while ($retorno = mysqli_fetch_assoc($result)) {
             $numVotos[] = $retorno;
