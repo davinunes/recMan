@@ -12,8 +12,9 @@ use Minishlink\WebPush\Subscription;
  * @param string $mensagem O Corpo do Pop Up
  * @param string $url URL para qual o usuário será redirecionado se clicar
  * @param array|null $userIds Array opcional de IDs de usuários. Null envia para todos os conselheiros.
+ * @param string|null $icon URL ou caminho do ícone.
  */
-function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
+function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
 {
     try {
         if (!class_exists('Minishlink\WebPush\WebPush')) {
@@ -38,13 +39,17 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null)
 
         $webPush = new WebPush($auth);
 
+        // Icone padrão se não for passado
+        if (!$icon) {
+            $icon = 'https://mini.davinunes.eti.br/storage/icons/conselho-toon.webp';
+        }
+
         // Payload que o Service Worker do Chrome vai interpretar:
         $payload = json_encode([
             'title' => $titulo,
             'body' => $mensagem,
             'url' => $url,
-            // Ícone customizável (usando um sininho genérico, você pode trocar pelo logo do condomínio em PNG)
-            'icon' => 'https://cdn-icons-png.flaticon.com/512/3239/3239952.png'
+            'icon' => $icon
         ]);
 
         $sql = "SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions";

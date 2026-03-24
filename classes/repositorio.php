@@ -938,15 +938,23 @@ function upsertRecurso($dados)
 
     // Execute a consulta
     if (DBExecute($sql)) {
-        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
-        $postData = "user_id=$id_usuario&id_rec=$numero_recurso";
+        // Envio de Push Notification
+        if (isset($dados['user_id'])) {
+            $id_usuario = $dados['user_id'];
+            $numero_recurso = $dados['numero'];
+            
+            require_once "database.php";
+            $usuario = getUsuariosById($id_usuario);
+            $nome_usuario = $usuario['nome'] ?? "Conselheiro";
+            
+            $titulo = "Sistema de Recursos";
+            $mensagem = "O conselheiro $nome_usuario cadastrou um novo recurso: $numero_recurso";
+            $domain = "mini.davinunes.eti.br";
 
-        // Monta o comando cURL para rodar em background
-        // -H define o Host para o Apache saber qual VirtualHost abrir
-        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
-        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli_novo_recurso.php > /dev/null 2>&1 &";
-
-        exec($comando);
+            $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
+            $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
+            exec($comando);
+        }
         return "ok";
     } else {
         return "Erro na execução da consulta.";
@@ -964,14 +972,17 @@ function upsertComentario($dados)
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
 
     if (DBExecute($sql)) {
-        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
-        $postData = "user_id=$id_usuario&id_rec=$id_recurso&comentario=$mensagem";
+        // Envio de Push Notification
+        $usuario = getUsuariosById($id_usuario);
+        $nome_usuario = $usuario['nome'] ?? "Conselheiro";
+        $resumo_comentario = substr($dados['messageText'], 0, 100) . (strlen($dados['messageText']) > 100 ? "..." : "");
 
+        $titulo = "Novo Comentário";
+        $mensagem = "$nome_usuario comentou no recurso $id_recurso:\n$resumo_comentario";
+        $domain = "mini.davinunes.eti.br";
 
-        // Monta o comando cURL para rodar em background
-        // -H define o Host para o Apache saber qual VirtualHost abrir
-        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
-        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli_comentario.php > /dev/null 2>&1 &";
+        $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
+        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
 
         exec($comando);
         return "ok";
@@ -1157,12 +1168,14 @@ function upsertVoto($dados)
             }
         }
 
-        $domain = "mini.davinunes.eti.br"; // O Host que funcionou no teste
-        $postData = "user_id=$id_usuario&id_rec=$numero_recurso";
+        $usuario = getUsuariosById($id_usuario);
+        $nome_usuario = $usuario['nome'] ?? "Conselheiro";
 
-        // Monta o comando cURL para rodar em background
-        // -H define o Host para o Apache saber qual VirtualHost abrir
-        // > /dev/null 2>&1 & garante que o PHP não espere o envio terminar
+        $titulo = "Voto Registrado";
+        $mensagem = "O conselheiro $nome_usuario votou no recurso $numero_recurso";
+        $domain = "mini.davinunes.eti.br";
+
+        $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
         $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
 
         exec($comando);
