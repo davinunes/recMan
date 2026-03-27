@@ -12,17 +12,6 @@ $mensagem = $_POST['mensagem'] ?? null;
 $url = $_POST['url'] ?? '/';
 $user_ids = $_POST['user_ids'] ?? null; // Serializado como string se vier via POST
 
-// --- DEBUG LOG ---
-$logData = [
-    'time' => date('Y-m-d H:i:s'),
-    'ip' => $_SERVER['REMOTE_ADDR'],
-    'titulo' => $titulo,
-    'mensagem' => $mensagem,
-    'user_ids' => $user_ids
-];
-file_put_contents(__DIR__ . '/push_debug.log', json_encode($logData) . PHP_EOL, FILE_APPEND);
-// -----------------
-
 if ($mensagem) {
     require_once "push_helper.php";
     require_once "database.php";
