@@ -938,6 +938,16 @@ function upsertRecurso($dados)
 
     // Execute a consulta
     if (DBExecute($sql)) {
+        // --- DEBUG LOG ---
+        $debugRecurso = [
+            'time' => date('Y-m-d H:i:s'),
+            'dados_contains_user_id' => isset($dados['user_id']),
+            'id_usuario' => $dados['user_id'] ?? 'NULL',
+            'numero' => $dados['numero'] ?? 'NULL'
+        ];
+        file_put_contents(__DIR__ . '/recurso_debug.log', json_encode($debugRecurso) . PHP_EOL, FILE_APPEND);
+        // -----------------
+
         // Envio de Push Notification
         if (isset($dados['user_id'])) {
             $id_usuario = $dados['user_id'];
