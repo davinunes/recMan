@@ -54,11 +54,14 @@ if (isset($_GET['action'])) {
             $steps['data'] = ($retData === 0);
 
             if ($steps['data']) {
-                // Passo 3: Tar (incluindo ambos os arquivos)
-                // Usando caminho relativo para os arquivos dentro do tar
-                $cmdTar = "tar -C " . escapeshellarg($backupBase) . " -cvf " . escapeshellarg($backupTar) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
+                // Passo 3: Tar (incluindo SQLs e a pasta storage - EXCETO a pasta de backups para evitar recursão)
+                // Usando -C para mudar de diretório e caminhos relativos
+                $cmdTar = "tar -cvf " . escapeshellarg($backupTar) . " " .
+                          "--exclude='storage/backups' -C " . escapeshellarg(__DIR__) . " storage " .
+                          "-C " . escapeshellarg($backupBase) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
                 exec($cmdTar, $output, $retTar);
-                $steps['tar'] = ($retTar === 0);
+                $steps['storage_and_sql_tar'] = ($retTar === 0);
+                $steps['tar'] = $steps['storage_and_sql_tar'];
 
                 // Passo 4: Gzip
                 if ($steps['tar']) {
@@ -217,9 +220,7 @@ krsort($decryptList);
                 <div class="card white">
                     <div class="card-content">
                         <span class="card-title">Gerar Novo Backup</span>
-                        <p>Isso criará dois dumps do banco <b><?php echo $database; ?></b> (estrutura e dados
-                            separadamente), compactará e
-                            criptografará com AES-256.</p>
+                        <p>Isso criará dois dumps do banco <b><?php echo $database; ?></b> (estrutura e dados separadamente), incluirá a pasta <b>storage/</b> (anexos e arquivos), compactará tudo e criptografará com AES-256.</p>
                         <br>
                         <button id="btnRunBackup" class="btn waves-effect waves-light teal">
                             <i class="material-icons left">cloud_upload</i> Iniciar Backup
