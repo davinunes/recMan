@@ -620,13 +620,22 @@ $(document).on('click', '#updateComment', function () {
     const formElement = document.getElementById('editMessageForm');
     const formData = new FormData(formElement);
     
-    // Garantir que os campos foram pegos (redundância caso o name não tenha funcionado)
-    if (!formData.has('id_mensagem')) formData.append('id_mensagem', $("#editMessageId").val());
-    if (!formData.has('messageText')) formData.append('messageText', $("#messageTextComment").val());
+    // Forçar os campos caso o FormData automático tenha falhado
+    const idValue = $("#editMessageId").val();
+    const textValue = $("#messageTextComment").val();
     
-    console.log("Enviando Comentário Editado:", {
+    formData.set('id_mensagem', idValue);
+    formData.set('messageText', textValue);
+    
+    if (!idValue || !textValue) {
+        return M.toast({ html: 'Erro: ID ou conteúdo do comentário ausente!', classes: 'rounded red' });
+    }
+
+    console.log("Enviando Comentário Editado (Final):", {
+        method: "editaComentario",
         id: formData.get('id_mensagem'),
-        texto: formData.get('messageText')
+        texto: formData.get('messageText'),
+        numFiles: formElement.querySelector('input[type=file]').files.length
     });
     
     $.ajax({
@@ -640,7 +649,9 @@ $(document).on('click', '#updateComment', function () {
                 M.toast({ html: "Comentário atualizado!", classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded red' });
+                // Se for um erro de SQL do die(), vai cair aqui
+                console.error("Erro do Servidor:", responseData);
+                M.toast({ html: 'Erro ao salvar. Verifique o console.', classes: 'rounded red' });
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
