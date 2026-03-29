@@ -41,59 +41,67 @@ if (isset($_GET['action'])) {
         $backupEnc = $backupGz . ".enc";
 
         $steps = [];
+        $debugLogs = [];
 
-        // Passo 1: MySQL Dump - ESTRUTURA
-        $cmdSchema = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-data > " . escapeshellarg($backupSchema);
-        exec($cmdSchema, $output, $retSchema);
-        $steps['schema'] = ($retSchema === 0);
-
-        if ($steps['schema']) {
-            // Passo 2: MySQL Dump - DADOS
-            $cmdData = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-create-info --skip-triggers > " . escapeshellarg($backupData);
-            exec($cmdData, $output, $retData);
-            $steps['data'] = ($retData === 0);
-
-            if ($steps['data']) {
-                // Passo 3: Tar - Dividido em 2 partes para evitar conflito de exclusão
-                // 3.1: Criar tar inicial apenas com os dumps SQL
-                $cmdTarSql = "tar -C " . escapeshellarg($backupBase) . " -cvf " . escapeshellarg($backupTar) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
-                exec($cmdTarSql, $output, $retTarSql);
-
-                // 3.2: Apensar a pasta storage (exceto a própria pasta de backups)
-                if ($retTarSql === 0) {
-                    $cmdTarStorage = "tar -rvf " . escapeshellarg($backupTar) . " --exclude='storage/backups' -C " . escapeshellarg(__DIR__) . " storage";
-                    exec($cmdTarStorage, $output, $retTarStorage);
-                    $steps['tar'] = ($retTarStorage === 0);
-                } else {
-                    $steps['tar'] = false;
-                }
-
-                // Passo 4: Gzip
-                if ($steps['tar']) {
-                    $cmdGzip = "gzip " . escapeshellarg($backupTar);
-                    exec($cmdGzip, $output, $retGzip);
-                    $steps['gzip'] = ($retGzip === 0);
-                }
-
-                // Passo 5: Encrypt
-                if ($steps['gzip']) {
-                    $cmdEnc = "openssl enc -aes-256-cbc -salt -in " . escapeshellarg($backupGz) . " -out " . escapeshellarg($backupEnc) . " -pass pass:" . escapeshellarg($password);
-                    exec($cmdEnc, $output, $retEnc);
-                    $steps['encrypt'] = ($retEnc === 0);
-                }
-
-                // Passo 6: Cleanup
-                $cmdClean = "rm -f " . escapeshellarg($backupSchema) . " " . escapeshellarg($backupData) . " " . escapeshellarg($backupTar) . " " . escapeshellarg($backupGz);
-                exec($cmdClean, $output, $retClean);
-                $steps['cleanup'] = ($retClean === 0);
-            }
+        function run_cmd($cmd, $key, &$steps, &$debugLogs) {
+            $output = [];
+            $retCode = 0;
+            exec($cmd . " 2>&1", $output, $retCode);
+            $logHtml = implode("\n", $output);
+            $debugLogs[$key] = $logHtml;
+            $steps[$key] = ($retCode === 0);
+            return $retCode === 0;
         }
+
+        // --- Passo 1: MySQL Dump - ESTRUTURA ---
+        $cmdSchema = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-data > " . escapeshellarg($backupSchema);
+        run_cmd($cmdSchema, 'schema', $steps, $debugLogs);
+
+        // --- Passo 2: MySQL Dump - DADOS ---
+        if ($steps['schema']) {
+            $cmdData = "mysqldump --host=$host --user=$username --password=$password --databases $database --no-create-info --skip-triggers > " . escapeshellarg($backupData);
+            run_cmd($cmdData, 'data', $steps, $debugLogs);
+        }
+
+        // --- Passo 3: Tar Archiving (Folders + SQLs) ---
+        if (isset($steps['data']) && $steps['data']) {
+            // Selecionar apenas pastas de interesse
+            $folders = ["storage/anexos", "storage/comentarios", "storage/diligencias", "storage/icons"];
+            $validFolders = [];
+            foreach ($folders as $f) {
+                if (is_dir(__DIR__ . '/' . $f)) $validFolders[] = escapeshellarg($f);
+            }
+            $foldersStr = implode(" ", $validFolders);
+
+            // Criar tar com SQLs e pastas específicas
+            $cmdTar = "tar -cvf " . escapeshellarg($backupTar) . " " .
+                      "-C " . escapeshellarg(__DIR__) . " $foldersStr " .
+                      "-C " . escapeshellarg($backupBase) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
+            
+            run_cmd($cmdTar, 'tar', $steps, $debugLogs);
+        }
+
+        // --- Passo 4: Gzip ---
+        if (isset($steps['tar']) && $steps['tar']) {
+            run_cmd("gzip " . escapeshellarg($backupTar), 'gzip', $steps, $debugLogs);
+        }
+
+        // --- Passo 5: Encrypt ---
+        if (isset($steps['gzip']) && $steps['gzip']) {
+            $cmdEnc = "openssl enc -aes-256-cbc -salt -in " . escapeshellarg($backupGz) . " -out " . escapeshellarg($backupEnc) . " -pass pass:" . escapeshellarg($password);
+            run_cmd($cmdEnc, 'encrypt', $steps, $debugLogs);
+        }
+
+        // --- Passo 6: Cleanup ---
+        $cmdClean = "rm -f " . escapeshellarg($backupSchema) . " " . escapeshellarg($backupData) . " " . escapeshellarg($backupTar) . " " . escapeshellarg($backupGz);
+        exec($cmdClean); // Cleanup silencioso
 
         $success = isset($steps['encrypt']) && $steps['encrypt'];
         echo json_encode([
             'success' => $success,
             'steps' => $steps,
-            'file' => $success ? $fileName . ".sql.tar.gz.enc" : null
+            'debug' => $debugLogs,
+            'file' => $success ? $fileName . ".tar.gz.enc" : null
         ]);
         exit;
     }
@@ -376,7 +384,15 @@ krsort($decryptList);
                             addLog('Compactação TAR: ' + (res.steps.tar ? 'OK' : 'FALHA'), res.steps.tar);
                             addLog('Compressão GZIP: ' + (res.steps.gzip ? 'OK' : 'FALHA'), res.steps.gzip);
                             addLog('Criptografia AES-256: ' + (res.steps.encrypt ? 'OK' : 'FALHA'), res.steps.encrypt);
-                            addLog('Limpeza de Temporários: ' + (res.steps.cleanup ? 'OK' : 'FALHA'), res.steps.cleanup);
+                        }
+
+                        if (res.debug) {
+                            console.log("Detalhes de Debug do Servidor:", res.debug);
+                            Object.keys(res.debug).forEach(key => {
+                                if (!res.steps[key]) {
+                                    addLog(`[DEBUG ${key}]: ${res.debug[key]}`, false);
+                                }
+                            });
                         }
 
                         if (res.success) {
@@ -384,7 +400,7 @@ krsort($decryptList);
                             M.toast({ html: 'Backup concluído!', classes: 'green' });
                             setTimeout(() => location.reload(), 2000);
                         } else {
-                            $status.html('<b class="red-text">Erro ao processar backup.</b>');
+                            $status.html('<b class="red-text">Erro ao processar backup. Verifique os logs abaixo.</b>');
                             M.toast({ html: 'Erro no backup', classes: 'red' });
                         }
                     },
