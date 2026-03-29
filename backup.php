@@ -111,13 +111,20 @@ if (isset($_GET['action'])) {
         $outName = $_FILES['backup_file']['name'] . ".decrypted.tar.gz";
         $outPath = $backupBase . $outName;
 
-        $cmd = "openssl enc -d -aes-256-cbc -in " . escapeshellarg($tmpFile) . " -out " . escapeshellarg($outPath) . " -pass pass:" . escapeshellarg($password);
+        $cmd = "openssl enc -d -aes-256-cbc -salt -in " . escapeshellarg($tmpFile) . " -out " . escapeshellarg($outPath) . " -pass pass:" . escapeshellarg($password) . " 2>&1";
+        $output = [];
+        $ret = 0;
         exec($cmd, $output, $ret);
 
         if ($ret === 0) {
             echo json_encode(['success' => true, 'file' => $webBase . $outName]);
         } else {
-            echo json_encode(['success' => false, 'error' => 'Falha na descriptografia. Verifique o arquivo e a senha.']);
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Falha na descriptografia. Verifique o arquivo e a senha.',
+                'debug' => implode("\n", $output),
+                'command' => $cmd
+            ]);
         }
         exit;
     }
@@ -433,7 +440,8 @@ krsort($decryptList);
                             $status.html(`<p class="green-text">Sucesso! <a href="${res.file}" download class="btn-small blue">Baixar ${res.file}</a></p>`);
                             M.toast({ html: 'Arquivo descriptografado!', classes: 'green' });
                         } else {
-                            $status.html(`<p class="red-text">${res.error}</p>`);
+                            console.error("Erro na descriptografia:", res);
+                            $status.html(`<p class="red-text">${res.error}</p><pre style='font-size:0.7rem; background:#fee; padding:5px'>${res.debug || 'Sem detalhes'}</pre>`);
                         }
                     },
                     error: function () {
