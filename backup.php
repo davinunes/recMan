@@ -54,14 +54,19 @@ if (isset($_GET['action'])) {
             $steps['data'] = ($retData === 0);
 
             if ($steps['data']) {
-                // Passo 3: Tar (incluindo SQLs e a pasta storage - EXCETO a pasta de backups para evitar recursão)
-                // Usando -C para mudar de diretório e caminhos relativos
-                $cmdTar = "tar -cvf " . escapeshellarg($backupTar) . " " .
-                          "--exclude='storage/backups' -C " . escapeshellarg(__DIR__) . " storage " .
-                          "-C " . escapeshellarg($backupBase) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
-                exec($cmdTar, $output, $retTar);
-                $steps['storage_and_sql_tar'] = ($retTar === 0);
-                $steps['tar'] = $steps['storage_and_sql_tar'];
+                // Passo 3: Tar - Dividido em 2 partes para evitar conflito de exclusão
+                // 3.1: Criar tar inicial apenas com os dumps SQL
+                $cmdTarSql = "tar -C " . escapeshellarg($backupBase) . " -cvf " . escapeshellarg($backupTar) . " " . escapeshellarg($fileName . "_schema.sql") . " " . escapeshellarg($fileName . "_data.sql");
+                exec($cmdTarSql, $output, $retTarSql);
+
+                // 3.2: Apensar a pasta storage (exceto a própria pasta de backups)
+                if ($retTarSql === 0) {
+                    $cmdTarStorage = "tar -rvf " . escapeshellarg($backupTar) . " --exclude='storage/backups' -C " . escapeshellarg(__DIR__) . " storage";
+                    exec($cmdTarStorage, $output, $retTarStorage);
+                    $steps['tar'] = ($retTarStorage === 0);
+                } else {
+                    $steps['tar'] = false;
+                }
 
                 // Passo 4: Gzip
                 if ($steps['tar']) {
