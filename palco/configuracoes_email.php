@@ -2,7 +2,9 @@
 require_once "classes/repositorio.php";
 
 $configsMail = getConfigEmails();
-$copiarSubs = getConfigSistema('copiar_subsindicos_diligencia') == '1';
+$copiarSubsDiligencia = getConfigSistema('copiar_subsindicos_diligencia') == '1';
+$copiarSubsParecer = getConfigSistema('copiar_subsindicos_parecer') == '1';
+$copiarSubsNovo = getConfigSistema('copiar_subsindicos_novo_recurso') == '1';
 
 ?>
 
@@ -19,14 +21,41 @@ $copiarSubs = getConfigSistema('copiar_subsindicos_diligencia') == '1';
         <div class="col s12">
             <div class="card">
                 <div class="card-content">
-                    <span class="card-title">Opções Gerais</span>
-                    <div class="switch">
-                        <label>
-                            Não copiar subsíndicos
-                            <input type="checkbox" id="checkCopiarSubs" <?php echo $copiarSubs ? 'checked' : ''; ?>>
-                            <span class="lever"></span>
-                            Copiar subsíndico do bloco nas diligências
-                        </label>
+                    <span class="card-title">Opções Gerais de Notificação (Bloco)</span>
+                    <div class="row">
+                        <div class="col s12 m4">
+                            <label>Diligências</label>
+                            <div class="switch">
+                                <label>
+                                    Não copiar
+                                    <input type="checkbox" id="checkCopiarSubsDiligencia" <?php echo $copiarSubsDiligencia ? 'checked' : ''; ?>>
+                                    <span class="lever"></span>
+                                    Copiar Sub.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col s12 m4">
+                            <label>Pareceres / Decisões</label>
+                            <div class="switch">
+                                <label>
+                                    Não copiar
+                                    <input type="checkbox" id="checkCopiarSubsParecer" <?php echo $copiarSubsParecer ? 'checked' : ''; ?>>
+                                    <span class="lever"></span>
+                                    Copiar Sub.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col s12 m4">
+                            <label>Portal (Novo Recurso)</label>
+                            <div class="switch">
+                                <label>
+                                    Não copiar
+                                    <input type="checkbox" id="checkCopiarSubsNovo" <?php echo $copiarSubsNovo ? 'checked' : ''; ?>>
+                                    <span class="lever"></span>
+                                    Copiar Sub.
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -134,9 +163,13 @@ $copiarSubs = getConfigSistema('copiar_subsindicos_diligencia') == '1';
 $(document).ready(function(){
     $('.modal').modal();
 
-    $(document).on('change', '#checkCopiarSubs', function(){
+    $(document).on('change', '#checkCopiarSubsDiligencia, #checkCopiarSubsParecer, #checkCopiarSubsNovo', function(){
         const val = this.checked ? '1' : '0';
-        $.post('metodo.php?metodo=upsertConfigSistema', { chave: 'copiar_subsindicos_diligencia', valor: val }, function(res){
+        let chave = 'copiar_subsindicos_diligencia';
+        if(this.id === 'checkCopiarSubsParecer') chave = 'copiar_subsindicos_parecer';
+        if(this.id === 'checkCopiarSubsNovo') chave = 'copiar_subsindicos_novo_recurso';
+
+        $.post('metodo.php?metodo=upsertConfigSistema', { chave: chave, valor: val }, function(res){
             if(res.trim() === 'ok') M.toast({html: 'Configuração atualizada!'});
         });
     });
