@@ -222,17 +222,17 @@ function getMensagens($recurso)
     $sql = "SELECT m.*, u.avatar 
             FROM conselho.mensagem m
 			left join conselho.usuarios u on u.id = m.id_usuario
-            WHERE id_recurso = '$recurso'";
+            WHERE id_recurso = '$recurso' order by m.timestamp desc";
 
     $result = DBExecute($sql);
     $dados = array(); // Inicializa a variável $dados como um array vazio
 
-    if (mysqli_num_rows($result) > 0) {
+    if ($result && mysqli_num_rows($result) > 0) {
         while ($retorno = mysqli_fetch_assoc($result)) {
+            $retorno['anexos'] = getMensagemAnexos($retorno['id']);
             $dados[] = $retorno;
         }
     }
-
     return $dados;
 }
 
@@ -978,6 +978,8 @@ function upsertComentario($dados)
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
 
     if (DBExecute($sql)) {
+        $id_mensagem = DBInsertID();
+        
         // Envio de Push Notification
         $usuario = getUsuariosById($id_usuario);
         $nome_usuario = $usuario['nome'] ?? "Conselheiro";
@@ -991,7 +993,7 @@ function upsertComentario($dados)
         $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
 
         exec($comando);
-        return "ok";
+        return $id_mensagem;
     } else {
         return "erro";
     }
@@ -1427,6 +1429,46 @@ function getDiligenciaAnexos($id_diligencia)
         }
     }
     return $dados;
+}
+
+function getMensagemAnexos($id_mensagem)
+{
+    $id_mensagem = DBEscape($id_mensagem);
+    $sql = "SELECT * FROM conselho.mensagem_anexos WHERE id_mensagem = '$id_mensagem' ORDER BY data_envio ASC";
+    $result = DBExecute($sql);
+    $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
+function upsertMensagemAnexo($id_mensagem, $nome, $caminho)
+{
+    $id_mensagem = DBEscape($id_mensagem);
+    $nome = DBEscape($nome);
+    $caminho = DBEscape($caminho);
+    $sql = "INSERT INTO conselho.mensagem_anexos (id_mensagem, nome_arquivo, caminho_arquivo) VALUES ('$id_mensagem', '$nome', '$caminho')";
+    return DBExecute($sql);
+}
+
+function deleteMensagemAnexo($id_anexo)
+{
+    $id_anexo = (int)$id_anexo;
+    $sql = "SELECT caminho_arquivo FROM conselho.mensagem_anexos WHERE id = $id_anexo";
+    $res = DBExecute($sql);
+    if ($res && mysqli_num_rows($res) > 0) {
+        $anexo = mysqli_fetch_assoc($res);
+        $caminho = $anexo['caminho_arquivo'];
+        if (file_exists($caminho)) {
+            unlink($caminho);
+        }
+        $sql_del = "DELETE FROM conselho.mensagem_anexos WHERE id = $id_anexo";
+        return DBExecute($sql_del);
+    }
+    return false;
 }
 
 function deleteDiligenciaAnexo($id_anexo)

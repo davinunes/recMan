@@ -535,31 +535,107 @@ $(document).on('click', '#logout', function () { // DesLogar Usuario
 $(document).on('click', '#comentar', function () { // Inserir mensagem no Recurso
     let metodo = "novoComentario";
     let idRec = $('#idRecurso').attr('idRec');
-    const formData = $("#postMessageForm").serializeArray();
-    formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
-    console.log(formData);
+    const formElement = document.getElementById('postMessageForm');
+    const formData = new FormData(formElement);
+    formData.append('id_recurso', idRec);
 
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
-        url: url,
-        method: "POST", // Defina o método como POST
+        url: 'metodo.php?metodo=' + metodo,
+        method: "POST",
         data: formData,
-        // data: formData, // Adicione o objeto 'data' aqui
+        contentType: false,
+        processData: false,
         success: function (responseData) {
-            if (responseData === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.trim() === "ok") {
+                M.toast({ html: "Comentário enviado!", classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData, classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
+            M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
+        }
+    });
+});
+
+$(document).on('click', '.editComment', function () { 
+    let id = $(this).attr("comment");
+    let comentario = $(this).closest("li.collection-item").find("p").html();
+    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    
+    $("#messageTextComment").val(comentario);
+    $("#editMessageId").val(id);
+    
+    // Buscar anexos existentes
+    $("#existingAttachmentsComment").html('<p class="center">Carregando anexos...</p>');
+    $.ajax({
+        url: "metodo.php?metodo=getComentarioAnexos",
+        method: "POST",
+        data: { id_mensagem: id },
+        success: function (res) {
+            const anexos = JSON.parse(res);
+            let html = "";
+            if (anexos.length > 0) {
+                anexos.forEach(ax => {
+                    html += `
+                    <div class="chip" id="anexo_msg_${ax.id}">
+                        <i class="material-icons left tiny">attach_file</i>
+                        ${ax.nome_arquivo}
+                        <i class="close_anexo_mensagem material-icons right" style="cursor:pointer; font-size: 1.2rem; margin-left:8px" idanexo="${ax.id}">close</i>
+                    </div>`;
+                });
+            } else {
+                html = "<p class='grey-text' style='padding-left:10px; font-size:0.8rem'>Nenhum anexo prévio.</p>";
+            }
+            $("#existingAttachmentsComment").html(html);
+        }
+    });
+
+    // Limpar o arquivo anterior do campo caso exista
+    $("#editMessageForm").find(".file-path").val("");
+    $("#editMessageForm").find("input[type=file]").val("");
+});
+
+$(document).on('click', '.close_anexo_mensagem', function () {
+    const idAnexo = $(this).attr('idanexo');
+    if (!confirm("Deseja realmente excluir permanentemente este anexo?")) return;
+
+    $.ajax({
+        url: "metodo.php?metodo=deleteAnexoComentario",
+        method: "POST",
+        data: { id_anexo: idAnexo },
+        success: function (res) {
+            if (res.trim() === "ok") {
+                $(`#anexo_msg_${idAnexo}`).fadeOut();
+                M.toast({ html: "Anexo excluído!", classes: "rounded orange" });
+            } else {
+                M.toast({ html: res, classes: "rounded red" });
+            }
+        }
+    });
+});
+
+$(document).on('click', '#updateComment', function () { 
+    const formElement = document.getElementById('editMessageForm');
+    const formData = new FormData(formElement);
+    
+    $.ajax({
+        url: 'metodo.php?metodo=editaComentario',
+        method: "POST",
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (responseData) {
+            if (responseData.trim() === "ok") {
+                M.toast({ html: "Comentário atualizado!", classes: 'rounded green' });
+                window.location.reload();
+            } else {
+                M.toast({ html: responseData, classes: 'rounded red' });
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
         }
     });
 });
@@ -678,8 +754,8 @@ $(document).on('click', '#updateDiligence', function () {
     });
 });
 
-// Suporte para Ctrl + V (Paste) de imagens nos campos de diligência
-$(document).on('paste', '#diligenciaText, #messageTextDiligencia', function (e) {
+// Suporte para Ctrl + V (Paste) de imagens nos campos de texto
+$(document).on('paste', '#diligenciaText, #messageTextDiligencia, #messageText, #messageTextComment', function (e) {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     const textarea = $(this);
     const form = textarea.closest('form');

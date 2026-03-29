@@ -38,6 +38,16 @@ CREATE TABLE IF NOT EXISTS `config_sistema` (
     `valor` TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- 6. Table for comment attachments
+CREATE TABLE IF NOT EXISTS `conselho`.`mensagem_anexos` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `id_mensagem` BIGINT(20) NOT NULL,
+  `nome_arquivo` VARCHAR(255) NOT NULL,
+  `caminho_arquivo` TEXT NOT NULL,
+  `data_envio` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`id_mensagem`) REFERENCES `conselho`.`mensagem` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- Initial default configs
 INSERT IGNORE INTO `config_sistema` (`chave`, `valor`) VALUES ('copiar_subsindicos_diligencia', '0');
 INSERT IGNORE INTO `config_sistema` (`chave`, `valor`) VALUES ('copiar_subsindicos_parecer', '0');

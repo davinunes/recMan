@@ -223,8 +223,16 @@ if ($esseRecurso == null) {
         }
         echo '<li class="collection-item avatar">
 				<img src="' . $mensagem['avatar'] . '" alt="" class="circle">
-				' . $actions . "<p>" . $textoFormatado . '</p>
-				</li>';
+				' . $actions . "<p>" . $textoFormatado . '</p>';
+        
+        if (!empty($mensagem['anexos'])) {
+            echo '<div style="margin-top:5px">';
+            foreach ($mensagem['anexos'] as $ma) {
+                echo '<a href="' . $ma['caminho_arquivo'] . '" target="_blank" class="chip" style="height: 22px; line-height: 22px; font-size: 0.7rem;"><i class="material-icons tiny">attach_file</i>' . $ma['nome_arquivo'] . '</a> ';
+            }
+            echo '</div>';
+        }
+        echo '</li>';
     }
     echo '</ul>';
     // dump($mensagens);
@@ -330,10 +338,19 @@ if ($esseRecurso == null) {
     <div class="modal-content">
         <h4>Novo comentário</h4>
         <p>Formulário para inserir um novo comentário...</p>
-        <form id="postMessageForm">
+        <form id="postMessageForm" enctype="multipart/form-data">
             <div class="input-field">
                 <textarea id="messageText" class="materialize-textarea" name="messageText" required></textarea>
                 <label for="messageText">Mensagem</label>
+            </div>
+            <div class="file-field input-field">
+                <div class="btn blue">
+                    <span>+ Anexos</span>
+                    <input type="file" name="anexos[]" multiple>
+                </div>
+                <div class="file-path-wrapper">
+                    <input class="file-path validate" type="text" placeholder="Anexar arquivos ao comentário">
+                </div>
             </div>
         </form>
     </div>
@@ -422,11 +439,23 @@ if ($esseRecurso == null) {
     <div class="modal-content">
         <h4>Editar comentário</h4>
         <p>Edite o seu Comentário...</p>
-        <form id="postMessageForm">
+        <form id="editMessageForm" enctype="multipart/form-data">
+            <input type="hidden" name="id_mensagem" id="editMessageId">
             <div class="input-field">
-                <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto"
-                    required></textarea>
+                <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
                 <label for="messageText">Mensagem</label>
+            </div>
+            <div id="existingAttachmentsComment" class="row" style="margin-bottom: 0px;">
+                <!-- Anexos aparecerão aqui via JS -->
+            </div>
+            <div class="file-field input-field">
+                <div class="btn blue">
+                    <span>+ Anexos</span>
+                    <input type="file" name="anexos[]" multiple>
+                </div>
+                <div class="file-path-wrapper">
+                    <input class="file-path validate" type="text" placeholder="Adicionar mais arquivos ao comentário">
+                </div>
             </div>
         </form>
     </div>

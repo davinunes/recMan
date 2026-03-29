@@ -86,17 +86,73 @@ switch ($_GET['metodo']) {
         $dados = $_POST;
         $dados["user_id"] = $_SESSION["user_id"];
 
-        $response = upsertComentario($dados);
-        echo $response;
+        $id_mensagem = upsertComentario($dados);
+        if (is_numeric($id_mensagem)) {
+            // Process uploads
+            if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
+                foreach ($_FILES['anexos']['name'] as $i => $name) {
+                    if ($_FILES['anexos']['error'][$i] === UPLOAD_ERR_OK) {
+                        $tmpName = $_FILES['anexos']['tmp_name'][$i];
+                        $ext = pathinfo($name, PATHINFO_EXTENSION);
+                        $fileName = "msg_{$id_mensagem}_{$i}_" . time() . ".$ext";
+                        $fullPath = "storage/comentarios/$fileName";
+
+                        if (!is_dir("storage/comentarios")) mkdir("storage/comentarios", 0777, true);
+
+                        if (move_uploaded_file($tmpName, $fullPath)) {
+                            upsertMensagemAnexo($id_mensagem, $name, $fullPath);
+                        }
+                    }
+                }
+            }
+            echo "ok";
+        } else {
+            echo $id_mensagem;
+        }
         break;
     case "editaComentario":
         session_start();
 
         $dados = $_POST;
+        $dados['id_comentario'] = $dados['id_mensagem']; // Ajuste para o repositório
+        $dados['comentario'] = $dados['messageText'];    // Ajuste para o repositório
         $dados['usuario'] = $_SESSION["user_id"];
+        
         $response = updateComentario($dados);
-        echo $response;
+        
+        if ($response === "ok") {
+            $id_msg = $dados['id_mensagem'];
+            // Process uploads
+            if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
+                foreach ($_FILES['anexos']['name'] as $i => $name) {
+                    if ($_FILES['anexos']['error'][$i] === UPLOAD_ERR_OK) {
+                        $tmpName = $_FILES['anexos']['tmp_name'][$i];
+                        $ext = pathinfo($name, PATHINFO_EXTENSION);
+                        $fileName = "msg_{$id_msg}_updated_{$i}_" . time() . ".$ext";
+                        $fullPath = "storage/comentarios/$fileName";
 
+                        if (!is_dir("storage/comentarios")) mkdir("storage/comentarios", 0777, true);
+
+                        if (move_uploaded_file($tmpName, $fullPath)) {
+                            upsertMensagemAnexo($id_msg, $name, $fullPath);
+                        }
+                    }
+                }
+            }
+        }
+        echo $response;
+        break;
+    case "getComentarioAnexos":
+        $id = $_POST['id_mensagem'];
+        echo json_encode(getMensagemAnexos($id));
+        break;
+    case "deleteAnexoComentario":
+        $id = $_POST['id_anexo'];
+        if (deleteMensagemAnexo($id)) {
+            echo "ok";
+        } else {
+            echo "Erro ao deletar";
+        }
         break;
     case "novaDiligencia":
         session_start();
