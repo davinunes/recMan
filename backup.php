@@ -107,9 +107,24 @@ if (isset($_GET['action'])) {
     }
 
     if ($_GET['action'] == 'decrypt' && isset($_FILES['backup_file'])) {
-        $tmpFile = $_FILES['backup_file']['tmp_name'];
-        $outName = $_FILES['backup_file']['name'] . ".decrypted.tar.gz";
+        $file = $_FILES['backup_file'];
+        $tmpFile = $file['tmp_name'];
+        $outName = $file['name'] . ".decrypted.tar.gz";
         $outPath = $backupBase . $outName;
+
+        // Diagnóstico de Erro de Upload
+        if ($file['error'] !== UPLOAD_ERR_OK || empty($tmpFile)) {
+            $errorMsg = "Erro no upload do PHP (Código: " . $file['error'] . "). ";
+            if ($file['error'] === 1 || $file['error'] === 2) $errorMsg .= "O arquivo excede o limite (upload_max_filesize / post_max_size).";
+            if ($file['error'] === 4) $errorMsg .= "Nenhum arquivo enviado.";
+            
+            echo json_encode([
+                'success' => false,
+                'error' => $errorMsg,
+                'debug' => "PHP _FILES: " . json_encode($file)
+            ]);
+            exit;
+        }
 
         $cmd = "openssl enc -d -aes-256-cbc -salt -in " . escapeshellarg($tmpFile) . " -out " . escapeshellarg($outPath) . " -pass pass:" . escapeshellarg($password) . " 2>&1";
         $output = [];
