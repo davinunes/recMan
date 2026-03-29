@@ -7,7 +7,7 @@ echo "<h3>Iniciando Migration para Web Push Notifications</h3>";
 
 $sql = file_get_contents("storage/migrations_20260329.sql");
 
-if (DBExecute($sql)) {
+if (DBMultiExecute($sql)) {
     echo "<p style='color:green;'>1. Tabelas criadas ou ja existentes.</p>";
 } else {
     echo "<p style='color:red;'>Erro ao criar tabelas.</p>";

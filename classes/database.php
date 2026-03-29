@@ -92,4 +92,16 @@ function DBInsertID()
 	DBClose($link);
 	return $id;
 }
+
+function DBMultiExecute($query)
+{
+	$link = DBConnect();
+	$result = mysqli_multi_query($link, $query);
+	if (!$result) {
+		die(mysqli_error($link) . " [MultiQuery: $query]");
+	}
+	while (mysqli_more_results($link) && mysqli_next_result($link));
+	DBClose($link);
+	return true;
+}
 ?>
