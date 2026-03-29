@@ -396,6 +396,36 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         x-text="dadosRecurso.detalhes || ''"></div>
                 </div>
 
+                <!-- Diligências do Conselho -->
+                <template x-if="listaDiligencias && listaDiligencias.length > 0">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-orange-500 uppercase tracking-widest block mb-1">Diligências do Conselho</span>
+                        <div class="space-y-4">
+                            <template x-for="dil in listaDiligencias" :key="dil.id">
+                                <div class="bg-white p-4 rounded-lg border-l-4 border-orange-400 shadow-sm">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="text-[10px] font-bold text-gray-400 uppercase" x-text="new Date(dil.timestamp.replace(' ', 'T')).toLocaleString()"></span>
+                                        <span class="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded">OFICIAL</span>
+                                    </div>
+                                    <p class="text-sm text-gray-800 whitespace-pre-wrap" x-text="dil.texto"></p>
+                                    
+                                    <!-- Anexos da Diligência -->
+                                    <template x-if="dil.anexos && dil.anexos.length > 0">
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            <template x-for="anx in dil.anexos" :key="anx.id">
+                                                <a :href="'../'+anx.caminho_arquivo" target="_blank" class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] rounded border transition">
+                                                    <span class="material-icons text-xs mr-1">attach_file</span>
+                                                    <span x-text="anx.nome_arquivo"></span>
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
                 <div class="mb-6" x-show="listaAnexos && listaAnexos.length > 0">
                     <span class="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Arquivos e
                         Provas</span>
@@ -488,6 +518,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 
                 dadosRecurso: {},
                 listaAnexos: [],
+                listaDiligencias: [],
                 carregandoAcao: false,
 
                 dados: {
@@ -761,6 +792,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         if (res.success) {
                             this.dadosRecurso = res.recurso;
                             this.listaAnexos = res.anexos;
+                            this.listaDiligencias = res.diligencias || [];
                         } else {
                             this.mostraErro(res.error || "Erro ao carregar os dados do recurso.");
                         }

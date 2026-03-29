@@ -165,7 +165,7 @@ if ($esseRecurso == null) {
     </div>
 </div>';
 
-    echo "<h6><b>Análise da Diligência</b></h6>";
+    echo "<h6><b>Diligências (Visível ao Morador)</b></h6>";
 
     echo '<div class="row">
     <div class="">
@@ -173,21 +173,41 @@ if ($esseRecurso == null) {
             ';
     foreach ($diligencias as $mensagem) {
         $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
-        $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
-        if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
-            $actions = "<span class='actions'><a class='editDiligence modal-trigger' href='#editaDiligencia' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
+        $textoFormatado = str_replace(["\r\n", "\r", "\n"], "<br>", htmlspecialchars($mensagem['texto']));
+        $enviada = ($mensagem['enviada_ao_requerente'] == 1);
+        $classeEnviada = $enviada ? "green lighten-5" : "";
+        $iconeEnviada = $enviada ? "<i class='material-icons tiny blue-text' title='Enviada ao requerente (ID: {$mensagem['gmail_id']})'>email</i>" : "";
+        
+        $actions = "<span class='actions'>";
+        if ($_SESSION["user_id"] == $mensagem["id_usuario"] && !$enviada) {
+            $actions .= "<a class='editDiligence modal-trigger' href='#editaDiligencia' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a>";
         } else {
-            $actions = "<span class='actions'>$dataFormatada</span>";
+            $actions .= "$dataFormatada $iconeEnviada";
         }
-        echo '<li class="collection-item avatar">
+        
+        if (!$enviada) {
+            $actions .= " <a class='notificarRequerente' comment='{$mensagem['id']}' style='cursor:pointer'><i class='material-icons tiny orange-text text-darken-3' title='Notificar Requerente via E-mail'>send</i></a>";
+        }
+        $actions .= "</span>";
+
+        echo '<li class="collection-item avatar ' . $classeEnviada . '">
 				<img src="' . $mensagem['avatar'] . '" alt="" class="circle">
-				' . $actions . "<p>" . $mensagem['texto'] . '</p>
-				</li>';
+				' . $actions . "<p>" . $textoFormatado . '</p>';
+        
+        $dilAnexos = getDiligenciaAnexos($mensagem['id']);
+        if (!empty($dilAnexos)) {
+            echo '<div style="margin-top:5px">';
+            foreach ($dilAnexos as $da) {
+                echo '<a href="' . $da['caminho_arquivo'] . '" target="_blank" class="chip" style="height: 22px; line-height: 22px; font-size: 0.7rem;"><i class="material-icons tiny">attach_file</i>' . $da['nome_arquivo'] . '</a> ';
+            }
+            echo '</div>';
+        }
+		echo '</li>';
     }
     echo '</ul>';
 
 
-    echo "<h6><b>Comentários</b></h6>";
+    echo "<h6><b>Comentários Internos (Privativo)</b></h6>";
 
     echo '<div class="row">
     <div class="">
@@ -195,7 +215,7 @@ if ($esseRecurso == null) {
             ';
     foreach ($mensagens as $mensagem) {
         $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
-        $mensagem = str_replace(["\r\n", "\r", "\n"], "<br>", $mensagem);
+        $textoFormatado = str_replace(["\r\n", "\r", "\n"], "<br>", htmlspecialchars($mensagem['texto']));
         if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
             $actions = "<span class='actions'><a class='editComment modal-trigger' href='#editaComentario' comment='{$mensagem['id']}'>$dataFormatada <i class='green-text text-darken-2 material-icons Tiny'>edit</i></a></span>";
         } else {
@@ -203,7 +223,7 @@ if ($esseRecurso == null) {
         }
         echo '<li class="collection-item avatar">
 				<img src="' . $mensagem['avatar'] . '" alt="" class="circle">
-				' . $actions . "<p>" . $mensagem['texto'] . '</p>
+				' . $actions . "<p>" . $textoFormatado . '</p>
 				</li>';
     }
     echo '</ul>';
@@ -214,6 +234,24 @@ if ($esseRecurso == null) {
     foreach ($vaga as $vg) {
         echo "<div class='chip'>Vaga " . $vg['id_estacionamento'] . " " . $vg['local'] . " </div>";
     }
+
+
+    // Seção de Ocorrências Vinculadas
+    $ocorrenciasVinculadas = getOcorrenciasVinculadas($esseRecurso);
+    echo "<h6><b>Ocorrências Condomínio Digital Vinculadas</b></h6>";
+    echo '<div class="collection">';
+    if (!empty($ocorrenciasVinculadas)) {
+        foreach ($ocorrenciasVinculadas as $oc) {
+            echo '<a href="' . $oc['url'] . '" target="_blank" class="collection-item">
+                    <span class="new badge blue" data-badge-caption="">ID ' . $oc['id'] . '</span>
+                    <b>' . $oc['bloco'] . ' / ' . $oc['unidade'] . '</b> - ' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '
+                    <span class="secondary-content"><i class="material-icons">open_in_new</i></span>
+                  </a>';
+        }
+    } else {
+        echo '<p class="grey-text p-10" style="padding:10px">Nenhuma ocorrência vinculada.</p>';
+    }
+    echo '</div>';
 
 
     echo "<h6><b>Histórico da unidade</b></h6>";
@@ -264,6 +302,7 @@ if ($esseRecurso == null) {
         echo '<a class="modal-trigger btn orange darken-3" href="#votoModal">Votar</a> ';
     }
     echo '<a class="modal-trigger btn orange black-3" href="#addiligencia">Adicionar Diligencia</a> ';
+    echo '<a class="modal-trigger btn indigo" href="#vincularOcorrenciaModal">Vincular Livro</a> ';
 
     if ($result['fase'] == 4)
         echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
@@ -305,17 +344,63 @@ if ($esseRecurso == null) {
 <!-- Modal de Diligencia -->
 <div id="addiligencia" class="modal">
     <div class="modal-content">
-        <h4>Nova Diligencia</h4>
-        <p>Relate como se deu a apuração do fato até finalização da notificação. Quanto mais detalhes melhor.</p>
-        <form id="postDiligenciaForm">
+        <h4>Nova Diligência</h4>
+        <p>Relate como se deu a apuração do fato. Estas mensagens serão visíveis ao morador caso você as notifique.</p>
+        <form id="postDiligenciaForm" enctype="multipart/form-data">
             <div class="input-field">
-                <textarea id="messageText" class="materialize-textarea" name="messageText" required></textarea>
-                <label for="messageText">Mensagem</label>
+                <textarea id="diligenciaText" class="materialize-textarea" name="messageText" required></textarea>
+                <label for="diligenciaText">Mensagem</label>
+            </div>
+            <div class="file-field input-field">
+                <div class="btn blue">
+                    <span>Anexos</span>
+                    <input type="file" name="anexos[]" multiple>
+                </div>
+                <div class="file-path-wrapper">
+                    <input class="file-path validate" type="text" placeholder="Upload de um ou mais arquivos">
+                </div>
             </div>
         </form>
     </div>
     <div class="modal-footer">
         <a id="diligenciar" class="modal-close waves-effect waves-green btn-flat">Anotar</a>
+    </div>
+</div>
+
+<div id="editaDiligencia" class="modal">
+    <div class="modal-content">
+        <h4>Editar Diligência</h4>
+        <p>Edite a sua Diligência...</p>
+        <form id="editDiligenciaForm">
+            <div class="input-field">
+                <textarea id="messageTextDiligencia" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
+                <label for="messageTextDiligencia">Mensagem</label>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a id="updateDiligence" class="modal-close waves-effect waves-green btn-flat">Salvar</a>
+    </div>
+</div>
+
+<div id="vincularOcorrenciaModal" class="modal">
+    <div class="modal-content">
+        <h4>Vincular Livro de Ocorrência</h4>
+        <p>Busque por ID ou por Unidade (Ex: A/101)</p>
+        <div class="row">
+            <div class="input-field col s9">
+                <input type="text" id="buscaOcorrenciaInput" placeholder="ID ou Bloco/Unidade">
+            </div>
+            <div class="col s3">
+                <button class="btn" id="btnBuscaOcorrencia" style="margin-top:15px">Buscar</button>
+            </div>
+        </div>
+        <div id="resultadoBuscaOcorrencia" class="collection">
+            <!-- Resultados aparecerão aqui -->
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-red btn-flat">Cancelar</a>
     </div>
 </div>
 <!-- Modal de Nova Mensagem -->

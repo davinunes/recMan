@@ -76,6 +76,9 @@ switch ($pag) {
 	case "statsSoluc":
 		include "palco/statsSoluc.php";
 		break;
+	case "configuracoes_email":
+		include "palco/configuracoes_email.php";
+		break;
 	case "dashboard":
 		include "palco/dashboard.php";
 		break;

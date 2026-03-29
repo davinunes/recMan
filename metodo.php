@@ -87,25 +87,166 @@
 			$dados["user_id"] = $_SESSION["user_id"];
 
             $response = upsertComentario($dados);
-			echo $response;
-            break;
-		case "novaDiligencia":
+    echo $response;
+    break;
+case "editaComentario":
+    session_start();
+
+    $dados = $_POST;
+    $dados['usuario'] = $_SESSION["user_id"];
+    $response = updateComentario($dados);
+    echo $response;
+
+    break;
+case "novaDiligencia":
 			session_start();
 			
             $dados = $_POST;
 			$dados["user_id"] = $_SESSION["user_id"];
 
-            $response = upsertDiligencia($dados);
-			echo $response;
+            $id_diligencia = upsertDiligencia($dados);
+			if (is_numeric($id_diligencia) || $id_diligencia === "ok") {
+                // If it's the first time and returning ID (I should update upsertDiligencia to return ID)
+                if ($id_diligencia === "ok") {
+                    // This is a bit of a hack since old version returned "ok", I'll check last insert id
+                    // Actually, I should update upsertDiligencia to return the ID. 
+                    // Let's assume for now we can get the ID from the database if needed, 
+                    // but I'll update upsertDiligencia in the next step.
+                }
+
+                // Handle file uploads
+                if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
+                    // I need the actual ID now. Let's get it.
+                    $sql_id = "SELECT id FROM conselho.diligencia WHERE id_usuario = '{$dados["user_id"]}' AND id_recurso = '{$dados["id_recurso"]}' ORDER BY id DESC LIMIT 1";
+                    $res_id = DBExecute($sql_id);
+                    $row_id = mysqli_fetch_assoc($res_id);
+                    $id_dil = $row_id['id'];
+
+                    foreach ($_FILES['anexos']['name'] as $i => $name) {
+                        if ($_FILES['anexos']['error'][$i] === UPLOAD_ERR_OK) {
+                            $tmpName = $_FILES['anexos']['tmp_name'][$i];
+                            $ext = pathinfo($name, PATHINFO_EXTENSION);
+                            $fileName = "dil_{$id_dil}_{$i}_" . time() . ".$ext";
+                            $fullPath = "storage/diligencias/$fileName";
+                            
+                            if (!is_dir("storage/diligencias")) mkdir("storage/diligencias", 0777, true);
+
+                            if (move_uploaded_file($tmpName, $fullPath)) {
+                                upsertDiligenciaAnexo($id_dil, $name, $fullPath);
+                            }
+                        }
+                    }
+                }
+                echo "ok";
+            } else {
+                echo $id_diligencia;
+            }
             break;
-		case "editaComentario":
+		case "editaDiligencia":
 			session_start();
 			
             $dados = $_POST;
 			$dados['usuario'] = $_SESSION["user_id"];
-			$response = updateComentario($dados);
+			$response = updateDiligencia($dados);
 			echo $response;
+            break;
+        case "notificarRequerente":
+            session_start();
+            require_once "classes/mail_helper.php";
+            
+            $id_diligencia = $_POST['id_diligencia'];
+            $diligencia = getDiligenciaById($id_diligencia);
+            if (!$diligencia) {
+                echo "Diligência não encontrada";
+                break;
+            }
 
+            $recurso = getRecursoById($diligencia['id_recurso']);
+            if (!$recurso) {
+                echo "Recurso não encontrado";
+                break;
+            }
+
+            $emailRequerente = $recurso['email'];
+            if (!$emailRequerente) {
+                echo "E-mail do requerente não cadastrado";
+                break;
+            }
+
+            // Get boardroom emails
+            $configs = getConfigEmails();
+            $cc = [];
+            $sindicoEmail = null;
+            $copiarSubs = getConfigSistema('copiar_subsindicos_diligencia') == '1';
+
+            foreach ($configs as $config) {
+                if (!$config['ativo']) continue;
+                if ($config['funcao'] == 'sindico') {
+                    $sindicoEmail = $config['email'];
+                } else if ($config['funcao'] == 'administracao') {
+                    $cc[] = $config['email'];
+                } else if ($config['funcao'] == 'subsindico' && $copiarSubs) {
+                    // Check if it's the sub for the resource block
+                    if ($config['bloco'] == $recurso['bloco']) {
+                        $cc[] = $config['email'];
+                    }
+                }
+            }
+            
+            if ($sindicoEmail) {
+                $cc[] = $sindicoEmail;
+            }
+
+            $assunto = "Diligência do Recurso: " . $recurso['numero'];
+            $corpo = "<h3>Olá,</h3>
+                      <p>O Conselho de Administração do Condomínio registrou uma diligência referente ao seu recurso <b>{$recurso['numero']}</b>:</p>
+                      <hr>
+                      <p><i>\"" . nl2br(htmlspecialchars($diligencia['texto'])) . "\"</i></p>
+                      <hr>
+                      <p>Você pode acompanhar o andamento do seu recurso através do portal do condômino.</p>
+                      <p>Atenciosamente,<br>Conselho de Administração</p>";
+
+            $anexos = getDiligenciaAnexos($id_diligencia);
+            $mailAnexos = [];
+            foreach ($anexos as $anexo) {
+                $mailAnexos[] = [
+                    'path' => $anexo['caminho_arquivo'],
+                    'name' => $anexo['nome_arquivo']
+                ];
+            }
+
+            $mime = MailHelper::buildMimeMessage($emailRequerente, $assunto, $corpo, $cc, [], $mailAnexos);
+            $resMail = MailHelper::sendViaGmail($mime);
+
+            if (isset($resMail['id'])) {
+                marcarDiligenciaEnviada($id_diligencia, $resMail['id']);
+                echo "ok";
+            } else {
+                echo "Erro ao enviar email: " . (isset($resMail['error']) ? $resMail['error'] : json_encode($resMail));
+            }
+            break;
+        case "buscarOcorrencia":
+            $termo = $_POST['termo'];
+            $res = buscarOcorrenciaDigital($termo);
+            echo json_encode($res);
+            break;
+        case "vincularOcorrencia":
+            $idRec = $_POST['id_recurso'];
+            $idOc = $_POST['id_ocorrencia'];
+            if (linkRecursoOcorrencia($idRec, $idOc)) {
+                echo "ok";
+            } else {
+                echo "Erro ao vincular";
+            }
+            break;
+        case "getConfigEmails":
+            echo json_encode(getConfigEmails());
+            break;
+        case "upsertConfigEmail":
+            if (upsertConfigEmail($_POST)) echo "ok"; else echo "erro";
+            break;
+        case "upsertConfigSistema":
+            if (upsertConfigSistema($_POST['chave'], $_POST['valor'])) echo "ok"; else echo "erro";
             break;
 		case "editaParecer":
 			session_start();

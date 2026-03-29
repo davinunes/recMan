@@ -389,6 +389,17 @@ if (
         $recurso = mysqli_fetch_assoc($res);
 
         $anexos = getAnexos($numeroRec);
+        
+        // Buscar diligências enviadas ao requerente
+        $sqlDil = "SELECT id, texto, timestamp FROM conselho.diligencia WHERE id_recurso = '" . DBEscape($recurso['id']) . "' AND enviada_ao_requerente = 1 ORDER BY timestamp ASC";
+        $resDil = DBExecute($sqlDil);
+        $diligencias = [];
+        if ($resDil) {
+            while ($d = mysqli_fetch_assoc($resDil)) {
+                $d['anexos'] = getDiligenciaAnexos($d['id']);
+                $diligencias[] = $d;
+            }
+        }
 
         // Remove campos sensiveis
         unset($recurso['token']);
@@ -396,7 +407,8 @@ if (
         echo json_encode([
             'success' => true,
             'recurso' => $recurso,
-            'anexos' => $anexos
+            'anexos' => $anexos,
+            'diligencias' => $diligencias
         ]);
         exit;
     }

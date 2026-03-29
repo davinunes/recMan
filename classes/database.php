@@ -54,13 +54,19 @@ function DBEscape($dados)
 	return $dados;
 }
 
-function DBExecute($query)
+function DBExecute($query, $returnId = false)
 { # Executa um Comando na Conexão
 	$link = DBConnect();
-	$result = mysqli_query($link, $query) or die(mysqli_error($link));
+	$result = mysqli_query($link, $query) or die(mysqli_error($link) . " [Query: $query]");
+
+	if ($returnId) {
+		$res = mysqli_insert_id($link);
+	} else {
+		$res = $result;
+	}
 
 	DBClose($link);
-	return $result;
+	return $res;
 }
 
 function DBQuery($sql)
@@ -77,5 +83,13 @@ function DBQuery($sql)
 		return null;
 
 	}
+}
+
+function DBInsertID()
+{
+	$link = DBConnect();
+	$id = mysqli_insert_id($link);
+	DBClose($link);
+	return $id;
 }
 ?>

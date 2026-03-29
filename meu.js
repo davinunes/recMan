@@ -567,36 +567,139 @@ $(document).on('click', '#comentar', function () { // Inserir mensagem no Recurs
 $(document).on('click', '#diligenciar', function () { // Inserir diligencia no Recurso
     let metodo = "novaDiligencia";
     let idRec = $('#idRecurso').attr('idRec');
-    const formData = $("#postDiligenciaForm").serializeArray();
-    formData.push({ name: 'id_recurso', value: idRec }); // Adiciona o idRec ao formData
-    console.log(formData);
+    
+    // Usar FormData para suportar upload de arquivos
+    const formElement = document.getElementById('postDiligenciaForm');
+    const formData = new FormData(formElement);
+    formData.append('id_recurso', idRec);
 
-    // Realizar a solicitação GET para obter os dados desejados
+    // Realizar a solicitação POST
     let url = 'metodo.php?metodo=' + metodo;
     $.ajax({
         url: url,
-        method: "POST", // Defina o método como POST
+        method: "POST",
         data: formData,
-        // data: formData, // Adicione o objeto 'data' aqui
+        contentType: false,
+        processData: false,
         success: function (responseData) {
-            if (responseData === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
-                window.location.reload();
+            if (responseData.trim() === "ok") {
+                M.toast({ html: "Diligência salva com sucesso!", classes: 'rounded green' });
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData, classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
+            M.toast({ html: 'Erro ao salvar diligência', classes: 'rounded red' });
         }
     });
 });
 
-$(document).on('click', '.opVoto', function () { // Inserir mensagem no Recurso
+$(document).on('click', '.editDiligence', function () {
+    let comentario = $(this).closest("li.collection-item").find("p").html();
+    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    $("#messageTextDiligencia").val(comentario);
+    $("#messageTextDiligencia").attr("diligencia_id", $(this).attr("comment"));
+});
+
+$(document).on('click', '#updateDiligence', function () {
+    let mensagem = $("#messageTextDiligencia").val();
+    let id_diligencia = $("#messageTextDiligencia").attr("diligencia_id");
+
+    const formData = {
+        id_diligencia: id_diligencia,
+        mensagem: mensagem
+    };
+
+    $.ajax({
+        url: "metodo.php?metodo=editaDiligencia",
+        method: "POST",
+        data: formData,
+        success: function (responseData) {
+            if (responseData.trim() === "ok") {
+                M.toast({ html: "Diligência atualizada!", classes: 'rounded green' });
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                M.toast({ html: responseData, classes: 'rounded red' });
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
+        }
+    });
+});
+
+$(document).on('click', '.notificarRequerente', function () {
+    const id = $(this).attr('comment');
+    if (!confirm("Deseja enviar esta diligência por e-mail ao requerente e à administração? Após enviada, ela não poderá ser editada.")) return;
+
+    M.toast({ html: "Enviando notificação...", classes: 'rounded' });
+
+    $.ajax({
+        url: "metodo.php?metodo=notificarRequerente",
+        method: "POST",
+        data: { id_diligencia: id },
+        success: function (response) {
+            if (response.trim() === "ok") {
+                M.toast({ html: "Notificação enviada com sucesso!", classes: 'rounded green' });
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                M.toast({ html: response, classes: 'rounded red' });
+            }
+        },
+        error: function () {
+            M.toast({ html: "Erro crítico ao enviar notificação", classes: 'rounded red' });
+        }
+    });
+});
+
+$(document).on('click', '#btnBuscaOcorrencia', function () {
+    const termo = $('#buscaOcorrenciaInput').val();
+    if (!termo) return M.toast({ html: "Digite um termo de busca", classes: 'rounded' });
+
+    $.ajax({
+        url: "metodo.php?metodo=buscarOcorrencia",
+        method: "POST",
+        data: { termo: termo },
+        success: function (response) {
+            const data = JSON.parse(response);
+            let html = "";
+            if (data.length > 0) {
+                data.forEach(oc => {
+                    html += `<a href="#!" class="collection-item vincularEstaOcorrencia" idOc="${oc.id}">
+                                <b>ID ${oc.id}</b> - ${oc.bloco}/${oc.unidade} - ${oc.status}
+                                <br><small>${oc.abertura}</small>
+                             </a>`;
+                });
+            } else {
+                html = "<p class='p-10 grey-text'>Nenhuma ocorrência encontrada.</p>";
+            }
+            $('#resultadoBuscaOcorrencia').html(html);
+        }
+    });
+});
+
+$(document).on('click', '.vincularEstaOcorrencia', function () {
+    const idOc = $(this).attr('idOc');
+    const idRec = $('#idRecurso').attr('idRec');
+
+    $.ajax({
+        url: "metodo.php?metodo=vincularOcorrencia",
+        method: "POST",
+        data: { id_recurso: idRec, id_ocorrencia: idOc },
+        success: function (response) {
+            if (response.trim() === "ok") {
+                M.toast({ html: "Vínculo realizado!", classes: 'rounded green' });
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                M.toast({ html: response, classes: 'rounded red' });
+            }
+        }
+    });
+});
+
+$(document).on('click', '.opVoto', function () { 
     let metodo = "votar";
     let idRec = $('#idRecurso').attr('idRec');
     let voto = $(this).attr('voto');

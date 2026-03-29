@@ -60,7 +60,7 @@ CREATE TABLE `diligencia` (
   KEY `id_recurso` (`id_recurso`),
   CONSTRAINT `diligencia_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`),
   CONSTRAINT `diligencia_ibfk_2` FOREIGN KEY (`id_recurso`) REFERENCES `recurso` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -113,7 +113,7 @@ CREATE TABLE `mensagem` (
   KEY `mensagem_FK_usuario` (`id_usuario`),
   CONSTRAINT `mensagem_FK_recurso` FOREIGN KEY (`id_recurso`) REFERENCES `recurso` (`id`),
   CONSTRAINT `mensagem_FK_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=606 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=650 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -139,7 +139,7 @@ CREATE TABLE `multas_cobradas` (
   KEY `idx_unidade_bloco` (`unidade`,`bloco`),
   KEY `idx_data_vencimento` (`data_vencimento`),
   KEY `idx_data_pagamento` (`data_pagamento`)
-) ENGINE=InnoDB AUTO_INCREMENT=124 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=151 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -222,6 +222,26 @@ CREATE TABLE `parecer` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `push_subscriptions`
+--
+
+DROP TABLE IF EXISTS `push_subscriptions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `push_subscriptions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `endpoint` text NOT NULL,
+  `p256dh` varchar(255) NOT NULL,
+  `auth` varchar(255) NOT NULL,
+  `criado_em` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `push_subscriptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `recurso`
 --
 
@@ -241,12 +261,32 @@ CREATE TABLE `recurso` (
   `titulo` varchar(100) DEFAULT NULL COMMENT 'Titulo do Recurso a ser exibido em listas',
   `data` date DEFAULT NULL COMMENT 'Data de interposição do recurso',
   `fato` text DEFAULT 'Fato narrado na cópia da Notificação',
+  `token` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `recurso_UN` (`numero`),
   KEY `recurso_unidade_IDX` (`unidade`,`bloco`,`numero`,`id`) USING BTREE,
   KEY `recurso_FK_fase` (`fase`),
   CONSTRAINT `recurso_FK_fase` FOREIGN KEY (`fase`) REFERENCES `fase` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=513 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=551 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `recurso_anexos`
+--
+
+DROP TABLE IF EXISTS `recurso_anexos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `recurso_anexos` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `numero_recurso` varchar(100) NOT NULL,
+  `nome_arquivo` varchar(255) NOT NULL,
+  `caminho_arquivo` text NOT NULL,
+  `data_envio` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_anexos` (`numero_recurso`),
+  CONSTRAINT `fk_anexos_recurso` FOREIGN KEY (`numero_recurso`) REFERENCES `recurso` (`numero`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -265,7 +305,7 @@ CREATE TABLE `tokens` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `refresh_token` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6586 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7437 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -307,7 +347,7 @@ CREATE TABLE `votos` (
   KEY `votos_id_IDX` (`id`,`id_recurso`,`id_usuario`) USING BTREE,
   CONSTRAINT `votos_FK_recurso` FOREIGN KEY (`id_recurso`) REFERENCES `recurso` (`id`),
   CONSTRAINT `votos_FK_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1417 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1511 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -319,4 +359,4 @@ CREATE TABLE `votos` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-21 23:10:10
+-- Dump completed on 2026-03-28 20:57:28

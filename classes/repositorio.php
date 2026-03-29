@@ -241,7 +241,8 @@ function getDiligencias($recurso)
     $sql = "SELECT m.*, u.avatar 
             FROM conselho.diligencia m
 			left join conselho.usuarios u on u.id = m.id_usuario
-            WHERE id_recurso = '$recurso'";
+            WHERE id_recurso = '$recurso'
+            ORDER BY m.timestamp ASC";
 
     $result = DBExecute($sql);
     $dados = array(); // Inicializa a variável $dados como um array vazio
@@ -1001,16 +1002,9 @@ function upsertDiligencia($dados)
     $id_recurso = $dados['id_recurso'];
     $id_usuario = $dados['user_id']; // Supondo que você tenha o ID do usuário na sessão
     $mensagem = DBEscape($dados['messageText']);
+    $sql = "INSERT INTO conselho.diligencia (id_usuario, id_recurso, texto) VALUES ('$id_usuario', '$id_recurso', '$mensagem')";
 
-    $sql = "INSERT INTO conselho.diligencia ";
-    $sql .= "(id_usuario, id_recurso, texto) ";
-    $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
-
-    if (DBExecute($sql)) {
-        return "ok";
-    } else {
-        return "erro";
-    }
+    return DBExecute($sql, true);
 }
 
 function updateComentario($dados)
@@ -1339,6 +1333,186 @@ function getAnexos($numero)
     $sql = "SELECT * FROM recurso_anexos WHERE numero_recurso = '" . DBEscape($numero) . "' ORDER BY data_envio ASC";
     $result = DBExecute($sql);
     $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
+function updateDiligencia($dados)
+{
+    $id_diligencia = DBEscape($dados['id_diligencia']);
+    $mensagem = DBEscape($dados['mensagem']);
+    $usuario = DBEscape($dados['usuario']);
+
+    // Check if it was already sent (cannot edit if sent)
+    $sql_check = "SELECT enviada_ao_requerente FROM conselho.diligencia WHERE id = $id_diligencia";
+    $res_check = DBExecute($sql_check);
+    $check = mysqli_fetch_assoc($res_check);
+    if ($check && $check['enviada_ao_requerente']) {
+        return "Mensagens enviadas não podem ser editadas";
+    }
+
+    $sql = "UPDATE conselho.diligencia 
+            SET texto = '$mensagem' 
+            WHERE id = $id_diligencia 
+            AND id_usuario = $usuario";
+
+    if (DBExecute($sql)) {
+        return "ok";
+    } else {
+        return "erro";
+    }
+}
+
+function getDiligenciaById($id)
+{
+    $sql = "SELECT d.*, u.avatar, u.nome as nome_usuario 
+            FROM conselho.diligencia d
+            LEFT JOIN conselho.usuarios u ON u.id = d.id_usuario
+            WHERE d.id = '$id'";
+    $result = DBExecute($sql);
+    if ($result && mysqli_num_rows($result) > 0) {
+        return mysqli_fetch_assoc($result);
+    }
+    return false;
+}
+
+function getRecursoById($id)
+{
+    $sql = "SELECT * FROM conselho.recurso WHERE id = '$id'";
+    $result = DBExecute($sql);
+    if ($result && mysqli_num_rows($result) > 0) {
+        return mysqli_fetch_assoc($result);
+    }
+    return false;
+}
+
+function linkRecursoOcorrencia($id_recurso, $id_ocorrencia)
+{
+    $id_recurso = DBEscape($id_recurso);
+    $id_ocorrencia = DBEscape($id_ocorrencia);
+    $sql = "INSERT IGNORE INTO recurso_ocorrencia (id_recurso, id_ocorrencia) VALUES ('$id_recurso', '$id_ocorrencia')";
+    return DBExecute($sql);
+}
+
+function getOcorrenciasVinculadas($id_recurso)
+{
+    $id_recurso = DBEscape($id_recurso);
+    $sql = "SELECT o.* 
+            FROM recurso_ocorrencia ro
+            JOIN ocorrencias o ON o.id = ro.id_ocorrencia
+            WHERE ro.id_recurso = '$id_recurso'";
+    $result = DBExecute($sql);
+    $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
+function getDiligenciaAnexos($id_diligencia)
+{
+    $id_diligencia = DBEscape($id_diligencia);
+    $sql = "SELECT * FROM diligencia_anexos WHERE id_diligencia = '$id_diligencia' ORDER BY data_envio ASC";
+    $result = DBExecute($sql);
+    $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
+function upsertDiligenciaAnexo($id_diligencia, $nome, $caminho)
+{
+    $id_diligencia = DBEscape($id_diligencia);
+    $nome = DBEscape($nome);
+    $caminho = DBEscape($caminho);
+    $sql = "INSERT INTO diligencia_anexos (id_diligencia, nome_arquivo, caminho_arquivo) VALUES ('$id_diligencia', '$nome', '$caminho')";
+    return DBExecute($sql);
+}
+
+function getConfigEmails()
+{
+    $sql = "SELECT * FROM config_emails_diretoria ORDER BY funcao, bloco ASC";
+    $result = DBExecute($sql);
+    $dados = array();
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($retorno = mysqli_fetch_assoc($result)) {
+            $dados[] = $retorno;
+        }
+    }
+    return $dados;
+}
+
+function upsertConfigEmail($dados)
+{
+    $id = !empty($dados['id']) ? (int)DBEscape($dados['id']) : null;
+    $bloco = !empty($dados['bloco']) ? "'" . DBEscape($dados['bloco']) . "'" : "NULL";
+    $funcao = DBEscape($dados['funcao']);
+    $nome = DBEscape($dados['nome']);
+    $email = DBEscape($dados['email']);
+    $ativo = isset($dados['ativo']) ? 1 : 0;
+
+    if ($id) {
+        $sql = "UPDATE conselho.config_emails_diretoria SET bloco = $bloco, funcao = '$funcao', nome = '$nome', email = '$email', ativo = $ativo WHERE id = $id";
+    } else {
+        $sql = "INSERT INTO conselho.config_emails_diretoria (bloco, funcao, nome, email, ativo) VALUES ($bloco, '$funcao', '$nome', '$email', $ativo)";
+    }
+    return DBExecute($sql);
+}
+
+function getConfigSistema($chave)
+{
+    $chave = DBEscape($chave);
+    $sql = "SELECT valor FROM config_sistema WHERE chave = '$chave'";
+    $result = DBExecute($sql);
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        return $row['valor'];
+    }
+    return null;
+}
+
+function upsertConfigSistema($chave, $valor)
+{
+    $chave = DBEscape($chave);
+    $valor = DBEscape($valor);
+    $sql = "INSERT INTO config_sistema (chave, valor) VALUES ('$chave', '$valor') ON DUPLICATE KEY UPDATE valor = '$valor'";
+    return DBExecute($sql);
+}
+
+function marcarDiligenciaEnviada($id_diligencia, $gmail_id)
+{
+    $id_diligencia = DBEscape($id_diligencia);
+    $gmail_id = DBEscape($gmail_id);
+    $sql = "UPDATE diligencia SET enviada_ao_requerente = 1, gmail_id = '$gmail_id' WHERE id = '$id_diligencia'";
+    return DBExecute($sql);
+}
+
+function buscarOcorrenciaDigital($termo) {
+    if (strpos($termo, '/') !== false) {
+        // Assume bloco/unidade
+        $aux = explode("/", $termo);
+        $bloco = DBEscape(trim($aux[0]));
+        $unidade = DBEscape(trim($aux[1]));
+        $where = "bloco = '$bloco' AND unidade = '$unidade'";
+    } else if (is_numeric($termo)) {
+        // Assume ID
+        $where = "id = " . (int)$termo;
+    } else {
+        return [];
+    }
+
+    $sql = "SELECT * FROM ocorrencias WHERE $where ORDER BY abertura DESC LIMIT 10";
+    $result = DBExecute($sql);
+    $dados = [];
     if ($result && mysqli_num_rows($result) > 0) {
         while ($retorno = mysqli_fetch_assoc($result)) {
             $dados[] = $retorno;
