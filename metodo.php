@@ -172,26 +172,28 @@ case "novaDiligencia":
             
             echo $response;
             break;
+        case "previaEmailDiligencia":
         case "notificarRequerente":
             session_start();
             require_once "classes/mail_helper.php";
+            $action = $_GET['metodo'];
             
             $id_diligencia = $_POST['id_diligencia'];
             $diligencia = getDiligenciaById($id_diligencia);
             if (!$diligencia) {
-                echo "Diligência não encontrada";
+                echo json_encode(['error' => "Diligência não encontrada"]);
                 break;
             }
 
             $recurso = getRecursoById($diligencia['id_recurso']);
             if (!$recurso) {
-                echo "Recurso não encontrado";
+                echo json_encode(['error' => "Recurso não encontrado"]);
                 break;
             }
 
             $emailRequerente = $recurso['email'];
             if (!$emailRequerente) {
-                echo "E-mail do requerente não cadastrado";
+                echo json_encode(['error' => "E-mail do requerente não cadastrado"]);
                 break;
             }
 
@@ -208,43 +210,59 @@ case "novaDiligencia":
                 } else if ($config['funcao'] == 'administracao') {
                     $cc[] = $config['email'];
                 } else if ($config['funcao'] == 'subsindico' && $copiarSubs) {
-                    // Check if it's the sub for the resource block
                     if ($config['bloco'] == $recurso['bloco']) {
                         $cc[] = $config['email'];
                     }
                 }
             }
-            
-            if ($sindicoEmail) {
-                $cc[] = $sindicoEmail;
-            }
+            if ($sindicoEmail) $cc[] = $sindicoEmail;
 
             $assunto = "Diligência do Recurso: " . $recurso['numero'];
-            $corpo = "<h3>Olá,</h3>
-                      <p>O Conselho de Administração do Condomínio registrou uma diligência referente ao seu recurso <b>{$recurso['numero']}</b>:</p>
-                      <hr>
-                      <p><i>\"" . nl2br(htmlspecialchars($diligencia['texto'])) . "\"</i></p>
-                      <hr>
-                      <p>Você pode acompanhar o andamento do seu recurso através do portal do condômino.</p>
-                      <p>Atenciosamente,<br>Conselho de Administração</p>";
-
+            $corpo = "<html><body>";
+            $corpo .= "<h3>Olá,</h3>";
+            $corpo .= "<p>O Conselho de Administração do Condomínio registrou uma diligência referente ao seu recurso <b>{$recurso['numero']}</b>:</p>";
+            $corpo .= "<div style='padding: 15px; border: 1px solid #eee; background: #f9f9f9; font-style: italic;'>";
+            $corpo .= nl2br(htmlspecialchars($diligencia['texto']));
+            $corpo .= "</div>";
+            $corpo .= "<p>Você pode acompanhar o andamento do seu recurso através do portal do condômino.</p>";
+            
             $anexos = getDiligenciaAnexos($id_diligencia);
-            $mailAnexos = [];
-            foreach ($anexos as $anexo) {
-                $mailAnexos[] = [
-                    'path' => $anexo['caminho_arquivo'],
-                    'name' => $anexo['nome_arquivo']
-                ];
+            if (!empty($anexos)) {
+                $corpo .= "<p><b>Anexos incluídos:</b></p><ul>";
+                foreach ($anexos as $ax) {
+                    $corpo .= "<li>{$ax['nome_arquivo']}</li>";
+                }
+                $corpo .= "</ul>";
             }
+            
+            $corpo .= "<p>Atenciosamente,<br>Conselho de Administração</p>";
+            $corpo .= "</body></html>";
 
-            $mime = MailHelper::buildMimeMessage($emailRequerente, $assunto, $corpo, $cc, [], $mailAnexos);
-            $resMail = MailHelper::sendViaGmail($mime);
-
-            if (isset($resMail['id'])) {
-                marcarDiligenciaEnviada($id_diligencia, $resMail['id']);
-                echo "ok";
+            if ($action == 'previaEmailDiligencia') {
+                echo json_encode([
+                    'success' => true,
+                    'to' => $emailRequerente,
+                    'cc' => array_unique($cc),
+                    'subject' => $assunto,
+                    'body' => $corpo,
+                    'attachments' => $anexos
+                ]);
             } else {
-                echo "Erro ao enviar email: " . (isset($resMail['error']) ? $resMail['error'] : json_encode($resMail));
+                // Proceder com o envio real - notificarRequerente
+                $attachments = [];
+                foreach ($anexos as $ax) {
+                    $attachments[] = ['name' => $ax['nome_arquivo'], 'path' => $ax['caminho_arquivo']];
+                }
+
+                $mime = MailHelper::buildMimeMessage($emailRequerente, $assunto, $corpo, $cc, [], $attachments);
+                $res = MailHelper::sendViaGmail($mime);
+
+                if (isset($res['id'])) {
+                    marcarDiligenciaEnviada($id_diligencia, $res['id']);
+                    echo "ok";
+                } else {
+                    echo "Erro ao enviar e-mail: " . ($res['error'] ?? 'Erro desconhecido');
+                }
             }
             break;
         case "buscarOcorrencia":

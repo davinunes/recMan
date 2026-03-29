@@ -456,8 +456,29 @@ if ($esseRecurso == null) {
         </table>
 
     </div>
+    </div>
+</div>
+
+<!-- Modal Prévia de E-mail de Diligência -->
+<div id="modalPreviewEmailDiligencia" class="modal modal-fixed-footer" style="width: 80% !important; max-height: 85% !important;">
+    <div class="modal-content">
+        <h4>Prévia da Notificação</h4>
+        <div class="row" style="background: #f1f1f1; padding: 10px; border-radius: 5px;">
+            <div class="col s12">
+                <p style="margin: 5px 0;"><strong>Para:</strong> <span id="previewEmailTo"></span></p>
+                <p style="margin: 5px 0;"><strong>Cópia (CC):</strong> <span id="previewEmailCc"></span></p>
+                <p style="margin: 5px 0;"><strong>Assunto:</strong> <span id="previewEmailSubject"></span></p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12" style="border: 1px solid #ccc; padding: 20px; background: white; margin-top: 15px; min-height: 300px;" id="previewEmailBody">
+                <!-- Conteúdo HTML do e-mail -->
+            </div>
+        </div>
+    </div>
     <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+        <a href="#!" class="modal-close waves-effect waves-red btn-flat">Cancelar</a>
+        <a href="#!" id="btnConfirmSendDiligencia" class="waves-effect waves-green btn blue white-text" id_dil="">Confirmar e Enviar</a>
     </div>
 </div>
 
