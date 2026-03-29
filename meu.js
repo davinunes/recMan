@@ -713,24 +713,53 @@ $(document).on('paste', '#diligenciaText, #messageTextDiligencia', function (e) 
 
 $(document).on('click', '.notificarRequerente', function () {
     const id = $(this).attr('comment');
-    if (!confirm("Deseja enviar esta diligência por e-mail ao requerente e à administração? Após enviada, ela não poderá ser editada.")) return;
+    
+    M.toast({ html: 'Gerando prévia...', classes: 'rounded blue' });
 
-    M.toast({ html: "Enviando notificação...", classes: 'rounded' });
+    $.ajax({
+        url: "metodo.php?metodo=previaEmailDiligencia",
+        method: "POST",
+        data: { id_diligencia: id },
+        success: function (res) {
+            const data = JSON.parse(res);
+            if (data.success) {
+                $("#previewEmailTo").text(data.to);
+                $("#previewEmailCc").text(data.cc.join(", "));
+                $("#previewEmailSubject").text(data.subject);
+                $("#previewEmailBody").html(data.body);
+                $("#btnConfirmSendDiligencia").attr("id_dil", id);
+                
+                const inst = M.Modal.getInstance(document.querySelector('#modalPreviewEmailDiligencia'));
+                inst.open();
+            } else {
+                M.toast({ html: data.error || 'Erro ao gerar prévia', classes: 'rounded red' });
+            }
+        }
+    });
+});
 
+$(document).on('click', '#btnConfirmSendDiligencia', function () {
+    const id = $(this).attr('id_dil');
+    const btn = $(this);
+    
+    btn.addClass('disabled').text('Enviando...');
+    
     $.ajax({
         url: "metodo.php?metodo=notificarRequerente",
         method: "POST",
         data: { id_diligencia: id },
-        success: function (response) {
-            if (response.trim() === "ok") {
-                M.toast({ html: "Notificação enviada com sucesso!", classes: 'rounded green' });
-                setTimeout(() => window.location.reload(), 1000);
+        success: function (responseData) {
+            if (responseData.trim() === "ok") {
+                M.toast({ html: "E-mail enviado com sucesso!", classes: 'rounded green' });
+                setTimeout(() => window.location.reload(), 1500);
             } else {
-                M.toast({ html: response, classes: 'rounded red' });
+                M.toast({ html: responseData, classes: 'rounded red' });
+                btn.removeClass('disabled').text('Confirmar e Enviar');
             }
         },
         error: function () {
-            M.toast({ html: "Erro crítico ao enviar notificação", classes: 'rounded red' });
+            M.toast({ html: 'Erro de conexão', classes: 'rounded red' });
+            btn.removeClass('disabled').text('Confirmar e Enviar');
         }
     });
 });
