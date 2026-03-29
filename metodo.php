@@ -1,5 +1,5 @@
 <?php
-require_once("/var/www/html/classes/repositorio.php");
+require_once __DIR__ . "/classes/repositorio.php";
 
 switch ($_GET['metodo']) {
     case "novoUsuario":
@@ -101,6 +101,10 @@ switch ($_GET['metodo']) {
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
                             upsertMensagemAnexo($id_mensagem, $name, $fullPath);
+                        } else {
+                            error_log("Erro ao mover arquivo para: $fullPath");
+                            echo "Erro ao salvar anexo: no permissões?"; 
+                            exit;
                         }
                     }
                 }
@@ -135,6 +139,10 @@ switch ($_GET['metodo']) {
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
                             upsertMensagemAnexo($id_msg, $name, $fullPath);
+                        } else {
+                            error_log("Erro ao mover arquivo atualizado para: $fullPath");
+                            echo "Erro ao salvar anexo durante edição";
+                            exit;
                         }
                     }
                 }
@@ -172,11 +180,7 @@ switch ($_GET['metodo']) {
 
             // Handle file uploads
             if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
-                // I need the actual ID now. Let's get it.
-                $sql_id = "SELECT id FROM conselho.diligencia WHERE id_usuario = '{$dados["user_id"]}' AND id_recurso = '{$dados["id_recurso"]}' ORDER BY id DESC LIMIT 1";
-                $res_id = DBExecute($sql_id);
-                $row_id = mysqli_fetch_assoc($res_id);
-                $id_dil = $row_id['id'];
+                $id_dil = $id_diligencia;
 
                 foreach ($_FILES['anexos']['name'] as $i => $name) {
                     if ($_FILES['anexos']['error'][$i] === UPLOAD_ERR_OK) {
@@ -189,7 +193,11 @@ switch ($_GET['metodo']) {
                             mkdir("storage/diligencias", 0777, true);
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
-                            upsertDiligenciaAnexo($id_dil, $name, $fullPath);
+                            upsertDiligenciaAnexo($id_diligencia, $name, $fullPath);
+                        } else {
+                            error_log("Erro ao mover anexo diligencia para: $fullPath");
+                            echo "Erro ao salvar anexo de diligência";
+                            exit;
                         }
                     }
                 }
@@ -280,7 +288,7 @@ switch ($_GET['metodo']) {
         $assunto = "Diligência do Recurso: " . $recurso['numero'];
         $corpo = "<html><body>";
         $corpo .= "<p>Prezado condômino,</p>";
-        $corpo .= "<p>O Conselho Fiscal, ao analisar o pedido de recurso, registrou uma diligência referente ao seu recurso <b>{$recurso['numero']}</b>:</p>";
+        $corpo .= "<p>Ao analisar o pedido de recurso, foi registrada uma diligência referente ao seu recurso <b>{$recurso['numero']}</b>:</p>";
         $corpo .= "<div style='padding: 15px; border: 1px solid #eee; background: #f9f9f9; font-style: italic;'>";
         $corpo .= nl2br(htmlspecialchars($diligencia['texto']));
         $corpo .= "</div>";

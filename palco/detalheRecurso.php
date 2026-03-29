@@ -343,6 +343,7 @@ if ($esseRecurso == null) {
                 <textarea id="messageText" class="materialize-textarea" name="messageText" required></textarea>
                 <label for="messageText">Mensagem</label>
             </div>
+            <div id="pastePreviewComment" class="row" style="margin-bottom:0"></div>
             <div class="file-field input-field">
                 <div class="btn blue">
                     <span>+ Anexos</span>
@@ -368,6 +369,7 @@ if ($esseRecurso == null) {
                 <textarea id="diligenciaText" class="materialize-textarea" name="messageText" required></textarea>
                 <label for="diligenciaText">Mensagem</label>
             </div>
+            <div id="pastePreviewDiligence" class="row" style="margin-bottom:0"></div>
             <div class="file-field input-field">
                 <div class="btn blue">
                     <span>Anexos</span>
@@ -445,6 +447,7 @@ if ($esseRecurso == null) {
                 <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
                 <label for="messageText">Mensagem</label>
             </div>
+            <div id="pastePreviewCommentEdit" class="row" style="margin-bottom:0"></div>
             <div id="existingAttachmentsComment" class="row" style="margin-bottom: 0px;">
                 <!-- Anexos aparecerão aqui via JS -->
             </div>

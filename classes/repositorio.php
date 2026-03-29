@@ -1004,7 +1004,7 @@ function upsertDiligencia($dados)
     $id_recurso = $dados['id_recurso'];
     $id_usuario = $dados['user_id']; // Supondo que você tenha o ID do usuário na sessão
     $mensagem = DBEscape($dados['messageText']);
-    $sql = "INSERT INTO conselho.diligencia (id_usuario, id_recurso, texto) VALUES ('$id_usuario', '$id_recurso', '$mensagem')";
+    $sql = "INSERT INTO diligencia (id_usuario, id_recurso, texto) VALUES ('$id_usuario', '$id_recurso', '$mensagem')";
 
     return DBExecute($sql, true);
 }

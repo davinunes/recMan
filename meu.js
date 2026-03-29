@@ -765,12 +765,32 @@ $(document).on('paste', '#diligenciaText, #messageTextDiligencia, #messageText, 
         if (item.type.indexOf("image") !== -1) {
             const blob = item.getAsFile();
             const timestamp = new Date().getTime();
-            const file = new File([blob], `pasted_image_${timestamp}.png`, { type: "image/png" });
+            const fileName = `pasted_image_${timestamp}.png`;
+            const file = new File([blob], fileName, { type: "image/png" });
+
+            // Criar preview visual
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const previewMap = {
+                    'diligenciaText': '#pastePreviewDiligence',
+                    'messageTextDiligencia': '#pastePreviewDiligenceEdit',
+                    'messageText': '#pastePreviewComment',
+                    'messageTextComment': '#pastePreviewCommentEdit'
+                };
+                const previewSelector = previewMap[textarea.attr('id')];
+                if (previewSelector) {
+                    $(previewSelector).append(`
+                        <div class="col s3 m2" style="position:relative; margin-top:10px">
+                            <img src="${event.target.result}" class="responsive-img z-depth-1 materialboxed">
+                            <i class="material-icons tiny red-text" style="position:absolute; top:0; right:5px; cursor:pointer; background:white; border-radius:50%" onclick="$(this).parent().remove()">cancel</i>
+                        </div>`);
+                    $('.materialboxed').materialbox();
+                }
+            };
+            reader.readAsDataURL(blob);
 
             // Criar um DataTransfer para injetar o arquivo no input file real
             const dataTransfer = new DataTransfer();
-            
-            // Se já houver arquivos, mantém os anteriores (opcional, aqui vamos somar)
             if (fileInput.files.length > 0) {
                 for (let i = 0; i < fileInput.files.length; i++) {
                     dataTransfer.items.add(fileInput.files[i]);
@@ -779,12 +799,15 @@ $(document).on('paste', '#diligenciaText, #messageTextDiligencia, #messageText, 
             dataTransfer.items.add(file);
             fileInput.files = dataTransfer.files;
 
-            // Trigger change para atualizar o visual do Materialize (file-path-wrapper)
             $(fileInput).trigger('change');
-            
-            M.toast({ html: "Imagem colada do clipboard!", classes: 'rounded blue' });
+            M.toast({ html: "Imagem colada!", classes: 'rounded blue' });
         }
     }
+});
+
+// Limpar previews ao fechar/abrir modais
+$(document).on('click', '.modal-trigger', function() {
+    $('#pastePreviewDiligence, #pastePreviewDiligenceEdit, #pastePreviewComment, #pastePreviewCommentEdit').empty();
 });
 
 $(document).on('click', '.notificarRequerente', function () {
