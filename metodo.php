@@ -148,7 +148,29 @@ case "novaDiligencia":
             $dados = $_POST;
 			$dados['usuario'] = $_SESSION["user_id"];
 			$response = updateDiligencia($dados);
-			echo $response;
+			
+            if ($response === "ok") {
+                // Se houver novos arquivos no upload
+                if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
+                    $id_dil = $dados['id_diligencia'];
+                    foreach ($_FILES['anexos']['name'] as $i => $name) {
+                        if ($_FILES['anexos']['error'][$i] === UPLOAD_ERR_OK) {
+                            $tmpName = $_FILES['anexos']['tmp_name'][$i];
+                            $ext = pathinfo($name, PATHINFO_EXTENSION);
+                            $fileName = "dil_{$id_dil}_updated_{$i}_" . time() . ".$ext";
+                            $fullPath = "storage/diligencias/$fileName";
+                            
+                            if (!is_dir("storage/diligencias")) mkdir("storage/diligencias", 0777, true);
+
+                            if (move_uploaded_file($tmpName, $fullPath)) {
+                                upsertDiligenciaAnexo($id_dil, $name, $fullPath);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            echo $response;
             break;
         case "notificarRequerente":
             session_start();
@@ -230,13 +252,25 @@ case "novaDiligencia":
             $res = buscarOcorrenciaDigital($termo);
             echo json_encode($res);
             break;
-        case "vincularOcorrencia":
+    case "vincularOcorrencia":
             $idRec = $_POST['id_recurso'];
             $idOc = $_POST['id_ocorrencia'];
             if (linkRecursoOcorrencia($idRec, $idOc)) {
                 echo "ok";
             } else {
                 echo "Erro ao vincular";
+            }
+            break;
+        case "getDiligenciaAnexos":
+            $id = $_POST['id_diligencia'];
+            echo json_encode(getDiligenciaAnexos($id));
+            break;
+        case "deleteAnexoDiligencia":
+            $id = $_POST['id_anexo'];
+            if (deleteDiligenciaAnexo($id)) {
+                echo "ok";
+            } else {
+                echo "Erro ao deletar";
             }
             break;
         case "getConfigEmails":

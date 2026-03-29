@@ -597,25 +597,73 @@ $(document).on('click', '#diligenciar', function () { // Inserir diligencia no R
 });
 
 $(document).on('click', '.editDiligence', function () {
+    let id_dil = $(this).attr("comment");
     let comentario = $(this).closest("li.collection-item").find("p").html();
     comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
     $("#messageTextDiligencia").val(comentario);
-    $("#messageTextDiligencia").attr("diligencia_id", $(this).attr("comment"));
+    $("#editDiligenciaId").val(id_dil);
+    
+    // Buscar anexos existentes
+    $("#existingAttachmentsDiligence").html('<p class="center">Carregando anexos...</p>');
+    $.ajax({
+        url: "metodo.php?metodo=getDiligenciaAnexos",
+        method: "POST",
+        data: { id_diligencia: id_dil },
+        success: function (response) {
+            const anexos = JSON.parse(response);
+            let html = "";
+            if (anexos.length > 0) {
+                anexos.forEach(ax => {
+                    html += `
+                    <div class="chip" id="anexo_dil_${ax.id}">
+                        <i class="material-icons left tiny">attach_file</i>
+                        ${ax.nome_arquivo}
+                        <i class="close_anexo_diligencia material-icons right" style="cursor:pointer; font-size: 1.2rem; margin-left:8px" idanexo="${ax.id}">close</i>
+                    </div>`;
+                });
+            } else {
+                html = "<p class='grey-text' style='padding-left:10px; font-size:0.8rem'>Nenhum anexo prévio.</p>";
+            }
+            $("#existingAttachmentsDiligence").html(html);
+        }
+    });
+
+    // Limpar o arquivo anterior do campo caso exista
+    $("#editDiligenciaForm").find(".file-path").val("");
+    $("#editDiligenciaForm").find("input[type=file]").val("");
+});
+
+$(document).on('click', '.close_anexo_diligencia', function () {
+    const idAnexo = $(this).attr('idanexo');
+    if (!confirm("Deseja realmente excluir permanentemente este anexo?")) return;
+
+    $.ajax({
+        url: "metodo.php?metodo=deleteAnexoDiligencia",
+        method: "POST",
+        data: { id_anexo: idAnexo },
+        success: function (res) {
+            if (res.trim() === "ok") {
+                $(`#anexo_dil_${idAnexo}`).fadeOut();
+                M.toast({ html: "Anexo excluído!", classes: "rounded orange" });
+            } else {
+                M.toast({ html: res, classes: "rounded red" });
+            }
+        }
+    });
 });
 
 $(document).on('click', '#updateDiligence', function () {
-    let mensagem = $("#messageTextDiligencia").val();
-    let id_diligencia = $("#messageTextDiligencia").attr("diligencia_id");
-
-    const formData = {
-        id_diligencia: id_diligencia,
-        mensagem: mensagem
-    };
+    let metodo = "editaDiligencia";
+    
+    const formElement = document.getElementById('editDiligenciaForm');
+    const formData = new FormData(formElement);
 
     $.ajax({
-        url: "metodo.php?metodo=editaDiligencia",
+        url: "metodo.php?metodo=" + metodo,
         method: "POST",
         data: formData,
+        contentType: false,
+        processData: false,
         success: function (responseData) {
             if (responseData.trim() === "ok") {
                 M.toast({ html: "Diligência atualizada!", classes: 'rounded green' });
@@ -628,6 +676,39 @@ $(document).on('click', '#updateDiligence', function () {
             M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
         }
     });
+});
+
+// Suporte para Ctrl + V (Paste) de imagens nos campos de diligência
+$(document).on('paste', '#diligenciaText, #messageTextDiligencia', function (e) {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    const textarea = $(this);
+    const form = textarea.closest('form');
+    const fileInput = form.find('input[type=file]')[0];
+
+    for (const item of items) {
+        if (item.type.indexOf("image") !== -1) {
+            const blob = item.getAsFile();
+            const timestamp = new Date().getTime();
+            const file = new File([blob], `pasted_image_${timestamp}.png`, { type: "image/png" });
+
+            // Criar um DataTransfer para injetar o arquivo no input file real
+            const dataTransfer = new DataTransfer();
+            
+            // Se já houver arquivos, mantém os anteriores (opcional, aqui vamos somar)
+            if (fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    dataTransfer.items.add(fileInput.files[i]);
+                }
+            }
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+
+            // Trigger change para atualizar o visual do Materialize (file-path-wrapper)
+            $(fileInput).trigger('change');
+            
+            M.toast({ html: "Imagem colada do clipboard!", classes: 'rounded blue' });
+        }
+    }
 });
 
 $(document).on('click', '.notificarRequerente', function () {

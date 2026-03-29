@@ -1344,7 +1344,7 @@ function getAnexos($numero)
 function updateDiligencia($dados)
 {
     $id_diligencia = DBEscape($dados['id_diligencia']);
-    $mensagem = DBEscape($dados['mensagem']);
+    $mensagem = DBEscape($dados['messageText']);
     $usuario = DBEscape($dados['usuario']);
 
     // Check if it was already sent (cannot edit if sent)
@@ -1427,6 +1427,27 @@ function getDiligenciaAnexos($id_diligencia)
         }
     }
     return $dados;
+}
+
+function deleteDiligenciaAnexo($id_anexo)
+{
+    $id_anexo = (int)$id_anexo;
+    $sql = "SELECT caminho_arquivo FROM conselho.diligencia_anexos WHERE id = $id_anexo";
+    $res = DBExecute($sql);
+    if ($res && mysqli_num_rows($res) > 0) {
+        $anexo = mysqli_fetch_assoc($res);
+        $caminho = $anexo['caminho_arquivo'];
+
+        // Deletar arquivo do disco
+        if (file_exists($caminho)) {
+            unlink($caminho);
+        }
+
+        // Deletar do banco
+        $sql_del = "DELETE FROM conselho.diligencia_anexos WHERE id = $id_anexo";
+        return DBExecute($sql_del);
+    }
+    return false;
 }
 
 function upsertDiligenciaAnexo($id_diligencia, $nome, $caminho)

@@ -371,10 +371,24 @@ if ($esseRecurso == null) {
     <div class="modal-content">
         <h4>Editar Diligência</h4>
         <p>Edite a sua Diligência...</p>
-        <form id="editDiligenciaForm">
+        <form id="editDiligenciaForm" enctype="multipart/form-data">
+            <input type="hidden" name="id_diligencia" id="editDiligenciaId">
             <div class="input-field">
                 <textarea id="messageTextDiligencia" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
                 <label for="messageTextDiligencia">Mensagem</label>
+            </div>
+            
+            <div id="existingAttachmentsDiligence" class="row" style="margin-bottom: 0px;">
+                <!-- Anexos aparecerão aqui via JS -->
+            </div>
+            <div class="file-field input-field">
+                <div class="btn blue">
+                    <span>+ Anexos</span>
+                    <input type="file" name="anexos[]" multiple>
+                </div>
+                <div class="file-path-wrapper">
+                    <input class="file-path validate" type="text" placeholder="Adicionar mais arquivos à diligência">
+                </div>
             </div>
         </form>
     </div>
