@@ -21,6 +21,7 @@ $(document).ready(function () {
 
     $('select').formSelect();
     $('.modal').modal();
+    $('.materialboxed').materialbox();
     $('.chips').chips();
     $('.sidenav').sidenav();
     $('#listaRecursos').DataTable({

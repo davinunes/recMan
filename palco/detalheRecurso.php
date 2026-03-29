@@ -196,9 +196,21 @@ if ($esseRecurso == null) {
         
         $dilAnexos = getDiligenciaAnexos($mensagem['id']);
         if (!empty($dilAnexos)) {
-            echo '<div style="margin-top:5px">';
+            echo '<div style="margin-top:10px">';
             foreach ($dilAnexos as $da) {
-                echo '<a href="' . $da['caminho_arquivo'] . '" target="_blank" class="chip" style="height: 22px; line-height: 22px; font-size: 0.7rem;"><i class="material-icons tiny">attach_file</i>' . $da['nome_arquivo'] . '</a> ';
+                $ext = strtolower(pathinfo($da['caminho_arquivo'], PATHINFO_EXTENSION));
+                $caminho = $da['caminho_arquivo'];
+                $nome = $da['nome_arquivo'];
+                
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    echo "<div style='margin-bottom:10px;'><img src='{$caminho}' class='responsive-img materialboxed z-depth-1' style='max-height:300px; border-radius:8px; cursor:pointer' alt='{$nome}'></div>";
+                } else if (in_array($ext, ['mp4', 'webm', 'ogg'])) {
+                    echo "<div style='margin-bottom:10px; max-width:400px'><video controls class='responsive-video' style='border-radius:8px;'><source src='{$caminho}' type='video/{$ext}'></video></div>";
+                } else if (in_array($ext, ['mp3', 'wav'])) {
+                    echo "<div style='margin-bottom:10px; max-width:400px'><audio controls style='width:100%'><source src='{$caminho}' type='audio/mpeg'></audio></div>";
+                } else {
+                    echo '<a href="' . $caminho . '" target="_blank" class="chip" style="height: 24px; line-height: 24px; margin-bottom:5px;"><i class="material-icons tiny left">insert_drive_file</i>' . $nome . '</a> ';
+                }
             }
             echo '</div>';
         }
@@ -226,9 +238,21 @@ if ($esseRecurso == null) {
 				' . $actions . "<p>" . $textoFormatado . '</p>';
         
         if (!empty($mensagem['anexos'])) {
-            echo '<div style="margin-top:5px">';
+            echo '<div style="margin-top:10px">';
             foreach ($mensagem['anexos'] as $ma) {
-                echo '<a href="' . $ma['caminho_arquivo'] . '" target="_blank" class="chip" style="height: 22px; line-height: 22px; font-size: 0.7rem;"><i class="material-icons tiny">attach_file</i>' . $ma['nome_arquivo'] . '</a> ';
+                $ext = strtolower(pathinfo($ma['caminho_arquivo'], PATHINFO_EXTENSION));
+                $caminho = $ma['caminho_arquivo'];
+                $nome = $ma['nome_arquivo'];
+                
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    echo "<div style='margin-bottom:10px;'><img src='{$caminho}' class='responsive-img materialboxed z-depth-1' style='max-height:300px; border-radius:8px; cursor:pointer' alt='{$nome}'></div>";
+                } else if (in_array($ext, ['mp4', 'webm', 'ogg'])) {
+                    echo "<div style='margin-bottom:10px; max-width:400px'><video controls class='responsive-video' style='border-radius:8px;'><source src='{$caminho}' type='video/{$ext}'></video></div>";
+                } else if (in_array($ext, ['mp3', 'wav'])) {
+                    echo "<div style='margin-bottom:10px; max-width:400px'><audio controls style='width:100%'><source src='{$caminho}' type='audio/mpeg'></audio></div>";
+                } else {
+                    echo '<a href="' . $caminho . '" target="_blank" class="chip" style="height: 24px; line-height: 24px; margin-bottom:5px;"><i class="material-icons tiny left">insert_drive_file</i>' . $nome . '</a> ';
+                }
             }
             echo '</div>';
         }
