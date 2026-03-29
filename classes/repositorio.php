@@ -1434,7 +1434,7 @@ function getDiligenciaAnexos($id_diligencia)
 function getMensagemAnexos($id_mensagem)
 {
     $id_mensagem = DBEscape($id_mensagem);
-    $sql = "SELECT * FROM conselho.mensagem_anexos WHERE id_mensagem = '$id_mensagem' ORDER BY data_envio ASC";
+    $sql = "SELECT * FROM mensagem_anexos WHERE id_mensagem = '$id_mensagem' ORDER BY data_envio ASC";
     $result = DBExecute($sql);
     $dados = array();
     if ($result && mysqli_num_rows($result) > 0) {
@@ -1450,14 +1450,14 @@ function upsertMensagemAnexo($id_mensagem, $nome, $caminho)
     $id_mensagem = DBEscape($id_mensagem);
     $nome = DBEscape($nome);
     $caminho = DBEscape($caminho);
-    $sql = "INSERT INTO conselho.mensagem_anexos (id_mensagem, nome_arquivo, caminho_arquivo) VALUES ('$id_mensagem', '$nome', '$caminho')";
+    $sql = "INSERT INTO mensagem_anexos (id_mensagem, nome_arquivo, caminho_arquivo) VALUES ('$id_mensagem', '$nome', '$caminho')";
     return DBExecute($sql);
 }
 
 function deleteMensagemAnexo($id_anexo)
 {
     $id_anexo = (int)$id_anexo;
-    $sql = "SELECT caminho_arquivo FROM conselho.mensagem_anexos WHERE id = $id_anexo";
+    $sql = "SELECT caminho_arquivo FROM mensagem_anexos WHERE id = $id_anexo";
     $res = DBExecute($sql);
     if ($res && mysqli_num_rows($res) > 0) {
         $anexo = mysqli_fetch_assoc($res);
@@ -1465,7 +1465,7 @@ function deleteMensagemAnexo($id_anexo)
         if (file_exists($caminho)) {
             unlink($caminho);
         }
-        $sql_del = "DELETE FROM conselho.mensagem_anexos WHERE id = $id_anexo";
+        $sql_del = "DELETE FROM mensagem_anexos WHERE id = $id_anexo";
         return DBExecute($sql_del);
     }
     return false;
@@ -1474,7 +1474,7 @@ function deleteMensagemAnexo($id_anexo)
 function deleteDiligenciaAnexo($id_anexo)
 {
     $id_anexo = (int)$id_anexo;
-    $sql = "SELECT caminho_arquivo FROM conselho.diligencia_anexos WHERE id = $id_anexo";
+    $sql = "SELECT caminho_arquivo FROM diligencia_anexos WHERE id = $id_anexo";
     $res = DBExecute($sql);
     if ($res && mysqli_num_rows($res) > 0) {
         $anexo = mysqli_fetch_assoc($res);
@@ -1486,7 +1486,7 @@ function deleteDiligenciaAnexo($id_anexo)
         }
 
         // Deletar do banco
-        $sql_del = "DELETE FROM conselho.diligencia_anexos WHERE id = $id_anexo";
+        $sql_del = "DELETE FROM diligencia_anexos WHERE id = $id_anexo";
         return DBExecute($sql_del);
     }
     return false;
