@@ -620,6 +620,15 @@ $(document).on('click', '#updateComment', function () {
     const formElement = document.getElementById('editMessageForm');
     const formData = new FormData(formElement);
     
+    // Garantir que os campos foram pegos (redundância caso o name não tenha funcionado)
+    if (!formData.has('id_mensagem')) formData.append('id_mensagem', $("#editMessageId").val());
+    if (!formData.has('messageText')) formData.append('messageText', $("#messageTextComment").val());
+    
+    console.log("Enviando Comentário Editado:", {
+        id: formData.get('id_mensagem'),
+        texto: formData.get('messageText')
+    });
+    
     $.ajax({
         url: 'metodo.php?metodo=editaComentario',
         method: "POST",
