@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `config_sistema` (
 -- 6. Table for comment attachments
 CREATE TABLE IF NOT EXISTS `mensagem_anexos` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `id_mensagem` BIGINT(20) NOT NULL,
+  `id_mensagem` BIGINT(20) UNSIGNED NOT NULL,
   `nome_arquivo` VARCHAR(255) NOT NULL,
   `caminho_arquivo` TEXT NOT NULL,
   `data_envio` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

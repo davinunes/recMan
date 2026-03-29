@@ -43,6 +43,38 @@ CREATE TABLE `DatasDeRetirada` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `config_emails_diretoria`
+--
+
+DROP TABLE IF EXISTS `config_emails_diretoria`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_emails_diretoria` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bloco` char(1) DEFAULT NULL,
+  `funcao` enum('sindico','subsindico','administracao') NOT NULL,
+  `nome` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `ativo` tinyint(1) DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `config_sistema`
+--
+
+DROP TABLE IF EXISTS `config_sistema`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_sistema` (
+  `chave` varchar(100) NOT NULL,
+  `valor` text DEFAULT NULL,
+  PRIMARY KEY (`chave`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `diligencia`
 --
 
@@ -55,12 +87,33 @@ CREATE TABLE `diligencia` (
   `id_recurso` bigint(20) unsigned NOT NULL,
   `texto` varchar(1500) NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
+  `gmail_id` varchar(255) DEFAULT NULL,
+  `enviada_ao_requerente` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `id_usuario` (`id_usuario`),
   KEY `id_recurso` (`id_recurso`),
   CONSTRAINT `diligencia_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`),
   CONSTRAINT `diligencia_ibfk_2` FOREIGN KEY (`id_recurso`) REFERENCES `recurso` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diligencia_anexos`
+--
+
+DROP TABLE IF EXISTS `diligencia_anexos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `diligencia_anexos` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `id_diligencia` bigint(20) unsigned NOT NULL,
+  `nome_arquivo` varchar(255) NOT NULL,
+  `caminho_arquivo` text NOT NULL,
+  `data_envio` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `id_diligencia` (`id_diligencia`),
+  CONSTRAINT `diligencia_anexos_ibfk_1` FOREIGN KEY (`id_diligencia`) REFERENCES `diligencia` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -290,6 +343,21 @@ CREATE TABLE `recurso_anexos` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `recurso_ocorrencia`
+--
+
+DROP TABLE IF EXISTS `recurso_ocorrencia`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `recurso_ocorrencia` (
+  `id_recurso` bigint(20) unsigned NOT NULL,
+  `id_ocorrencia` int(11) NOT NULL,
+  PRIMARY KEY (`id_recurso`,`id_ocorrencia`),
+  CONSTRAINT `fk_recurso_ocorrencia_recurso` FOREIGN KEY (`id_recurso`) REFERENCES `recurso` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `tokens`
 --
 
@@ -305,7 +373,7 @@ CREATE TABLE `tokens` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `refresh_token` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7437 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7451 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -359,4 +427,4 @@ CREATE TABLE `votos` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-28 20:57:28
+-- Dump completed on 2026-03-29 10:34:06
