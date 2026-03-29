@@ -269,9 +269,32 @@ if ($action == 'submit') {
         }
         $msgHtml .= "<br><br><small>Por favor, acesse o painel (recMan) para visualizar o recurso na íntegra.</small>";
 
+        // Fetch dynamic recipients from config
+        $resRecipients = DBExecute("SELECT * FROM config_emails_diretoria WHERE ativo = 1");
+        $to_list = [];
+        $cc_list = [$email]; // Resident is always CC
+
+        $copiarSubs = getConfigSistema('copiar_subsindicos_novo_recurso') == '1';
+
+        if ($resRecipients && mysqli_num_rows($resRecipients) > 0) {
+            while ($cfg = mysqli_fetch_assoc($resRecipients)) {
+                if ($cfg['funcao'] == 'sindico' || $cfg['funcao'] == 'administracao') {
+                    $to_list[] = $cfg['email'];
+                } else if ($cfg['funcao'] == 'subsindico' && $copiarSubs) {
+                    if ($cfg['bloco'] == $bloco) $cc_list[] = $cfg['email'];
+                }
+            }
+        }
+
+        if (empty($to_list)) $to_list = explode(',', EMAIL_SINDICO_NOTIFICACAO);
+        
+        $to_str = implode(', ', array_unique(array_map('trim', $to_list)));
+        $cc_str = implode(', ', array_unique(array_map('trim', $cc_list)));
+
         // Multipart Email Configuration
         $boundary = uniqid('np');
-        $mime = "To: " . EMAIL_SINDICO_NOTIFICACAO . "\r\n";
+        $mime = "To: $to_str\r\n";
+        if (!empty($cc_str)) $mime .= "Cc: $cc_str\r\n";
         $mime .= "Subject: $assunto_encoded\r\n";
         $mime .= "MIME-Version: 1.0\r\n";
         $mime .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n\r\n";

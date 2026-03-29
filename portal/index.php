@@ -82,6 +82,17 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         </div>
                     </div>
 
+                    <div x-show="notificacaoNaoEncontrada" x-transition
+                         class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
+                        <div class="flex">
+                            <i class="material-icons mr-2 text-orange-500">warning</i>
+                            <div>
+                                <p class="font-bold">Notificação não localizada!</p>
+                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam corretos em seu documento físico, clique em "Continuar" para prosseguir com a validação manual.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-between items-center mt-8">
                         <button type="button" @click="etapa = 0"
                             class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
@@ -527,6 +538,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     detalhes: ''
                 },
                 notificacaoData: null,
+                notificacaoNaoEncontrada: false,
 
                 init() {
                     // Já tenta carregar as info se começou na etapa 8 por estar logado
@@ -553,6 +565,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 
                 iniciarNovo() {
                     this.erro = false;
+                    this.notificacaoNaoEncontrada = false;
                     this.etapa = 1;
                 },
 
@@ -580,8 +593,21 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                                 this.dados.bloco = res.notificacao.torre || res.notificacao.bloco || '';
                                 this.dados.unidade = res.notificacao.unidade;
                                 this.notificacaoData = res.notificacao;
+                                this.notificacaoNaoEncontrada = false;
+                                this.etapa = 3; // Próximo passo
+                            } else {
+                                // Não encontramos a notificação
+                                if (!this.notificacaoNaoEncontrada) {
+                                    // Primeira vez, avisa visualmente
+                                    this.notificacaoNaoEncontrada = true;
+                                    return;
+                                } else {
+                                    // Segunda vez (insistiu), mostra alert
+                                    if (confirm("Esta notificação não consta em nossa base de dados oficial.\n\nVocê poderá prosseguir, mas o recurso passará por validação e poderá ser recusado se as informações forem procedentes. Deseja continuar?")) {
+                                        this.etapa = 3;
+                                    }
+                                }
                             }
-                            this.etapa = 3; // Solicitar email
                         }
                     } catch (e) {
                         this.mostraErro("Erro ao consultar os servidores da central.");

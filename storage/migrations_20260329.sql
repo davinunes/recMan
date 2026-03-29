@@ -51,3 +51,4 @@ CREATE TABLE IF NOT EXISTS `mensagem_anexos` (
 -- Initial default configs
 INSERT IGNORE INTO `config_sistema` (`chave`, `valor`) VALUES ('copiar_subsindicos_diligencia', '0');
 INSERT IGNORE INTO `config_sistema` (`chave`, `valor`) VALUES ('copiar_subsindicos_parecer', '0');
+INSERT IGNORE INTO `config_sistema` (`chave`, `valor`) VALUES ('copiar_subsindicos_novo_recurso', '1');
