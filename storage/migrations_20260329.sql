@@ -1,8 +1,8 @@
 -- Migrations for RecMan updates
 
 -- 1. Update diligencia table to support Gmail integration and status
-ALTER TABLE `diligencia` ADD COLUMN `gmail_id` VARCHAR(255) DEFAULT NULL;
-ALTER TABLE `diligencia` ADD COLUMN `enviada_ao_requerente` TINYINT(1) DEFAULT 0;
+ALTER TABLE `diligencia` ADD COLUMN IF NOT EXISTS `gmail_id` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `diligencia` ADD COLUMN IF NOT EXISTS `enviada_ao_requerente` TINYINT(1) DEFAULT 0;
 
 -- 2. Table for diligence attachments
 CREATE TABLE IF NOT EXISTS `diligencia_anexos` (
