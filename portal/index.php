@@ -83,12 +83,14 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     </div>
 
                     <div x-show="notificacaoNaoEncontrada" x-transition
-                         class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
+                        class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
                         <div class="flex">
                             <i class="material-icons mr-2 text-orange-500">warning</i>
                             <div>
                                 <p class="font-bold">Notificação não localizada!</p>
-                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam corretos em seu documento físico, clique em "Continuar" para prosseguir com a validação manual.</p>
+                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
+                                    corretos em seu documento físico, clique em "Continuar" para prosseguir com a
+                                    validação manual.</p>
                             </div>
                         </div>
                     </div>
@@ -140,7 +142,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <button @click="etapa = 7"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition w-full sm:w-auto"
                         title="Ir para acessar recurso">
-                        Já tenho um // Acessar
+                        Já tenho um código
                     </button>
                 </div>
             </div>
@@ -410,21 +412,25 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 <!-- Diligências do Conselho -->
                 <template x-if="listaDiligencias && listaDiligencias.length > 0">
                     <div class="mb-6">
-                        <span class="text-xs font-bold text-orange-500 uppercase tracking-widest block mb-1">Diligências do Conselho</span>
+                        <span class="text-xs font-bold text-orange-500 uppercase tracking-widest block mb-1">Diligências
+                            do Conselho</span>
                         <div class="space-y-4">
                             <template x-for="dil in listaDiligencias" :key="dil.id">
                                 <div class="bg-white p-4 rounded-lg border-l-4 border-orange-400 shadow-sm">
                                     <div class="flex justify-between items-start mb-2">
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase" x-text="new Date(dil.timestamp.replace(' ', 'T')).toLocaleString()"></span>
-                                        <span class="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded">OFICIAL</span>
+                                        <span class="text-[10px] font-bold text-gray-400 uppercase"
+                                            x-text="new Date(dil.timestamp.replace(' ', 'T')).toLocaleString()"></span>
+                                        <span
+                                            class="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded">OFICIAL</span>
                                     </div>
                                     <p class="text-sm text-gray-800 whitespace-pre-wrap" x-text="dil.texto"></p>
-                                    
+
                                     <!-- Anexos da Diligência -->
                                     <template x-if="dil.anexos && dil.anexos.length > 0">
                                         <div class="mt-3 flex flex-wrap gap-2">
                                             <template x-for="anx in dil.anexos" :key="anx.id">
-                                                <a :href="'../'+anx.caminho_arquivo" target="_blank" class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] rounded border transition">
+                                                <a :href="'../'+anx.caminho_arquivo" target="_blank"
+                                                    class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] rounded border transition">
                                                     <span class="material-icons text-xs mr-1">attach_file</span>
                                                     <span x-text="anx.nome_arquivo"></span>
                                                 </a>
