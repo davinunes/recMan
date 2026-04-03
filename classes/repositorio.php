@@ -977,9 +977,8 @@ function upsertComentario($dados)
     $sql .= "(id_usuario, id_recurso, texto) ";
     $sql .= "VALUES ('$id_usuario', '$id_recurso', '$mensagem') ";
 
-    if (DBExecute($sql)) {
-        $id_mensagem = DBInsertID();
-        
+    $id_mensagem = DBExecute($sql, true);
+    if ($id_mensagem && is_numeric($id_mensagem)) {
         // Envio de Push Notification
         $usuario = getUsuariosById($id_usuario);
         $nome_usuario = $usuario['nome'] ?? "Conselheiro";
@@ -1451,7 +1450,7 @@ function upsertMensagemAnexo($id_mensagem, $nome, $caminho)
     $nome = DBEscape($nome);
     $caminho = DBEscape($caminho);
     $sql = "INSERT INTO mensagem_anexos (id_mensagem, nome_arquivo, caminho_arquivo) VALUES ('$id_mensagem', '$nome', '$caminho')";
-    return DBExecute($sql);
+    return DBExecute($sql, false, false);
 }
 
 function deleteMensagemAnexo($id_anexo)
@@ -1498,7 +1497,7 @@ function upsertDiligenciaAnexo($id_diligencia, $nome, $caminho)
     $nome = DBEscape($nome);
     $caminho = DBEscape($caminho);
     $sql = "INSERT INTO diligencia_anexos (id_diligencia, nome_arquivo, caminho_arquivo) VALUES ('$id_diligencia', '$nome', '$caminho')";
-    return DBExecute($sql);
+    return DBExecute($sql, false, false);
 }
 
 function getConfigEmails()

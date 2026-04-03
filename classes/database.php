@@ -54,10 +54,19 @@ function DBEscape($dados)
 	return $dados;
 }
 
-function DBExecute($query, $returnId = false)
+function DBExecute($query, $returnId = false, $die = true)
 { # Executa um Comando na Conexão
 	$link = DBConnect();
-	$result = mysqli_query($link, $query) or die(mysqli_error($link) . " [Query: $query]");
+	$result = mysqli_query($link, $query);
+
+	if (!$result) {
+		$error = mysqli_error($link) . " [Query: $query]";
+		DBClose($link);
+		if ($die) {
+			die($error);
+		}
+		return false;
+	}
 
 	if ($returnId) {
 		$res = mysqli_insert_id($link);

@@ -100,7 +100,10 @@ switch ($_GET['metodo']) {
                         if (!is_dir("storage/comentarios")) mkdir("storage/comentarios", 0777, true);
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
-                            upsertMensagemAnexo($id_mensagem, $name, $fullPath);
+                            if (!upsertMensagemAnexo($id_mensagem, $name, $fullPath)) {
+                                if (file_exists($fullPath)) unlink($fullPath);
+                                error_log("Erro ao vincular anexo no banco: $fullPath");
+                            }
                         } else {
                             error_log("Erro ao mover arquivo para: $fullPath");
                             echo "Erro ao salvar anexo: no permissões?"; 
@@ -138,7 +141,10 @@ switch ($_GET['metodo']) {
                         if (!is_dir("storage/comentarios")) mkdir("storage/comentarios", 0777, true);
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
-                            upsertMensagemAnexo($id_msg, $name, $fullPath);
+                            if (!upsertMensagemAnexo($id_msg, $name, $fullPath)) {
+                                if (file_exists($fullPath)) unlink($fullPath);
+                                error_log("Erro ao vincular anexo atualizado no banco: $fullPath");
+                            }
                         } else {
                             error_log("Erro ao mover arquivo atualizado para: $fullPath");
                             echo "Erro ao salvar anexo durante edição";
@@ -169,15 +175,7 @@ switch ($_GET['metodo']) {
         $dados["user_id"] = $_SESSION["user_id"];
 
         $id_diligencia = upsertDiligencia($dados);
-        if (is_numeric($id_diligencia) || $id_diligencia === "ok") {
-            // If it's the first time and returning ID (I should update upsertDiligencia to return ID)
-            if ($id_diligencia === "ok") {
-                // This is a bit of a hack since old version returned "ok", I'll check last insert id
-                // Actually, I should update upsertDiligencia to return the ID. 
-                // Let's assume for now we can get the ID from the database if needed, 
-                // but I'll update upsertDiligencia in the next step.
-            }
-
+        if (is_numeric($id_diligencia)) {
             // Handle file uploads
             if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
                 $id_dil = $id_diligencia;
@@ -193,7 +191,10 @@ switch ($_GET['metodo']) {
                             mkdir("storage/diligencias", 0777, true);
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
-                            upsertDiligenciaAnexo($id_diligencia, $name, $fullPath);
+                            if (!upsertDiligenciaAnexo($id_diligencia, $name, $fullPath)) {
+                                if (file_exists($fullPath)) unlink($fullPath);
+                                error_log("Erro ao vincular anexo diligencia no banco: $fullPath");
+                            }
                         } else {
                             error_log("Erro ao mover anexo diligencia para: $fullPath");
                             echo "Erro ao salvar anexo de diligência";
@@ -229,7 +230,10 @@ switch ($_GET['metodo']) {
                             mkdir("storage/diligencias", 0777, true);
 
                         if (move_uploaded_file($tmpName, $fullPath)) {
-                            upsertDiligenciaAnexo($id_dil, $name, $fullPath);
+                            if (!upsertDiligenciaAnexo($id_dil, $name, $fullPath)) {
+                                if (file_exists($fullPath)) unlink($fullPath);
+                                error_log("Erro ao vincular anexo diligencia atualizado no banco: $fullPath");
+                            }
                         }
                     }
                 }
