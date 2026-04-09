@@ -93,3 +93,49 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
         return false;
     }
 }
+
+/**
+ * Dispara o envio de Push em background via chamada interna (CLI)
+ * Resolve problemas de lentidão no request do usuário e centraliza a lógica de Host/URL/Backgrounding
+ * 
+ * @param string $titulo
+ * @param string $mensagem
+ * @param string $url
+ * @param array|null $userIds
+ */
+function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null)
+{
+    // Domínio para o Header Host (essencial para virtualhosts no Apache/Nginx)
+    $domain = $_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br";
+
+    $postData = [
+        'titulo' => $titulo,
+        'mensagem' => $mensagem,
+        'url' => $url
+    ];
+
+    if ($userIds) {
+        $postData['user_ids'] = is_array($userIds) ? implode(',', $userIds) : $userIds;
+    }
+
+    $postFields = http_build_query($postData);
+
+    // Tenta detectar se estamos em um subdiretório (ex: /recMan/)
+    // Se o script atual for /recMan/portal/api.php, o base path é /recMan/
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    // Se contiver /recMan/, assume que a raiz é /recMan/
+    // Caso contrário, assume raiz /
+    $basePath = (strpos($scriptName, '/recMan/') !== false) ? '/recMan/' : '/';
+    
+    $api_url = "http://127.0.0.1" . $basePath . "classes/api_push_cli.php";
+
+    // Silencia saída e joga para background
+    // No Windows usamos 'start /B', no Linux usamos '&'
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $comando = "start /B curl -s -k -H \"Host: $domain\" -d \"$postFields\" $api_url > NUL 2>&1";
+    } else {
+        $comando = "curl -s -k -H \"Host: $domain\" -d \"$postFields\" \"$api_url\" > /dev/null 2>&1 &";
+    }
+
+    exec($comando);
+}

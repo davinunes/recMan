@@ -949,17 +949,16 @@ function upsertRecurso($dados)
         if ($id_usuario) {
             $numero_recurso = $dados['numero'];
             
+            require_once "push_helper.php";
             require_once "database.php";
             $usuario = getUsuariosById($id_usuario);
             $nome_usuario = $usuario['nome'] ?? "Conselheiro";
             
             $titulo = "Sistema de Recursos";
             $mensagem = "O conselheiro $nome_usuario cadastrou um novo recurso: $numero_recurso";
-            $domain = "mini.davinunes.eti.br";
+            $url = "/index.php?pag=recurso&rec=" . urlencode($numero_recurso);
 
-            $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
-            $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
-            exec($comando);
+            sendPushBackground($titulo, $mensagem, $url);
         }
         return "ok";
     } else {
@@ -980,18 +979,16 @@ function upsertComentario($dados)
     $id_mensagem = DBExecute($sql, true);
     if ($id_mensagem && is_numeric($id_mensagem)) {
         // Envio de Push Notification
+        require_once "push_helper.php";
         $usuario = getUsuariosById($id_usuario);
         $nome_usuario = $usuario['nome'] ?? "Conselheiro";
         $resumo_comentario = substr($dados['messageText'], 0, 100) . (strlen($dados['messageText']) > 100 ? "..." : "");
 
         $titulo = "Novo Comentário";
         $mensagem = "$nome_usuario comentou no recurso $id_recurso:\n$resumo_comentario";
-        $domain = "mini.davinunes.eti.br";
+        $url = "/index.php?pag=recurso&rec=" . urlencode($id_recurso);
 
-        $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
-        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
-
-        exec($comando);
+        sendPushBackground($titulo, $mensagem, $url);
         return $id_mensagem;
     } else {
         return "erro";

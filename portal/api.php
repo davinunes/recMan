@@ -200,12 +200,9 @@ if ($action == 'submit') {
     // --- ENVIAR PUSH NOTIFICATION (Background) ---
     $tituloPush = "Novo Recurso ($numeroCompleto)";
     $mensagemPush = "Bloco {$bloco}-{$unidade} protocolou nova defesa.";
-    $urlPush = "https://" . $_SERVER['HTTP_HOST'] . "/recMan/index.php";
-    $domain = "mini.davinunes.eti.br";
-
-    $postData = "titulo=" . urlencode($tituloPush) . "&mensagem=" . urlencode($mensagemPush) . "&url=" . urlencode($urlPush);
-    $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
-    exec($comando);
+    $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroCompleto);
+    
+    sendPushBackground($tituloPush, $mensagemPush, $urlPush);
 
     // Tratamento de Arquivos Anexados
     $storageDir = __DIR__ . '/../storage/anexos/';
@@ -444,6 +441,13 @@ if (
             $sql = "UPDATE recurso SET detalhes = CONCAT(detalhes, '" . DBEscape($append) . "') WHERE numero = '" .
                 DBEscape($numeroRec) . "'";
             DBExecute($sql);
+
+            // Notifica conselheiros
+            $tituloPush = "Novo Comentário ($numeroRec)";
+            $mensagemPush = "O condômino adicionou informações ao recurso.";
+            $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroRec);
+            sendPushBackground($tituloPush, $mensagemPush, $urlPush);
+
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Comentário vazio.']);
@@ -456,6 +460,7 @@ if (
         if (!is_dir($storageDir)) {
             @mkdir($storageDir, 0777, true);
         }
+        $pushedAny = false;
         if (isset($_FILES['anexos']) && !empty($_FILES['anexos']['name'][0])) {
             foreach ($_FILES['anexos']['name'] as $key => $name) {
                 $tmp = $_FILES['anexos']['tmp_name'][$key];
@@ -470,9 +475,18 @@ if (
                 '" . DBEscape($newName) . "'
                 )";
                     DBExecute($sqlAnexo);
+                    $pushedAny = true;
                 }
             }
         }
+        if ($pushedAny) {
+            // Notifica conselheiros
+            $tituloPush = "Novos Anexos ($numeroRec)";
+            $mensagemPush = "O condômino enviou novos arquivos para o recurso.";
+            $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroRec);
+            sendPushBackground($tituloPush, $mensagemPush, $urlPush);
+        }
+
         echo json_encode(['success' => true]);
         exit;
     }
