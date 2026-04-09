@@ -123,7 +123,7 @@ if ($esseRecurso == null) {
             echo '<div class="collection-item">';
 
             if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                echo '<div style="margin-bottom: 10px;"><img src="' . $urlView . '" style="max-width: 100%; max-height: 400px; border-radius: 4px; border: 1px solid #ccc;"></div>';
+                echo '<div style="margin-bottom: 10px;"><img src="' . $urlView . '" class="responsive-img materialboxed z-depth-1" style="max-height: 400px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer;" alt="' . htmlspecialchars($anx['nome_arquivo']) . '"></div>';
                 echo '<a href="' . $urlDownload . '" target="_blank" class="btn-flat grey lighten-4" style="height:auto;line-height:30px;"><i class="material-icons left">image</i> ' . htmlspecialchars($anx['nome_arquivo']) . '</a>';
             } elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])) {
                 echo '<div style="margin-bottom: 10px;"><video controls style="max-width: 100%; max-height: 400px; border-radius: 4px; border: 1px solid #ccc; background: #000;"><source src="' . $urlView . '" type="video/' . ($ext == 'mov' ? 'mp4' : $ext) . '">Seu navegador não suporta vídeos.</video></div>';
