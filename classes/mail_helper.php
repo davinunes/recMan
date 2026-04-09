@@ -11,14 +11,15 @@ class MailHelper {
         if (!empty($bcc)) {
             $headers .= "Bcc: " . implode(', ', $bcc) . "\r\n";
         }
-        $headers .= "Subject: $subject\r\n";
+        $encodedSubject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
+        $headers .= "Subject: $encodedSubject\r\n";
         $headers .= "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n\r\n";
         
-        $message = "--$boundary\r\n";
+        $message = $headers . "--$boundary\r\n";
         $message .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-        $message .= "$body\r\n\r\n";
+        $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $message .= chunk_split(base64_encode($body)) . "\r\n";
         
         foreach ($attachments as $attachment) {
             if (file_exists($attachment['path'])) {

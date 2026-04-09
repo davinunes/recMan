@@ -326,14 +326,22 @@ switch ($_GET['metodo']) {
                 $attachments[] = ['name' => $ax['nome_arquivo'], 'path' => $ax['caminho_arquivo']];
             }
 
-            $mime = MailHelper::buildMimeMessage($emailRequerente, $assunto, $corpo, $cc, [], $attachments);
+            $mime = MailHelper::buildMimeMessage($emailRequerente, $assunto, $corpo, array_unique($cc), [], $attachments);
             $res = MailHelper::sendViaGmail($mime);
 
             if (isset($res['id'])) {
                 marcarDiligenciaEnviada($id_diligencia, $res['id']);
                 echo "ok";
             } else {
-                echo "Erro ao enviar e-mail: " . ($res['error'] ?? 'Erro desconhecido');
+                $errorMsg = "Erro desconhecido";
+                if (isset($res['error'])) {
+                    if (is_array($res['error'])) {
+                        $errorMsg = $res['error']['message'] ?? json_encode($res['error']);
+                    } else {
+                        $errorMsg = $res['error'];
+                    }
+                }
+                echo "Erro ao enviar e-mail: " . $errorMsg;
             }
         }
         break;
