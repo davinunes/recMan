@@ -36,17 +36,18 @@ if ($action == 'subscribe') {
     $endpoint = $data['endpoint'];
     $p256dh = $data['keys']['p256dh'] ?? '';
     $auth = $data['keys']['auth'] ?? '';
+    $baseUrl = $data['base_url'] ?? '';
 
     // Evita duplicação (o navegador renova as chaves as vezes em background)
     $chk = DBExecute("SELECT id FROM push_subscriptions WHERE endpoint = '" . DBEscape($endpoint) . "'");
 
     if ($chk && mysqli_num_rows($chk) == 0) {
-        $sql = "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) 
-                VALUES ($userId, '" . DBEscape($endpoint) . "', '" . DBEscape($p256dh) . "', '" . DBEscape($auth) . "')";
+        $sql = "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, base_url) 
+                VALUES ($userId, '" . DBEscape($endpoint) . "', '" . DBEscape($p256dh) . "', '" . DBEscape($auth) . "', '" . DBEscape($baseUrl) . "')";
         DBExecute($sql);
     } else {
         $sql = "UPDATE push_subscriptions 
-                SET user_id = $userId, p256dh = '" . DBEscape($p256dh) . "', auth = '" . DBEscape($auth) . "' 
+                SET user_id = $userId, p256dh = '" . DBEscape($p256dh) . "', auth = '" . DBEscape($auth) . "', base_url = '" . DBEscape($baseUrl) . "' 
                 WHERE endpoint = '" . DBEscape($endpoint) . "'";
         DBExecute($sql);
     }

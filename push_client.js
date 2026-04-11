@@ -14,28 +14,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Se ainda não se inscreveu neste aparelho, pergunta e se cadastra no servidor
         if (!subscription) {
             console.log('Solicitando permissão para enviar Push...');
-
-            // Pega a chave VAPID segura
             const response = await fetch('api_push.php?action=get_vapid');
             const data = await response.json();
 
             if (data.publicKey) {
                 const convertedVapidKey = urlBase64ToUint8Array(data.publicKey);
-
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: convertedVapidKey
                 });
-
-                // Grava o token do celular do usuário no banco MySQL via PHP
-                await fetch('api_push.php?action=subscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(subscription)
-                });
-
-                console.log('Inscrito no Push Notifications!');
             }
+        }
+
+        // Sempre sincroniza com o servidor (para atualizar ID do usuário ou base_url se mudou)
+        if (subscription) {
+            const subscriptionData = JSON.parse(JSON.stringify(subscription));
+            subscriptionData.base_url = window.location.origin;
+
+            await fetch('api_push.php?action=subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscriptionData)
+            });
+
+            console.log('Push sincronizado com o servidor!');
         }
     } catch (e) {
         console.error('Falha no Web Push Registration:', e);

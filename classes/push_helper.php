@@ -44,15 +44,7 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
             $icon = 'https://mini.davinunes.eti.br/storage/icons/conselho-toon.webp';
         }
 
-        // Payload que o Service Worker do Chrome vai interpretar:
-        $payload = json_encode([
-            'title' => $titulo,
-            'body' => $mensagem,
-            'url' => $url,
-            'icon' => $icon
-        ]);
-
-        $sql = "SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions";
+        $sql = "SELECT id, user_id, endpoint, p256dh, auth, base_url FROM push_subscriptions";
         if (!empty($userIds) && is_array($userIds)) {
             $ids = implode(',', array_map('intval', $userIds));
             $sql .= " WHERE user_id IN ($ids)";
@@ -68,13 +60,29 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
         while ($row = mysqli_fetch_assoc($res)) {
             $hasSubs = true;
 
+            // Se a URL for relativa, tenta usar o base_url do dispositivo do conselheiro
+            // Se o base_url for por exemplo https://mini.davinunes.eti.br
+            // E a URL for /index.php, o link final será https://mini.davinunes.eti.br/index.php
+            $finalUrl = $url;
+            if (substr($url, 0, 4) !== 'http') {
+                $base = $row['base_url'] ?: 'https://mini.davinunes.eti.br';
+                $finalUrl = rtrim($base, '/') . '/' . ltrim($url, '/');
+            }
+
             $subscription = Subscription::create([
                 'endpoint' => $row['endpoint'],
                 'publicKey' => $row['p256dh'],
                 'authToken' => $row['auth']
             ]);
 
-            $webPush->sendOneNotification($subscription, $payload);
+            $devicePayload = json_encode([
+                'title' => $titulo,
+                'body' => $mensagem,
+                'url' => $finalUrl,
+                'icon' => $icon
+            ]);
+
+            $webPush->sendOneNotification($subscription, $devicePayload);
         }
 
         if ($hasSubs) {
@@ -105,12 +113,9 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
  */
 function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null)
 {
-    // Domínio para o Header Host (essencial para virtualhosts no Apache/Nginx)
-    // Força o domínio oficial se estiver em um contexto estranho
-    $domain = $_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br";
-    if ($domain === '127.0.0.1' || $domain === 'localhost') {
-        $domain = "mini.davinunes.eti.br";
-    }
+    // Domínio oficial para garantir que o curl interno sempre funcione
+    // Mesmo se o request vier do portal (outro dominio), o curl interno deve usar o dominio que tem a pasta /classes/
+    $domain = "mini.davinunes.eti.br";
 
     $postData = [
         'titulo' => $titulo,
