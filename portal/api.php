@@ -169,7 +169,10 @@ if ($action == 'submit') {
     $unidade = (int) ($_POST['unidade'] ?? 0);
     $email = $_SESSION['portal_token']['email'] ?? '';
     $detalhes = $_POST['detalhes'] ?? '';
-    $fato = $_POST['fato'] ?? 'Fato narrado na cópia da Notificação';
+    $fato = ($_POST['fato'] ?? 'undefined');
+    if ($fato === 'undefined' || empty($fato)) {
+        $fato = 'Fato descrito em epígrafe.';
+    }
 
     $numeroCompleto = $numero . '/' . $ano;
 
@@ -200,7 +203,12 @@ if ($action == 'submit') {
     // --- ENVIAR PUSH NOTIFICATION (Background) ---
     $tituloPush = "Novo Recurso ($numeroCompleto)";
     $mensagemPush = "Bloco {$bloco}-{$unidade} protocolou nova defesa.";
-    $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroCompleto);
+    
+    // Detecta host e path base
+    $httpHost = $_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br";
+    // Se o portal está em /recMan/portal, assumimos que o index.php está em /recMan/
+    $basePathUrl = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/recMan/') !== false) ? '/recMan/' : '/';
+    $urlPush = "https://" . $httpHost . $basePathUrl . "index.php?pag=recurso&rec=" . urlencode($numeroCompleto);
     
     sendPushBackground($tituloPush, $mensagemPush, $urlPush);
 

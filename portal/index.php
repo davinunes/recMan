@@ -752,7 +752,10 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     fd.append('assunto', this.notificacaoData ? this.notificacaoData.assunto : '');
 
                     // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
-                    fd.append('fato', this.notificacaoData ? this.notificacaoData.fato : 'Fato narrado na Notificação.');
+                    const fatoOficial = (this.notificacaoData && this.notificacaoData.fato && this.notificacaoData.fato !== 'undefined') 
+                                        ? this.notificacaoData.fato 
+                                        : 'Fato descrito em epígrafe.';
+                    fd.append('fato', fatoOficial);
 
                     // Upload files logic
                     const inputFile = document.getElementById("anexosInput");
