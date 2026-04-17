@@ -15,11 +15,13 @@ function send_response($data) {
 // Pega o ID ou lista de IDs da requisição (aceita tanto GET quanto POST)
 $id = $_REQUEST['id'] ?? null;
 $ids = $_REQUEST['ids'] ?? null;
+$bloco = $_REQUEST['bloco'] ?? null;
+$unidade = $_REQUEST['unidade'] ?? null;
 
-// Validação: Pelo menos um dos campos (id ou ids) é obrigatório
-if (empty($id) && empty($ids)) {
+// Validação: Pelo menos um dos campos (id, ids ou bloco+unidade) é obrigatório
+if (empty($id) && empty($ids) && (empty($bloco) || empty($unidade))) {
     http_response_code(400); // Bad Request
-    send_response(['status' => 'error', 'message' => 'É obrigatório informar o campo "id" ou "ids".']);
+    send_response(['status' => 'error', 'message' => 'É obrigatório informar o campo "id", "ids" ou o par "bloco" e "unidade".']);
 }
 
 $link = null; // Inicializa a variável de conexão para garantir que ela exista no bloco finally
@@ -122,6 +124,29 @@ try {
                 'requested_ids' => $validIds
             ]);
         }
+    }
+    // Se foram passados Bloco e Unidade
+    else if (!empty($bloco) && !empty($unidade)) {
+        // Prepara a consulta para buscar todas as ocorrências daquela unidade
+        $stmt = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE bloco = ? AND unidade = ? ORDER BY abertura DESC");
+        mysqli_stmt_bind_param($stmt, "ss", $bloco, $unidade);
+        mysqli_stmt_execute($stmt);
+        
+        $result = mysqli_stmt_get_result($stmt);
+        $ocorrencias = [];
+        
+        while ($row = mysqli_fetch_assoc($result)) {
+            $ocorrencias[] = $row;
+        }
+        
+        mysqli_stmt_close($stmt);
+
+        // Retorna as ocorrências (pode ser vazio se não houver registros para aquela unidade)
+        send_response([
+            'status' => 'success', 
+            'data' => $ocorrencias,
+            'count' => count($ocorrencias)
+        ]);
     }
 
 } catch (Exception $e) {
