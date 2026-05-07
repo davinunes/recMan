@@ -1,8 +1,7 @@
 <?php
 require_once __DIR__ . "/classes/repositorio.php";
 
-DBExecute("ALTER TABLE recurso ADD COLUMN token VARCHAR(50) DEFAULT NULL;");
-
+// DBExecute("ALTER TABLE recurso ADD COLUMN token VARCHAR(50) DEFAULT NULL;"); // Já aplicado
 $sqlAnexos = "CREATE TABLE IF NOT EXISTS recurso_anexos (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     numero_recurso VARCHAR(100) NOT NULL,
