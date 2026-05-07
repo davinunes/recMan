@@ -14,4 +14,10 @@ $sqlAnexos = "CREATE TABLE IF NOT EXISTS recurso_anexos (
 )";
 DBExecute($sqlAnexos);
 
+$sqlDrop = "ALTER TABLE recurso_anexos DROP FOREIGN KEY fk_anexos_recurso;";
+DBExecute($sqlDrop);
+
+$sqlAdd = "ALTER TABLE recurso_anexos ADD CONSTRAINT fk_anexos_recurso FOREIGN KEY (numero_recurso) REFERENCES recurso(numero) ON DELETE CASCADE ON UPDATE CASCADE;";
+DBExecute($sqlAdd);
+
 echo "Migration done.";
