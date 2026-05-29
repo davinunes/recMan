@@ -30,8 +30,22 @@ set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-// --- AUTENTICAÇÃO BEARER (Desabilitada temporariamente para testes) ---
-/*
+// --- SUPORTE A GETALLHEADERS ---
+if (!function_exists('getallheaders')) {
+    function getallheaders() {
+        $headers = [];
+        foreach ($_SERVER as $name => $value) {
+            if (substr($name, 0, 5) == 'HTTP_') {
+                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+            }
+        }
+        return $headers;
+    }
+}
+
+// --- AUTENTICAÇÃO BEARER ---
+require_once __DIR__ . '/token.php';
+
 $headers = getallheaders();
 $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
@@ -40,12 +54,11 @@ if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
     exit;
 }
 $token = $matches[1];
-if ($token !== 'NOSSO_TOKEN_SECRETO') { // Substitua pelo token real do sistema
+if (!isset($token_api) || $token !== $token_api) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Não autorizado: token inválido.']);
     exit;
 }
-*/
 
 // Carrega as dependências necessárias
 require_once __DIR__ . '/../classes/repositorio.php';

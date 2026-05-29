@@ -487,9 +487,24 @@
                     Esta API REST permite integrar e atualizar o sistema de recursos e controle de notificações (ciencia, dados cadastrais e multas). A API é estruturada de forma simples e direta, operando sobre JSON.
                 </p>
 
-                <div class="alert-box">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <strong>Nota sobre Autenticação:</strong> A validação de tokens está desabilitada temporariamente para fins de homologação e testes locais. Futuramente, será cobrado o cabeçalho padrão <code>Authorization: Bearer &lt;TOKEN&gt;</code>.
+                <div class="alert-box" style="background-color: rgba(124, 77, 255, 0.1); border-left-color: var(--accent-primary);">
+                    <i class="fa-solid fa-lock" style="color: var(--accent-primary);"></i>
+                    <strong>Autenticação Ativa:</strong> As requisições de homologação e testes exigem o envio do token no cabeçalho HTTP <code>Authorization: Bearer &lt;TOKEN&gt;</code>.
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem; max-width: 500px;">
+                    <label for="api-token" style="font-weight: 600; color: #ffffff;">
+                        <i class="fa-solid fa-key" style="color: var(--accent-primary); margin-right: 6px;"></i> Token Bearer para Testes
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="password" id="api-token" autocomplete="off" placeholder="Cole aqui o token de teste..." style="padding-right: 40px;">
+                        <button type="button" id="toggle-token-btn" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                        Por motivos de segurança, o navegador não salvará este campo.
+                    </small>
                 </div>
 
                 <p>O endpoint base das chamadas locais está localizado em:</p>
@@ -754,6 +769,17 @@
             document.querySelectorAll('section').forEach(section => {
                 observer.observe(section);
             });
+
+            // Toggle show/hide password para o input do token
+            const tokenInput = document.getElementById('api-token');
+            const toggleBtn = document.getElementById('toggle-token-btn');
+            if (toggleBtn && tokenInput) {
+                toggleBtn.addEventListener('click', () => {
+                    const type = tokenInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    tokenInput.setAttribute('type', type);
+                    toggleBtn.innerHTML = type === 'password' ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+                });
+            }
         });
 
         // GET Request handler
@@ -763,6 +789,7 @@
             const numero = document.getElementById('get-numero').value.trim();
             const mes = document.getElementById('get-mes').value;
             const ano = document.getElementById('get-ano').value.trim();
+            const token = document.getElementById('api-token').value.trim();
             
             const params = new URLSearchParams();
             if (numero) params.append('numeros', numero);
@@ -777,7 +804,15 @@
             statusInd.className = 'status-indicator';
             statusInd.innerText = 'Pendente';
             
-            fetch(url)
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+            
+            fetch(url, {
+                method: 'GET',
+                headers: headers
+            })
                 .then(response => {
                     if (response.ok) {
                         statusInd.className = 'status-indicator ok';
@@ -807,6 +842,7 @@
             const obsRetirada = document.getElementById('post-obs-retirada').value.trim();
             const dataCobranca = document.getElementById('post-data-cobranca').value.trim();
             const valor = document.getElementById('post-valor').value.trim();
+            const token = document.getElementById('api-token').value.trim();
             
             const payload = {
                 recurso_numero: numero
@@ -824,11 +860,16 @@
             statusInd.className = 'status-indicator';
             statusInd.innerText = 'Pendente';
             
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+            
             fetch('api/recursos.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: headers,
                 body: JSON.stringify(payload)
             })
                 .then(response => {
