@@ -58,6 +58,17 @@ if (!loadEnv($envPath)) {
     exit(1);
 }
 
+// Se executado via Web (browser ou cURL de fora do console), exige token de segurança
+if (php_sapi_name() !== 'cli') {
+    $secretToken = getenv('SYNC_SECRET_TOKEN');
+    $receivedToken = $_GET['token'] ?? '';
+    if (empty($secretToken) || $receivedToken !== $secretToken) {
+        http_response_code(403);
+        echo "Acesso Negado: Token de seguranca (?token=...) invalido ou nao configurado no .env.\n";
+        exit(1);
+    }
+}
+
 $supabaseUrl = getenv('SUPABASE_URL');
 $supabaseAnonKey = getenv('SUPABASE_ANON_KEY');
 $supabaseEmail = getenv('SUPABASE_EMAIL');

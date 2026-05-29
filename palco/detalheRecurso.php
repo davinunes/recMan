@@ -339,6 +339,8 @@ if ($esseRecurso == null) {
     if ($result['fase'] == 4)
         echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
 
+    echo '<button class="btn deep-orange" id="btnSyncSupabase" data-rec="' . htmlspecialchars($result['numero']) . '">Sincronizar Supabase</button> ';
+
     echo '
                 <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
@@ -352,6 +354,44 @@ if ($esseRecurso == null) {
 
     <!-- Inclua os scripts do Materialize CSS e outros recursos -->
     <!-- Inclua seu código JavaScript para controlar os modais, eventos, etc. -->
+    <script>
+    $(document).ready(function() {
+        $('#btnSyncSupabase').click(function() {
+            var rec = $(this).attr('data-rec');
+            var $btn = $(this);
+            
+            // Desabilita o botão para evitar cliques duplos
+            $btn.addClass('disabled').text('Sincronizando...');
+            
+            $.ajax({
+                url: 'magnacom-sistema/sync_single.php',
+                type: 'POST',
+                data: { rec: rec },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var msg = 'Notificação sincronizada!';
+                        if (response.data.artigo) {
+                            msg += ' Artigo copiado: ' + response.data.artigo;
+                        }
+                        M.toast({html: msg, classes: 'green'});
+                        // Recarrega a página após 1.5s para exibir o artigo e dados atualizados
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        M.toast({html: 'Erro: ' + response.error, classes: 'red'});
+                        $btn.removeClass('disabled').text('Sincronizar Supabase');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    M.toast({html: 'Erro ao conectar com o servidor.', classes: 'red'});
+                    $btn.removeClass('disabled').text('Sincronizar Supabase');
+                }
+            });
+        });
+    });
+    </script>
 </body>
 
 
