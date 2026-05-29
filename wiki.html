@@ -509,6 +509,19 @@
                     Adicionalmente, se o recurso possuir um <strong>Parecer</strong> concluído associado, será retornado um objeto <code>parecer</code> simplificado contendo a data, o resultado final, a cópia do PDF gerado em <strong>Base64</strong> e o hash <strong>SHA-256</strong> deste PDF.
                 </p>
 
+                <h3>Campos de Retorno (JSON)</h3>
+                <p>
+                    Cada item da lista contém dados cadastrais básicos e os novos campos relacionados a retirada e cobrança:
+                </p>
+                <ul>
+                    <li><code>id</code>, <code>unidade</code>, <code>bloco</code>, <code>numero</code>, <code>artigo</code>, <code>fase</code>, <code>email</code>, <code>Nome</code>, <code>detalhes</code>, <code>titulo</code>, <code>data</code>, <code>fato</code>.</li>
+                    <li><code>data_retirada</code>: Data em que a notificação foi retirada/ciente (caso cadastrada).</li>
+                    <li><code>observacao_retirada</code>: Observações cadastradas na retirada.</li>
+                    <li><code>data_cobranca</code>: Data de cobrança/vencimento da multa aplicada.</li>
+                    <li><code>valor_cobranca</code>: Valor da cobrança/multa (decimal).</li>
+                    <li><code>parecer</code>: Objeto parecer (se existente).</li>
+                </ul>
+
                 <h3>Parâmetros de Query (Opcionais)</h3>
                 <table>
                     <thead>
@@ -646,22 +659,22 @@
                             <td>Observações adicionais de retirada física/digital</td>
                         </tr>
                         <tr>
-                            <td><code>status</code></td>
+                            <td><code>data_cobranca</code></td>
                             <td><code>string</code></td>
                             <td>Não</td>
-                            <td>Status atual da Notificação (Ex: <code>Pago</code>, <code>Cancelado</code>, <code>Em Análise</code>)</td>
+                            <td>Ajusta a data de cobrança/vencimento da multa (Ex: <code>10/06/2026</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>valor_cobranca</code></td>
+                            <td><code>decimal</code></td>
+                            <td>Não</td>
+                            <td>Ajusta o valor da cobrança da multa aplicada (Ex: <code>250.00</code>)</td>
                         </tr>
                         <tr>
                             <td><code>assunto</code></td>
                             <td><code>string</code></td>
                             <td>Não</td>
                             <td>Assunto / Infração vinculada</td>
-                        </tr>
-                        <tr>
-                            <td><code>multa_valor</code></td>
-                            <td><code>decimal</code></td>
-                            <td>Não</td>
-                            <td>Valor da multa aplicada (Ex: <code>150.00</code>)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -688,18 +701,11 @@
                                 <input type="text" id="post-obs-retirada" placeholder="Ex: Morador ciente via e-mail corporativo">
                             </div>
                             <div class="form-group">
-                                <label for="post-status">Status da Notificação</label>
-                                <select id="post-status">
-                                    <option value="">Não Alterar</option>
-                                    <option value="Aberto">Aberto</option>
-                                    <option value="Em Recurso">Em Recurso</option>
-                                    <option value="Deferido">Deferido (Cancelado)</option>
-                                    <option value="Indeferido">Indeferido (Cobrar)</option>
-                                    <option value="Pago">Pago</option>
-                                </select>
+                                <label for="post-data-cobranca">Data da Cobrança/Vencimento (DD/MM/AAAA ou AAAA-MM-DD)</label>
+                                <input type="text" id="post-data-cobranca" placeholder="Ex: 10/06/2026">
                             </div>
                             <div class="form-group">
-                                <label for="post-valor">Valor da Multa (caso haja alteração)</label>
+                                <label for="post-valor">Valor da Cobrança</label>
                                 <input type="number" id="post-valor" placeholder="Ex: 250.00" step="0.01">
                             </div>
                             <button type="submit" class="btn btn-success"><i class="fa-solid fa-paper-plane"></i> Atualizar Notificação</button>
@@ -795,7 +801,7 @@
             const numero = document.getElementById('post-numero').value.trim();
             const dataCiencia = document.getElementById('post-data-ciencia').value.trim();
             const obsRetirada = document.getElementById('post-obs-retirada').value.trim();
-            const status = document.getElementById('post-status').value;
+            const dataCobranca = document.getElementById('post-data-cobranca').value.trim();
             const valor = document.getElementById('post-valor').value.trim();
             
             const payload = {
@@ -804,8 +810,8 @@
             
             if (dataCiencia) payload.data_ciencia = dataCiencia;
             if (obsRetirada) payload.obs_retirada = obsRetirada;
-            if (status) payload.status = status;
-            if (valor) payload.multa_valor = valor;
+            if (dataCobranca) payload.data_cobranca = dataCobranca;
+            if (valor) payload.valor_cobranca = valor;
             
             const statusInd = document.getElementById('post-status-ind');
             const responseBox = document.getElementById('post-response');

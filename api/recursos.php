@@ -94,25 +94,32 @@ if ($method === 'GET') {
     $mes = isset($_GET['mes']) && $_GET['mes'] !== '' ? (int)$_GET['mes'] : null;
     $ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? (int)$_GET['ano'] : null;
 
-    // Monta consulta SQL para recursos (apenas dados cadastrais)
-    $sql = "SELECT id, unidade, bloco, numero, artigo, fase, email, Nome, detalhes, titulo, data, fato 
-            FROM recurso 
+    // Monta consulta SQL para recursos (incluindo data retirada, obs, data cobrança e valor)
+    $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, r.artigo, r.fase, r.email, r.Nome, r.detalhes, r.titulo, r.data, r.fato,
+                   d.dia_retirada AS data_retirada,
+                   d.obs AS observacao_retirada,
+                   mc.data_vencimento AS data_cobranca,
+                   mc.valor AS valor_cobranca
+            FROM recurso r
+            LEFT JOIN DatasDeRetirada d ON d.virtual = r.numero
+            LEFT JOIN multas_cobradas mc ON mc.numero = CAST(SUBSTRING_INDEX(r.numero, '/', 1) AS UNSIGNED) 
+                                        AND mc.ano = CAST(SUBSTRING_INDEX(r.numero, '/', -1) AS UNSIGNED)
             WHERE 1=1";
 
     if (!empty($numeros)) {
         $escaped_numeros = array_map('DBEscape', $numeros);
-        $sql .= " AND numero IN ('" . implode("','", $escaped_numeros) . "')";
+        $sql .= " AND r.numero IN ('" . implode("','", $escaped_numeros) . "')";
     }
 
     if ($mes !== null) {
-        $sql .= " AND MONTH(data) = " . $mes;
+        $sql .= " AND MONTH(r.data) = " . $mes;
     }
 
     if ($ano !== null) {
-        $sql .= " AND YEAR(data) = " . $ano;
+        $sql .= " AND YEAR(r.data) = " . $ano;
     }
 
-    $sql .= " ORDER BY data DESC, id DESC";
+    $sql .= " ORDER BY r.data DESC, r.id DESC";
 
     $recursosRes = DBQuery($sql);
     $recursos = [];
@@ -292,7 +299,6 @@ if ($method === 'GET') {
         'assunto' => 'assunto',
         'notificacao' => 'notificacao',
         'cobranca' => 'cobranca',
-        'status' => 'status',
         'obs_notificacao' => 'obs',
         'obs_solucoes' => 'obs',
     ];
@@ -340,9 +346,12 @@ if ($method === 'GET') {
     }
 
     // 3. Atualizar/Inserir Multas Cobradas (Tabela multas_cobradas)
-    $multa_valor = $input['multa_valor'] ?? ($input['valor'] ?? null);
-    $multa_vencimento = isset($input['multa_vencimento']) ? parseDateToMysql($input['multa_vencimento']) : (isset($input['data_vencimento']) ? parseDateToMysql($input['data_vencimento']) : null);
-    $multa_pagamento = isset($input['multa_pagamento']) ? parseDateToMysql($input['multa_pagamento']) : (isset($input['data_pagamento']) ? parseDateToMysql($input['data_pagamento']) : null);
+    $multa_valor = $input['valor_cobranca'] ?? ($input['multa_valor'] ?? ($input['valor'] ?? null));
+    $multa_vencimento = isset($input['data_cobranca']) ? parseDateToMysql($input['data_cobranca']) : 
+                        (isset($input['data_vencimento']) ? parseDateToMysql($input['data_vencimento']) : 
+                        (isset($input['multa_vencimento']) ? parseDateToMysql($input['multa_vencimento']) : null));
+    $multa_pagamento = isset($input['multa_pagamento']) ? parseDateToMysql($input['multa_pagamento']) : 
+                       (isset($input['data_pagamento']) ? parseDateToMysql($input['data_pagamento']) : null);
 
     $updateMulta = ($multa_valor !== null || $multa_vencimento !== null || $multa_pagamento !== null);
 
