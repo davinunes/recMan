@@ -86,13 +86,28 @@ if ($method === 'GET') {
             $numeros = explode(',', $_GET['numeros']);
         }
     }
-    if (isset($_GET['numero'])) {
+    if (isset($_GET['numero']) && $_GET['numero'] !== '') {
         $numeros[] = $_GET['numero'];
     }
     $numeros = array_filter(array_map('trim', $numeros));
 
     $mes = isset($_GET['mes']) && $_GET['mes'] !== '' ? (int)$_GET['mes'] : null;
     $ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? (int)$_GET['ano'] : null;
+
+    // Se informou o mês mas não o ano, assume o ano atual
+    if ($mes !== null && $ano === null) {
+        $ano = (int)date('Y');
+    }
+
+    // Bloqueia listagem global se nenhum filtro for fornecido para evitar carga pesada
+    if (empty($numeros) && $mes === null && $ano === null) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'A listagem global foi desativada por motivos de performance. Por favor, forneça o número/lista de recursos (numero/numeros) ou filtros de data (mes/ano).'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     // Monta consulta SQL para recursos (incluindo data retirada, obs, data cobrança e valor)
     $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, r.artigo, r.fase, r.email, r.Nome, r.detalhes, r.titulo, r.data, r.fato,

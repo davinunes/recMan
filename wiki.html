@@ -503,8 +503,12 @@
             <section id="get-recursos">
                 <h2><span class="method-badge get">GET</span> Listagem de Recursos</h2>
                 <p>
-                    Retorna os dados cadastrais dos Recursos criados. Por padrão, retorna todos os registros. É possível filtrar por uma lista específica de números, ou por mês e ano.
+                    Retorna os dados cadastrais dos Recursos criados. <strong>Atenção:</strong> Por motivos de performance, a listagem global sem parâmetros está <strong>desabilitada</strong>. É necessário informar um identificador (número/lista de recursos) ou filtros de data (mês/ano).
                 </p>
+                <div class="alert-box" style="margin-top: 10px;">
+                    <i class="fa-solid fa-clock"></i>
+                    <strong>Padrão de Data:</strong> Caso o parâmetro de ano (<code>ano</code>) não seja enviado mas o mês (<code>mes</code>) seja fornecido, o sistema considerará automaticamente o <strong>ano atual</strong>.
+                </div>
                 <p>
                     Adicionalmente, se o recurso possuir um <strong>Parecer</strong> concluído associado, será retornado um objeto <code>parecer</code> simplificado contendo a data, o resultado final, a cópia do PDF gerado em <strong>Base64</strong> e o hash <strong>SHA-256</strong> deste PDF.
                 </p>
