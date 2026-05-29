@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki API - Recursos & Notificações</title>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-primary: #7c4dff;
+            --accent-primary-hover: #9e79ff;
+            --accent-success: #2ea44f;
+            --accent-success-hover: #3fb950;
+            --accent-warning: #dbab09;
+            --code-bg: #161b22;
+            --input-bg: #0d1117;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        /* Glassmorphism Header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(13, 17, 23, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(45deg, #a370f7, #38ef7d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        header nav a:hover {
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: sticky;
+            top: 6rem;
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar ul li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            color: #ffffff;
+            background-color: var(--card-bg);
+            padding-left: 1rem;
+        }
+
+        /* Main Content Cards */
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            transition: border-color 0.3s ease;
+        }
+
+        section:hover {
+            border-color: rgba(124, 77, 255, 0.4);
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+        }
+
+        h2 i {
+            color: var(--accent-primary);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Badge elements */
+        .method-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .method-badge.get {
+            background-color: rgba(56, 139, 253, 0.15);
+            color: #58a6ff;
+            border: 1px solid rgba(56, 139, 253, 0.3);
+        }
+
+        .method-badge.post {
+            background-color: rgba(46, 164, 79, 0.15);
+            color: #3fb950;
+            border: 1px solid rgba(46, 164, 79, 0.3);
+        }
+
+        .url-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .url-box span {
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px;
+            font-size: 1rem;
+            transition: color 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            color: #ffffff;
+        }
+
+        /* Documentation Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        table th, table td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        table th {
+            color: #ffffff;
+            font-weight: 600;
+            background-color: rgba(22, 27, 34, 0.4);
+        }
+
+        table td code {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ff7b72;
+        }
+
+        /* Interactive Playground Panels */
+        .playground-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .playground-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.2);
+        }
+
+        .btn {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-primary-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn.btn-success {
+            background-color: var(--accent-success);
+        }
+
+        .btn.btn-success:hover {
+            background-color: var(--accent-success-hover);
+        }
+
+        /* Pretty Code Block output */
+        .response-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 250px;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #161b22;
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+        }
+
+        .status-indicator.ok {
+            color: #58a6ff;
+        }
+
+        .status-indicator.error {
+            color: #f85149;
+        }
+
+        .response-box {
+            flex-grow: 1;
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            overflow: auto;
+            max-height: 400px;
+            white-space: pre-wrap;
+            color: #8be9fd;
+        }
+
+        /* Tabs styling inside blocks */
+        .code-tabs {
+            margin-top: 1.5rem;
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: #ffffff;
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+            color: #e6edf3;
+        }
+
+        /* Alert Callouts */
+        .alert-box {
+            background-color: rgba(219, 171, 9, 0.1);
+            border-left: 4px solid var(--accent-warning);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .alert-box i {
+            color: var(--accent-warning);
+            margin-right: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .playground-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><i class="fa-solid fa-square-rss"></i> recMan REST API</h1>
+        <nav>
+            <a href="#overview">Visão Geral</a>
+            <a href="#get-recursos">GET Recursos</a>
+            <a href="#post-recursos">POST Recursos</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <h3>Documentação</h3>
+            <ul>
+                <li><a href="#overview" class="nav-link active">Visão Geral</a></li>
+                <li><a href="#get-recursos" class="nav-link">GET Recursos</a></li>
+                <li><a href="#post-recursos" class="nav-link">POST Notificações (POST)</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Visão Geral -->
+            <section id="overview">
+                <h2><i class="fa-solid fa-circle-info"></i> Visão Geral</h2>
+                <p>
+                    Esta API REST permite integrar e atualizar o sistema de recursos e controle de notificações (ciencia, dados cadastrais e multas). A API é estruturada de forma simples e direta, operando sobre JSON.
+                </p>
+
+                <div class="alert-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <strong>Nota sobre Autenticação:</strong> A validação de tokens está desabilitada temporariamente para fins de homologação e testes locais. Futuramente, será cobrado o cabeçalho padrão <code>Authorization: Bearer &lt;TOKEN&gt;</code>.
+                </div>
+
+                <p>O endpoint base das chamadas locais está localizado em:</p>
+                <div class="url-box">
+                    <span id="base-url-text">/api/recursos.php</span>
+                    <button class="copy-btn" onclick="copyText('base-url-text')"><i class="fa-regular fa-copy"></i></button>
+                </div>
+            </section>
+
+            <!-- GET Recursos -->
+            <section id="get-recursos">
+                <h2><span class="method-badge get">GET</span> Listagem de Recursos</h2>
+                <p>
+                    Retorna os dados cadastrais dos Recursos criados. Por padrão, retorna todos os registros. É possível filtrar por uma lista específica de números, ou por mês e ano.
+                </p>
+                <p>
+                    Adicionalmente, se o recurso possuir um <strong>Parecer</strong> concluído associado, será retornado um objeto <code>parecer</code> simplificado contendo a data, o resultado final, a cópia do PDF gerado em <strong>Base64</strong> e o hash <strong>SHA-256</strong> deste PDF.
+                </p>
+
+                <h3>Parâmetros de Query (Opcionais)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parâmetro</th>
+                            <th>Tipo</th>
+                            <th>Descrição</th>
+                            <th>Exemplo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>numeros</code></td>
+                            <td><code>string</code></td>
+                            <td>Lista de números separados por vírgula</td>
+                            <td><code>186/2023,123/2024</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>numero</code></td>
+                            <td><code>string</code></td>
+                            <td>Número de recurso único (atalho)</td>
+                            <td><code>186/2023</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>mes</code></td>
+                            <td><code>int</code></td>
+                            <td>Mês de cadastro do recurso</td>
+                            <td><code>5</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>ano</code></td>
+                            <td><code>int</code></td>
+                            <td>Ano de cadastro do recurso</td>
+                            <td><code>2026</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Interactive Playground (GET) -->
+                <div class="playground-title">
+                    <i class="fa-solid fa-vial"></i> Playground Interativo (GET)
+                </div>
+                
+                <div class="playground-grid">
+                    <div>
+                        <form id="get-form">
+                            <div class="form-group">
+                                <label for="get-numero">Número do Recurso (ou lista separada por vírgula)</label>
+                                <input type="text" id="get-numero" placeholder="Ex: 186/2023, 123/2024">
+                            </div>
+                            <div class="form-group">
+                                <label for="get-mes">Filtrar por Mês (1-12)</label>
+                                <select id="get-mes">
+                                    <option value="">Nenhum</option>
+                                    <option value="1">Janeiro</option>
+                                    <option value="2">Fevereiro</option>
+                                    <option value="3">Março</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Maio</option>
+                                    <option value="6">Junho</option>
+                                    <option value="7">Julho</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="get-ano">Filtrar por Ano</label>
+                                <input type="number" id="get-ano" placeholder="Ex: 2026" min="2020" max="2030">
+                            </div>
+                            <button type="submit" class="btn"><i class="fa-solid fa-play"></i> Enviar Requisição</button>
+                        </form>
+                    </div>
+
+                    <div class="response-container">
+                        <div class="response-header">
+                            <span>Resposta JSON</span>
+                            <span class="status-indicator" id="get-status">-</span>
+                        </div>
+                        <pre class="response-box" id="get-response">Clique em "Enviar Requisição" para ver a resposta...</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- POST Recursos/Notificações -->
+            <section id="post-recursos">
+                <h2><span class="method-badge post">POST</span> Atualizar Notificação</h2>
+                <p>
+                    Permite alterar a data de ciência de notificação e atualizar dados adicionais no cadastro da notificação correlata. O recurso é utilizado apenas como identificador do registro.
+                </p>
+                <p>
+                    A API mapeia e atualiza automaticamente os registros em:
+                </p>
+                <ul>
+                    <li><code>DatasDeRetirada</code>: Atualiza a data de ciência (<code>dia_retirada</code>) e observações de entrega.</li>
+                    <li><code>notificacoes</code>: Atualiza dados cadastrais, tais como status, assunto, tipo, valores e datas de envio da notificação.</li>
+                    <li><code>multas_cobradas</code>: Atualiza valores de multa, data de vencimento e pagamento.</li>
+                </ul>
+
+                <h3>Corpo da Requisição (JSON ou Form-Data)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Tipo</th>
+                            <th>Obrigatório</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>recurso_numero</code></td>
+                            <td><code>string</code></td>
+                            <td>Parcial*</td>
+                            <td>Número do recurso identificador (Ex: <code>186/2023</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>recurso_id</code></td>
+                            <td><code>int</code></td>
+                            <td>Parcial*</td>
+                            <td>ID numérico interno do recurso no banco de dados</td>
+                        </tr>
+                        <tr>
+                            <td><code>data_ciencia</code></td>
+                            <td><code>string</code></td>
+                            <td>Não</td>
+                            <td>Data de ciência da notificação (Ex: <code>2026-05-29</code> ou <code>29/05/2026</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>obs_retirada</code></td>
+                            <td><code>string</code></td>
+                            <td>Não</td>
+                            <td>Observações adicionais de retirada física/digital</td>
+                        </tr>
+                        <tr>
+                            <td><code>status</code></td>
+                            <td><code>string</code></td>
+                            <td>Não</td>
+                            <td>Status atual da Notificação (Ex: <code>Pago</code>, <code>Cancelado</code>, <code>Em Análise</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>assunto</code></td>
+                            <td><code>string</code></td>
+                            <td>Não</td>
+                            <td>Assunto / Infração vinculada</td>
+                        </tr>
+                        <tr>
+                            <td><code>multa_valor</code></td>
+                            <td><code>decimal</code></td>
+                            <td>Não</td>
+                            <td>Valor da multa aplicada (Ex: <code>150.00</code>)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p><em>* É obrigatório o envio de <code>recurso_id</code> OU <code>recurso_numero</code> para localizar o registro.</em></p>
+
+                <!-- Interactive Playground (POST) -->
+                <div class="playground-title">
+                    <i class="fa-solid fa-vial"></i> Playground Interativo (POST)
+                </div>
+
+                <div class="playground-grid">
+                    <div>
+                        <form id="post-form">
+                            <div class="form-group">
+                                <label for="post-numero">Identificador: Número do Recurso *</label>
+                                <input type="text" id="post-numero" placeholder="Ex: 186/2023" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="post-data-ciencia">Data de Ciência (DD/MM/AAAA ou AAAA-MM-DD)</label>
+                                <input type="text" id="post-data-ciencia" placeholder="Ex: 29/05/2026">
+                            </div>
+                            <div class="form-group">
+                                <label for="post-obs-retirada">Observações de Retirada</label>
+                                <input type="text" id="post-obs-retirada" placeholder="Ex: Morador ciente via e-mail corporativo">
+                            </div>
+                            <div class="form-group">
+                                <label for="post-status">Status da Notificação</label>
+                                <select id="post-status">
+                                    <option value="">Não Alterar</option>
+                                    <option value="Aberto">Aberto</option>
+                                    <option value="Em Recurso">Em Recurso</option>
+                                    <option value="Deferido">Deferido (Cancelado)</option>
+                                    <option value="Indeferido">Indeferido (Cobrar)</option>
+                                    <option value="Pago">Pago</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="post-valor">Valor da Multa (caso haja alteração)</label>
+                                <input type="number" id="post-valor" placeholder="Ex: 250.00" step="0.01">
+                            </div>
+                            <button type="submit" class="btn btn-success"><i class="fa-solid fa-paper-plane"></i> Atualizar Notificação</button>
+                        </form>
+                    </div>
+
+                    <div class="response-container">
+                        <div class="response-header">
+                            <span>Resposta JSON</span>
+                            <span class="status-indicator" id="post-status-ind">-</span>
+                        </div>
+                        <pre class="response-box" id="post-response">Preencha o formulário e clique em "Atualizar Notificação" para testar...</pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Copy text helper
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('URL copiada para a área de transferência!');
+            });
+        }
+
+        // Active link scrolling selector
+        window.addEventListener('DOMContentLoaded', () => {
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    const id = entry.target.getAttribute('id');
+                    if (entry.intersectionRatio > 0.5) {
+                        document.querySelectorAll('.sidebar a').forEach(a => {
+                            a.classList.remove('active');
+                        });
+                        document.querySelector(`.sidebar a[href="#${id}"]`).classList.add('active');
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            document.querySelectorAll('section').forEach(section => {
+                observer.observe(section);
+            });
+        });
+
+        // GET Request handler
+        document.getElementById('get-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const numero = document.getElementById('get-numero').value.trim();
+            const mes = document.getElementById('get-mes').value;
+            const ano = document.getElementById('get-ano').value.trim();
+            
+            const params = new URLSearchParams();
+            if (numero) params.append('numeros', numero);
+            if (mes) params.append('mes', mes);
+            if (ano) params.append('ano', ano);
+            
+            const url = 'api/recursos.php?' + params.toString();
+            const statusInd = document.getElementById('get-status');
+            const responseBox = document.getElementById('get-response');
+            
+            responseBox.innerText = 'Buscando dados no servidor...';
+            statusInd.className = 'status-indicator';
+            statusInd.innerText = 'Pendente';
+            
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        statusInd.className = 'status-indicator ok';
+                        statusInd.innerText = `${response.status} OK`;
+                    } else {
+                        statusInd.className = 'status-indicator error';
+                        statusInd.innerText = `${response.status} Erro`;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    statusInd.className = 'status-indicator error';
+                    statusInd.innerText = 'Falha de Conexão';
+                    responseBox.innerText = 'Erro ao conectar no servidor: ' + err.message;
+                });
+        });
+
+        // POST Request handler
+        document.getElementById('post-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const numero = document.getElementById('post-numero').value.trim();
+            const dataCiencia = document.getElementById('post-data-ciencia').value.trim();
+            const obsRetirada = document.getElementById('post-obs-retirada').value.trim();
+            const status = document.getElementById('post-status').value;
+            const valor = document.getElementById('post-valor').value.trim();
+            
+            const payload = {
+                recurso_numero: numero
+            };
+            
+            if (dataCiencia) payload.data_ciencia = dataCiencia;
+            if (obsRetirada) payload.obs_retirada = obsRetirada;
+            if (status) payload.status = status;
+            if (valor) payload.multa_valor = valor;
+            
+            const statusInd = document.getElementById('post-status-ind');
+            const responseBox = document.getElementById('post-response');
+            
+            responseBox.innerText = 'Enviando atualizações para o servidor...';
+            statusInd.className = 'status-indicator';
+            statusInd.innerText = 'Pendente';
+            
+            fetch('api/recursos.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        statusInd.className = 'status-indicator ok';
+                        statusInd.innerText = `${response.status} OK`;
+                    } else {
+                        statusInd.className = 'status-indicator error';
+                        statusInd.innerText = `${response.status} Erro`;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    statusInd.className = 'status-indicator error';
+                    statusInd.innerText = 'Falha de Conexão';
+                    responseBox.innerText = 'Erro ao conectar no servidor: ' + err.message;
+                });
+        });
+    </script>
+</body>
+</html>
