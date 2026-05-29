@@ -633,12 +633,16 @@
                 <p>
                     Permite alterar a data de ciência de notificação e atualizar dados adicionais no cadastro da notificação correlata. O recurso é utilizado apenas como identificador do registro.
                 </p>
+                <div class="alert-box" style="margin-top: 10px; background-color: rgba(46, 164, 79, 0.1); border-left-color: var(--accent-success);">
+                    <i class="fa-solid fa-sync" style="color: var(--accent-success);"></i>
+                    <strong>Registro Independente:</strong> É permitido registrar dados de retirada e cobrança mesmo que a notificação correspondente ou o recurso não existam previamente no banco. Nesses casos, os dados de <strong>bloco</strong> e <strong>unidade</strong> devem ser enviados no payload para viabilizar o cadastro, que será complementado posteriormente via sincronização.
+                </div>
                 <p>
                     A API mapeia e atualiza automaticamente os registros em:
                 </p>
                 <ul>
                     <li><code>DatasDeRetirada</code>: Atualiza a data de ciência (<code>dia_retirada</code>) e observações de entrega.</li>
-                    <li><code>notificacoes</code>: Atualiza dados cadastrais, tais como status, assunto, tipo, valores e datas de envio da notificação.</li>
+                    <li><code>notificacoes</code>: Atualiza dados cadastrais, tais como assunto, tipo, valores e datas de envio da notificação.</li>
                     <li><code>multas_cobradas</code>: Atualiza valores de multa, data de vencimento e pagamento.</li>
                 </ul>
 
@@ -657,7 +661,7 @@
                             <td><code>recurso_numero</code></td>
                             <td><code>string</code></td>
                             <td>Parcial*</td>
-                            <td>Número do recurso identificador (Ex: <code>186/2023</code>)</td>
+                            <td>Número do recurso/notificação identificador (Ex: <code>186/2023</code>)</td>
                         </tr>
                         <tr>
                             <td><code>recurso_id</code></td>
@@ -695,9 +699,22 @@
                             <td>Não</td>
                             <td>Assunto / Infração vinculada</td>
                         </tr>
+                        <tr>
+                            <td><code>bloco</code></td>
+                            <td><code>string</code></td>
+                            <td>Não**</td>
+                            <td>Bloco do apartamento de A a F (usado como fallback para novos registros)</td>
+                        </tr>
+                        <tr>
+                            <td><code>unidade</code></td>
+                            <td><code>int</code></td>
+                            <td>Não**</td>
+                            <td>Número da unidade de 101 a 1912 (usado como fallback para novos registros)</td>
+                        </tr>
                     </tbody>
                 </table>
-                <p><em>* É obrigatório o envio de <code>recurso_id</code> OU <code>recurso_numero</code> para localizar o registro.</em></p>
+                <p><em>* É obrigatório o envio de <code>recurso_id</code> OU <code>recurso_numero</code> (formato "numero/ano") para identificar o registro.</em></p>
+                <p><em>** Obrigatório para inserção de novas multas/retiradas caso o recurso/notificação correspondente ainda não exista no banco.</em></p>
 
                 <!-- Interactive Playground (POST) -->
                 <div class="playground-title">
@@ -726,6 +743,14 @@
                             <div class="form-group">
                                 <label for="post-valor">Valor da Cobrança</label>
                                 <input type="number" id="post-valor" placeholder="Ex: 250.00" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="post-bloco">Bloco (A-F) (Opcional - Fallback)</label>
+                                <input type="text" id="post-bloco" placeholder="Ex: A" maxlength="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="post-unidade">Unidade (101-1912) (Opcional - Fallback)</label>
+                                <input type="number" id="post-unidade" placeholder="Ex: 1305" min="101" max="1912">
                             </div>
                             <button type="submit" class="btn btn-success"><i class="fa-solid fa-paper-plane"></i> Atualizar Notificação</button>
                         </form>
@@ -842,6 +867,8 @@
             const obsRetirada = document.getElementById('post-obs-retirada').value.trim();
             const dataCobranca = document.getElementById('post-data-cobranca').value.trim();
             const valor = document.getElementById('post-valor').value.trim();
+            const bloco = document.getElementById('post-bloco').value.trim();
+            const unidade = document.getElementById('post-unidade').value.trim();
             const token = document.getElementById('api-token').value.trim();
             
             const payload = {
@@ -852,6 +879,8 @@
             if (obsRetirada) payload.obs_retirada = obsRetirada;
             if (dataCobranca) payload.data_cobranca = dataCobranca;
             if (valor) payload.valor_cobranca = valor;
+            if (bloco) payload.bloco = bloco;
+            if (unidade) payload.unidade = parseInt(unidade);
             
             const statusInd = document.getElementById('post-status-ind');
             const responseBox = document.getElementById('post-response');

@@ -248,16 +248,17 @@ if ($method === 'GET') {
         }
     }
 
-    if (!$recurso) {
+    // Se foi fornecido o ID mas não encontramos o recurso correspondente
+    if ($id && !$recurso) {
         http_response_code(404);
         echo json_encode([
             'success' => false,
-            'error' => 'Recurso correspondente não encontrado na base de dados.'
+            'error' => 'Recurso correspondente ao ID informado não foi encontrado.'
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    $recursoNumero = $recurso['numero'];
+    $recursoNumero = $recurso ? $recurso['numero'] : $numero;
     $parts = explode('/', $recursoNumero);
     $notificacao_numero = isset($parts[0]) ? (int)$parts[0] : null;
     $notificacao_ano = isset($parts[1]) ? (int)$parts[1] : null;
@@ -266,9 +267,22 @@ if ($method === 'GET') {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'error' => 'O recurso possui um número inválido para mapeamento da notificação correspondente.'
+            'error' => 'O número identificador fornecido é inválido. Utilize o formato "numero/ano" (Ex: 186/2023).'
         ], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    // Bloco e unidade provenientes do recurso, do input ou consultados na tabela de notificações
+    $bloco = $recurso ? $recurso['bloco'] : ($input['bloco'] ?? null);
+    $unidade = $recurso ? $recurso['unidade'] : ($input['unidade'] ?? null);
+
+    if ((!$bloco || !$unidade) && ($notificacao_numero && $notificacao_ano)) {
+        $sqlNotif = "SELECT torre, unidade FROM notificacoes WHERE numero = $notificacao_numero AND ano = $notificacao_ano";
+        $resNotif = DBQuery($sqlNotif);
+        if ($resNotif && count($resNotif) > 0) {
+            $bloco = $bloco ?: $resNotif[0]['torre'];
+            $unidade = $unidade ?: $resNotif[0]['unidade'];
+        }
     }
 
     // 1. Atualizar Data de Ciência da Notificação (Tabela DatasDeRetirada)
@@ -278,10 +292,11 @@ if ($method === 'GET') {
     $updateDatasDeRetirada = false;
     $datasDeRetiradaFields = [
         'notificacao' => $notificacao_numero,
-        'ano' => $notificacao_ano,
-        'bloco' => $recurso['bloco'],
-        'apartamento' => $recurso['unidade']
+        'ano' => $notificacao_ano
     ];
+    if ($bloco) $datasDeRetiradaFields['bloco'] = $bloco;
+    if ($unidade) $datasDeRetiradaFields['apartamento'] = $unidade;
+
     $datasDeRetiradaUpdates = [];
 
     if ($dia_retirada !== null) {
@@ -316,10 +331,10 @@ if ($method === 'GET') {
     // 2. Atualizar Cadastro da Notificação Geral (Tabela notificacoes)
     $notifFields = [
         'numero' => $notificacao_numero,
-        'ano' => $notificacao_ano,
-        'torre' => $recurso['bloco'],
-        'unidade' => $recurso['unidade']
+        'ano' => $notificacao_ano
     ];
+    if ($bloco) $notifFields['torre'] = $bloco;
+    if ($unidade) $notifFields['unidade'] = $unidade;
     $notifUpdates = [];
     $updateNotif = false;
 
@@ -386,8 +401,18 @@ if ($method === 'GET') {
     if ($updateMulta) {
         $existsSql = "SELECT 1 FROM multas_cobradas WHERE numero = $notificacao_numero AND ano = $notificacao_ano";
         $existsRes = DBQuery($existsSql);
+        $multaExists = ($existsRes && count($existsRes) > 0);
         
-        if ($existsRes && count($existsRes) > 0) {
+        if (!$multaExists && (!$bloco || !$unidade)) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Para cadastrar uma nova cobrança de multa, o bloco e a unidade correspondentes são obrigatórios (informe "bloco" e "unidade" no payload).'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        if ($multaExists) {
             $updates = [];
             if ($multa_valor !== null) $updates[] = "valor = '" . DBEscape($multa_valor) . "'";
             if ($multa_vencimento !== null) $updates[] = "data_vencimento = '" . DBEscape($multa_vencimento) . "'";
@@ -401,14 +426,12 @@ if ($method === 'GET') {
             $sql = "UPDATE multas_cobradas SET " . implode(", ", $updates) . " WHERE numero = $notificacao_numero AND ano = $notificacao_ano";
             DBExecute($sql);
         } else {
-            $unidade = $recurso['unidade'];
-            $bloco = $recurso['bloco'];
             $vencimento_val = $multa_vencimento !== null ? "'" . DBEscape($multa_vencimento) . "'" : "CURRENT_DATE()";
             $pagamento_val = $multa_pagamento !== null ? "'" . DBEscape($multa_pagamento) . "'" : "NULL";
             $valor_val = $multa_valor !== null ? "'" . DBEscape($multa_valor) . "'" : "0.00";
             
             $sql = "INSERT INTO multas_cobradas (unidade, bloco, data_vencimento, data_pagamento, valor, numero, ano, created_at, updated_at) 
-                    VALUES ('$unidade', '$bloco', $vencimento_val, $pagamento_val, $valor_val, $notificacao_numero, $notificacao_ano, NOW(), NOW())";
+                    VALUES ('" . DBEscape($unidade) . "', '" . DBEscape($bloco) . "', $vencimento_val, $pagamento_val, $valor_val, $notificacao_numero, $notificacao_ano, NOW(), NOW())";
             DBExecute($sql);
         }
     }
