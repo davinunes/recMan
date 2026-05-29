@@ -156,8 +156,8 @@ if ($method === 'GET') {
         foreach ($recursosRes as $row) {
             $recursoNumero = $row['numero'];
             
-            // Busca o parecer correspondente (se existir)
-            $sqlParecer = "SELECT * FROM parecer WHERE id = '" . DBEscape($recursoNumero) . "'";
+            // Busca o parecer correspondente (apenas se estiver concluído)
+            $sqlParecer = "SELECT * FROM parecer WHERE id = '" . DBEscape($recursoNumero) . "' AND concluido = 1";
             $parecerRes = DBQuery($sqlParecer);
             
             $parecerObj = null;
@@ -195,7 +195,7 @@ if ($method === 'GET') {
                 
                 $parecerObj = [
                     'data' => $parecerRow['data'],
-                    'resultado' => $parecerRow['resultado'],
+                    'resultado' => $parecerRow['conclusao'],
                     'pdf' => $pdfBase64,
                     'pdf_hash' => $pdfHash
                 ];
