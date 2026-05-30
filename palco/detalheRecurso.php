@@ -49,7 +49,64 @@ $parecer = getParecer($result['numero']);
 
 if (isset($result['unidade']) && isset($result['bloco'])) {
     $historico = getNotificacoes($result['unidade'], $result['bloco']);
+}
 
+// Busca a notificação para recuperar o artigo (em notação regimento, ex: "14.1")
+$parts = explode('/', $result['numero']);
+$num = isset($parts[0]) ? (int)$parts[0] : 0;
+$ano = isset($parts[1]) ? (int)$parts[1] : 0;
+$notifRecurso = getNotificacaoByNumeroAno($num, $ano);
+$artigoNota = ($notifRecurso && isset($notifRecurso['artigo'])) ? $notifRecurso['artigo'] : null;
+
+// Função helper para buscar artigo no regimento localmente
+function obterArtigoDoRegimento($notacao) {
+    $jsonPath = dirname(__DIR__) . '/regimento/database.json';
+    if (!file_exists($jsonPath)) return null;
+    
+    $database = json_decode(file_get_contents($jsonPath), true);
+    if (!$database || !isset($database['artigos'])) return null;
+    
+    $partes = explode('.', strtolower($notacao));
+    $artigoNumero = $partes[0];
+    if (!isset($database['artigos'][$artigoNumero])) return null;
+    
+    $artigoPai = $database['artigos'][$artigoNumero];
+    $resultado = $artigoPai;
+    
+    for ($i = 1; $i < count($partes); $i++) {
+        $parteDoCaminho = $partes[$i];
+        $proximoNivelEncontrado = false;
+        
+        if (preg_match('/^([pia])(.+)$/', $parteDoCaminho, $matches)) {
+            $tipo = $matches[1]; 
+            $chave = $matches[2];
+            $mapaTipos = ['p' => 'paragrafos', 'i' => 'incisos', 'a' => 'alineas'];
+            $subnivelAlvo = $mapaTipos[$tipo];
+            if (isset($resultado[$subnivelAlvo]) && isset($resultado[$subnivelAlvo][$chave])) {
+                $resultado = $resultado[$subnivelAlvo][$chave];
+                $proximoNivelEncontrado = true;
+            }
+        } else {
+            $chave = $parteDoCaminho;
+            $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
+            foreach ($ordemDeBusca as $subnivel) {
+                if (isset($resultado[$subnivel]) && isset($resultado[$subnivel][$chave])) {
+                    $resultado = $resultado[$subnivel][$chave];
+                    $proximoNivelEncontrado = true;
+                    break;
+                }
+            }
+        }
+        if (!$proximoNivelEncontrado) return null;
+    }
+    
+    return [
+        'artigo_numero' => $artigoNumero,
+        'texto_pai' => count($partes) > 1 ? ($artigoPai['texto'] ?? null) : null,
+        'titulo_pai' => count($partes) > 1 ? ($artigoPai['titulo_artigo'] ?? null) : null,
+        'conteudo' => $resultado,
+        'notacao' => $notacao
+    ];
 }
 
 if ($esseRecurso == null) {
@@ -106,10 +163,67 @@ if ($esseRecurso == null) {
                     <p>Obs: ' . $dataRetirada[0]["obs"] . '</p>
                 </div>
 				<h6 class=""><b>Fato Ocorrido</b></h6>
-                <div class="grey">' . $result['fato'] . '</div>
-                <h6 class=""><b>Argumentação</b></h6>
-                
-            ';
+                <div class="grey">' . $result['fato'] . '</div>';
+
+    // RENDERIZA O CARD DO ARTIGO SE HOUVER
+    $artigoHtml = '';
+    if (!empty($artigoNota)) {
+        $artigoData = obterArtigoDoRegimento($artigoNota);
+        if ($artigoData) {
+            $artigoHtml .= '<div class="card blue-grey lighten-5" style="border-radius: 8px; border: 1px solid #b2dfdb; margin: 15px 0;">';
+            $artigoHtml .= '  <div class="card-content black-text" style="padding: 15px;">';
+            $artigoHtml .= '    <span class="card-title" style="font-size: 1.15rem; font-weight: bold; color: #00796b; margin-bottom: 8px; display: flex; align-items: center;">';
+            $artigoHtml .= '      <i class="material-icons left" style="color: #00796b; margin-right: 8px;">gavel</i> Regulamento Interno: Artigo ' . htmlspecialchars($artigoData['artigo_numero']);
+            if ($artigoData['notacao'] !== $artigoData['artigo_numero']) {
+                $artigoHtml .= ' (' . htmlspecialchars($artigoData['notacao']) . ')';
+            }
+            $artigoHtml .= '    </span>';
+            
+            if ($artigoData['texto_pai']) {
+                $artigoHtml .= '    <p class="grey-text text-darken-3" style="font-size: 0.85rem; margin-bottom: 12px; font-style: italic; line-height: 1.35;">';
+                if ($artigoData['titulo_pai']) {
+                    $artigoHtml .= '      <strong>' . htmlspecialchars($artigoData['titulo_pai']) . '</strong><br>';
+                }
+                $artigoHtml .= '      ' . htmlspecialchars($artigoData['texto_pai']);
+                $artigoHtml .= '    </p>';
+            }
+            
+            $conteudo = $artigoData['conteudo'];
+            $artigoHtml .= '    <div class="white" style="padding: 12px; border-radius: 5px; border-left: 4px solid #009688; font-size: 0.95rem; line-height: 1.45; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+            if (isset($conteudo['texto'])) {
+                $artigoHtml .= '      ' . htmlspecialchars($conteudo['texto']);
+            } else {
+                $artigoHtml .= '      ' . htmlspecialchars($conteudo['texto'] ?? '');
+            }
+            
+            if (isset($conteudo['paragrafos']) || isset($conteudo['incisos']) || isset($conteudo['alineas'])) {
+                $artigoHtml .= '      <ul style="margin: 8px 0 0 15px; padding-left: 0; list-style-type: none;">';
+                if (isset($conteudo['paragrafos'])) {
+                    foreach ($conteudo['paragrafos'] as $n => $sub) {
+                        $lbl = ($n === 'unico') ? 'Parágrafo único:' : "§ {$n}°:";
+                        $artigoHtml .= '        <li style="margin-top: 5px;"><strong>' . $lbl . '</strong> ' . htmlspecialchars($sub['texto']) . '</li>';
+                    }
+                }
+                if (isset($conteudo['incisos'])) {
+                    foreach ($conteudo['incisos'] as $n => $sub) {
+                        $artigoHtml .= '        <li style="margin-top: 5px;"><strong>Inciso ' . $n . ':</strong> ' . htmlspecialchars($sub['texto']) . '</li>';
+                    }
+                }
+                if (isset($conteudo['alineas'])) {
+                    foreach ($conteudo['alineas'] as $n => $sub) {
+                        $artigoHtml .= '        <li style="margin-top: 5px;"><strong>Alínea ' . $n . '):</strong> ' . htmlspecialchars($sub['texto']) . '</li>';
+                    }
+                }
+                $artigoHtml .= '      </ul>';
+            }
+            $artigoHtml .= '    </div>';
+            $artigoHtml .= '  </div>';
+            $artigoHtml .= '</div>';
+        }
+    }
+    echo $artigoHtml;
+
+    echo '      <h6 class=""><b>Argumentação</b></h6>';
     echo '<pre>' . $result['detalhes'] . '</pre>';
 
     echo '<h6><b>Anexos do Condômino (Enviados via Portal)</b></h6>';

@@ -123,12 +123,14 @@ if ($method === 'GET') {
     }
 
     // Monta consulta SQL para recursos (incluindo data retirada, obs, data cobrança e valor)
-    $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, r.artigo, r.fase, r.email, r.Nome, r.detalhes, r.titulo, r.data, r.fato,
+    $sql = "SELECT r.id, r.unidade, r.bloco, r.numero, n.artigo, r.fase, r.email, r.Nome, r.detalhes, r.titulo, r.data, r.fato,
                    d.dia_retirada AS data_retirada,
                    d.obs AS observacao_retirada,
                    mc.data_vencimento AS data_cobranca,
                    mc.valor AS valor_cobranca
             FROM recurso r
+            LEFT JOIN notificacoes n ON n.numero = CAST(SUBSTRING_INDEX(r.numero, '/', 1) AS UNSIGNED) 
+                                    AND n.ano = CAST(SUBSTRING_INDEX(r.numero, '/', -1) AS UNSIGNED)
             LEFT JOIN DatasDeRetirada d ON d.virtual = r.numero
             LEFT JOIN multas_cobradas mc ON mc.numero = CAST(SUBSTRING_INDEX(r.numero, '/', 1) AS UNSIGNED) 
                                         AND mc.ano = CAST(SUBSTRING_INDEX(r.numero, '/', -1) AS UNSIGNED)

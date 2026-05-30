@@ -209,6 +209,35 @@ try {
         $timestamp = strtotime($dateStr);
         return $timestamp ? date('Y-m-d', $timestamp) : null;
     }
+
+    function parseTipificacaoToNotacao($tipificacao) {
+        $tipificacao = trim($tipificacao);
+        if (empty($tipificacao)) return null;
+        $clean = preg_replace('/^art(igo)?\.?\s+/i', '', $tipificacao);
+        if (!preg_match('/^(\d+)/', $clean, $matches)) return null;
+        $artigo = $matches[1];
+        $resto = trim(substr($clean, strlen($artigo)));
+        $romanos = [
+            'xiv' => 14, 'xiii' => 13, 'xii' => 12, 'xi' => 11, 'x' => 10,
+            'ix' => 9, 'viii' => 8, 'vii' => 7, 'vi' => 6, 'v' => 5,
+            'iv' => 4, 'iii' => 3, 'ii' => 2, 'i' => 1
+        ];
+        if (preg_match('/(?:inciso\s+)?([ivxldcm]+)\b/i', $resto, $matches)) {
+            $romano = strtolower($matches[1]);
+            if (isset($romanos[$romano])) return $artigo . '.' . $romanos[$romano];
+        }
+        if (preg_match('/inciso\s+(\d+)/i', $resto, $matches)) {
+            return $artigo . '.' . $matches[1];
+        }
+        if (preg_match('/par[aá]grafo\s+u[nni]co/i', $resto)) {
+            return $artigo . '.unico';
+        }
+        if (preg_match('/(?:par[aá]grafo\s+|§\s*)(\d+)/ui', $resto, $matches)) {
+            return $artigo . '.' . $matches[1];
+        }
+        return $artigo;
+    }
+
     $data_email = parseDateToDb($row['confeccao'] ?? '');
     $data_envio = parseDateToDb($row['envio'] ?? '');
     $data_ocorrido = parseDateToDb($row['data_ocorrido'] ?? '');
@@ -235,6 +264,7 @@ try {
         'unidade' => $unidade,
         'notificacao' => $normalizedTipo,
         'assunto' => $assunto,
+        'artigo' => parseTipificacaoToNotacao($row['tipificacao'] ?? ''),
         'data_email' => $data_email,
         'data_envio' => $data_envio,
         'data_ocorrido' => $data_ocorrido,
@@ -273,22 +303,8 @@ try {
         upsertDatasDeRetirada($dadosRetirada);
     }
 
-    // K. Sincronização do Artigo no Recurso
-    // Pega o artigo da notificação (coluna 'tipificacao' no Supabase)
-    $artigo = isset($row['tipificacao']) ? trim($row['tipificacao']) : '';
-    $artigoAtualizado = false;
-
-    if ($artigo !== '') {
-        // Verifica se existe o recurso cadastrado localmente para atualizar o artigo
-        $sqlCheck = "SELECT 1 FROM recurso WHERE numero = '" . DBEscape($rec) . "'";
-        $resCheck = DBQuery($sqlCheck);
-        
-        if ($resCheck && count($resCheck) > 0) {
-            $sqlRec = "UPDATE recurso SET artigo = '" . DBEscape($artigo) . "' WHERE numero = '" . DBEscape($rec) . "'";
-            DBExecute($sqlRec);
-            $artigoAtualizado = true;
-        }
-    }
+    // K. Sincronização do Artigo (Mapeia a tipificação)
+    $artigoNotacao = parseTipificacaoToNotacao($row['tipificacao'] ?? '');
 
     echo json_encode([
         'success' => true,
@@ -300,8 +316,7 @@ try {
             'torre' => $torre,
             'notificacao' => $normalizedTipo,
             'assunto' => $assunto,
-            'artigo' => $artigo,
-            'artigo_atualizado_no_recurso' => $artigoAtualizado
+            'artigo' => $artigoNotacao
         ]
     ], JSON_UNESCAPED_UNICODE);
 

@@ -192,6 +192,53 @@ function formatDbDate($dateStr) {
     return null;
 }
 
+/**
+ * Converte tipificacao da Magnacom (ex: "Art. 14, inciso I") para notacao do regimento (ex: "14.1")
+ */
+function parseTipificacaoToNotacao($tipificacao) {
+    $tipificacao = trim($tipificacao);
+    if (empty($tipificacao)) return null;
+
+    // Remove prefixos como "Art." ou "Artigo"
+    $clean = preg_replace('/^art(igo)?\.?\s+/i', '', $tipificacao);
+
+    // Tenta encontrar o número do artigo
+    if (!preg_match('/^(\d+)/', $clean, $matches)) {
+        return null;
+    }
+    $artigo = $matches[1];
+
+    $resto = trim(substr($clean, strlen($artigo)));
+
+    // Mapeamento de romanos para números
+    $romanos = [
+        'xiv' => 14, 'xiii' => 13, 'xii' => 12, 'xi' => 11, 'x' => 10,
+        'ix' => 9, 'viii' => 8, 'vii' => 7, 'vi' => 6, 'v' => 5,
+        'iv' => 4, 'iii' => 3, 'ii' => 2, 'i' => 1
+    ];
+
+    // Busca por Inciso romano ou palavra "inciso"
+    if (preg_match('/(?:inciso\s+)?([ivxldcm]+)\b/i', $resto, $matches)) {
+        $romano = strtolower($matches[1]);
+        if (isset($romanos[$romano])) {
+            return $artigo . '.' . $romanos[$romano];
+        }
+    }
+    if (preg_match('/inciso\s+(\d+)/i', $resto, $matches)) {
+        return $artigo . '.' . $matches[1];
+    }
+
+    // Busca por Parágrafo Único ou Parágrafo X
+    if (preg_match('/par[aá]grafo\s+u[nni]co/i', $resto)) {
+        return $artigo . '.unico';
+    }
+    if (preg_match('/(?:par[aá]grafo\s+|§\s*)(\d+)/ui', $resto, $matches)) {
+        return $artigo . '.' . $matches[1];
+    }
+
+    return $artigo;
+}
+
 // --- 4. FLUXO DE EXECUÇÃO PRINCIPAL ---
 
 try {
@@ -305,6 +352,7 @@ try {
             'unidade' => $unidade,
             'notificacao' => $normalizedTipo,
             'assunto' => $assunto,
+            'artigo' => parseTipificacaoToNotacao($row['tipificacao'] ?? ''),
             'data_email' => $data_email,
             'data_envio' => $data_envio,
             'data_ocorrido' => $data_ocorrido,
