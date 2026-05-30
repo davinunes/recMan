@@ -30,7 +30,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
         <div x-show="erro" x-transition
             class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-sm"
             style="display: none;">
-            <p x-text="erroMensagem"></p>
+            <p x-text="erroMensagem" class="whitespace-pre-line"></p>
         </div>
 
         <div x-show="sucesso" x-transition
@@ -587,6 +587,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     try {
                         let req = await fetch('api.php?action=check_notification', { method: 'POST', body: fd });
                         let res = await req.json();
+
+                        if (res.error) {
+                            this.mostraErro(res.error);
+                            return;
+                        }
 
                         if (res.exists) {
                             // Ja tem
