@@ -21,7 +21,7 @@ $(document).ready(function () {
 
     $('select').formSelect();
     $('.modal').modal();
-    $('.materialboxed').materialbox();
+    initMaterialboxed();
     $('.chips').chips();
     $('.sidenav').sidenav();
     $('#listaRecursos').DataTable({
@@ -805,7 +805,7 @@ $(document).on('paste', '#diligenciaText, #messageTextDiligencia, #messageText, 
                             <img src="${event.target.result}" class="responsive-img z-depth-1 materialboxed">
                             <i class="material-icons tiny red-text" style="position:absolute; top:0; right:5px; cursor:pointer; background:white; border-radius:50%" onclick="$(this).parent().remove()">cancel</i>
                         </div>`);
-                    $('.materialboxed').materialbox();
+                    initMaterialboxed();
                 }
             };
             reader.readAsDataURL(blob);
@@ -1563,3 +1563,225 @@ function ajustaValores(data) {
     titulo.val(data.assunto);
     M.FormSelect.init(document.querySelector("#bloco"));
 }
+
+// Intercepta evento scroll no window para impedir fechar o materialbox quando ativo
+window.addEventListener('scroll', function(e) {
+    if (window.isMaterialboxOpen) {
+        e.stopImmediatePropagation();
+    }
+}, true);
+
+// Inicializa o materialbox com callbacks personalizados para controle de zoom
+function initMaterialboxed() {
+    $('.materialboxed').materialbox({
+        onOpenStart: function(el) {
+            window.isMaterialboxOpen = true;
+            document.body.style.overflow = 'hidden';
+            
+            var $img = $(el);
+            $img.data('scale', 1);
+            $img.data('translateX', 0);
+            $img.data('translateY', 0);
+            $img.data('isDragging', false);
+            $img.data('hasMoved', false);
+            
+            $img.css({
+                'cursor': 'grab',
+                'transition': 'transform 0.1s ease-out, left 0.3s, top 0.3s, width 0.3s, height 0.3s'
+            });
+        },
+        onOpenEnd: function(el) {
+            var $img = $(el);
+            // Salva o transform original gerado pelo Materialize
+            $img.data('originalTransform', el.style.transform);
+        },
+        onCloseStart: function(el) {
+            window.isMaterialboxOpen = false;
+            document.body.style.overflow = '';
+            
+            var $img = $(el);
+            var orig = $img.data('originalTransform');
+            if (orig) {
+                el.style.transform = orig;
+            }
+            $img.css('cursor', '');
+        }
+    });
+}
+
+// Manipulador de zoom com roda do mouse (wheel)
+$(document).on('wheel', '.materialboxed.active', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    var el = this;
+    var $img = $(el);
+    var scale = parseFloat($img.data('scale') || 1);
+    var originalTransform = $img.data('originalTransform') || el.style.transform;
+    if (!originalTransform) return;
+    
+    var delta = e.originalEvent.deltaY < 0 ? 0.15 : -0.15;
+    scale = Math.min(Math.max(scale + delta, 1), 5);
+    
+    $img.data('scale', scale);
+    
+    if (scale === 1) {
+        $img.data('translateX', 0);
+        $img.data('translateY', 0);
+    }
+    
+    var tx = parseFloat($img.data('translateX') || 0);
+    var ty = parseFloat($img.data('translateY') || 0);
+    
+    el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+});
+
+// Manipuladores de mouse para arrastar (pan) a imagem com zoom
+var startX, startY;
+$(document).on('mousedown', '.materialboxed.active', function(e) {
+    e.preventDefault();
+    var $img = $(this);
+    if ($img.data('scale') > 1) {
+        $img.data('isDragging', true);
+        $img.data('hasMoved', false);
+        $img.data('dragStartX', e.clientX);
+        $img.data('dragStartY', e.clientY);
+        startX = e.clientX - parseFloat($img.data('translateX') || 0) * $img.data('scale');
+        startY = e.clientY - parseFloat($img.data('translateY') || 0) * $img.data('scale');
+        $img.css('cursor', 'grabbing');
+    }
+});
+
+$(document).on('mousemove', function(e) {
+    var $img = $('.materialboxed.active');
+    if ($img.length && $img.data('isDragging')) {
+        var el = $img[0];
+        var scale = $img.data('scale');
+        
+        var dx = Math.abs(e.clientX - $img.data('dragStartX'));
+        var dy = Math.abs(e.clientY - $img.data('dragStartY'));
+        if (dx > 5 || dy > 5) {
+            $img.data('hasMoved', true);
+        }
+        
+        var tx = (e.clientX - startX) / scale;
+        var ty = (e.clientY - startY) / scale;
+        
+        $img.data('translateX', tx);
+        $img.data('translateY', ty);
+        
+        var originalTransform = $img.data('originalTransform');
+        if (originalTransform) {
+            el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+        }
+    }
+});
+
+$(document).on('mouseup mouseleave', '.materialboxed.active', function(e) {
+    var $img = $(this);
+    if ($img.data('isDragging')) {
+        $img.data('isDragging', false);
+        $img.css('cursor', 'grab');
+    }
+});
+
+// Evita fechar o materialbox ao soltar o mouse depois de arrastar
+$(document).on('click', '.materialboxed.active', function(e) {
+    var $img = $(this);
+    if ($img.data('hasMoved')) {
+        e.preventDefault();
+        e.stopPropagation();
+        $img.data('hasMoved', false);
+    }
+});
+
+// Suporte a gestos touch em dispositivos móveis (pinch zoom e pan)
+var touchStartDist = 0;
+var touchStartScale = 1;
+var touchStartX = 0, touchStartY = 0;
+var touchStartTx = 0, touchStartTy = 0;
+var isPinching = false;
+var isTouchDragging = false;
+
+$(document).on('touchstart', '.materialboxed.active', function(e) {
+    var $img = $(this);
+    var touches = e.originalEvent.touches;
+    
+    if (touches.length === 2) {
+        isPinching = true;
+        isTouchDragging = false;
+        touchStartDist = Math.hypot(
+            touches[0].clientX - touches[1].clientX,
+            touches[0].clientY - touches[1].clientY
+        );
+        touchStartScale = parseFloat($img.data('scale') || 1);
+    } else if (touches.length === 1 && $img.data('scale') > 1) {
+        isTouchDragging = true;
+        isPinching = false;
+        $img.data('hasMoved', false);
+        touchStartX = touches[0].clientX;
+        touchStartY = touches[0].clientY;
+        $img.data('dragStartX', touches[0].clientX);
+        $img.data('dragStartY', touches[0].clientY);
+        touchStartTx = parseFloat($img.data('translateX') || 0);
+        touchStartTy = parseFloat($img.data('translateY') || 0);
+    }
+});
+
+$(document).on('touchmove', '.materialboxed.active', function(e) {
+    var $img = $(this);
+    var el = this;
+    var touches = e.originalEvent.touches;
+    var originalTransform = $img.data('originalTransform');
+    if (!originalTransform) return;
+    
+    if (isPinching && touches.length === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var dist = Math.hypot(
+            touches[0].clientX - touches[1].clientX,
+            touches[0].clientY - touches[1].clientY
+        );
+        var factor = dist / touchStartDist;
+        var scale = Math.min(Math.max(touchStartScale * factor, 1), 5);
+        
+        $img.data('scale', scale);
+        
+        if (scale === 1) {
+            $img.data('translateX', 0);
+            $img.data('translateY', 0);
+        }
+        
+        var tx = parseFloat($img.data('translateX') || 0);
+        var ty = parseFloat($img.data('translateY') || 0);
+        
+        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+    } else if (isTouchDragging && touches.length === 1 && $img.data('scale') > 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var scale = $img.data('scale');
+        var dx = touches[0].clientX - touchStartX;
+        var dy = touches[0].clientY - touchStartY;
+        
+        var adx = Math.abs(touches[0].clientX - $img.data('dragStartX'));
+        var ady = Math.abs(touches[0].clientY - $img.data('dragStartY'));
+        if (adx > 5 || ady > 5) {
+            $img.data('hasMoved', true);
+        }
+        
+        var tx = touchStartTx + (dx / scale);
+        var ty = touchStartTy + (dy / scale);
+        
+        $img.data('translateX', tx);
+        $img.data('translateY', ty);
+        
+        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+    }
+});
+
+$(document).on('touchend', '.materialboxed.active', function(e) {
+    isPinching = false;
+    isTouchDragging = false;
+});
