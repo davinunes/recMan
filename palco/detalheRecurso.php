@@ -413,7 +413,7 @@ if ($esseRecurso == null) {
             }
             
             echo '
-            <div style="background-color: ' . $cardBg . '; border: 1px solid #e0e0e0; border-left: 4px solid ' . $borderCol . '; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+            <div class="diligence-card" style="background-color: ' . $cardBg . '; border: 1px solid #e0e0e0; border-left: 4px solid ' . $borderCol . '; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img src="' . $mensagem['avatar'] . '" alt="" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -429,7 +429,7 @@ if ($esseRecurso == null) {
                         ' . $actions . '
                     </div>
                 </div>
-                <div style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
+                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
                     ' . $textoFormatado . '
                 </div>';
             
@@ -479,7 +479,7 @@ if ($esseRecurso == null) {
             }
             
             echo '
-            <div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-left: 4px solid #2196f3; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+            <div class="comment-card" style="background-color: #ffffff; border: 1px solid #e0e0e0; border-left: 4px solid #2196f3; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img src="' . $mensagem['avatar'] . '" alt="" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -492,7 +492,7 @@ if ($esseRecurso == null) {
                         ' . $actions . '
                     </div>
                 </div>
-                <div style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
+                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
                     ' . $textoFormatado . '
                 </div>';
             

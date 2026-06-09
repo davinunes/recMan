@@ -219,7 +219,7 @@ function insertParecer($dados)
 
 function getMensagens($recurso)
 {
-    $sql = "SELECT m.*, u.avatar 
+    $sql = "SELECT m.*, u.avatar, u.nome 
             FROM conselho.mensagem m
 			left join conselho.usuarios u on u.id = m.id_usuario
             WHERE id_recurso = '$recurso' order by m.timestamp desc";
@@ -238,7 +238,7 @@ function getMensagens($recurso)
 
 function getDiligencias($recurso)
 {
-    $sql = "SELECT m.*, u.avatar 
+    $sql = "SELECT m.*, u.avatar, u.nome 
             FROM conselho.diligencia m
 			left join conselho.usuarios u on u.id = m.id_usuario
             WHERE id_recurso = '$recurso'

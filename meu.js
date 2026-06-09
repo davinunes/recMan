@@ -437,7 +437,7 @@ $(document).on('click', '.editComment', function () { // Enviar e-mail
         textarea.style.height = textarea.scrollHeight + "px"; // Definir a altura com base no conteúdo
     }
 
-    let comentario = $(this).closest("li.collection-item").find("p").html();
+    let comentario = $(this).closest(".comment-card, li.collection-item").find(".mensagem-texto, p").html();
 
 
     comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
@@ -562,7 +562,7 @@ $(document).on('click', '#comentar', function () { // Inserir mensagem no Recurs
 
 $(document).on('click', '.editComment', function () { 
     let id = $(this).attr("comment");
-    let comentario = $(this).closest("li.collection-item").find("p").html();
+    let comentario = $(this).closest(".comment-card, li.collection-item").find(".mensagem-texto, p").html();
     comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
     
     $("#messageTextComment").val(comentario);
@@ -695,7 +695,7 @@ $(document).on('click', '#diligenciar', function () { // Inserir diligencia no R
 
 $(document).on('click', '.editDiligence', function () {
     let id_dil = $(this).attr("comment");
-    let comentario = $(this).closest("li.collection-item").find("p").html();
+    let comentario = $(this).closest(".diligence-card, li.collection-item").find(".mensagem-texto, p").html();
     comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
     $("#messageTextDiligencia").val(comentario);
     $("#editDiligenciaId").val(id_dil);
@@ -1564,14 +1564,43 @@ function ajustaValores(data) {
     M.FormSelect.init(document.querySelector("#bloco"));
 }
 
-// Intercepta evento scroll no window para impedir fechar o materialbox quando ativo
+// Intercepta e previne o scroll da página quando o materialbox estiver aberto, direcionando para o zoom
+window.addEventListener('wheel', function(e) {
+    if (window.isMaterialboxOpen) {
+        e.preventDefault();
+        
+        var $img = $('.materialboxed.active');
+        if ($img.length) {
+            var el = $img[0];
+            var scale = parseFloat($img.data('scale') || 1);
+            var originalTransform = $img.data('originalTransform') || el.style.transform;
+            if (originalTransform) {
+                var delta = e.deltaY < 0 ? 0.15 : -0.15;
+                scale = Math.min(Math.max(scale + delta, 1), 5);
+                
+                $img.data('scale', scale);
+                
+                if (scale === 1) {
+                    $img.data('translateX', 0);
+                    $img.data('translateY', 0);
+                }
+                
+                var tx = parseFloat($img.data('translateX') || 0);
+                var ty = parseFloat($img.data('translateY') || 0);
+                
+                el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+            }
+        }
+    }
+}, { passive: false });
+
 window.addEventListener('scroll', function(e) {
     if (window.isMaterialboxOpen) {
         e.stopImmediatePropagation();
     }
 }, true);
 
-// Inicializa o materialbox com callbacks personalizados para controle de zoom
+// Inicializa o materialbox com callbacks personalizados para controle de zoom e barra de botões
 function initMaterialboxed() {
     $('.materialboxed').materialbox({
         onOpenStart: function(el) {
@@ -1594,6 +1623,17 @@ function initMaterialboxed() {
             var $img = $(el);
             // Salva o transform original gerado pelo Materialize
             $img.data('originalTransform', el.style.transform);
+            
+            // Adiciona a barra de controles flutuantes
+            $('#materialbox-controls').remove();
+            $('body').append(`
+                <div id="materialbox-controls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10005; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); transition: opacity 0.3s ease;">
+                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-in" style="background: transparent; margin:0;" title="Aumentar Zoom"><i class="material-icons">add</i></button>
+                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-out" style="background: transparent; margin:0;" title="Diminuir Zoom"><i class="material-icons">remove</i></button>
+                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-reset" style="background: transparent; margin:0;" title="Ajustar / Resetar"><i class="material-icons">crop_free</i></button>
+                    <button class="btn-floating btn-flat btn-small white-text" id="mb-close" style="background: transparent; margin:0;" title="Fechar"><i class="material-icons">close</i></button>
+                </div>
+            `);
         },
         onCloseStart: function(el) {
             window.isMaterialboxOpen = false;
@@ -1605,35 +1645,77 @@ function initMaterialboxed() {
                 el.style.transform = orig;
             }
             $img.css('cursor', '');
+            
+            // Remove a barra de controles
+            $('#materialbox-controls').fadeOut(200, function() {
+                $(this).remove();
+            });
         }
     });
 }
 
-// Manipulador de zoom com roda do mouse (wheel)
-$(document).on('wheel', '.materialboxed.active', function(e) {
+// Ações para a barra de controles flutuantes
+$(document).on('click', '#mb-zoom-in', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
-    var el = this;
-    var $img = $(el);
-    var scale = parseFloat($img.data('scale') || 1);
-    var originalTransform = $img.data('originalTransform') || el.style.transform;
-    if (!originalTransform) return;
-    
-    var delta = e.originalEvent.deltaY < 0 ? 0.15 : -0.15;
-    scale = Math.min(Math.max(scale + delta, 1), 5);
-    
-    $img.data('scale', scale);
-    
-    if (scale === 1) {
+    var $img = $('.materialboxed.active');
+    if ($img.length) {
+        var el = $img[0];
+        var scale = parseFloat($img.data('scale') || 1);
+        scale = Math.min(scale + 0.3, 5);
+        $img.data('scale', scale);
+        
+        var tx = parseFloat($img.data('translateX') || 0);
+        var ty = parseFloat($img.data('translateY') || 0);
+        var originalTransform = $img.data('originalTransform');
+        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+    }
+});
+
+$(document).on('click', '#mb-zoom-out', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var $img = $('.materialboxed.active');
+    if ($img.length) {
+        var el = $img[0];
+        var scale = parseFloat($img.data('scale') || 1);
+        scale = Math.max(scale - 0.3, 1);
+        $img.data('scale', scale);
+        
+        if (scale === 1) {
+            $img.data('translateX', 0);
+            $img.data('translateY', 0);
+        }
+        
+        var tx = parseFloat($img.data('translateX') || 0);
+        var ty = parseFloat($img.data('translateY') || 0);
+        var originalTransform = $img.data('originalTransform');
+        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+    }
+});
+
+$(document).on('click', '#mb-zoom-reset', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var $img = $('.materialboxed.active');
+    if ($img.length) {
+        var el = $img[0];
+        $img.data('scale', 1);
         $img.data('translateX', 0);
         $img.data('translateY', 0);
+        var originalTransform = $img.data('originalTransform');
+        el.style.transform = originalTransform;
     }
-    
-    var tx = parseFloat($img.data('translateX') || 0);
-    var ty = parseFloat($img.data('translateY') || 0);
-    
-    el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+});
+
+$(document).on('click', '#mb-close', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var $img = $('.materialboxed.active');
+    if ($img.length) {
+        var instance = M.Materialbox.getInstance($img[0]);
+        if (instance) instance.close();
+    }
 });
 
 // Manipuladores de mouse para arrastar (pan) a imagem com zoom
