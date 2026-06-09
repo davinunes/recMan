@@ -429,9 +429,7 @@ if ($esseRecurso == null) {
                         ' . $actions . '
                     </div>
                 </div>
-                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
-                    ' . $textoFormatado . '
-                </div>';
+                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">' . $textoFormatado . '</div>';
             
             $dilAnexos = getDiligenciaAnexos($mensagem['id']);
             if (!empty($dilAnexos)) {
@@ -492,9 +490,7 @@ if ($esseRecurso == null) {
                         ' . $actions . '
                     </div>
                 </div>
-                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">
-                    ' . $textoFormatado . '
-                </div>';
+                <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">' . $textoFormatado . '</div>';
             
             if (!empty($mensagem['anexos'])) {
                 echo '<div style="margin-top:12px; padding-left: 46px; display: flex; flex-wrap: wrap; gap: 10px;">';

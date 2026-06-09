@@ -438,9 +438,7 @@ $(document).on('click', '.editComment', function () { // Enviar e-mail
     }
 
     let comentario = $(this).closest(".comment-card, li.collection-item").find(".mensagem-texto, p").html();
-
-
-    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    comentario = comentario ? comentario.trim().replace(/<br\s*\/?>/gi, "\n") : "";
     console.log(comentario);
     $("#messageTextComment").val(comentario);
 
@@ -563,7 +561,7 @@ $(document).on('click', '#comentar', function () { // Inserir mensagem no Recurs
 $(document).on('click', '.editComment', function () { 
     let id = $(this).attr("comment");
     let comentario = $(this).closest(".comment-card, li.collection-item").find(".mensagem-texto, p").html();
-    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    comentario = comentario ? comentario.trim().replace(/<br\s*\/?>/gi, "\n") : "";
     
     $("#messageTextComment").val(comentario);
     $("#editMessageId").val(id);
@@ -696,7 +694,7 @@ $(document).on('click', '#diligenciar', function () { // Inserir diligencia no R
 $(document).on('click', '.editDiligence', function () {
     let id_dil = $(this).attr("comment");
     let comentario = $(this).closest(".diligence-card, li.collection-item").find(".mensagem-texto, p").html();
-    comentario = comentario.replace(/<br\s*\/?>/gi, "\n");
+    comentario = comentario ? comentario.trim().replace(/<br\s*\/?>/gi, "\n") : "";
     $("#messageTextDiligencia").val(comentario);
     $("#editDiligenciaId").val(id_dil);
     
@@ -1575,7 +1573,17 @@ window.addEventListener('wheel', function(e) {
             var scale = parseFloat($img.data('scale') || 1);
             var originalTransform = $img.data('originalTransform') || el.style.transform;
             if (originalTransform) {
-                var delta = e.deltaY < 0 ? 0.15 : -0.15;
+                // Normaliza o delta da roda do mouse de forma segura
+                var deltaY = e.deltaY;
+                if (e.wheelDelta) {
+                    deltaY = -e.wheelDelta;
+                }
+                if (e.detail) {
+                    deltaY = e.detail;
+                }
+                
+                // deltaY < 0 significa scroll para cima (zoom in), deltaY > 0 significa scroll para baixo (zoom out)
+                var delta = deltaY < 0 ? 0.25 : -0.25;
                 scale = Math.min(Math.max(scale + delta, 1), 5);
                 
                 $img.data('scale', scale);
@@ -1589,6 +1597,7 @@ window.addEventListener('wheel', function(e) {
                 var ty = parseFloat($img.data('translateY') || 0);
                 
                 el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+                console.log('Wheel zoom deltaY:', deltaY, 'scale:', scale);
             }
         }
     }
@@ -1599,6 +1608,21 @@ window.addEventListener('scroll', function(e) {
         e.stopImmediatePropagation();
     }
 }, true);
+
+// Bloqueia qualquer clique de fechar o visualizador (como no overlay ou na imagem) no capture phase.
+// O fechamento fica restrito EXCLUSIVAMENTE ao botão de fechar 'X' ou tecla ESC.
+window.addEventListener('click', function(e) {
+    if (window.isMaterialboxOpen) {
+        // Se clicar no botão de fechar ou dentro dele, permite fechar
+        if (e.target.closest('#mb-close') || (e.target.closest('.material-icons') && e.target.textContent.trim() === 'close')) {
+            return;
+        }
+        
+        // Bloqueia outros cliques (overlay, imagem, etc)
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }
+}, true); // true = capturing phase!
 
 // Inicializa o materialbox com callbacks personalizados para controle de zoom e barra de botões
 function initMaterialboxed() {
@@ -1718,12 +1742,14 @@ $(document).on('click', '#mb-close', function(e) {
     }
 });
 
-// Manipuladores de mouse para arrastar (pan) a imagem com zoom
+// Manipuladores de mouse para arrastar (pan) a imagem com zoom (suporta clique do meio ou clique esquerdo quando com zoom)
 var startX, startY;
 $(document).on('mousedown', '.materialboxed.active', function(e) {
-    e.preventDefault();
     var $img = $(this);
-    if ($img.data('scale') > 1) {
+    // e.button === 0: clique esquerdo (permite pan se scale > 1)
+    // e.button === 1: clique do meio (roda) - permite pan sempre
+    if (($img.data('scale') > 1 && e.button === 0) || e.button === 1) {
+        e.preventDefault();
         $img.data('isDragging', true);
         $img.data('hasMoved', false);
         $img.data('dragStartX', e.clientX);
@@ -1767,13 +1793,32 @@ $(document).on('mouseup mouseleave', '.materialboxed.active', function(e) {
     }
 });
 
-// Evita fechar o materialbox ao soltar o mouse depois de arrastar
+// Clique na imagem ativa para alternar entre 1x e 2.5x de zoom (se não tiver arrastado)
 $(document).on('click', '.materialboxed.active', function(e) {
     var $img = $(this);
     if ($img.data('hasMoved')) {
-        e.preventDefault();
-        e.stopPropagation();
         $img.data('hasMoved', false);
+        return;
+    }
+    
+    // Zoom toggle com botão esquerdo (e.button === 0)
+    if (e.button === 0) {
+        var el = this;
+        var currentScale = parseFloat($img.data('scale') || 1);
+        var newScale = currentScale > 1 ? 1 : 2.5;
+        
+        $img.data('scale', newScale);
+        $img.data('translateX', 0);
+        $img.data('translateY', 0);
+        
+        var originalTransform = $img.data('originalTransform');
+        if (originalTransform) {
+            if (newScale === 1) {
+                el.style.transform = originalTransform;
+            } else {
+                el.style.transform = originalTransform + ' scale(' + newScale + ') translate(0px, 0px)';
+            }
+        }
     }
 });
 
