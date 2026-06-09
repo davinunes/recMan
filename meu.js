@@ -1562,6 +1562,21 @@ function ajustaValores(data) {
     M.FormSelect.init(document.querySelector("#bloco"));
 }
 
+// Recupera e padroniza o transform original do Materialize, removendo o valor 'none' indesejado
+function getOriginalTransform($img) {
+    if (!$img.length) return '';
+    var orig = $img.data('originalTransform');
+    if (orig === undefined) {
+        var el = $img[0];
+        orig = el ? (el.style.transform || '') : '';
+        if (orig === 'none') {
+            orig = '';
+        }
+        $img.data('originalTransform', orig);
+    }
+    return orig === 'none' ? '' : orig;
+}
+
 // Intercepta e previne o scroll da página quando o materialbox estiver aberto, direcionando para o zoom
 window.addEventListener('wheel', function(e) {
     if (window.isMaterialboxOpen) {
@@ -1571,34 +1586,33 @@ window.addEventListener('wheel', function(e) {
         if ($img.length) {
             var el = $img[0];
             var scale = parseFloat($img.data('scale') || 1);
-            var originalTransform = $img.data('originalTransform') || el.style.transform;
-            if (originalTransform) {
-                // Normaliza o delta da roda do mouse de forma segura
-                var deltaY = e.deltaY;
-                if (e.wheelDelta) {
-                    deltaY = -e.wheelDelta;
-                }
-                if (e.detail) {
-                    deltaY = e.detail;
-                }
-                
-                // deltaY < 0 significa scroll para cima (zoom in), deltaY > 0 significa scroll para baixo (zoom out)
-                var delta = deltaY < 0 ? 0.25 : -0.25;
-                scale = Math.min(Math.max(scale + delta, 1), 5);
-                
-                $img.data('scale', scale);
-                
-                if (scale === 1) {
-                    $img.data('translateX', 0);
-                    $img.data('translateY', 0);
-                }
-                
-                var tx = parseFloat($img.data('translateX') || 0);
-                var ty = parseFloat($img.data('translateY') || 0);
-                
-                el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-                console.log('Wheel zoom deltaY:', deltaY, 'scale:', scale);
+            var originalTransform = getOriginalTransform($img);
+            
+            // Normaliza o delta da roda do mouse de forma segura
+            var deltaY = e.deltaY;
+            if (e.wheelDelta) {
+                deltaY = -e.wheelDelta;
             }
+            if (e.detail) {
+                deltaY = e.detail;
+            }
+            
+            // deltaY < 0 significa scroll para cima (zoom in), deltaY > 0 significa scroll para baixo (zoom out)
+            var delta = deltaY < 0 ? 0.25 : -0.25;
+            scale = Math.min(Math.max(scale + delta, 1), 5);
+            
+            $img.data('scale', scale);
+            
+            if (scale === 1) {
+                $img.data('translateX', 0);
+                $img.data('translateY', 0);
+            }
+            
+            var tx = parseFloat($img.data('translateX') || 0);
+            var ty = parseFloat($img.data('translateY') || 0);
+            
+            el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
+            console.log('Wheel zoom deltaY:', deltaY, 'scale:', scale);
         }
     }
 }, { passive: false });
@@ -1610,12 +1624,18 @@ window.addEventListener('scroll', function(e) {
 }, true);
 
 // Bloqueia qualquer clique de fechar o visualizador (como no overlay ou na imagem) no capture phase.
-// O fechamento fica restrito EXCLUSIVAMENTE ao botão de fechar 'X' ou tecla ESC.
+// O fechamento fica restrito EXCLUSIVAMENTE ao botão de fechar 'X' ou tecla ESC, permitindo cliques nos controles.
 window.addEventListener('click', function(e) {
-    if (window.isMaterialboxOpen) {
-        // Se clicar no botão de fechar ou dentro dele, permite fechar
-        if (e.target.closest('#mb-close') || (e.target.closest('.material-icons') && e.target.textContent.trim() === 'close')) {
-            return;
+    if (window.isMaterialboxOpen && e.target) {
+        if (typeof e.target.closest === 'function') {
+            // Se o clique for dentro do container de controle, permite a propagação normal
+            if (e.target.closest('#materialbox-controls')) {
+                return;
+            }
+            // Se clicar no botão de fechar ou dentro dele, permite fechar
+            if (e.target.closest('#mb-close') || (e.target.closest('.material-icons') && e.target.textContent.trim() === 'close')) {
+                return;
+            }
         }
         
         // Bloqueia outros cliques (overlay, imagem, etc)
@@ -1646,7 +1666,7 @@ function initMaterialboxed() {
         onOpenEnd: function(el) {
             var $img = $(el);
             // Salva o transform original gerado pelo Materialize
-            $img.data('originalTransform', el.style.transform);
+            getOriginalTransform($img);
             
             // Adiciona a barra de controles flutuantes
             $('#materialbox-controls').remove();
@@ -1664,9 +1684,11 @@ function initMaterialboxed() {
             document.body.style.overflow = '';
             
             var $img = $(el);
-            var orig = $img.data('originalTransform');
+            var orig = getOriginalTransform($img);
             if (orig) {
                 el.style.transform = orig;
+            } else {
+                el.style.transform = 'none';
             }
             $img.css('cursor', '');
             
@@ -1691,7 +1713,7 @@ $(document).on('click', '#mb-zoom-in', function(e) {
         
         var tx = parseFloat($img.data('translateX') || 0);
         var ty = parseFloat($img.data('translateY') || 0);
-        var originalTransform = $img.data('originalTransform');
+        var originalTransform = getOriginalTransform($img);
         el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
     }
 });
@@ -1713,7 +1735,7 @@ $(document).on('click', '#mb-zoom-out', function(e) {
         
         var tx = parseFloat($img.data('translateX') || 0);
         var ty = parseFloat($img.data('translateY') || 0);
-        var originalTransform = $img.data('originalTransform');
+        var originalTransform = getOriginalTransform($img);
         el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
     }
 });
@@ -1727,8 +1749,8 @@ $(document).on('click', '#mb-zoom-reset', function(e) {
         $img.data('scale', 1);
         $img.data('translateX', 0);
         $img.data('translateY', 0);
-        var originalTransform = $img.data('originalTransform');
-        el.style.transform = originalTransform;
+        var originalTransform = getOriginalTransform($img);
+        el.style.transform = originalTransform || 'none';
     }
 });
 
@@ -1778,10 +1800,8 @@ $(document).on('mousemove', function(e) {
         $img.data('translateX', tx);
         $img.data('translateY', ty);
         
-        var originalTransform = $img.data('originalTransform');
-        if (originalTransform) {
-            el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-        }
+        var originalTransform = getOriginalTransform($img);
+        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
     }
 });
 
@@ -1811,13 +1831,11 @@ $(document).on('click', '.materialboxed.active', function(e) {
         $img.data('translateX', 0);
         $img.data('translateY', 0);
         
-        var originalTransform = $img.data('originalTransform');
-        if (originalTransform) {
-            if (newScale === 1) {
-                el.style.transform = originalTransform;
-            } else {
-                el.style.transform = originalTransform + ' scale(' + newScale + ') translate(0px, 0px)';
-            }
+        var originalTransform = getOriginalTransform($img);
+        if (newScale === 1) {
+            el.style.transform = originalTransform || 'none';
+        } else {
+            el.style.transform = originalTransform + ' scale(' + newScale + ') translate(0px, 0px)';
         }
     }
 });
@@ -1859,8 +1877,7 @@ $(document).on('touchmove', '.materialboxed.active', function(e) {
     var $img = $(this);
     var el = this;
     var touches = e.originalEvent.touches;
-    var originalTransform = $img.data('originalTransform');
-    if (!originalTransform) return;
+    var originalTransform = getOriginalTransform($img);
     
     if (isPinching && touches.length === 2) {
         e.preventDefault();
