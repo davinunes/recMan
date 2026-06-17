@@ -53,32 +53,36 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
 
 // Busca a notificação para recuperar o artigo (em notação regimento, ex: "14.1")
 $parts = explode('/', $result['numero']);
-$num = isset($parts[0]) ? (int)$parts[0] : 0;
-$ano = isset($parts[1]) ? (int)$parts[1] : 0;
+$num = isset($parts[0]) ? (int) $parts[0] : 0;
+$ano = isset($parts[1]) ? (int) $parts[1] : 0;
 $notifRecurso = getNotificacaoByNumeroAno($num, $ano);
 $artigoNota = ($notifRecurso && isset($notifRecurso['artigo'])) ? $notifRecurso['artigo'] : null;
 
 // Função helper para buscar artigo no regimento localmente
-function obterArtigoDoRegimento($notacao) {
+function obterArtigoDoRegimento($notacao)
+{
     $jsonPath = dirname(__DIR__) . '/regimento/database.json';
-    if (!file_exists($jsonPath)) return null;
-    
+    if (!file_exists($jsonPath))
+        return null;
+
     $database = json_decode(file_get_contents($jsonPath), true);
-    if (!$database || !isset($database['artigos'])) return null;
-    
+    if (!$database || !isset($database['artigos']))
+        return null;
+
     $partes = explode('.', strtolower($notacao));
     $artigoNumero = $partes[0];
-    if (!isset($database['artigos'][$artigoNumero])) return null;
-    
+    if (!isset($database['artigos'][$artigoNumero]))
+        return null;
+
     $artigoPai = $database['artigos'][$artigoNumero];
     $resultado = $artigoPai;
-    
+
     for ($i = 1; $i < count($partes); $i++) {
         $parteDoCaminho = $partes[$i];
         $proximoNivelEncontrado = false;
-        
+
         if (preg_match('/^([pia])(.+)$/', $parteDoCaminho, $matches)) {
-            $tipo = $matches[1]; 
+            $tipo = $matches[1];
             $chave = $matches[2];
             $mapaTipos = ['p' => 'paragrafos', 'i' => 'incisos', 'a' => 'alineas'];
             $subnivelAlvo = $mapaTipos[$tipo];
@@ -97,9 +101,10 @@ function obterArtigoDoRegimento($notacao) {
                 }
             }
         }
-        if (!$proximoNivelEncontrado) return null;
+        if (!$proximoNivelEncontrado)
+            return null;
     }
-    
+
     return [
         'artigo_numero' => $artigoNumero,
         'texto_pai' => count($partes) > 1 ? ($artigoPai['texto'] ?? null) : null,
@@ -142,7 +147,7 @@ if ($esseRecurso == null) {
     <div class="row">
     <div class="col s12">
         <div class="card premium-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #cfd8dc; margin-bottom: 25px;">';
-    
+
     // Premium Header
     echo '
     <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 18px 24px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
@@ -230,7 +235,7 @@ if ($esseRecurso == null) {
                 $artigoHtml .= ' (' . htmlspecialchars($artigoData['notacao']) . ')';
             }
             $artigoHtml .= '    </span>';
-            
+
             if ($artigoData['texto_pai']) {
                 $artigoHtml .= '    <p class="grey-text text-darken-3" style="font-size: 0.85rem; margin-bottom: 12px; font-style: italic; line-height: 1.35;">';
                 if ($artigoData['titulo_pai']) {
@@ -239,7 +244,7 @@ if ($esseRecurso == null) {
                 $artigoHtml .= '      ' . htmlspecialchars($artigoData['texto_pai']);
                 $artigoHtml .= '    </p>';
             }
-            
+
             $conteudo = $artigoData['conteudo'];
             $artigoHtml .= '    <div class="white" style="padding: 12px; border-radius: 5px; border-left: 4px solid #009688; font-size: 0.95rem; line-height: 1.45; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
             if (isset($conteudo['texto'])) {
@@ -247,7 +252,7 @@ if ($esseRecurso == null) {
             } else {
                 $artigoHtml .= '      ' . htmlspecialchars($conteudo['texto'] ?? '');
             }
-            
+
             if (isset($conteudo['paragrafos']) || isset($conteudo['incisos']) || isset($conteudo['alineas'])) {
                 $artigoHtml .= '      <ul style="margin: 8px 0 0 15px; padding-left: 0; list-style-type: none;">';
                 if (isset($conteudo['paragrafos'])) {
@@ -398,20 +403,20 @@ if ($esseRecurso == null) {
             $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
             $textoFormatado = str_replace(["\r\n", "\r", "\n"], "<br>", htmlspecialchars($mensagem['texto']));
             $enviada = ($mensagem['enviada_ao_requerente'] == 1);
-            
+
             $cardBg = $enviada ? "#e8f5e9" : "#ffffff";
             $borderCol = $enviada ? "#2e7d32" : "#ff9800";
             $badgeText = $enviada ? "Enviada ao Requerente" : "Diligência Interna (Não enviada)";
-            
+
             $actions = "";
             if ($_SESSION["user_id"] == $mensagem["id_usuario"] && !$enviada) {
                 $actions .= "<a class='editDiligence modal-trigger btn-flat btn-small' href='#editaDiligencia' comment='{$mensagem['id']}' style='padding: 0 8px; height: 28px; line-height: 28px; margin-left: 10px; display: inline-flex; align-items: center;'><i class='green-text text-darken-2 material-icons' style='font-size: 1.1rem; margin-right: 4px;'>edit</i>Editar</a>";
             }
-            
+
             if (!$enviada) {
                 $actions .= " <a class='notificarRequerente btn-flat btn-small' comment='{$mensagem['id']}' style='padding: 0 8px; height: 28px; line-height: 28px; margin-left: 10px; display: inline-flex; align-items: center;'><i class='material-icons orange-text text-darken-3' style='font-size: 1.1rem; margin-right: 4px;'>send</i>Enviar p/ Morador</a>";
             }
-            
+
             echo '
             <div class="diligence-card" style="background-color: ' . $cardBg . '; border: 1px solid #e0e0e0; border-left: 4px solid ' . $borderCol . '; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -430,7 +435,7 @@ if ($esseRecurso == null) {
                     </div>
                 </div>
                 <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">' . $textoFormatado . '</div>';
-            
+
             $dilAnexos = getDiligenciaAnexos($mensagem['id']);
             if (!empty($dilAnexos)) {
                 echo '<div style="margin-top:12px; padding-left: 46px; display: flex; flex-wrap: wrap; gap: 10px;">';
@@ -438,7 +443,7 @@ if ($esseRecurso == null) {
                     $ext = strtolower(pathinfo($da['caminho_arquivo'], PATHINFO_EXTENSION));
                     $caminho = $da['caminho_arquivo'];
                     $nome = $da['nome_arquivo'];
-                    
+
                     if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                         echo "
                         <div style='position: relative; max-width: 200px;'>
@@ -470,12 +475,12 @@ if ($esseRecurso == null) {
         foreach ($mensagens as $mensagem) {
             $dataFormatada = date('d/m/Y H:i:s', strtotime($mensagem['timestamp']));
             $textoFormatado = str_replace(["\r\n", "\r", "\n"], "<br>", htmlspecialchars($mensagem['texto']));
-            
+
             $actions = "";
             if ($_SESSION["user_id"] == $mensagem["id_usuario"]) {
                 $actions = "<a class='editComment modal-trigger btn-flat btn-small' href='#editaComentario' comment='{$mensagem['id']}' style='padding: 0 8px; height: 28px; line-height: 28px; display: inline-flex; align-items: center;'><i class='green-text text-darken-2 material-icons' style='font-size: 1.1rem; margin-right: 4px;'>edit</i>Editar</a>";
             }
-            
+
             echo '
             <div class="comment-card" style="background-color: #ffffff; border: 1px solid #e0e0e0; border-left: 4px solid #2196f3; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -491,14 +496,14 @@ if ($esseRecurso == null) {
                     </div>
                 </div>
                 <div class="mensagem-texto" style="font-size: 0.95rem; line-height: 1.5; color: #37474f; padding-left: 46px;">' . $textoFormatado . '</div>';
-            
+
             if (!empty($mensagem['anexos'])) {
                 echo '<div style="margin-top:12px; padding-left: 46px; display: flex; flex-wrap: wrap; gap: 10px;">';
                 foreach ($mensagem['anexos'] as $ma) {
                     $ext = strtolower(pathinfo($ma['caminho_arquivo'], PATHINFO_EXTENSION));
                     $caminho = $ma['caminho_arquivo'];
                     $nome = $ma['nome_arquivo'];
-                    
+
                     if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                         echo "
                         <div style='position: relative; max-width: 200px;'>
@@ -616,42 +621,42 @@ if ($esseRecurso == null) {
     <!-- Inclua os scripts do Materialize CSS e outros recursos -->
     <!-- Inclua seu código JavaScript para controlar os modais, eventos, etc. -->
     <script>
-    $(document).ready(function() {
-        $('#btnSyncSupabase').click(function() {
-            var rec = $(this).attr('data-rec');
-            var $btn = $(this);
-            
-            // Desabilita o botão para evitar cliques duplos
-            $btn.addClass('disabled').text('Sincronizando...');
-            
-            $.ajax({
-                url: 'magnacom-sistema/sync_single.php',
-                type: 'POST',
-                data: { rec: rec },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        var msg = 'Notificação sincronizada!';
-                        if (response.data.artigo) {
-                            msg += ' Artigo copiado: ' + response.data.artigo;
+        $(document).ready(function () {
+            $('#btnSyncSupabase').click(function () {
+                var rec = $(this).attr('data-rec');
+                var $btn = $(this);
+
+                // Desabilita o botão para evitar cliques duplos
+                $btn.addClass('disabled').text('Sincronizando...');
+
+                $.ajax({
+                    url: 'magnacom-sistema/sync_single.php',
+                    type: 'POST',
+                    data: { rec: rec },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            var msg = 'Notificação sincronizada!';
+                            if (response.data.artigo) {
+                                msg += ' Artigo copiado: ' + response.data.artigo;
+                            }
+                            M.toast({ html: msg, classes: 'green' });
+                            // Recarrega a página após 1.5s para exibir o artigo e dados atualizados
+                            setTimeout(function () {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            M.toast({ html: 'Erro: ' + response.error, classes: 'red' });
+                            $btn.removeClass('disabled').text('Sincronizar Supabase');
                         }
-                        M.toast({html: msg, classes: 'green'});
-                        // Recarrega a página após 1.5s para exibir o artigo e dados atualizados
-                        setTimeout(function() {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        M.toast({html: 'Erro: ' + response.error, classes: 'red'});
+                    },
+                    error: function (xhr, status, error) {
+                        M.toast({ html: 'Erro ao conectar com o servidor.', classes: 'red' });
                         $btn.removeClass('disabled').text('Sincronizar Supabase');
                     }
-                },
-                error: function(xhr, status, error) {
-                    M.toast({html: 'Erro ao conectar com o servidor.', classes: 'red'});
-                    $btn.removeClass('disabled').text('Sincronizar Supabase');
-                }
+                });
             });
         });
-    });
     </script>
 </body>
 
@@ -718,10 +723,11 @@ if ($esseRecurso == null) {
         <form id="editDiligenciaForm" enctype="multipart/form-data">
             <input type="hidden" name="id_diligencia" id="editDiligenciaId">
             <div class="input-field">
-                <textarea id="messageTextDiligencia" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
+                <textarea id="messageTextDiligencia" class="browser-default" name="messageText" placeholder="texto"
+                    required style="width:100%; min-height:100px; padding:10px"></textarea>
                 <label for="messageTextDiligencia">Mensagem</label>
             </div>
-            
+
             <div id="existingAttachmentsDiligence" class="row" style="margin-bottom: 0px;">
                 <!-- Anexos aparecerão aqui via JS -->
             </div>
@@ -769,7 +775,8 @@ if ($esseRecurso == null) {
         <form id="editMessageForm" enctype="multipart/form-data">
             <input type="hidden" name="id_mensagem" id="editMessageId">
             <div class="input-field">
-                <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto" required style="width:100%; min-height:100px; padding:10px"></textarea>
+                <textarea id="messageTextComment" class="browser-default" name="messageText" placeholder="texto"
+                    required style="width:100%; min-height:100px; padding:10px"></textarea>
                 <label for="messageText">Mensagem</label>
             </div>
             <div id="pastePreviewCommentEdit" class="row" style="margin-bottom:0"></div>
@@ -806,18 +813,21 @@ if ($esseRecurso == null) {
                 <td class="opVoto" voto="revogar">
                     <div class="chip teal  white-text">Revogar</div>
                 </td>
-                <!-- <td class="opVoto" voto="converter">
-            <div class="chip">Converter</div>
-        </td> -->
+                <?php if (!empty($notifRecurso['notificacao']) && strtoupper($notifRecurso['notificacao']) === 'MULTA'): ?>
+                <td class="opVoto" voto="converter">
+                    <div class="chip">Converter</div>
+                </td>
+                <?php endif; ?>
             </tr>
         </table>
 
     </div>
-    </div>
+</div>
 </div>
 
 <!-- Modal Prévia de E-mail de Diligência -->
-<div id="modalPreviewEmailDiligencia" class="modal modal-fixed-footer" style="width: 80% !important; max-height: 85% !important;">
+<div id="modalPreviewEmailDiligencia" class="modal modal-fixed-footer"
+    style="width: 80% !important; max-height: 85% !important;">
     <div class="modal-content">
         <h4>Prévia da Notificação</h4>
         <div class="row" style="background: #f1f1f1; padding: 10px; border-radius: 5px;">
@@ -828,14 +838,17 @@ if ($esseRecurso == null) {
             </div>
         </div>
         <div class="row">
-            <div class="col s12" style="border: 1px solid #ccc; padding: 20px; background: white; margin-top: 15px; min-height: 300px;" id="previewEmailBody">
+            <div class="col s12"
+                style="border: 1px solid #ccc; padding: 20px; background: white; margin-top: 15px; min-height: 300px;"
+                id="previewEmailBody">
                 <!-- Conteúdo HTML do e-mail -->
             </div>
         </div>
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-red btn-flat">Cancelar</a>
-        <a href="#!" id="btnConfirmSendDiligencia" class="waves-effect waves-green btn blue white-text" id_dil="">Confirmar e Enviar</a>
+        <a href="#!" id="btnConfirmSendDiligencia" class="waves-effect waves-green btn blue white-text"
+            id_dil="">Confirmar e Enviar</a>
     </div>
 </div>
 
