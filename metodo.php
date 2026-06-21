@@ -460,30 +460,25 @@ switch ($_GET['metodo']) {
         }
 
         // 6. Preparar o prompt
-        $prompt = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\n";
-        $prompt .= "Seu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\n";
-        $prompt .= "Informações do Recurso:\n";
+        $systemPrompt = getConfigSistema('gemini_system_prompt');
+        if (empty($systemPrompt)) {
+            $systemPrompt = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\nSeu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\nInstruções importantes para a redação:\n1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n3. Adapte a fundamentação e a análise à decisão do Conselho:\n   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).\n4. O campo 'assunto' deve conter o título formal (ex: \"Parecer do Conselho - Recurso de Notificação nº [NUMERO_RECURSO]\").\n5. O campo 'notificacao' deve resumir formalmente o fato ocorrido.\n6. O campo 'analise' deve conter a fundamentação confrontando os argumentos do morador com o regimento interno.\n7. O campo 'resultado' deve conter as considerações finais.\n8. O campo 'conclusao' deve conter a decisão e veredito final em letras maiúsculas (ex: \"MANTIDA A PENALIDADE DE MULTA\", \"REVOGADA A PENALIDADE APLICADA\", \"CONVERTIDA A PENALIDADE DE MULTA EM ADVERTÊNCIA\").";
+        }
+
+        // Sublocar placeholders se houver
+        $systemPrompt = str_replace('[NUMERO_RECURSO]', $rec, $systemPrompt);
+
+        $prompt = $systemPrompt . "\n\n";
+        $prompt .= "Informações específicas deste Recurso:\n";
         $prompt .= "- Unidade/Bloco: {$recurso['bloco']}-{$recurso['unidade']}\n";
         $prompt .= "- Decisão do Conselho (Resultado do Voto): {$resultadoVoto}\n";
         $prompt .= "- Argumentação do Morador (Defesa):\n{$recurso['detalhes']}\n\n";
         $prompt .= "- Artigo do Regulamento Interno infringido:\n{$artigoTexto}\n\n";
         $prompt .= "- Comentários/Debates dos Conselheiros:\n{$comentariosStr}\n\n";
-        $prompt .= "Instruções importantes para a redação:\n";
-        $prompt .= "1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n";
-        $prompt .= "2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n";
-        $prompt .= "3. Adapte a fundamentação e a análise à decisão do Conselho (\"{$resultadoVoto}\"):\n";
-        $prompt .= "   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n";
-        $prompt .= "   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n";
-        $prompt .= "   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).\n";
-        $prompt .= "4. O campo 'assunto' deve conter o título formal (ex: \"Parecer do Conselho - Recurso de Notificação nº {$rec}\").\n";
-        $prompt .= "5. O campo 'notificacao' deve resumir formalmente o fato ocorrido.\n";
-        $prompt .= "6. O campo 'analise' deve conter a fundamentação confrontando os argumentos do morador com o regimento interno.\n";
-        $prompt .= "7. O campo 'resultado' deve conter as considerações finais.\n";
-        $prompt .= "8. O campo 'conclusao' deve conter a decisão e veredito final em letras maiúsculas (ex: \"MANTIDA A PENALIDADE DE MULTA\", \"REVOGADA A PENALIDADE APLICADA\", \"CONVERTIDA A PENALIDADE DE MULTA EM ADVERTÊNCIA\").\n\n";
         $prompt .= "Retorne apenas o JSON correspondente ao schema solicitado, sem marcações markdown de bloco de código.";
 
         // 7. Fazer a requisição HTTP para a API do Gemini
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $geminiKey;
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $geminiKey;
 
         $payload = [
             'contents' => [
