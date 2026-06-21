@@ -1580,4 +1580,96 @@ function buscarOcorrenciaDigital($termo) {
     return $dados;
 }
 
-?>
+function getArtigoRegimento($notacao)
+{
+    $jsonPath = dirname(__DIR__) . '/regimento/database.json';
+    if (!file_exists($jsonPath))
+        return null;
+
+    $database = json_decode(file_get_contents($jsonPath), true);
+    if (!$database || !isset($database['artigos']))
+        return null;
+
+    $partes = explode('.', strtolower($notacao));
+    $artigoNumero = $partes[0];
+    if (!isset($database['artigos'][$artigoNumero]))
+        return null;
+
+    $artigoPai = $database['artigos'][$artigoNumero];
+    $resultado = $artigoPai;
+
+    for ($i = 1; $i < count($partes); $i++) {
+        $parteDoCaminho = $partes[$i];
+        $proximoNivelEncontrado = false;
+
+        if (preg_match('/^([pia])(.+)$/', $parteDoCaminho, $matches)) {
+            $tipo = $matches[1];
+            $chave = $matches[2];
+            $mapaTipos = ['p' => 'paragrafos', 'i' => 'incisos', 'a' => 'alineas'];
+            $subnivelAlvo = $mapaTipos[$tipo];
+            if (isset($resultado[$subnivelAlvo]) && isset($resultado[$subnivelAlvo][$chave])) {
+                $resultado = $resultado[$subnivelAlvo][$chave];
+                $proximoNivelEncontrado = true;
+            }
+        } else {
+            $chave = $parteDoCaminho;
+            $ordemDeBusca = ['incisos', 'paragrafos', 'alineas'];
+            foreach ($ordemDeBusca as $subnivel) {
+                if (isset($resultado[$subnivel]) && isset($resultado[$subnivel][$chave])) {
+                    $resultado = $resultado[$subnivel][$chave];
+                    $proximoNivelEncontrado = true;
+                    break;
+                }
+            }
+        }
+        if (!$proximoNivelEncontrado)
+            return null;
+    }
+
+    return [
+        'artigo_numero' => $artigoNumero,
+        'texto_pai' => count($partes) > 1 ? ($artigoPai['texto'] ?? null) : null,
+        'titulo_pai' => count($partes) > 1 ? ($artigoPai['titulo_artigo'] ?? null) : null,
+        'conteudo' => $resultado,
+        'notacao' => $notacao
+    ];
+}
+
+function getArtigoRegimentoTexto($notacao) {
+    $artigoData = getArtigoRegimento($notacao);
+    if (!$artigoData) return "Regulamento não encontrado para a notação $notacao.";
+    
+    $text = "";
+    if ($artigoData['titulo_pai']) {
+        $text .= $artigoData['titulo_pai'] . "\n";
+    }
+    if ($artigoData['texto_pai']) {
+        $text .= $artigoData['texto_pai'] . "\n";
+    }
+    
+    $conteudo = $artigoData['conteudo'];
+    $text .= "Artigo " . $artigoData['artigo_numero'] . ": ";
+    if (isset($conteudo['texto'])) {
+        $text .= $conteudo['texto'] . "\n";
+    }
+    
+    if (isset($conteudo['paragrafos'])) {
+        foreach ($conteudo['paragrafos'] as $n => $sub) {
+            $lbl = ($n === 'unico') ? 'Parágrafo único' : "§ {$n}°";
+            $text .= "  - $lbl: " . $sub['texto'] . "\n";
+        }
+    }
+    if (isset($conteudo['incisos'])) {
+        foreach ($conteudo['incisos'] as $n => $sub) {
+            $text .= "  - Inciso $n: " . $sub['texto'] . "\n";
+        }
+    }
+    if (isset($conteudo['alineas'])) {
+        foreach ($conteudo['alineas'] as $n => $sub) {
+            $text .= "  - Alínea $n): " . $sub['texto'] . "\n";
+        }
+    }
+    return trim($text);
+}
+
+?>

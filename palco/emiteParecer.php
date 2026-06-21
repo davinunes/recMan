@@ -170,7 +170,12 @@ Content-Disposition: attachment; filename="' . "$nomeAnexo" . '"' . "\n" . "\n";
 
   <div id="formParecer" class="card hide">
     <div class="card-content">
-      <span class="card-title">Editar Parecer</span>
+      <span class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        Editar Parecer
+        <button type="button" class="btn purple darken-2 waves-effect waves-light" id="btnAjudaIA" data-rec="<?php echo htmlspecialchars($parecer['id']); ?>">
+          <i class="material-icons left">psychology</i>Ajuda da IA
+        </button>
+      </span>
 
       <!-- Formulário de Edição -->
       <form action="processa_edicao_parecer.php" method="post">

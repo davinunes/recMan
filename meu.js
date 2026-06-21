@@ -428,6 +428,57 @@ $(document).on('click', '#btnSalvarParecer', function () { // Enviar e-mail
 
 });
 
+$(document).on('click', '#btnAjudaIA', function () {
+    const btn = $(this);
+    const rec = btn.attr('data-rec');
+
+    if (!rec) {
+        M.toast({ html: 'Erro: Código do recurso não encontrado no botão.', classes: 'rounded red' });
+        return;
+    }
+
+    // Colocar botão em estado de carregamento
+    btn.addClass('disabled').html('<i class="material-icons left">hourglass_empty</i>Gerando...');
+    M.toast({ html: 'A IA está analisando o caso e redigindo as sugestões...', classes: 'rounded blue', displayLength: 4000 });
+
+    $.ajax({
+        url: 'metodo.php?metodo=sugerirParecerIA',
+        method: 'POST',
+        data: { rec: rec },
+        dataType: 'json',
+        success: function (response) {
+            if (response.success && response.suggestions) {
+                const sug = response.suggestions;
+                
+                // Preenche os campos do formulário
+                if (sug.assunto) $('#assunto').val(sug.assunto);
+                if (sug.notificacao) $('#notificacao').val(sug.notificacao);
+                if (sug.analise) $('#analise').val(sug.analise);
+                if (sug.resultado) $('#resultado').val(sug.resultado);
+                if (sug.conclusao) $('#conclusao').val(sug.conclusao);
+
+                // Atualizar labels do Materialize e redimensionar textareas
+                M.updateTextFields();
+                $('#formParecer textarea').each(function () {
+                    M.textareaAutoResize($(this));
+                });
+
+                M.toast({ html: 'Sugestão da IA aplicada com sucesso!', classes: 'rounded green' });
+            } else {
+                M.toast({ html: 'Erro da IA: ' + (response.error || 'Erro desconhecido'), classes: 'rounded red' });
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.error('Erro na solicitação AJAX da IA:', textStatus, errorThrown);
+            M.toast({ html: 'Erro de comunicação com o servidor.', classes: 'rounded red' });
+        },
+        complete: function () {
+            // Restaurar estado original do botão
+            btn.removeClass('disabled').html('<i class="material-icons left">psychology</i>Ajuda da IA');
+        }
+    });
+});
+
 $(document).on('click', '.editComment', function () { // Enviar e-mail
 
 

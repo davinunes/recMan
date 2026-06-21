@@ -386,6 +386,182 @@ switch ($_GET['metodo']) {
         else
             echo "erro";
         break;
+    case "sugerirParecerIA":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $rec = $_POST['rec'] ?? '';
+        if (empty($rec)) {
+            echo json_encode(['success' => false, 'error' => 'Parâmetro rec ausente.']);
+            break;
+        }
+
+        // 1. Obter os dados do recurso
+        $sql = "SELECT r.* FROM recurso r WHERE r.numero = '" . DBEscape($rec) . "'";
+        $res = DBExecute($sql);
+        if (!$res || mysqli_num_rows($res) === 0) {
+            echo json_encode(['success' => false, 'error' => 'Recurso não encontrado.']);
+            break;
+        }
+        $recurso = mysqli_fetch_assoc($res);
+        $recursoId = $recurso['id'];
+
+        // 2. Obter o tipo e artigo da notificação correspondente
+        $parts = explode('/', $rec);
+        $num = isset($parts[0]) ? (int) $parts[0] : 0;
+        $ano = isset($parts[1]) ? (int) $parts[1] : 0;
+        $notifRecurso = getNotificacaoByNumeroAno($num, $ano);
+        $artigoNota = ($notifRecurso && isset($notifRecurso['artigo'])) ? $notifRecurso['artigo'] : null;
+
+        $artigoTexto = "Não informado.";
+        if ($artigoNota) {
+            $artigoTexto = getArtigoRegimentoTexto($artigoNota);
+        }
+
+        // 3. Obter comentários dos conselheiros
+        $mensagens = getMensagens($recursoId);
+        $comentariosStr = "";
+        if (!empty($mensagens)) {
+            foreach ($mensagens as $msg) {
+                $comentariosStr .= "- " . ($msg['nome'] ?? 'Conselheiro') . ": " . $msg['texto'] . "\n";
+            }
+        } else {
+            $comentariosStr = "Nenhum comentário registrado.";
+        }
+
+        // 4. Obter resultado da votação
+        $votos = getMaisVotado($recursoId);
+        $resultadoVoto = ($votos && isset($votos['voto'])) ? strtoupper($votos['voto']) : 'MANTER'; // assume MANTER por padrão se não houver votos
+
+        // 5. Carregar chave da API Gemini
+        $geminiKey = getConfigSistema('gemini_api_key');
+        if (empty($geminiKey)) {
+            $envPath = __DIR__ . '/magnacom-sistema/.env';
+            if (file_exists($envPath)) {
+                $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    $parts = explode('=', $line, 2);
+                    if (count($parts) === 2 && trim($parts[0]) === 'GEMINI_API_KEY') {
+                        $geminiKey = trim($parts[1]);
+                        if (preg_match('/^"([^"]*)"$/', $geminiKey, $matches) || preg_match('/^\'([^\']*)\'$/', $geminiKey, $matches)) {
+                            $geminiKey = $matches[1];
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (empty($geminiKey)) {
+            echo json_encode(['success' => false, 'error' => 'Chave do Gemini (GEMINI_API_KEY) não configurada no .env ou no banco de dados.']);
+            break;
+        }
+
+        // 6. Preparar o prompt
+        $prompt = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\n";
+        $prompt .= "Seu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\n";
+        $prompt .= "Informações do Recurso:\n";
+        $prompt .= "- Unidade/Bloco: {$recurso['bloco']}-{$recurso['unidade']}\n";
+        $prompt .= "- Decisão do Conselho (Resultado do Voto): {$resultadoVoto}\n";
+        $prompt .= "- Argumentação do Morador (Defesa):\n{$recurso['detalhes']}\n\n";
+        $prompt .= "- Artigo do Regulamento Interno infringido:\n{$artigoTexto}\n\n";
+        $prompt .= "- Comentários/Debates dos Conselheiros:\n{$comentariosStr}\n\n";
+        $prompt .= "Instruções importantes para a redação:\n";
+        $prompt .= "1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n";
+        $prompt .= "2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n";
+        $prompt .= "3. Adapte a fundamentação e a análise à decisão do Conselho (\"{$resultadoVoto}\"):\n";
+        $prompt .= "   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n";
+        $prompt .= "   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n";
+        $prompt .= "   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).\n";
+        $prompt .= "4. O campo 'assunto' deve conter o título formal (ex: \"Parecer do Conselho - Recurso de Notificação nº {$rec}\").\n";
+        $prompt .= "5. O campo 'notificacao' deve resumir formalmente o fato ocorrido.\n";
+        $prompt .= "6. O campo 'analise' deve conter a fundamentação confrontando os argumentos do morador com o regimento interno.\n";
+        $prompt .= "7. O campo 'resultado' deve conter as considerações finais.\n";
+        $prompt .= "8. O campo 'conclusao' deve conter a decisão e veredito final em letras maiúsculas (ex: \"MANTIDA A PENALIDADE DE MULTA\", \"REVOGADA A PENALIDADE APLICADA\", \"CONVERTIDA A PENALIDADE DE MULTA EM ADVERTÊNCIA\").\n\n";
+        $prompt .= "Retorne apenas o JSON correspondente ao schema solicitado, sem marcações markdown de bloco de código.";
+
+        // 7. Fazer a requisição HTTP para a API do Gemini
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $geminiKey;
+
+        $payload = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'responseMimeType' => 'application/json',
+                'responseSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'assunto' => [
+                            'type' => 'string',
+                            'description' => 'Título formal do parecer.'
+                        ],
+                        'notificacao' => [
+                            'type' => 'string',
+                            'description' => 'Resumo profissional do fato/infração.'
+                        ],
+                        'analise' => [
+                            'type' => 'string',
+                            'description' => 'Fundamentação técnica e confronto com as regras.'
+                        ],
+                        'resultado' => [
+                            'type' => 'string',
+                            'description' => 'Considerações finais baseadas nos votos/debates.'
+                        ],
+                        'conclusao' => [
+                            'type' => 'string',
+                            'description' => 'Veredito final em maiúsculas.'
+                        ]
+                    ],
+                    'required' => ['assunto', 'notificacao', 'analise', 'resultado', 'conclusao']
+                ]
+            ]
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            $errData = json_decode($response, true);
+            $errMsg = isset($errData['error']['message']) ? $errData['error']['message'] : 'Erro desconhecido na API do Gemini.';
+            echo json_encode(['success' => false, 'error' => "API Gemini retornou código HTTP $httpCode: $errMsg"]);
+            break;
+        }
+
+        $resData = json_decode($response, true);
+        $jsonText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        
+        if (empty($jsonText)) {
+            echo json_encode(['success' => false, 'error' => 'Nenhum text retornado pela IA.']);
+            break;
+        }
+
+        $suggestions = json_decode(trim($jsonText), true);
+        if (!$suggestions) {
+            echo json_encode(['success' => false, 'error' => 'Resposta da IA não pôde ser decodificada como JSON: ' . $jsonText]);
+            break;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'suggestions' => $suggestions
+        ]);
+        break;
     case "editaParecer":
         session_start();
 
