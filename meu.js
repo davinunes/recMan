@@ -579,10 +579,11 @@ $(document).on('click', '#logon', function () { // Logar Usuario
         method: "POST", // Defina o método como POST
         data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData.startsWith("ok")) {
-                const parts = responseData.split('|');
+            const cleanResponse = responseData.trim();
+            if (cleanResponse.startsWith("ok")) {
+                const parts = cleanResponse.split('|');
                 if (parts.length > 1) {
-                    localStorage.setItem('remember_device_token', parts[1]);
+                    localStorage.setItem('remember_device_token', parts[1].trim());
                 } else {
                     localStorage.removeItem('remember_device_token');
                 }
