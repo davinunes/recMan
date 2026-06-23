@@ -716,14 +716,57 @@ switch ($_GET['metodo']) {
             $_SESSION['user_nome'] = $usuario['nome'];
             $_SESSION['user_pwd'] = $usuario['senha'];
             $_SESSION['avatar'] = $usuario['avatar'];
-            echo "ok";
+            
+            // Gerar token de lembrar dispositivo se selecionado
+            if (isset($dados['remember_device']) && $dados['remember_device'] == 'on') {
+                $token = bin2hex(random_bytes(32));
+                upsertConfigSistema("remember_token_" . $token, $usuario['id']);
+                echo "ok|" . $token;
+            } else {
+                echo "ok";
+            }
         } else {
             echo "erro";
         }
         break;
     case "logout":
         session_start();
+        
+        // Deletar o token de lembrar dispositivo se fornecido
+        $token = $_GET['token'] ?? '';
+        if (!empty($token)) {
+            deleteConfigSistema("remember_token_" . $token);
+        }
+
         session_destroy();
+        break;
+    case "loginComToken":
+        header('Content-Type: application/json; charset=utf-8');
+        $token = $_POST['token'] ?? '';
+        if (empty($token)) {
+            echo json_encode(['success' => false, 'error' => 'Token ausente']);
+            break;
+        }
+
+        // Buscar o id_usuario na tabela config_sistema
+        $userId = getConfigSistema("remember_token_" . $token);
+        if ($userId) {
+            // Validar se o usuário existe e está ativo
+            $usuario = getUsuariosById((int)$userId);
+            if ($usuario && $usuario['status'] == 1) {
+                session_start();
+                $_SESSION['user_id'] = $usuario['id'];
+                $_SESSION['user_email'] = $usuario['email'];
+                $_SESSION['user_nome'] = $usuario['nome'];
+                $_SESSION['user_pwd'] = $usuario['senha'];
+                $_SESSION['avatar'] = $usuario['avatar'];
+
+                echo json_encode(['success' => true]);
+                break;
+            }
+        }
+
+        echo json_encode(['success' => false, 'error' => 'Token inválido ou usuário inativo']);
         break;
 }
 ?>

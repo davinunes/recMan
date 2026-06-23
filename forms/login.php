@@ -14,6 +14,14 @@
                                 <input type="password" id="password" name="password" required>
                                 <label for="password">Password</label>
                             </div>
+                            <div class="row" style="margin-top: -10px; margin-bottom: 20px;">
+                                <div class="col s12">
+                                    <label>
+                                        <input type="checkbox" id="remember_device" name="remember_device" checked />
+                                        <span>Lembrar este dispositivo</span>
+                                    </label>
+                                </div>
+                            </div>
                             <div class="input-field center">
                                 <a id="logon" class="btn waves-effect waves-light" type="submit">Login
                                     <i class="material-icons right">send</i>

@@ -1,5 +1,38 @@
 $(document).ready(function () {
 
+    // Auto-login check when remember_device_token is present in browser Local Storage
+    if ($('#loginForm').length > 0) {
+        const token = localStorage.getItem('remember_device_token');
+        if (token) {
+            $('body').append('<div id="autoLoginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column;">' +
+                             '<div class="preloader-wrapper big active">' +
+                             '<div class="spinner-layer spinner-blue-only">' +
+                             '<div class="circle-clipper left"><div class="circle"></div></div>' +
+                             '<div class="gap-patch"><div class="circle"></div></div>' +
+                             '<div class="circle-clipper right"><div class="circle"></div></div>' +
+                             '</div></div>' +
+                             '<p style="margin-top:20px; font-weight:bold; color:#1565c0; font-family:sans-serif;">Entrando automaticamente...</p></div>');
+            
+            $.ajax({
+                url: 'metodo.php?metodo=loginComToken',
+                method: 'POST',
+                data: { token: token },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        window.location.reload();
+                    } else {
+                        localStorage.removeItem('remember_device_token');
+                        $('#autoLoginOverlay').remove();
+                    }
+                },
+                error: function() {
+                    $('#autoLoginOverlay').remove();
+                }
+            });
+        }
+    }
+
     if (window.screen.orientation.type.includes("portrait")) {
         console.log("Monitor na orientação vertical");
         // Remove a classe "container" e adiciona o atributo "data-custom" ao elemento
@@ -546,13 +579,17 @@ $(document).on('click', '#logon', function () { // Logar Usuario
         method: "POST", // Defina o método como POST
         data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.startsWith("ok")) {
+                const parts = responseData.split('|');
+                if (parts.length > 1) {
+                    localStorage.setItem('remember_device_token', parts[1]);
+                } else {
+                    localStorage.removeItem('remember_device_token');
+                }
+                M.toast({ html: 'Login realizado!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData, classes: 'rounded red' });
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -564,16 +601,16 @@ $(document).on('click', '#logon', function () { // Logar Usuario
 
 $(document).on('click', '#logout', function () { // DesLogar Usuario
     let metodo = "logout";
+    const token = localStorage.getItem('remember_device_token') || '';
 
-    // Realizar a solicitação GET para obter os dados desejados
-    let url = 'metodo.php?metodo=' + metodo;
+    // Realizar a solicitação GET para obter os dados desejados com o token
+    let url = 'metodo.php?metodo=' + metodo + '&token=' + encodeURIComponent(token);
     $.ajax({
         url: url,
-        method: "GET", // Defina o método como POST
-        // data: formData, // Adicione o objeto 'data' aqui
+        method: "GET",
         success: function (responseData) {
+            localStorage.removeItem('remember_device_token');
             window.location.reload();
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
