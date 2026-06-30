@@ -62,46 +62,7 @@ $copiarSubsNovo = getConfigSistema('copiar_subsindicos_novo_recurso') == '1';
         </div>
     </div>
 
-    <!-- Configuração do Gemini / IA -->
-    <div class="row">
-        <div class="col s12">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title" style="display: flex; align-items: center; gap: 8px;">
-                        <i class="material-icons purple-text">psychology</i> Integração Gemini (Inteligência Artificial)
-                    </span>
-                    <p style="margin-bottom: 20px;" class="grey-text">Configure a chave de API do Gemini e o prompt de sistema utilizado para gerar sugestões automáticas dos pareceres.</p>
-                    
-                    <form id="formConfigGemini">
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <input type="password" id="geminiApiKeyInput" value="<?php echo htmlspecialchars(getConfigSistema('gemini_api_key') ?? ''); ?>" placeholder="AIzaSy...">
-                                <label for="geminiApiKeyInput">Chave de API do Gemini (GEMINI_API_KEY)</label>
-                                <span class="helper-text">Deixe em branco para usar o valor definido no arquivo .env</span>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s12">
-                                <textarea id="geminiPromptInput" class="materialize-textarea" style="min-height: 150px; font-family: monospace; font-size: 0.9rem;"><?php 
-                                    $promptDb = getConfigSistema('gemini_system_prompt');
-                                    if (empty($promptDb)) {
-                                        $promptDb = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\nSeu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\nInstruções importantes para a redação:\n1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n3. Adapte a fundamentação e a análise à decisão do Conselho:\n   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).\n4. O campo 'assunto' deve conter o título formal (ex: \"Parecer do Conselho - Recurso de Notificação nº [NUMERO_RECURSO]\").\n5. O campo 'notificacao' deve resumir formalmente o fato ocorrido.\n6. O campo 'analise' deve conter a fundamentação confrontando os argumentos do morador com o regimento interno.\n7. O campo 'resultado' deve conter as considerações finais.\n8. O campo 'conclusao' deve conter a decisão e veredito final em letras maiúsculas.";
-                                    }
-                                    echo htmlspecialchars($promptDb); 
-                                ?></textarea>
-                                <label for="geminiPromptInput">Prompt de Sistema (Instruções da IA)</label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="card-action">
-                    <button type="button" class="btn purple darken-2 waves-effect waves-light" id="btnSaveConfigGemini">
-                        <i class="material-icons left">save</i>Salvar Configurações da IA
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Tabela de Destinatários -->
     <div class="row">
@@ -250,28 +211,6 @@ $(document).ready(function(){
         });
     });
 
-    $('#btnSaveConfigGemini').click(function(){
-        const apiKey = $('#geminiApiKeyInput').val();
-        const prompt = $('#geminiPromptInput').val();
-        const btn = $(this);
-        
-        btn.addClass('disabled').text('Salvando...');
 
-        $.post('metodo.php?metodo=upsertConfigSistema', { chave: 'gemini_api_key', valor: apiKey }, function(res1){
-            if(res1.trim() === 'ok'){
-                $.post('metodo.php?metodo=upsertConfigSistema', { chave: 'gemini_system_prompt', valor: prompt }, function(res2){
-                    btn.removeClass('disabled').html('<i class="material-icons left">save</i>Salvar Configurações da IA');
-                    if(res2.trim() === 'ok'){
-                        M.toast({html: 'Configurações da IA salvas com sucesso!', classes: 'green'});
-                    } else {
-                        M.toast({html: 'Erro ao salvar o Prompt.', classes: 'red'});
-                    }
-                });
-            } else {
-                btn.removeClass('disabled').html('<i class="material-icons left">save</i>Salvar Configurações da IA');
-                M.toast({html: 'Erro ao salvar a Chave API.', classes: 'red'});
-            }
-        });
-    });
 });
 </script>

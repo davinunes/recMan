@@ -18,6 +18,9 @@ $tools = [
         ['label' => 'Atualizar Token', 'url' => 'gmail/refresh.php', 'icon' => 'refresh', 'target' => '_blank', 'color' => 'red darken-3'],
         ['label' => 'E-mails e Notificações', 'url' => 'index.php?pag=configuracoes_email', 'icon' => 'contact_mail', 'target' => '_self', 'color' => 'red accent-2'],
     ],
+    'IA' => [
+        ['label' => 'Configurações da IA', 'url' => 'index.php?pag=configuracoes_ia', 'icon' => 'psychology', 'target' => '_self', 'color' => 'purple darken-2'],
+    ],
     'Relatórios e Dados' => [
         ['label' => 'Ocorrências Diretas', 'url' => 'ocorrenciasCondominioDigital/relatorio.php', 'icon' => 'assignment', 'target' => '_blank', 'color' => 'indigo'],
         ['label' => 'Quantitativos / Gráficos', 'url' => 'ocorrenciasCondominioDigital/quantitativos.php', 'icon' => 'insert_chart', 'target' => '_blank', 'color' => 'purple'],

@@ -386,6 +386,20 @@ switch ($_GET['metodo']) {
         else
             echo "erro";
         break;
+    case "upsertMultipleConfigSistema":
+        session_start();
+        $success = true;
+        if (isset($_POST['configs']) && is_array($_POST['configs'])) {
+            foreach ($_POST['configs'] as $chave => $valor) {
+                if (!upsertConfigSistema($chave, $valor)) {
+                    $success = false;
+                }
+            }
+        } else {
+            $success = false;
+        }
+        echo $success ? "ok" : "erro";
+        break;
     case "sugerirParecerIA":
         session_start();
         header('Content-Type: application/json; charset=utf-8');
@@ -460,13 +474,44 @@ switch ($_GET['metodo']) {
         }
 
         // 6. Preparar o prompt
-        $systemPrompt = getConfigSistema('gemini_system_prompt');
+        $systemPrompt = getConfigSistema('gemini_prompt_main');
         if (empty($systemPrompt)) {
-            $systemPrompt = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\nSeu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\nInstruções importantes para a redação:\n1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n3. Adapte a fundamentação e a análise à decisão do Conselho:\n   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).\n4. O campo 'assunto' deve conter o título formal (ex: \"Parecer do Conselho - Recurso de Notificação nº [NUMERO_RECURSO]\").\n5. O campo 'notificacao' deve resumir formalmente o fato ocorrido.\n6. O campo 'analise' deve conter a fundamentação confrontando os argumentos do morador com o regimento interno.\n7. O campo 'resultado' deve conter as considerações finais.\n8. O campo 'conclusao' deve conter a decisão e veredito final em letras maiúsculas (ex: \"MANTIDA A PENALIDADE DE MULTA\", \"REVOGADA A PENALIDADE APLICADA\", \"CONVERTIDA A PENALIDADE DE MULTA EM ADVERTÊNCIA\").";
+            // Tenta backward compatibility com a chave antiga
+            $systemPrompt = getConfigSistema('gemini_system_prompt');
+        }
+        if (empty($systemPrompt)) {
+            $systemPrompt = "Você é um assistente de inteligência artificial encarregado de redigir pareceres formais e profissionais para o Conselho Consultivo e Fiscal de um condomínio residencial de alto padrão.\nSeu objetivo é sugerir textos profissionais e bem redigidos para cada campo do Parecer com base nas informações fornecidas.\n\nInstruções importantes para a redação:\n1. O estilo deve ser extremamente formal, profissional, claro e objetivo, adequado para um parecer administrativo/jurídico de condomínio de luxo.\n2. Evite linguagem informal. Utilize a norma padrão da língua portuguesa (Português do Brasil).\n3. Adapte a fundamentação e a análise à decisão do Conselho:\n   - Se for MANTER, justifique tecnicamente por que a multa/advertência está de acordo com as regras e por que a defesa do morador não prospera.\n   - Se for REVOGAR, explique com razoabilidade por que a infração deve ser desconsiderada/anulada.\n   - Se for CONVERTER, fundamente a aplicação da conversão da multa para advertência (ex: por primariedade ou menor gravidade do fato).";
         }
 
-        // Sublocar placeholders se houver
+        // Sublocar placeholders se houver no prompt principal
         $systemPrompt = str_replace('[NUMERO_RECURSO]', $rec, $systemPrompt);
+
+        // Resgatar descrições dinâmicas com fallbacks estritos
+        $descAssunto = getConfigSistema('gemini_desc_assunto');
+        if (empty($descAssunto)) {
+            $descAssunto = 'Título formal do parecer (ex: "Parecer do Conselho - Recurso de Notificação nº [NUMERO_RECURSO]").';
+        }
+        $descAssunto = str_replace('[NUMERO_RECURSO]', $rec, $descAssunto);
+
+        $descNotificacao = getConfigSistema('gemini_desc_notificacao');
+        if (empty($descNotificacao)) {
+            $descNotificacao = 'Resumo profissional do fato/infração ocorrido.';
+        }
+
+        $descAnalise = getConfigSistema('gemini_desc_analise');
+        if (empty($descAnalise)) {
+            $descAnalise = 'Fundamentação técnica confrontando os argumentos do morador com o regimento interno.';
+        }
+
+        $descResultado = getConfigSistema('gemini_desc_resultado');
+        if (empty($descResultado)) {
+            $descResultado = 'Considerações finais baseadas nos votos/debates dos conselheiros.';
+        }
+
+        $descConclusao = getConfigSistema('gemini_desc_conclusao');
+        if (empty($descConclusao)) {
+            $descConclusao = 'Decisão e veredito final em letras maiúsculas (ex: "MANTIDA A PENALIDADE DE MULTA", "REVOGADA A PENALIDADE APLICADA", "CONVERTIDA A PENALIDADE DE MULTA EM ADVERTÊNCIA").';
+        }
 
         $prompt = $systemPrompt . "\n\n";
         $prompt .= "Informações específicas deste Recurso:\n";
@@ -495,23 +540,23 @@ switch ($_GET['metodo']) {
                     'properties' => [
                         'assunto' => [
                             'type' => 'string',
-                            'description' => 'Título formal do parecer.'
+                            'description' => $descAssunto
                         ],
                         'notificacao' => [
                             'type' => 'string',
-                            'description' => 'Resumo profissional do fato/infração.'
+                            'description' => $descNotificacao
                         ],
                         'analise' => [
                             'type' => 'string',
-                            'description' => 'Fundamentação técnica e confronto com as regras.'
+                            'description' => $descAnalise
                         ],
                         'resultado' => [
                             'type' => 'string',
-                            'description' => 'Considerações finais baseadas nos votos/debates.'
+                            'description' => $descResultado
                         ],
                         'conclusao' => [
                             'type' => 'string',
-                            'description' => 'Veredito final em maiúsculas.'
+                            'description' => $descConclusao
                         ]
                     ],
                     'required' => ['assunto', 'notificacao', 'analise', 'resultado', 'conclusao']

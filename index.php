@@ -79,6 +79,9 @@ switch ($pag) {
 	case "configuracoes_email":
 		include "palco/configuracoes_email.php";
 		break;
+	case "configuracoes_ia":
+		include "palco/configuracoes_ia.php";
+		break;
 	case "dashboard":
 		include "palco/dashboard.php";
 		break;
