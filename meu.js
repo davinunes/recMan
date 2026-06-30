@@ -217,7 +217,7 @@ $(document).on('click', '#salvarEdicao', function () {
         processData: false,
         success: function (response) {
             M.toast({ html: response, classes: 'rounded' });
-            if (response === "ok") {
+            if (response.trim() === "ok") {
                 setTimeout(function () {
                     location.reload();
                 }, 1500);
@@ -443,7 +443,7 @@ $(document).on('click', '#btnSalvarParecer', function () { // Enviar e-mail
         data: formData,
         // data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData === "ok") {
+            if (responseData.trim() === "ok") {
                 M.toast({ html: responseData, classes: 'rounded' });
                 window.location.reload();
             } else {
@@ -548,7 +548,7 @@ $(document).on('click', '#updateComment', function () { // Enviar e-mail
         data: formData,
         // data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData === "ok") {
+            if (responseData.trim() === "ok") {
                 M.toast({ html: responseData, classes: 'rounded' });
                 window.location.reload();
             } else {
@@ -1034,7 +1034,7 @@ $(document).on('click', '.opVoto', function () {
         data: formData,
         data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData === "ok") {
+            if (responseData.trim() === "ok") {
                 M.toast({ html: responseData, classes: 'rounded' });
                 window.location.reload();
             } else {
@@ -1069,7 +1069,7 @@ $(document).on('click', '.recFase', function () { // Altera a fase do recurso
         data: formData,
         data: formData, // Adicione o objeto 'data' aqui
         success: function (responseData) {
-            if (responseData === "ok") {
+            if (responseData.trim() === "ok") {
                 M.toast({ html: responseData, classes: 'rounded' });
                 window.location.reload();
             } else {
@@ -1120,7 +1120,7 @@ $(document).on('submit', '#changePasswordForm', function (event) {
         currentPassword: currentPassword,
         newPassword: newPassword
     }, function (response) {
-        if (response === "ok") {
+        if (response.trim() === "ok") {
             M.toast({ html: response, classes: 'rounded' });
             // window.location.reload();
         } else {
@@ -1151,7 +1151,7 @@ $(document).on('submit', '#updateThisUser', function (e) {
         contentType: false,
         processData: false,
         success: function (response) {
-            if (response === "ok") {
+            if (response.trim() === "ok") {
                 M.toast({ html: response, classes: 'rounded' });
                 window.location.reload();
             } else {
@@ -1264,7 +1264,7 @@ $(document).on('submit', '#atualizarRecursoForm', function (e) {
         contentType: false,
         processData: false,
         success: function (response) {
-            if (response === "ok") {
+            if (response.trim() === "ok") {
                 M.toast({ html: response, classes: 'rounded' });
                 window.location.href = "index.php?pag=recurso&rec=" + numeroValue;
             } else {

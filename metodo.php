@@ -769,4 +769,3 @@ switch ($_GET['metodo']) {
         echo json_encode(['success' => false, 'error' => 'Token inválido ou usuário inativo']);
         break;
 }
-?>

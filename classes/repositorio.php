@@ -1677,7 +1677,4 @@ function deleteConfigSistema($chave)
     $chave = DBEscape($chave);
     $sql = "DELETE FROM config_sistema WHERE chave = '$chave'";
     return DBExecute($sql);
-}
-
-?>
-
+}

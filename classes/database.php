@@ -113,4 +113,3 @@ function DBMultiExecute($query)
 	DBClose($link);
 	return true;
 }
-?>
