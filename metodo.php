@@ -41,13 +41,19 @@ switch ($_GET['metodo']) {
             if (move_uploaded_file($avatarTmpName, $avatarFullPath)) {
                 $dados['avatar'] = $avatarFullPath; // <-- SOMENTE AQUI
             } else {
-                echo "Erro ao mover o arquivo.";
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => "Erro ao mover o arquivo."]);
                 exit;
             }
         }
 
         $response = upsertUsuario($dados);
-        echo $response;
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "novoRecurso":
         $dados = $_POST;
@@ -147,14 +153,20 @@ switch ($_GET['metodo']) {
                             }
                         } else {
                             error_log("Erro ao mover arquivo atualizado para: $fullPath");
-                            echo "Erro ao salvar anexo durante edição";
+                            header('Content-Type: application/json; charset=utf-8');
+                            echo json_encode(['success' => false, 'error' => "Erro ao salvar anexo durante edição"]);
                             exit;
                         }
                     }
                 }
             }
         }
-        echo $response;
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "getComentarioAnexos":
         $id = $_POST['id_mensagem'];
@@ -607,18 +619,18 @@ switch ($_GET['metodo']) {
 
         $dados = $_POST;
 
-        $response = updateParecer($dados) ? "ok" : "erro";
-        echo $response;
-
+        $response = updateParecer($dados);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $response]);
         break;
     case "finalizaParecer":
         session_start();
 
         $dados = $_POST;
         $dados["userId"] = $_SESSION["user_id"];
-        $response = finalizaParecer($dados) ? "ok" : "erro";
-        echo $response;
-
+        $response = finalizaParecer($dados);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $response]);
         break;
     case "votar":
         session_start();
@@ -627,8 +639,12 @@ switch ($_GET['metodo']) {
         $dados["user_id"] = $_SESSION["user_id"];
 
         $response = upsertVoto($dados);
-        echo $response;
-        // var_dump($dados);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "upsertMultaCobrada":
         session_start();
@@ -673,21 +689,29 @@ switch ($_GET['metodo']) {
         $dados["user_id"] = $_SESSION["user_id"];
 
         $response = upsertFase($dados);
-        echo $response;
-        // var_dump($dados);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "trocaSenha":
         session_start();
         $dados = $_POST;
+        header('Content-Type: application/json; charset=utf-8');
         if ($_SESSION['user_pwd'] != hash('sha256', $dados["currentPassword"])) {
-            echo "Senha atual incorreta!";
+            echo json_encode(['success' => false, 'error' => 'Senha atual incorreta!']);
             break;
         }
         $dados["user_id"] = $_SESSION["user_id"];
 
         $response = trocaSenha($dados);
-        echo $response;
-        // var_dump($dados);
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "updateThisUser":
         session_start();
@@ -708,7 +732,9 @@ switch ($_GET['metodo']) {
             if (move_uploaded_file($avatarTmpName, $avatarFullPath)) {
                 // echo "O arquivo foi movido com sucesso.";
             } else {
-                echo "Houve um erro ao mover o arquivo.";
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => "Houve um erro ao mover o arquivo de avatar."]);
+                exit;
             }
             // Atualizar a variável $avatarBase64 para ser o caminho completo
             $avatarBase64 = $avatarFullPath;
@@ -718,17 +744,24 @@ switch ($_GET['metodo']) {
         }
 
         $response = updateUsuario($dados, $avatarBase64);
-        echo $response;
-
-        // var_dump($dados);
-        // var_dump($avatarBase64);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "atualizarRecurso":
         session_start();
         $dados = $_POST;
 
         $response = upsertRecurso($dados);
-        echo $response;
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "historicoPorUnidade":
         session_start();

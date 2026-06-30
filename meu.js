@@ -215,12 +215,15 @@ $(document).on('click', '#salvarEdicao', function () {
         data: formData,
         contentType: false,
         processData: false,
+        dataType: 'json',
         success: function (response) {
-            M.toast({ html: response, classes: 'rounded' });
-            if (response.trim() === "ok") {
+            if (response.success) {
+                M.toast({ html: 'Alterações salvas com sucesso!', classes: 'rounded green' });
                 setTimeout(function () {
                     location.reload();
                 }, 1500);
+            } else {
+                M.toast({ html: response.error || 'Erro ao salvar alterações', classes: 'rounded red' });
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -441,17 +444,14 @@ $(document).on('click', '#btnSalvarParecer', function () { // Enviar e-mail
         url: "metodo.php?metodo=editaParecer",
         method: "POST", // Defina o método como POST
         data: formData,
-        // data: formData, // Adicione o objeto 'data' aqui
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.success) {
+                M.toast({ html: 'Parecer salvo com sucesso!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData.error || 'Erro ao salvar o parecer.', classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
@@ -546,17 +546,14 @@ $(document).on('click', '#updateComment', function () { // Enviar e-mail
         url: "metodo.php?metodo=editaComentario",
         method: "POST", // Defina o método como POST
         data: formData,
-        // data: formData, // Adicione o objeto 'data' aqui
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.success) {
+                M.toast({ html: 'Comentário atualizado!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData.error || 'Erro ao editar comentário.', classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
@@ -1032,17 +1029,14 @@ $(document).on('click', '.opVoto', function () {
         url: url,
         method: "POST", // Defina o método como POST
         data: formData,
-        data: formData, // Adicione o objeto 'data' aqui
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.success) {
+                M.toast({ html: 'Voto registrado!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData.error || 'Erro ao registrar voto.', classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
@@ -1067,17 +1061,14 @@ $(document).on('click', '.recFase', function () { // Altera a fase do recurso
         url: url,
         method: "POST", // Defina o método como POST
         data: formData,
-        data: formData, // Adicione o objeto 'data' aqui
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
-                M.toast({ html: responseData, classes: 'rounded' });
+            if (responseData.success) {
+                M.toast({ html: 'Fase alterada!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: responseData.error || 'Erro ao alterar fase.', classes: 'rounded red' });
             }
-
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("Erro na solicitação AJAX: " + textStatus);
@@ -1120,15 +1111,12 @@ $(document).on('submit', '#changePasswordForm', function (event) {
         currentPassword: currentPassword,
         newPassword: newPassword
     }, function (response) {
-        if (response.trim() === "ok") {
-            M.toast({ html: response, classes: 'rounded' });
-            // window.location.reload();
+        if (response.success) {
+            M.toast({ html: 'Senha alterada com sucesso!', classes: 'rounded green' });
         } else {
-            M.toast({ html: response, classes: 'rounded' });
-            // window.location.reload();
-
+            M.toast({ html: response.error || 'Erro ao alterar senha.', classes: 'rounded red' });
         }
-    });
+    }, 'json');
 });
 
 $(document).on('submit', '#updateThisUser', function (e) {
@@ -1143,25 +1131,22 @@ $(document).on('submit', '#updateThisUser', function (e) {
     // formData.append('avatarBase64', avatarBase64); // Adiciona a base64 aos dados do formulário
     // }
 
-    // Envia os dados usando AJAX
     $.ajax({
         type: 'POST',
         url: 'metodo.php?metodo=updateThisUser',
         data: formData,
         contentType: false,
         processData: false,
+        dataType: 'json',
         success: function (response) {
-            if (response.trim() === "ok") {
-                M.toast({ html: response, classes: 'rounded' });
+            if (response.success) {
+                M.toast({ html: 'Perfil atualizado!', classes: 'rounded green' });
                 window.location.reload();
             } else {
-                M.toast({ html: response, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: response.error || 'Erro ao atualizar perfil.', classes: 'rounded red' });
             }
         },
         error: function (xhr, status, error) {
-            // Lida com erros
             console.error(error);
         }
     });
@@ -1256,25 +1241,22 @@ $(document).on('submit', '#atualizarRecursoForm', function (e) {
 
     var formData = new FormData(this);
     var numeroValue = formData.get('numero');
-    // Envia os dados usando AJAX
     $.ajax({
         type: 'POST',
         url: 'metodo.php?metodo=atualizarRecurso',
         data: formData,
         contentType: false,
         processData: false,
+        dataType: 'json',
         success: function (response) {
-            if (response.trim() === "ok") {
-                M.toast({ html: response, classes: 'rounded' });
+            if (response.success) {
+                M.toast({ html: 'Recurso atualizado!', classes: 'rounded green' });
                 window.location.href = "index.php?pag=recurso&rec=" + numeroValue;
             } else {
-                M.toast({ html: response, classes: 'rounded' });
-                // window.location.reload();
-
+                M.toast({ html: response.error || 'Erro ao atualizar recurso.', classes: 'rounded red' });
             }
         },
         error: function (xhr, status, error) {
-            // Lida com erros
             console.error(error);
         }
     });
