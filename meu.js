@@ -387,21 +387,22 @@ $(document).on('click', '#finalizaEnviaParecer', function () {
                                 id_parecer: idParecer,
                                 mailId: mailId
                             },
+                            dataType: 'json',
                             success: function (finalizaResponse) {
-                                // Verifica se a resposta da segunda chamada é 'ok'
-                                if (finalizaResponse.trim().toLowerCase() === 'ok') {
-                                    // Se 'ok', atualiza a página
+                                // Verifica se a resposta da segunda chamada é bem sucedida
+                                if (finalizaResponse && finalizaResponse.success) {
+                                    // Se sucesso, atualiza a página
                                     location.reload();
                                 } else {
                                     // Exibe um toast informando que algo deu errado
-                                    M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded' });
+                                    M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded red' });
                                 }
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 console.log("Erro na segunda solicitação AJAX: " + textStatus);
                                 console.log("Detalhes do erro: " + errorThrown);
                                 // Exibe um toast informando que algo deu errado
-                                M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded' });
+                                M.toast({ html: 'Erro ao finalizar o parecer.', classes: 'rounded red' });
                             }
                         });
                     } else {
