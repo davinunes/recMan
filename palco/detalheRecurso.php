@@ -176,6 +176,10 @@ if ($esseRecurso == null) {
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">monetization_on</i>
                 Cobrança: ' . htmlspecialchars($cobranca) . '
             </div>
+            <a id="supabaseFilesChip" class="chip white-text modal-trigger" href="#supabaseFilesModal" style="background: rgba(255,255,255,0.15); margin: 0; border: 1px solid #ff9800; height: 32px; line-height: 32px; display: none; cursor: pointer; align-items: center; gap: 4px;">
+                <i class="material-icons left" style="color: #ff9800; margin-top: 4px;">cloud_download</i>
+                Arquivos Magnacom: <span id="supabaseFilesCount">0</span>
+            </a>
         </div>
         <div>
             <a class="btn-floating btn-small waves-effect waves-light orange" href="index.php?pag=editarRecurso&rec=' . $esseRecurso . '" title="Editar Recurso">
@@ -656,6 +660,63 @@ if ($esseRecurso == null) {
                     }
                 });
             });
+
+            // Buscar anexos do Supabase para esta notificação
+            var rec = $('#btnSyncSupabase').attr('data-rec');
+            if (rec) {
+                $.ajax({
+                    url: 'magnacom-sistema/get_attachments.php',
+                    type: 'GET',
+                    data: { rec: rec },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success && response.attachments && response.attachments.length > 0) {
+                            $('#supabaseFilesCount').text(response.attachments.length);
+                            $('#supabaseFilesChip').css('display', 'inline-flex');
+
+                            var $list = $('#supabaseFilesList');
+                            $list.empty();
+
+                            response.attachments.forEach(function (file) {
+                                var ext = file.nome_arquivo.split('.').pop().toLowerCase();
+                                var icon = 'insert_drive_file';
+                                var iconColor = 'grey white-text';
+
+                                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
+                                    icon = 'image';
+                                    iconColor = 'blue darken-1 white-text';
+                                } else if (ext === 'pdf') {
+                                    icon = 'picture_as_pdf';
+                                    iconColor = 'red darken-1 white-text';
+                                } else if (['mp4', 'webm', 'ogg', 'mov'].indexOf(ext) !== -1) {
+                                    icon = 'movie';
+                                    iconColor = 'purple darken-1 white-text';
+                                } else if (['mp3', 'wav', 'aac'].indexOf(ext) !== -1) {
+                                    icon = 'audiotrack';
+                                    iconColor = 'teal darken-1 white-text';
+                                }
+
+                                var sizeKb = (file.tamanho_bytes / 1024).toFixed(1);
+
+                                var itemHtml = 
+                                    '<a href="' + file.url + '" target="_blank" class="collection-item avatar" style="min-height: 84px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0;">' +
+                                        '<i class="material-icons circle ' + iconColor + '" style="font-size: 24px; display: flex; align-items: center; justify-content: center; left: 15px;">' + icon + '</i>' +
+                                        '<div style="margin-left: 56px; flex-grow: 1; padding-right: 40px;">' +
+                                            '<span class="title black-text" style="font-weight: 600; font-size: 0.95rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + file.nome_arquivo + '">' + file.nome_arquivo + '</span>' +
+                                            '<span class="grey-text" style="font-size: 0.8rem; display: block; margin-top: 4px;">' + sizeKb + ' KB | Supabase</span>' +
+                                        '</div>' +
+                                        '<span class="secondary-content" style="right: 15px;"><i class="material-icons orange-text">cloud_download</i></span>' +
+                                    '</a>';
+
+                                $list.append(itemHtml);
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Erro ao buscar anexos remotos:', error);
+                    }
+                });
+            }
         });
     </script>
 </body>
@@ -871,5 +932,23 @@ if ($esseRecurso == null) {
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+    </div>
+</div>
+
+<!-- Modal para Exibir Arquivos do Supabase -->
+<div id="supabaseFilesModal" class="modal" style="max-width: 600px; border-radius: 12px; overflow: hidden;">
+    <div class="modal-content" style="padding: 24px;">
+        <h5 style="margin-top: 0; margin-bottom: 20px; font-weight: bold; color: #37474f; display: flex; align-items: center; gap: 10px;">
+            <i class="material-icons orange-text" style="font-size: 2rem;">cloud_queue</i>
+            Arquivos da Notificação (Supabase)
+        </h5>
+        <div id="supabaseFilesList" class="collection" style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 0;">
+            <div class="collection-item" style="padding: 20px; text-align: center; color: #9e9e9e;">
+                Buscando arquivos no Supabase...
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color: #fafafa; border-top: 1px solid #e0e0e0; padding: 4px 16px;">
+        <a href="#!" class="modal-close waves-effect waves-red btn-flat font-weight-bold" style="color: #e53935;">Fechar</a>
     </div>
 </div>
