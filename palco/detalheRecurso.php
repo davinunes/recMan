@@ -176,10 +176,6 @@ if ($esseRecurso == null) {
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">monetization_on</i>
                 Cobrança: ' . htmlspecialchars($cobranca) . '
             </div>
-            <a id="supabaseFilesChip" class="chip white-text modal-trigger" href="#supabaseFilesModal" style="background: rgba(255,255,255,0.15); margin: 0; border: 1px solid #ff9800; height: 32px; line-height: 32px; display: none; cursor: pointer; align-items: center; gap: 4px;">
-                <i class="material-icons left" style="color: #ff9800; margin-top: 4px;">cloud_download</i>
-                Arquivos Magnacom: <span id="supabaseFilesCount">0</span>
-            </a>
         </div>
         <div>
             <a class="btn-floating btn-small waves-effect waves-light orange" href="index.php?pag=editarRecurso&rec=' . $esseRecurso . '" title="Editar Recurso">
@@ -367,6 +363,16 @@ if ($esseRecurso == null) {
     } else {
         echo '<p class="grey-text" style="margin-bottom: 25px;">Nenhum anexo extra fornecido.</p>';
     }
+
+    // Container para Anexos do Supabase (Magnacom)
+    echo '  <div id="supabaseFilesContainer" style="display: none; margin-bottom: 25px;">
+                <h6 style="font-weight: bold; color: #37474f; margin-top: 25px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    <i class="material-icons orange-text text-darken-3">cloud_queue</i> Anexos da Notificação (Sistema Magnacom)
+                </h6>
+                <div id="supabaseFilesList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                    <!-- Os cards dos arquivos serão inseridos via AJAX -->
+                </div>
+            </div>';
 
     if ($parecer['concluido'] == 1) {
         $link = "https://mail.google.com/mail/#inbox/" . $parecer['mailId'];
@@ -671,45 +677,68 @@ if ($esseRecurso == null) {
                     dataType: 'json',
                     success: function (response) {
                         if (response.success && response.attachments && response.attachments.length > 0) {
-                            $('#supabaseFilesCount').text(response.attachments.length);
-                            $('#supabaseFilesChip').css('display', 'inline-flex');
+                            $('#supabaseFilesContainer').show();
 
                             var $list = $('#supabaseFilesList');
                             $list.empty();
 
                             response.attachments.forEach(function (file) {
                                 var ext = file.nome_arquivo.split('.').pop().toLowerCase();
-                                var icon = 'insert_drive_file';
-                                var iconColor = 'grey white-text';
+                                var sizeKb = (file.tamanho_bytes / 1024).toFixed(1);
+                                var cardHtml = '';
+
+                                cardHtml += '<div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
 
                                 if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
-                                    icon = 'image';
-                                    iconColor = 'blue darken-1 white-text';
-                                } else if (ext === 'pdf') {
-                                    icon = 'picture_as_pdf';
-                                    iconColor = 'red darken-1 white-text';
+                                    cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center; border: 1px solid #f0f0f0;">' +
+                                                    '<img src="' + file.url + '" class="responsive-img materialboxed" style="max-height: 180px; max-width: 100%; cursor: pointer;" alt="' + file.nome_arquivo + '">' +
+                                                '</div>' +
+                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                                        file.nome_arquivo +
+                                                    '</span>' +
+                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                                '</div>';
                                 } else if (['mp4', 'webm', 'ogg', 'mov'].indexOf(ext) !== -1) {
-                                    icon = 'movie';
-                                    iconColor = 'purple darken-1 white-text';
-                                } else if (['mp3', 'wav', 'aac'].indexOf(ext) !== -1) {
-                                    icon = 'audiotrack';
-                                    iconColor = 'teal darken-1 white-text';
+                                    cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #000; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center;">' +
+                                                    '<video controls style="max-width: 100%; max-height: 180px;"><source src="' + file.url + '" type="video/' + (ext === 'mov' ? 'mp4' : ext) + '">Seu navegador não suporta vídeos.</video>' +
+                                                '</div>' +
+                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                                        file.nome_arquivo +
+                                                    '</span>' +
+                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                                '</div>';
+                                } else if (ext === 'pdf') {
+                                    cardHtml += '<div style="padding: 10px; background: #ffebee; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
+                                                    '<i class="material-icons red-text" style="font-size: 3rem;">picture_as_pdf</i>' +
+                                                    '<span style="font-weight: 500; font-size: 0.9rem; color: #c62828;">Documento PDF</span>' +
+                                                '</div>' +
+                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                                        file.nome_arquivo +
+                                                    '</span>' +
+                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small red lighten-5 red-text" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">open_in_new</i>Abrir</a>' +
+                                                '</div>';
+                                } else {
+                                    cardHtml += '<div style="padding: 10px; background: #eceff1; border-radius: 6px; margin-bottom: 10px; border: 1px solid #cfd8dc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
+                                                    '<i class="material-icons grey-text text-darken-1" style="font-size: 3rem;">insert_drive_file</i>' +
+                                                    '<span style="font-weight: 500; font-size: 0.9rem; color: #37474f;">Arquivo .' + ext.toUpperCase() + '</span>' +
+                                                '</div>' +
+                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                                        file.nome_arquivo +
+                                                    '</span>' +
+                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                                '</div>';
                                 }
 
-                                var sizeKb = (file.tamanho_bytes / 1024).toFixed(1);
-
-                                var itemHtml = 
-                                    '<a href="' + file.url + '" target="_blank" class="collection-item avatar" style="min-height: 84px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0;">' +
-                                        '<i class="material-icons circle ' + iconColor + '" style="font-size: 24px; display: flex; align-items: center; justify-content: center; left: 15px;">' + icon + '</i>' +
-                                        '<div style="margin-left: 56px; flex-grow: 1; padding-right: 40px;">' +
-                                            '<span class="title black-text" style="font-weight: 600; font-size: 0.95rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + file.nome_arquivo + '">' + file.nome_arquivo + '</span>' +
-                                            '<span class="grey-text" style="font-size: 0.8rem; display: block; margin-top: 4px;">' + sizeKb + ' KB | Supabase</span>' +
-                                        '</div>' +
-                                        '<span class="secondary-content" style="right: 15px;"><i class="material-icons orange-text">cloud_download</i></span>' +
-                                    '</a>';
-
-                                $list.append(itemHtml);
+                                cardHtml += '</div>';
+                                $list.append(cardHtml);
                             });
+
+                            // Inicializa zoom das novas imagens injetadas
+                            $('.materialboxed').materialbox();
                         }
                     },
                     error: function (xhr, status, error) {
@@ -934,21 +963,4 @@ if ($esseRecurso == null) {
         <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
     </div>
 </div>
-
-<!-- Modal para Exibir Arquivos do Supabase -->
-<div id="supabaseFilesModal" class="modal" style="max-width: 600px; border-radius: 12px; overflow: hidden;">
-    <div class="modal-content" style="padding: 24px;">
-        <h5 style="margin-top: 0; margin-bottom: 20px; font-weight: bold; color: #37474f; display: flex; align-items: center; gap: 10px;">
-            <i class="material-icons orange-text" style="font-size: 2rem;">cloud_queue</i>
-            Arquivos da Notificação (Supabase)
-        </h5>
-        <div id="supabaseFilesList" class="collection" style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 0;">
-            <div class="collection-item" style="padding: 20px; text-align: center; color: #9e9e9e;">
-                Buscando arquivos no Supabase...
-            </div>
-        </div>
-    </div>
-    <div class="modal-footer" style="background-color: #fafafa; border-top: 1px solid #e0e0e0; padding: 4px 16px;">
-        <a href="#!" class="modal-close waves-effect waves-red btn-flat font-weight-bold" style="color: #e53935;">Fechar</a>
-    </div>
-</div>
+
