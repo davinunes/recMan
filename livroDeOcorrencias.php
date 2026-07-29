@@ -344,22 +344,40 @@ $mapaCoresTipo = [
                                     <small style="color:#666;">(<?= htmlspecialchars($cargo) ?>)</small>
                                 </span>
                             </div>
-                            <div style="margin-top:4px;"><?= nl2br(htmlspecialchars($mensagemTexto)) ?></div>
+                            
+                            <div style="margin-top:4px;"><?= vds_format_mensagem_text($mensagemTexto) ?></div>
+
                             <?php if (!empty($ev['listaAnexo'])): ?>
-                                <div style="margin-top: 8px;">
+                                <div style="margin-top: 8px; display:flex; flex-direction:column; gap:6px;">
                                     <?php foreach ($ev['listaAnexo'] as $anx): ?>
                                         <?php
                                         $anxUrl = $anx['url'] ?? '';
                                         if ($anxUrl && strpos($anxUrl, '/') === 0) {
                                             $anxUrl = 'https://app.vidadesindico.com.br' . $anxUrl;
                                         }
+                                        $nomeAnx = $anx['nome'] ?? 'anexo';
+                                        $ext = strtolower(pathinfo($nomeAnx, PATHINFO_EXTENSION));
                                         ?>
-                                        <a href="<?= htmlspecialchars($anxUrl) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
-                                            <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars($anx['nome']) ?>
-                                        </a>
+                                        <?php if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
+                                            <div>
+                                                <img src="<?= htmlspecialchars($anxUrl) ?>" class="responsive-img materialboxed z-depth-1" style="max-width:280px; max-height:200px; border-radius:8px; cursor:pointer;" alt="<?= htmlspecialchars($nomeAnx) ?>">
+                                            </div>
+                                        <?php elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])): ?>
+                                            <div>
+                                                <video controls preload="metadata" style="max-width:300px; max-height:220px; border-radius:8px;">
+                                                    <source src="<?= htmlspecialchars($anxUrl) ?>" type="video/<?= $ext === 'mov' ? 'mp4' : $ext ?>">
+                                                    Seu navegador não suporta a exibição deste vídeo.
+                                                </video>
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="<?= htmlspecialchars($anxUrl) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+                                                <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars($nomeAnx) ?>
+                                            </a>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
+
                             <div class="msg-time"><?= htmlspecialchars($dthoraStr) ?></div>
                         </div>
                     <?php endforeach; ?>
