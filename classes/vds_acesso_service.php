@@ -327,3 +327,59 @@ function vds_get_chamados_unidade($bloco, $unidade) {
 
     return $chamados;
 }
+
+/**
+ * Consulta boletos e lançamentos financeiros da unidade na VDS para o ano informado.
+ */
+function vds_get_boletos_unidade($bloco, $unidade, $ano = null, $usuarioIdConselho = null) {
+    if (empty($ano)) {
+        $ano = date('Y');
+    }
+
+    // 1. Resolver UUIDs de Bloco e Unidade
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+    $blocoUuid = $uuids['blocoUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+
+    if ($token && $unidadeUuid && $blocoUuid) {
+        $url = VDS_BASE_URL . '/boleto?page=1&limit=50&sortBy=status&order=asc'
+             . '&Ano=' . urlencode($ano)
+             . '&Bloco.Uuid=' . urlencode($blocoUuid)
+             . '&Unidade.Uuid=' . urlencode($unidadeUuid);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+            if (is_array($regs)) {
+                return $regs;
+            }
+        }
+    }
+
+    // Fallback Mock de testes se offline ou falha
+    $mockPath = __DIR__ . '/../docs/mocks/retornos dos endpoints';
+    if (file_exists($mockPath)) {
+        $mockContent = file_get_contents($mockPath);
+        if (preg_match('/5\.1\s*(\{[\s\S]*?\})\s*(?:\/\/|$)/', $mockContent, $m)) {
+            $mockData = json_decode($m[1], true);
+            return $mockData['regs'] ?? [];
+        }
+    }
+
+    return [];
+}

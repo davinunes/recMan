@@ -846,4 +846,28 @@ switch ($_GET['metodo']) {
 
         echo json_encode(['success' => false, 'error' => 'Token inválido ou usuário inativo']);
         break;
+
+    case "buscarBoletosUnidade":
+        header('Content-Type: application/json; charset=utf-8');
+        require_once __DIR__ . "/classes/vds_acesso_service.php";
+        
+        $bloco = $_GET['bloco'] ?? ($_POST['bloco'] ?? '');
+        $unidade = $_GET['unidade'] ?? ($_POST['unidade'] ?? '');
+        $ano = $_GET['ano'] ?? ($_POST['ano'] ?? date('Y'));
+        
+        if (empty($bloco) || empty($unidade)) {
+            echo json_encode(['success' => false, 'message' => 'Bloco e Unidade são obrigatórios.']);
+            break;
+        }
+
+        $boletos = vds_get_boletos_unidade($bloco, $unidade, $ano);
+        echo json_encode([
+            'success' => true,
+            'bloco' => $bloco,
+            'unidade' => $unidade,
+            'ano' => $ano,
+            'count' => count($boletos),
+            'data' => $boletos
+        ], JSON_UNESCAPED_UNICODE);
+        break;
 }

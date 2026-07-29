@@ -2001,3 +2001,87 @@ $(document).on('touchend', '.materialboxed.active', function(e) {
     isPinching = false;
     isTouchDragging = false;
 });
+
+// Manipulador do modal de inspeção de boletos da unidade
+$(document).on('click', '.btn-inspecionar-boletos', function (e) {
+    e.preventDefault();
+    const bloco = $(this).data('bloco') || '';
+    const unidade = $(this).data('unidade') || '';
+    const ano = $(this).data('ano') || new Date().getFullYear();
+
+    $('#boletos-modal-subtitle').html(`<b>Unidade:</b> Bloco ${bloco} - Apt ${unidade} &nbsp;|&nbsp; <b>Ano:</b> ${ano}`);
+    $('#boletos-loading').removeClass('hide');
+    $('#boletos-empty').addClass('hide');
+    $('#boletos-cards-container').html('').addClass('hide');
+
+    const modalElem = $('#modal-inspecionar-boletos');
+    const instance = M.Modal.getInstance(modalElem);
+    if (instance) {
+        instance.open();
+    } else {
+        modalElem.modal().modal('open');
+    }
+
+    $.ajax({
+        url: `metodo.php?metodo=buscarBoletosUnidade&bloco=${encodeURIComponent(bloco)}&unidade=${encodeURIComponent(unidade)}&ano=${encodeURIComponent(ano)}`,
+        method: 'GET',
+        dataType: 'json',
+        success: function (res) {
+            $('#boletos-loading').addClass('hide');
+            if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                let cardsHtml = '';
+                res.data.forEach(function (b) {
+                    const statusStr = b.status || 'N/A';
+                    let statusBadgeClass = 'blue';
+                    if (statusStr.toLowerCase().includes('liquidado') || statusStr.toLowerCase().includes('pago')) {
+                        statusBadgeClass = 'green';
+                    } else if (statusStr.toLowerCase().includes('aberto') || statusStr.toLowerCase().includes('vencido')) {
+                        statusBadgeClass = 'red';
+                    }
+
+                    const dtVenc = b.dtVencimento ? moment(b.dtVencimento).format('DD/MM/YYYY') : '-';
+                    const valorNum = parseFloat(b.valor || 0);
+                    const valorFmt = isNaN(valorNum) ? '-' : 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const descStr = b.descricao || 'Taxa / Lançamento';
+
+                    // Verificar se há indícios de Multa/RI na descrição
+                    const isMultaRI = /multa|infra[çc]|regimento|ri\b|penalidade/i.test(descStr + ' ' + (b.msgReserva || ''));
+                    const badgeMulta = isMultaRI ? `<span class="new badge red pulse" data-badge-caption="MULTA / RI" style="margin-left:5px"></span>` : '';
+
+                    const btnLink = b.urlSegundaVia ? 
+                        `<a href="${b.urlSegundaVia}" target="_blank" rel="noopener noreferrer" class="btn waves-effect waves-light teal" style="width:100%; margin-top:12px;">
+                            <i class="material-icons left">open_in_new</i> Visualizar Boleto (2ª Via)
+                         </a>` : 
+                        `<button class="btn disabled" style="width:100%; margin-top:12px;">Link indisponível</button>`;
+
+                    cardsHtml += `
+                        <div class="col s12 m6 l4">
+                            <div class="card hoverable z-depth-1" style="border-radius: 8px; border: 1px solid #e0e0e0; overflow:hidden;">
+                                <div class="card-content" style="padding: 16px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                                        <span class="badge ${statusBadgeClass} white-text" style="margin:0; border-radius:4px; font-weight:bold;">${statusStr}</span>
+                                        ${badgeMulta}
+                                    </div>
+                                    <span class="card-title truncate" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;" title="${descStr}">${descStr}</span>
+                                    <div style="font-size: 0.9rem; color: #555;">
+                                        <div><i class="material-icons tiny">event</i> <b>Vencimento:</b> ${dtVenc}</div>
+                                        <div><i class="material-icons tiny">attach_money</i> <b>Valor:</b> <span class="teal-text text-darken-2" style="font-size:1.1rem; font-weight:bold;">${valorFmt}</span></div>
+                                        ${b.nomeSacado ? `<div class="truncate" style="font-size:0.8rem; margin-top:4px;" title="${b.nomeSacado}"><i class="material-icons tiny">person</i> ${b.nomeSacado}</div>` : ''}
+                                    </div>
+                                    ${btnLink}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                $('#boletos-cards-container').html(cardsHtml).removeClass('hide');
+            } else {
+                $('#boletos-empty').removeClass('hide');
+            }
+        },
+        error: function () {
+            $('#boletos-loading').addClass('hide');
+            $('#boletos-empty').removeClass('hide').find('p').text('Erro ao conectar à API VDS para buscar boletos.');
+        }
+    });
+});

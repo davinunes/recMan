@@ -95,6 +95,40 @@ require "classes/repositorio.php";
 </div>
 </div>
 
+<!-- Modal para inspecionar boletos da unidade -->
+<div id="modal-inspecionar-boletos" class="modal modal-fixed-footer" style="width: 85%; max-height: 85%;">
+    <div class="modal-content">
+        <h4 style="display:flex; align-items:center; gap:10px; font-size:1.5rem; margin-top:0;">
+            <i class="material-icons teal-text">receipt_long</i>
+            Inspecionar Boletos VDS / Superlógica
+        </h4>
+        <div id="boletos-modal-subtitle" class="grey-text text-darken-1" style="margin-bottom: 15px; font-weight: 500;">
+            Carregando boletos...
+        </div>
+
+        <div id="boletos-loading" class="center-align" style="padding: 40px 0;">
+            <div class="preloader-wrapper big active">
+                <div class="spinner-layer spinner-teal-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <p class="grey-text" style="margin-top:15px;">Consultando API VDS e buscando faturas...</p>
+        </div>
+
+        <div id="boletos-empty" class="center-align hide" style="padding: 40px 0;">
+            <i class="material-icons grey-text text-lighten-1" style="font-size: 64px;">request_quote</i>
+            <p class="grey-text text-darken-1 font-weight-bold">Nenhum boleto encontrado para esta unidade no ano selecionado.</p>
+        </div>
+
+        <div id="boletos-cards-container" class="row hide"></div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-grey btn-flat">Fechar</a>
+    </div>
+</div>
+
 <!-- Modal para editar multa cobrada -->
 <div id="modal-multa" class="modal">
     <div class="modal-content">
@@ -136,6 +170,17 @@ require "classes/repositorio.php";
 .tr-multa-cobrada:hover {
     background-color: #ffecb3 !important; /* Dourado mais escuro no hover */
 }
+
+.btn-boletos-unidade {
+    padding: 0 8px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 0.8rem;
+}
+.btn-boletos-unidade i {
+    font-size: 1.1rem;
+    line-height: 28px;
+}
 </style>
 
 <?php
@@ -157,6 +202,7 @@ echo "<div class='table-responsive' style='overflow-x: auto;'>";
 echo "<table class='striped' id='listaSolucoes'>";
 echo "<thead>";
 echo "<tr>";
+    echo "<th>Ações</th>";
     echo "<th>Número</th>";
     echo "<th>Ano</th>";
     echo "<th>Unidade</th>";
@@ -183,6 +229,11 @@ foreach($lista as $item){
     $classeLinha = $temMulta ? 'tr-multa-cobrada' : '';
     
     echo "<tr class='$classeLinha' data-id='{$item['numero']}/{$item['ano']}'>";
+    echo "<td class='center-align'>";
+    echo "<button type='button' class='btn-small btn-floating waves-effect waves-light teal btn-inspecionar-boletos' data-bloco='{$item['torre']}' data-unidade='{$item['unidade']}' data-ano='{$item['ano']}' title='Inspecionar Boletos VDS da Unidade {$item['torre']}-{$item['unidade']}'>";
+    echo "<i class='material-icons'>receipt</i>";
+    echo "</button>";
+    echo "</td>";
     echo "<td class='edit-multa-cobrada'>{$item['numero']}</td>";
     echo "<td>{$item['ano']}</td>";
     echo "<td class='edit-multa-cobrada'>{$item['unidade']}</td>";
