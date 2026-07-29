@@ -88,6 +88,8 @@ if ($blocoFiltro) { $sqlWhere .= " AND bloco = ?"; $params[] = $blocoFiltro; $ty
 if ($unidadeFiltro) { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltro; $types .= "s"; }
 if ($protoFiltro) { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
 if ($respFiltro) { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
+// Ocultar chamados resolvidos por padrão
+$sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0)";
 
 $sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
 $stmtList = mysqli_prepare($link, $sqlList);

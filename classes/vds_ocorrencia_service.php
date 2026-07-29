@@ -172,6 +172,23 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     if ($ocorrencia) {
         $debug['local_found'] = true;
         $debug['local_record'] = $ocorrencia;
+
+        // Auto-corrigir bloco/unidade se estão com fallback Z/999 — parsear do cargo no dados_json
+        if (($ocorrencia['bloco'] === 'Z' || $ocorrencia['unidade'] === '999') && !empty($ocorrencia['dados_json'])) {
+            $dadosJson = json_decode($ocorrencia['dados_json'], true);
+            $cargoStr = $dadosJson['cargo'] ?? '';
+            if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+                $blocoCorrigido = trim($bu[1]);
+                $unidadeCorrigida = trim($bu[2]);
+                $stmtFix = mysqli_prepare($link, "UPDATE ocorrencias SET bloco = ?, unidade = ? WHERE id = ?");
+                mysqli_stmt_bind_param($stmtFix, "ssi", $blocoCorrigido, $unidadeCorrigida, $ocorrencia['id']);
+                mysqli_stmt_execute($stmtFix);
+                mysqli_stmt_close($stmtFix);
+                $ocorrencia['bloco'] = $blocoCorrigido;
+                $ocorrencia['unidade'] = $unidadeCorrigida;
+                $debug['bloco_unidade_corrigido'] = true;
+            }
+        }
     }
 
     $token = vds_get_token($usuarioIdConselho);
