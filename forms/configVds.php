@@ -73,14 +73,14 @@ $statusConselheiro = vds_check_token_status($tokenConselheiro);
                         <?php endif; ?>
                     </div>
 
-                    <form method="POST">
+                    <form method="POST" autocomplete="off">
                         <input type="hidden" name="action" value="sync_condominio">
                         <div class="input-field">
-                            <input type="text" id="vds_user_cond" name="vds_user" required>
+                            <input type="text" id="vds_user_cond" name="vds_user" required autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
                             <label for="vds_user_cond">Usuário Administrador (VDS)</label>
                         </div>
                         <div class="input-field">
-                            <input type="password" id="vds_pass_cond" name="vds_pass" required>
+                            <input type="password" id="vds_pass_cond" name="vds_pass" required autocomplete="new-password">
                             <label for="vds_pass_cond">Senha Administradora (VDS)</label>
                         </div>
                         <button type="submit" class="btn waves-effect waves-light blue">
@@ -109,14 +109,14 @@ $statusConselheiro = vds_check_token_status($tokenConselheiro);
                         <?php endif; ?>
                     </div>
 
-                    <form method="POST">
+                    <form method="POST" autocomplete="off">
                         <input type="hidden" name="action" value="ultra_login_conselheiro">
                         <div class="input-field">
-                            <input type="text" id="vds_user_cons" name="vds_user" required>
+                            <input type="text" id="vds_user_cons" name="vds_user" required autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
                             <label for="vds_user_cons">Seu Usuário na VDS</label>
                         </div>
                         <div class="input-field">
-                            <input type="password" id="vds_pass_cons" name="vds_pass" required>
+                            <input type="password" id="vds_pass_cons" name="vds_pass" required autocomplete="new-password">
                             <label for="vds_pass_cons">Sua Senha na VDS</label>
                         </div>
                         <button type="submit" class="btn waves-effect waves-light purple">
