@@ -390,33 +390,66 @@ function vds_get_boletos_unidade($bloco, $unidade, $ano = null, $usuarioIdConsel
 function vds_extrair_sugestoes_multa_boleto($urlSegundaVia, $boletoStatus = null, $boletoDtVencimento = null) {
     if (empty($urlSegundaVia)) return ['sugestoes' => [], 'error' => 'URL vazia'];
 
-    $ch = curl_init($urlSegundaVia);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 5,
-        CURLOPT_ENCODING => '', // Suporte a compressão GZIP / Deflate do Superlógica
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        CURLOPT_HTTPHEADER => [
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
-        ]
-    ]);
+    // Lista de variantes de URL (HTML SPA web vs Espelho estático direto Superlógica)
+    $urlsParaTestar = [$urlSegundaVia];
+    if (preg_match('/-FaturaHtml-flSegundaVia$/i', $urlSegundaVia)) {
+        // Testar variante estática sem a casca SPA (-FaturaHtml-flSegundaVia)
+        $urlsParaTestar[] = preg_replace('/-FaturaHtml-flSegundaVia$/i', '', $urlSegundaVia);
+        $urlsParaTestar[] = preg_replace('/-FaturaHtml-flSegundaVia$/i', '-flSegundaVia', $urlSegundaVia);
+    }
 
-    $html = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
+    $html = null;
+    $httpCode = 0;
+    $curlErr = null;
+    $urlSucesso = null;
 
-    if ($httpCode !== 200 || empty($html)) {
+    foreach ($urlsParaTestar as $targetUrl) {
+        $ch = curl_init($targetUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_ENCODING => '', // Suporte a compressão GZIP / Deflate do Superlógica
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_TIMEOUT => 6,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            CURLOPT_HTTPHEADER => [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+            ]
+        ]);
+
+        $resHtml = curl_exec($ch);
+        $resCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $resErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($resCode === 200 && !empty($resHtml)) {
+            // Se encontrar a tag de composição ou tabela no HTML, priorizar esta resposta
+            if (preg_match('/corpoComposicao|aria-label=["\']Composição["\']|class=["\']item["\']/i', $resHtml)) {
+                $html = $resHtml;
+                $httpCode = $resCode;
+                $urlSucesso = $targetUrl;
+                break;
+            } elseif (!$html) {
+                // Fallback para qualquer resposta HTTP 200 válida
+                $html = $resHtml;
+                $httpCode = $resCode;
+                $urlSucesso = $targetUrl;
+            }
+        } else {
+            $httpCode = $resCode;
+            $curlErr = $resErr;
+        }
+    }
+
+    if (empty($html)) {
         return [
             'sugestoes' => [],
             'httpCode' => $httpCode,
             'curlErr' => $curlErr,
-            'htmlLength' => strlen($html ?? '')
+            'htmlLength' => 0
         ];
     }
 
@@ -530,6 +563,7 @@ function vds_extrair_sugestoes_multa_boleto($urlSegundaVia, $boletoStatus = null
         'sugestoes' => $sugestoes,
         'httpCode' => $httpCode,
         'htmlLength' => strlen($html),
+        'urlUtilizada' => $urlSucesso,
         'snippet' => $snippet
     ];
 }
