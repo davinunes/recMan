@@ -78,7 +78,7 @@ $unidadeFiltro = $_GET['unidade'] ?? '';
 $protoFiltro = $_GET['protocolo'] ?? '';
 $respFiltro = $_GET['responsabilidade'] ?? '';
 
-// Montar Query de Ocorrências
+// Montar Query de Ocorrências (Listar até 1000 da base legada / sincronizada)
 $link = DBConnect();
 $sqlWhere = " WHERE 1=1";
 $params = [];
@@ -89,7 +89,7 @@ if ($unidadeFiltro) { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltr
 if ($protoFiltro) { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
 if ($respFiltro) { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
 
-$sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 50";
+$sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
 $stmtList = mysqli_prepare($link, $sqlList);
 if ($types) {
     mysqli_stmt_bind_param($stmtList, $types, ...$params);
@@ -105,7 +105,13 @@ mysqli_stmt_close($stmtList);
 DBClose($link);
 
 // Ocorrência selecionada para visualização
-$selId = $_GET['id'] ?? ($ocorrencias[0]['id'] ?? null);
+$selId = $_GET['id'] ?? null;
+// Em telas grandes (desktop), se nenhuma foi especificada na URL, seleciona a primeira por padrão
+$isMobileView = isset($_SERVER['HTTP_USER_AGENT']) && preg_match('/Mobile|Android|iPhone/i', $_SERVER['HTTP_USER_AGENT']);
+if (!$selId && !$isMobileView && !empty($ocorrencias)) {
+    $selId = $ocorrencias[0]['id'];
+}
+
 $detalheSel = $selId ? vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho) : null;
 
 // Mapa de cores para ocoTipo
@@ -122,39 +128,44 @@ $mapaCoresTipo = [
     172 => ['nome' => 'Suporte ao Controle de Acesso', 'bg' => '#495057', 'color' => '#ffffff']
 ];
 ?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Livro de Ocorrências - Conselho Digital</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-        body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .sidebar-feed { background: #ffffff; border-right: 1px solid #e0e0e0; height: calc(100vh - 120px); overflow-y: auto; }
-        .chat-container { background: #efeae2; height: calc(100vh - 120px); display: flex; flex-direction: column; }
-        .chat-header { background: #ffffff; padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
-        .chat-body { flex: 1; overflow-y: auto; padding: 20px; }
-        .chat-footer { background: #ffffff; padding: 15px; border-top: 1px solid #e0e0e0; }
 
-        /* Estilo Balões Chat WhatsApp */
-        .msg-bubble { max-width: 70%; margin-bottom: 15px; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg-left { background: #ffffff; border-top-left-radius: 2px; align-self: flex-start; margin-right: auto; }
-        .msg-internal { background: #fff3cd; border: 1px solid #ffebaba; border-top-right-radius: 2px; margin-left: auto; color: #856404; }
-        .msg-right { background: #dcf8c6; border-top-right-radius: 2px; margin-left: auto; color: #111; }
-        .msg-author { font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 10px; }
-        .msg-time { font-size: 0.75rem; color: #888; text-align: right; margin-top: 6px; }
+<style>
+    .sidebar-feed { background: #ffffff; border-right: 1px solid #e0e0e0; height: calc(100vh - 120px); overflow-y: auto; }
+    .chat-container { background: #efeae2; height: calc(100vh - 120px); display: flex; flex-direction: column; }
+    .chat-header { background: #ffffff; padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .chat-footer { background: #ffffff; padding: 15px; border-top: 1px solid #e0e0e0; }
 
-        .item-oco { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
-        .item-oco:hover, .item-oco.active { background: #e8f0fe; }
-        .badge-tipo { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 500; display: inline-block; }
-    </style>
-</head>
-<body>
+    /* Estilo Balões Chat WhatsApp */
+    .msg-bubble { max-width: 75%; margin-bottom: 15px; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .msg-left { background: #ffffff; border-top-left-radius: 2px; align-self: flex-start; margin-right: auto; }
+    .msg-internal { background: #fff3cd; border: 1px solid #ffeba0; border-top-right-radius: 2px; margin-left: auto; color: #856404; }
+    .msg-right { background: #dcf8c6; border-top-right-radius: 2px; margin-left: auto; color: #111; }
+    .msg-author { font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 10px; }
+    .msg-time { font-size: 0.75rem; color: #888; text-align: right; margin-top: 6px; }
+
+    .item-oco { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+    .item-oco:hover, .item-oco.active { background: #e8f0fe; }
+    .badge-tipo { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 500; display: inline-block; }
+
+    /* Responsividade Mobile (Telas até 992px) */
+    @media (max-width: 992px) {
+        .sidebar-feed {
+            display: <?= isset($_GET['id']) ? 'none' : 'block' ?> !important;
+            width: 100% !important;
+            height: auto !important;
+        }
+        .chat-container {
+            display: <?= isset($_GET['id']) ? 'flex' : 'none' ?> !important;
+            width: 100% !important;
+            height: calc(100vh - 120px) !important;
+        }
+    }
+</style>
 
 <div style="padding: 10px 20px; background: #ffffff; border-bottom: 1px solid #e0e0e0;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h5 style="margin: 0; font-weight: 600; color: #333;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <h5 style="margin: 0; font-weight: 600; color: #333; font-size: 1.3rem;">
             <i class="material-icons left" style="color:#0d6efd;">book</i> Livro de Ocorrências (Condomínio Digital)
         </h5>
         
@@ -165,7 +176,7 @@ $mapaCoresTipo = [
                     <i class="material-icons left">sync</i> Sincronizar Agora
                 </button>
             </form>
-            <a href="forms/configVds.php" class="btn-flat btn-small purple-text">
+            <a href="index.php?pag=configVds" class="btn-flat btn-small purple-text">
                 <i class="material-icons left">settings</i> Configurações
             </a>
         </div>
@@ -186,10 +197,11 @@ $mapaCoresTipo = [
 </div>
 
 <div class="row" style="margin: 0;">
-    <!-- Sidebar Left: Feed de Ocorrências -->
+    <!-- Sidebar Left: Feed de Ocorrências (Mostra base legada e sincronizada) -->
     <div class="col s12 m4 l3 sidebar-feed">
         <!-- Filtros Rápidos -->
-        <form method="GET" style="padding: 10px 0;">
+        <form method="GET" action="index.php" style="padding: 10px 0;">
+            <input type="hidden" name="pag" value="livroDeOcorrencias">
             <div class="row" style="margin-bottom: 0;">
                 <div class="input-field col s6" style="margin:0;">
                     <input type="text" name="bloco" placeholder="Bloco" value="<?= htmlspecialchars($blocoFiltro) ?>">
@@ -198,13 +210,13 @@ $mapaCoresTipo = [
                     <input type="text" name="unidade" placeholder="Unidade" value="<?= htmlspecialchars($unidadeFiltro) ?>">
                 </div>
             </div>
-            <button type="submit" class="btn-small waves-effect waves-light grey darken-2 width-100%" style="width:100%; margin-top:5px;">
-                Filtrar
+            <button type="submit" class="btn-small waves-effect waves-light grey darken-2" style="width:100%; margin-top:5px;">
+                Filtrar (<?= count($ocorrencias) ?> encontradas)
             </button>
         </form>
 
         <?php if (empty($ocorrencias)): ?>
-            <div style="padding: 20px; text-align: center; color: #999;">Nenhuma ocorrência encontrada. Clique em 'Sincronizar Agora'.</div>
+            <div style="padding: 20px; text-align: center; color: #999;">Nenhuma ocorrência encontrada no banco de dados.</div>
         <?php else: ?>
             <?php foreach ($ocorrencias as $oco): ?>
                 <?php
@@ -212,7 +224,7 @@ $mapaCoresTipo = [
                 $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
                 $isSel = ($selId == $oco['id']);
                 ?>
-                <div class="item-oco <?= $isSel ? 'active' : '' ?>" onclick="window.location.href='livroDeOcorrencias.php?id=<?= $oco['id'] ?>'">
+                <div class="item-oco <?= $isSel ? 'active' : '' ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&id=<?= $oco['id'] ?>'">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
                             <?= htmlspecialchars($infoTipo['nome']) ?>
@@ -227,9 +239,9 @@ $mapaCoresTipo = [
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                        <span>Responsável: <strong><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
+                        <span>Resp: <strong><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
                         <span style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
-                            <?= $oco['resolvido'] ? '✓ Resolvido' : '• Em Aberto' ?>
+                            <?= $oco['resolvido'] ? '✓ Resolvido' : '• Aberto' ?>
                         </span>
                     </div>
                 </div>
@@ -240,7 +252,7 @@ $mapaCoresTipo = [
     <!-- Main Chat & Details -->
     <div class="col s12 m8 l9 chat-container" style="padding:0;">
         <?php if (!$detalheSel): ?>
-            <div style="padding: 40px; text-align: center; color: #888;">Selecione uma ocorrência na lista à esquerda para visualizar as mensagens.</div>
+            <div style="padding: 40px; text-align: center; color: #888;">Selecione uma ocorrência na lista para visualizar o chat e mensagens.</div>
         <?php else: ?>
             <?php
             $local = $detalheSel['local'];
@@ -251,27 +263,33 @@ $mapaCoresTipo = [
             $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
             ?>
 
-            <!-- Header do Chat -->
+            <!-- Header do Chat (com Botão Voltar para Mobile) -->
             <div class="chat-header">
-                <div>
-                    <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>; margin-bottom:5px;">
-                        <?= htmlspecialchars($infoTipo['nome']) ?>
-                    </span>
-                    <h6 style="margin: 2px 0; font-weight:600;">
-                        Bloco <?= htmlspecialchars($local['bloco']) ?> - Unidade <?= htmlspecialchars($local['unidade']) ?> 
-                        <small style="color:#666;">(Protocolo: <?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>)</small>
-                    </h6>
-                    <div style="font-size: 0.8rem; color: #666;">
-                        Abertura: <?= htmlspecialchars($local['abertura']) ?>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <a href="index.php?pag=livroDeOcorrencias" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;">
+                        <i class="material-icons">arrow_back</i>
+                    </a>
+
+                    <div>
+                        <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>; margin-bottom:3px;">
+                            <?= htmlspecialchars($infoTipo['nome']) ?>
+                        </span>
+                        <h6 style="margin: 2px 0; font-weight:600;">
+                            Bloco <?= htmlspecialchars($local['bloco']) ?> - Unidade <?= htmlspecialchars($local['unidade']) ?> 
+                            <small style="color:#666;">(Protocolo: <?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>)</small>
+                        </h6>
+                        <div style="font-size: 0.8rem; color: #666;">
+                            Abertura: <?= htmlspecialchars($local['abertura']) ?>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Alterar Responsabilidade e Status -->
-                <form method="POST" style="display:flex; gap:10px; align-items:center;">
+                <form method="POST" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <input type="hidden" name="action" value="atualizar_responsabilidade">
                     <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
 
-                    <select name="responsabilidade" class="browser-default" style="height:32px; padding:2px 5px; font-size:0.85rem;">
+                    <select name="responsabilidade" class="browser-default" style="height:32px; padding:2px 5px; font-size:0.85rem; width:auto;">
                         <option value="" <?= empty($local['responsabilidade']) ? 'selected' : '' ?>>Responsável...</option>
                         <option value="sindico" <?= $local['responsabilidade'] === 'sindico' ? 'selected' : '' ?>>Síndico</option>
                         <option value="sub" <?= $local['responsabilidade'] === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
@@ -283,12 +301,12 @@ $mapaCoresTipo = [
                         <span style="font-size:0.85rem; color:#333;">Resolvido</span>
                     </label>
 
-                    <button type="submit" class="btn-small btn-flat blue-text">Salvar</button>
+                    <button type="submit" class="btn-small btn-flat blue-text" style="padding:0 5px;">Salvar</button>
                 </form>
             </div>
 
             <!-- Tags de Unidades Vinculadas -->
-            <div style="background:#fff; padding:6px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:#fff; padding:6px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <div>
                     <strong>Unidades Vinculadas (Tags):</strong>
                     <?php if (empty($tags)): ?>
@@ -421,7 +439,7 @@ $mapaCoresTipo = [
                     <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
                     
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <textarea name="texto" placeholder="Digite uma Nota Interna do Conselho... (Por padrão fica salva apenas internamente)" required style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
+                        <textarea name="texto" placeholder="Digite uma Nota Interna do Conselho..." required style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
                         <button type="submit" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
                             Salvar Nota Interna <i class="material-icons right">note_add</i>
                         </button>
@@ -431,7 +449,3 @@ $mapaCoresTipo = [
         <?php endif; ?>
     </div>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-</body>
-</html>
