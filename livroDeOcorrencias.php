@@ -485,11 +485,15 @@ $mapaCoresTipo = [
                     }
                 }
 
-                // Mapear IDs de eventos VDS publicados pelo Conselho => nome do conselheiro
+                // Mapear IDs de eventos VDS publicados pelo Conselho => dados do conselheiro (nome, avatar, id)
                 $publishedEventMap = [];
                 foreach ($notas as $n) {
                     if (!empty($n['vds_evento_uuid'])) {
-                        $publishedEventMap[(string)$n['vds_evento_uuid']] = $n['conselheiro_nome'] ?? 'Conselheiro';
+                        $publishedEventMap[(string)$n['vds_evento_uuid']] = [
+                            'nome' => $n['conselheiro_nome'] ?? 'Conselheiro',
+                            'avatar' => $n['conselheiro_avatar'] ?? null,
+                            'id' => $n['conselheiro_id'] ?? null
+                        ];
                     }
                 }
                 ?>
@@ -560,9 +564,13 @@ $mapaCoresTipo = [
                             <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
                                 <span><?= htmlspecialchars($dthoraStr) ?></span>
                                 <?php if ($conselheiroAutor): ?>
-                                    <span style="background:#e8f5e9; color:#2e7d32; padding:2px 6px; border-radius:3px; font-size:0.7rem; font-weight:600;">
-                                        <i class="material-icons tiny" style="vertical-align:middle;">person</i>
-                                        Publicado por <?= htmlspecialchars($conselheiroAutor) ?> (Conselho)
+                                    <span style="background:#e8f5e9; color:#2e7d32; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                        <?php if (!empty($conselheiroAutor['avatar'])): ?>
+                                            <img src="<?= htmlspecialchars($conselheiroAutor['avatar']) ?>" style="width:16px; height:16px; border-radius:50%; object-fit:cover;">
+                                        <?php else: ?>
+                                            <i class="material-icons tiny" style="font-size:1rem;">person</i>
+                                        <?php endif; ?>
+                                        Publicado por <?= htmlspecialchars($conselheiroAutor['nome']) ?> (ID: <?= htmlspecialchars($conselheiroAutor['id']) ?>)
                                     </span>
                                 <?php endif; ?>
                             </div>
@@ -573,24 +581,34 @@ $mapaCoresTipo = [
                 <!-- Notas Internas do Conselho (somente as NÃO publicadas no remoto) -->
                 <?php foreach ($notas as $n): ?>
                     <?php if ($n['enviado_remoto']) continue; ?>
+                    <?php
+                    $avatarUser = !empty($n['conselheiro_avatar']) ? $n['conselheiro_avatar'] : '';
+                    if ($avatarUser && strpos($avatarUser, 'http') !== 0 && strpos($avatarUser, '/') !== 0) {
+                        $avatarUser = '/' . $avatarUser;
+                    }
+                    ?>
                     <div class="msg-bubble msg-internal">
                         <div class="msg-author">
-                            <span>
-                                <i class="material-icons tiny">lock_outline</i> 
-                                <?= htmlspecialchars($n['conselheiro_nome']) ?> 
-                                <small>(Nota Interna do Conselho)</small>
+                            <span style="display:flex; align-items:center; gap:6px;">
+                                <?php if ($avatarUser): ?>
+                                    <img src="<?= htmlspecialchars($avatarUser) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #e0c068;">
+                                <?php else: ?>
+                                    <i class="material-icons tiny" style="vertical-align:middle; color:#856404;">lock_outline</i>
+                                <?php endif; ?>
+                                <b><?= htmlspecialchars($n['conselheiro_nome']) ?></b> 
+                                <small style="color:#856404;">(ID: <?= htmlspecialchars($n['conselheiro_id'] ?? '1') ?> - Nota Interna)</small>
                             </span>
                         </div>
-                        <div><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
+                        <div style="margin-top:4px; font-size:0.95rem;"><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
                         
-                        <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
-                            <span><?= htmlspecialchars($n['created_at']) ?></span>
+                        <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
                             
                             <form method="POST" style="margin:0;">
                                 <input type="hidden" name="action" value="publicar_remoto">
                                 <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
-                                <button type="submit" class="btn-small orange white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:3px;">
-                                    Publicar no Remoto (VDS) <i class="material-icons right tiny">send</i>
+                                <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
+                                    Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
                                 </button>
                             </form>
                         </div>

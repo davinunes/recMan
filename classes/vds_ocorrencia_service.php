@@ -341,13 +341,24 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         ];
     }
 
-    // 3. Buscar Notas Internas locais do Conselho
-    $stmtNotas = mysqli_prepare($link, "SELECT * FROM ocorrencia_notas_internas WHERE ocorrencia_id = ? ORDER BY created_at ASC");
+    // 3. Buscar Notas Internas locais do Conselho (incluindo avatar do usuário local)
+    $sqlNotas = "SELECT n.*, u.avatar as conselheiro_avatar, u.nome as usuario_nome_db FROM ocorrencia_notas_internas n LEFT JOIN usuarios u ON u.id = n.conselheiro_id WHERE n.ocorrencia_id = ? ORDER BY n.created_at ASC";
+    $stmtNotas = @mysqli_prepare($link, $sqlNotas);
+    if (!$stmtNotas) {
+        $sqlNotas = "SELECT n.*, u.avatar as conselheiro_avatar, u.nome as usuario_nome_db FROM ocorrencia_notas_internas n LEFT JOIN conselho.usuarios u ON u.id = n.conselheiro_id WHERE n.ocorrencia_id = ? ORDER BY n.created_at ASC";
+        $stmtNotas = @mysqli_prepare($link, $sqlNotas);
+    }
+    if (!$stmtNotas) {
+        $stmtNotas = mysqli_prepare($link, "SELECT * FROM ocorrencia_notas_internas WHERE ocorrencia_id = ? ORDER BY created_at ASC");
+    }
     mysqli_stmt_bind_param($stmtNotas, "i", $ocorrencia['id']);
     mysqli_stmt_execute($stmtNotas);
     $resNotas = mysqli_stmt_get_result($stmtNotas);
     $notasInternas = [];
     while ($n = mysqli_fetch_assoc($resNotas)) {
+        if (!empty($n['usuario_nome_db'])) {
+            $n['conselheiro_nome'] = $n['usuario_nome_db'];
+        }
         $notasInternas[] = $n;
     }
     mysqli_stmt_close($stmtNotas);
