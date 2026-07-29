@@ -61,8 +61,15 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     foreach ($items as $item) {
         $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
         $protocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? null);
-        $bloco = $item['bloco'] ?? ($item['Bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null));
-        $unidade = $item['unidade'] ?? ($item['Unidade'] ?? ($item['unidade']['numero'] ?? null));
+        // Parsear bloco e unidade do campo 'cargo' (ex: "Bloco B - 1108", "Bl. A - 102")
+        $bloco = null;
+        $unidade = null;
+        $cargoStr = $item['cargo'] ?? '';
+        if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+            $bloco = trim($bu[1]);
+            $unidade = trim($bu[2]);
+        }
+        // Fallback somente quando não há dados de bloco/unidade (ex: 'CONDOMÍNIO - GESTÃO')
         if (empty($bloco)) { $bloco = 'Z'; }
         if (empty($unidade)) { $unidade = '999'; }
 
@@ -208,8 +215,14 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     $realProtocolo = $item['protocolo'] ?? $protoSearch;
                     $realUuid = $item['uuid'] ?? null;
                     
-                    $bloco = $item['bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null);
-                    $unidade = $item['unidade'] ?? ($item['unidade']['numero'] ?? null);
+                    // Parsear bloco e unidade do campo 'cargo'
+                    $bloco = null;
+                    $unidade = null;
+                    $cargoStr = $item['cargo'] ?? '';
+                    if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+                        $bloco = trim($bu[1]);
+                        $unidade = trim($bu[2]);
+                    }
                     if (empty($bloco)) { $bloco = 'Z'; }
                     if (empty($unidade)) { $unidade = '999'; }
 
