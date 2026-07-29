@@ -220,6 +220,23 @@ $mapaCoresTipo = [
         </div>
     <?php endif; ?>
 
+    <?php
+    $tokenCheck = vds_get_token($usuarioIdConselho);
+    ?>
+    <?php if (!$tokenCheck): ?>
+        <div style="margin-top: 10px; padding: 12px 15px; background: #fff3cd; border-left: 5px solid #ffc107; border-radius: 4px; color: #856404; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+                <strong style="display:flex; align-items:center; gap:6px;">
+                    <i class="material-icons tiny">vpn_key</i> Autenticação com a VDS Pendente
+                </strong>
+                Nenhum token de acesso ativo foi encontrado na tabela <code>vds_tokens</code>. Faça login uma vez para autorizar a sincronização.
+            </div>
+            <a href="index.php?pag=configVds" class="btn btn-small purple white-text">
+                <i class="material-icons left tiny">settings</i> Ir para Configurações VDS
+            </a>
+        </div>
+    <?php endif; ?>
+
     <?php if ($msg): ?>
         <div style="margin-top: 10px; padding: 10px 15px; background-color: <?= $msgType === 'success' ? '#d4edda' : ($msgType === 'warning' ? '#fff3cd' : '#f8d7da') ?>; color: <?= $msgType === 'success' ? '#155724' : ($msgType === 'warning' ? '#856404' : '#721c24') ?>; border-radius: 4px;">
             <?= htmlspecialchars($msg) ?>
