@@ -111,9 +111,9 @@ $selId = $_GET['id'] ?? null;
 $detalheSel = null;
 if (!empty($protoFiltro)) {
     $detalhePorProto = vds_get_ocorrencia_detalhe($protoFiltro, $usuarioIdConselho);
+    $detalheSel = $detalhePorProto;
     if ($detalhePorProto && isset($detalhePorProto['local']['id'])) {
         $selId = $detalhePorProto['local']['id'];
-        $detalheSel = $detalhePorProto;
 
         // Adiciona ao topo da lista $ocorrencias se ainda não estiver nela
         $jaNaLista = false;
