@@ -123,7 +123,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
 function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     $link = DBConnect();
 
-    // 1. Buscar ocorrência local (por ID numérico ou protocolo_vds string)
+    // 1. Tentar buscar no banco local por ID (numérico) ou por protocolo_vds (string)
     $stmt = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? OR protocolo_vds = ? LIMIT 1");
     $ocoInt = (int)$ocorrenciaId;
     $ocoStr = (string)$ocorrenciaId;
@@ -133,13 +133,13 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     $ocorrencia = mysqli_fetch_assoc($res);
     mysqli_stmt_close($stmt);
 
-    // Se não encontrou localmente ou não tem UUID, tenta resolver direto na VDS por Protocolo
-    if (!$ocorrencia || empty($ocorrencia['uuid_remoto'])) {
-        $token = vds_get_token($usuarioIdConselho);
-        $protoStr = $ocorrencia['protocolo_vds'] ?? (string)$ocorrenciaId;
-        
-        if (!empty($protoStr) && $token) {
-            $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoStr);
+    $token = vds_get_token($usuarioIdConselho);
+
+    // 2. Se a ocorrência não existe no banco ou não tem uuid_remoto, consulta na VDS por Protocolo
+    if ((!$ocorrencia || empty($ocorrencia['uuid_remoto'])) && $token) {
+        $protoSearch = !empty($ocorrencia['protocolo_vds']) ? $ocorrencia['protocolo_vds'] : $ocoStr;
+        if (!empty($protoSearch)) {
+            $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoSearch);
             $chSearch = curl_init($urlSearch);
             curl_setopt_array($chSearch, [
                 CURLOPT_RETURNTRANSFER => true,
@@ -157,9 +157,9 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                 $regsSearch = $dataSearch['regs'] ?? ($dataSearch['items'] ?? []);
                 if (!empty($regsSearch[0])) {
                     $item = $regsSearch[0];
-                    $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
-                    $protocolo = $item['protocolo'] ?? $protoStr;
-                    $uuidRemoto = $item['uuid'] ?? null;
+                    $realOcoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
+                    $realProtocolo = $item['protocolo'] ?? $protoSearch;
+                    $realUuid = $item['uuid'] ?? null;
                     $bloco = $item['bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null);
                     $unidade = $item['unidade'] ?? ($item['unidade']['numero'] ?? null);
                     $abertura = $item['dtExibicao'] ?? date('Y-m-d H:i:s');
@@ -168,19 +168,20 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
 
                     if ($ocorrencia) {
-                        // Atualiza o registro já existente
+                        // Atualiza registro local existente com os dados remotos
                         $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
-                        mysqli_stmt_bind_param($stmtUp, "ssisi", $uuidRemoto, $protocolo, $ocoTipo, $jsonEnc, $ocorrencia['id']);
+                        mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $ocorrencia['id']);
                         mysqli_stmt_execute($stmtUp);
                         mysqli_stmt_close($stmtUp);
-                        
-                        $ocorrencia['uuid_remoto'] = $uuidRemoto;
-                        $ocorrencia['protocolo_vds'] = $protocolo;
+
+                        $ocorrencia['uuid_remoto'] = $realUuid;
+                        $ocorrencia['protocolo_vds'] = $realProtocolo;
                         $ocorrencia['oco_tipo'] = $ocoTipo;
+                        $ocorrencia['dados_json'] = $jsonEnc;
                     } else {
-                        // Verifica se o ID retornado pela VDS já existe localmente
+                        // Se não existia localmente, verifica por realOcoId antes de inserir
                         $stmtCheck = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? LIMIT 1");
-                        mysqli_stmt_bind_param($stmtCheck, "i", $ocoId);
+                        mysqli_stmt_bind_param($stmtCheck, "i", $realOcoId);
                         mysqli_stmt_execute($stmtCheck);
                         $resCheck = mysqli_stmt_get_result($stmtCheck);
                         $rowCheck = mysqli_fetch_assoc($resCheck);
@@ -188,23 +189,24 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
 
                         if ($rowCheck) {
                             $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
-                            mysqli_stmt_bind_param($stmtUp, "ssisi", $uuidRemoto, $protocolo, $ocoTipo, $jsonEnc, $ocoId);
+                            mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $realOcoId);
                             mysqli_stmt_execute($stmtUp);
                             mysqli_stmt_close($stmtUp);
-                            $targetId = $ocoId;
+                            $targetId = $realOcoId;
                         } else {
-                            if ($ocoId > 0) {
+                            if ($realOcoId > 0) {
                                 $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                                mysqli_stmt_bind_param($stmtIns, "issssssis", $ocoId, $abertura, $bloco, $unidade, $status, $uuidRemoto, $protocolo, $ocoTipo, $jsonEnc);
+                                mysqli_stmt_bind_param($stmtIns, "issssssis", $realOcoId, $abertura, $bloco, $unidade, $status, $realUuid, $realProtocolo, $ocoTipo, $jsonEnc);
                             } else {
                                 $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                                mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidRemoto, $protocolo, $ocoTipo, $jsonEnc);
+                                mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $realUuid, $realProtocolo, $ocoTipo, $jsonEnc);
                             }
                             mysqli_stmt_execute($stmtIns);
-                            $targetId = ($ocoId > 0) ? $ocoId : mysqli_insert_id($link);
+                            $targetId = ($realOcoId > 0) ? $realOcoId : mysqli_insert_id($link);
                             mysqli_stmt_close($stmtIns);
                         }
 
+                        // Carregar o objeto ocorrência recién criado/atualizado
                         $stmtFetch = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
                         mysqli_stmt_bind_param($stmtFetch, "i", $targetId);
                         mysqli_stmt_execute($stmtFetch);
@@ -215,55 +217,14 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                 }
             }
         }
-
-        if (!$ocorrencia) {
-            DBClose($link);
-            return null;
-        }
     }
 
-    $token = vds_get_token($usuarioIdConselho);
-    $uuidRemoto = $ocorrencia['uuid_remoto'] ?? null;
-    $protocolo = $ocorrencia['protocolo_vds'] ?? $ocorrencia['id'];
-
-    // Se a ocorrência legada não possui uuid_remoto, busca na VDS pelo protocolo para resolver o UUID
-    if (empty($uuidRemoto) && !empty($protocolo) && $token) {
-        $urlProto = VDS_BASE_URL . '/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protocolo);
-        $chProto = curl_init($urlProto);
-        curl_setopt_array($chProto, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Origin: ' . VDS_ORIGIN_HEADER
-            ]
-        ]);
-        $respProto = curl_exec($chProto);
-        $codeProto = curl_getinfo($chProto, CURLINFO_HTTP_CODE);
-        curl_close($chProto);
-
-        if ($codeProto === 200 && $respProto) {
-            $dataProto = json_decode($respProto, true);
-            $regsProto = $dataProto['regs'] ?? ($dataProto['items'] ?? []);
-            if (!empty($regsProto[0]['uuid'])) {
-                $uuidRemoto = $regsProto[0]['uuid'];
-                $protocoloVds = $regsProto[0]['protocolo'] ?? $protocolo;
-                $ocoTipo = (int)($regsProto[0]['tipoId'] ?? ($regsProto[0]['tipo'] ?? 115));
-                $jsonEnc = json_encode($regsProto[0], JSON_UNESCAPED_UNICODE);
-
-                // Atualiza ocorrência legada no banco com o UUID resolvido
-                $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
-                mysqli_stmt_bind_param($stmtUp, "ssisi", $uuidRemoto, $protocoloVds, $ocoTipo, $jsonEnc, $ocorrencia['id']);
-                mysqli_stmt_execute($stmtUp);
-                mysqli_stmt_close($stmtUp);
-
-                $ocorrencia['uuid_remoto'] = $uuidRemoto;
-                $ocorrencia['protocolo_vds'] = $protocoloVds;
-                $ocorrencia['oco_tipo'] = $ocoTipo;
-            }
-        }
+    if (!$ocorrencia) {
+        DBClose($link);
+        return null;
     }
 
-    // 2. Buscar Notas Internas locais do Conselho
+    // 3. Buscar Notas Internas locais do Conselho
     $stmtNotas = mysqli_prepare($link, "SELECT * FROM ocorrencia_notas_internas WHERE ocorrencia_id = ? ORDER BY created_at ASC");
     mysqli_stmt_bind_param($stmtNotas, "i", $ocorrencia['id']);
     mysqli_stmt_execute($stmtNotas);
@@ -274,7 +235,7 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     }
     mysqli_stmt_close($stmtNotas);
 
-    // 3. Buscar Tags de Unidades vinculadas
+    // 4. Buscar Tags de Unidades vinculadas
     $stmtTags = mysqli_prepare($link, "SELECT * FROM ocorrencia_unidade_tag WHERE ocorrencia_id = ?");
     mysqli_stmt_bind_param($stmtTags, "i", $ocorrencia['id']);
     mysqli_stmt_execute($stmtTags);
@@ -287,8 +248,9 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
 
     DBClose($link);
 
-    // 4. Buscar os detalhes reais na API VDS via HTTP GET /ocorrencia/{uuid}
+    // 5. Buscar os detalhes reais de eventos na API VDS via HTTP GET /ocorrencia/{uuid}
     $remoteData = null;
+    $uuidRemoto = $ocorrencia['uuid_remoto'] ?? null;
 
     if ($uuidRemoto && $token) {
         $ch = curl_init(VDS_BASE_URL . '/ocorrencia/' . urlencode($uuidRemoto));

@@ -370,8 +370,42 @@ $mapaCoresTipo = [
             <!-- Feed do Chat WhatsApp -->
             <div class="chat-body">
                 <!-- Mensagens da VDS (Morador / Remoto) -->
-                <?php if ($remote && isset($remote['eventos'])): ?>
-                    <?php foreach ($remote['eventos'] as $ev): ?>
+                <?php
+                $eventosRemotos = [];
+                if (!empty($remote)) {
+                    if (isset($remote['eventos']) && is_array($remote['eventos'])) {
+                        $eventosRemotos = $remote['eventos'];
+                    } elseif (isset($remote['regs']) && is_array($remote['regs'])) {
+                        $eventosRemotos = $remote['regs'];
+                    } elseif (isset($remote['data']['eventos']) && is_array($remote['data']['eventos'])) {
+                        $eventosRemotos = $remote['data']['eventos'];
+                    } elseif (is_array($remote) && isset($remote[0])) {
+                        $eventosRemotos = $remote;
+                    }
+                }
+
+                // Fallback: Se não houver lista de eventos na resposta remota, extrai a mensagem inicial do dados_json armazenado localmente
+                if (empty($eventosRemotos) && !empty($local['dados_json'])) {
+                    $dadosJsonLocal = json_decode($local['dados_json'], true);
+                    if (!empty($dadosJsonLocal)) {
+                        if (isset($dadosJsonLocal['eventos']) && is_array($dadosJsonLocal['eventos'])) {
+                            $eventosRemotos = $dadosJsonLocal['eventos'];
+                        } elseif (!empty($dadosJsonLocal['mensagem']) || !empty($dadosJsonLocal['titulo'])) {
+                            $eventosRemotos[] = [
+                                'por' => $dadosJsonLocal['por'] ?? ($dadosJsonLocal['autor']['nome'] ?? 'Morador/Solicitante'),
+                                'cargo' => $dadosJsonLocal['cargo'] ?? 'Morador',
+                                'mensagem' => $dadosJsonLocal['mensagem'] ?? ($dadosJsonLocal['titulo'] ?? ''),
+                                'dtHora' => $dadosJsonLocal['dtExibicao'] ?? ($dadosJsonLocal['dthora'] ?? ($dadosJsonLocal['abertura'] ?? '')),
+                                'foto' => $dadosJsonLocal['foto'] ?? '',
+                                'listaAnexo' => $dadosJsonLocal['listaAnexo'] ?? []
+                            ];
+                        }
+                    }
+                }
+                ?>
+
+                <?php if (!empty($eventosRemotos)): ?>
+                    <?php foreach ($eventosRemotos as $ev): ?>
                         <?php
                         $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
                         $cargo = $ev['cargo'] ?? 'Morador';
