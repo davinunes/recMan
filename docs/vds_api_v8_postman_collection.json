@@ -79,6 +79,26 @@
 				},
 				{
 					"name": "1.2 Login de Usuário (Obter Bearer Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Login bem-sucedido e token recebido\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;",
+									"});",
+									"",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set(\"bearerToken\", jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
