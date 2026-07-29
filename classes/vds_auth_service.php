@@ -289,3 +289,40 @@ function vds_get_toast_alerts($usuarioIdConselho = null) {
 
     return null;
 }
+
+/**
+ * Retorna estatísticas de diagnósticos detalhados da tabela vds_tokens.
+ */
+function vds_get_tokens_debug_stats() {
+    $link = DBConnect();
+    $stats = [
+        'table_exists' => false,
+        'total_rows' => 0,
+        'rows' => [],
+        'db_error' => null
+    ];
+
+    $resCheck = mysqli_query($link, "SHOW TABLES LIKE 'vds_tokens'");
+    if ($resCheck && mysqli_num_rows($resCheck) > 0) {
+        $stats['table_exists'] = true;
+        $resCount = mysqli_query($link, "SELECT COUNT(*) as total FROM vds_tokens");
+        if ($resCount) {
+            $rowCount = mysqli_fetch_assoc($resCount);
+            $stats['total_rows'] = (int)($rowCount['total'] ?? 0);
+        }
+
+        $resRows = mysqli_query($link, "SELECT id, tipo, usuario_id_conselho, vds_username, vds_user_uuid, status, LENGTH(bearer_token) as token_len, expires_at, updated_at FROM vds_tokens ORDER BY id DESC LIMIT 10");
+        if ($resRows) {
+            while ($r = mysqli_fetch_assoc($resRows)) {
+                $stats['rows'][] = $r;
+            }
+        } else {
+            $stats['db_error'] = mysqli_error($link);
+        }
+    } else {
+        $stats['db_error'] = "Tabela 'vds_tokens' não existe no banco de dados.";
+    }
+
+    DBClose($link);
+    return $stats;
+}

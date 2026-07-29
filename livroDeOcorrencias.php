@@ -561,6 +561,35 @@ $mapaCoresTipo = [
             <?php endif; ?>
         </div>
 
+        <!-- Estatísticas da tabela vds_tokens -->
+        <?php $tokenStats = vds_get_tokens_debug_stats(); ?>
+        <div style="margin-top:10px; background:#111; padding:10px; border-radius:4px; border:1px solid #333;">
+            <strong style="color:#e0e0e0;">Estatísticas da tabela `vds_tokens`:</strong> 
+            Tabela existe: <strong><?= $tokenStats['table_exists'] ? 'SIM' : 'NÃO' ?></strong> | 
+            Total Registros: <strong><?= $tokenStats['total_rows'] ?></strong>
+            <?php if (!empty($tokenStats['db_error'])): ?>
+                | <span style="color:#ff4444;">Erro MySQL: <?= htmlspecialchars($tokenStats['db_error']) ?></span>
+            <?php endif; ?>
+            <?php if (!empty($tokenStats['rows'])): ?>
+                <table style="width:100%; margin-top:6px; color:#ccc; font-size:0.75rem; border-collapse:collapse;" border="1" cellpadding="3">
+                    <tr style="background:#222; color:#fff;">
+                        <th>ID</th><th>Tipo</th><th>ConselheiroID</th><th>Username</th><th>Token Length</th><th>Status</th><th>Updated At</th>
+                    </tr>
+                    <?php foreach ($tokenStats['rows'] as $tr): ?>
+                        <tr>
+                            <td><?= $tr['id'] ?></td>
+                            <td><?= htmlspecialchars($tr['tipo']) ?></td>
+                            <td><?= htmlspecialchars($tr['usuario_id_conselho'] ?? 'NULL') ?></td>
+                            <td><?= htmlspecialchars($tr['vds_username'] ?? 'N/A') ?></td>
+                            <td><?= $tr['token_len'] ?> chars</td>
+                            <td><?= htmlspecialchars($tr['status']) ?></td>
+                            <td><?= htmlspecialchars($tr['updated_at']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+            <?php endif; ?>
+        </div>
+
         <?php if (!empty($dbg['error_log'])): ?>
             <div style="margin-top:8px; color:#ff4444;">
                 <strong>Logs de Alertas/Erros:</strong>
