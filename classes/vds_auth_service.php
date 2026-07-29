@@ -197,7 +197,81 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
 }
 
 /**
- * Recupera o Token ativo do banco de dados (prioriza token de conselheiro se fornecido ID e faz fallback para qualquer token válido na tabela).
+ * Tenta renovar o Bearer Token usando o Refresh Token registrado na VDS.
+ */
+function vds_refresh_token($tokenId) {
+    $link = DBConnect();
+    $stmt = mysqli_prepare($link, "SELECT id, tipo, usuario_id_conselho, refresh_token, bearer_token FROM vds_tokens WHERE id = ? LIMIT 1");
+    mysqli_stmt_bind_param($stmt, "i", $tokenId);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $row = mysqli_fetch_assoc($res);
+    mysqli_stmt_close($stmt);
+
+    if (!$row || empty($row['refresh_token'])) {
+        DBClose($link);
+        return null;
+    }
+
+    $refreshToken = $row['refresh_token'];
+    $endpoints = [
+        VDS_BASE_URL . '/auth/refresh',
+        VDS_BASE_URL . '/login/refresh',
+        VDS_BASE_URL . '/token/refresh'
+    ];
+
+    $newToken = null;
+    $newRefreshToken = null;
+    $newExpires = null;
+
+    foreach ($endpoints as $url) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(['refreshToken' => $refreshToken]),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $row['bearer_token'],
+                'Content-Type: application/json',
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $t = $json['token'] ?? ($json['bearerToken'] ?? null);
+            if ($t) {
+                $newToken = $t;
+                $newRefreshToken = $json['refreshToken'] ?? $refreshToken;
+                $newExpires = $json['expires'] ?? null;
+                break;
+            }
+        }
+    }
+
+    if ($newToken) {
+        $expiresFormatted = !empty($newExpires) ? date('Y-m-d H:i:s', strtotime($newExpires)) : date('Y-m-d H:i:s', strtotime('+4 hours'));
+        $stmtUp = mysqli_prepare($link, "UPDATE vds_tokens SET bearer_token = ?, refresh_token = ?, expires_at = ?, status = 'ativo', updated_at = NOW() WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp, "sssi", $newToken, $newRefreshToken, $expiresFormatted, $row['id']);
+        mysqli_stmt_execute($stmtUp);
+        mysqli_stmt_close($stmtUp);
+        DBClose($link);
+        return $newToken;
+    } else {
+        $stmtErr = mysqli_prepare($link, "UPDATE vds_tokens SET status = 'expirado' WHERE id = ?");
+        mysqli_stmt_bind_param($stmtErr, "i", $row['id']);
+        mysqli_stmt_execute($stmtErr);
+        mysqli_stmt_close($stmtErr);
+        DBClose($link);
+        return null;
+    }
+}
+
+/**
+ * Recupera o Token ativo do banco de dados com auto-renovação automática se o token estiver expirado ou prestes a expirar.
  */
 function vds_get_token($usuarioIdConselho = null) {
     $link = DBConnect();
@@ -216,35 +290,46 @@ function vds_get_token($usuarioIdConselho = null) {
         UNIQUE KEY uk_tipo_usuario (tipo, usuario_id_conselho)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+    $targetRow = null;
+
     // 1. Tentar token específico do conselheiro
     if ($usuarioIdConselho) {
-        $stmt = mysqli_prepare($link, "SELECT bearer_token FROM vds_tokens WHERE usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+        $stmt = mysqli_prepare($link, "SELECT * FROM vds_tokens WHERE usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "i", $usuarioIdConselho);
             mysqli_stmt_execute($stmt);
             $res = mysqli_stmt_get_result($stmt);
-            $row = mysqli_fetch_assoc($res);
+            $targetRow = mysqli_fetch_assoc($res);
             mysqli_stmt_close($stmt);
-            if ($row && !empty($row['bearer_token'])) {
-                DBClose($link);
-                return $row['bearer_token'];
-            }
         }
     }
 
-    // 2. Fallback para qualquer Token válido cadastrado na vds_tokens (tipo 'condominio' ou mais recente)
-    $resCond = mysqli_query($link, "SELECT bearer_token FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
-    if ($resCond) {
-        $rowCond = mysqli_fetch_assoc($resCond);
-        DBClose($link);
-        if (!empty($rowCond['bearer_token'])) {
-            return $rowCond['bearer_token'];
+    // 2. Fallback para qualquer Token cadastrado na vds_tokens (tipo 'condominio' ou mais recente)
+    if (!$targetRow) {
+        $resCond = mysqli_query($link, "SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+        if ($resCond) {
+            $targetRow = mysqli_fetch_assoc($resCond);
         }
-    } else {
-        DBClose($link);
     }
 
-    return null;
+    DBClose($link);
+
+    if (!$targetRow || empty($targetRow['bearer_token'])) {
+        return null;
+    }
+
+    // Checar se o token já expirou ou vence nos próximos 5 minutos
+    $isExpiredByDate = !empty($targetRow['expires_at']) && (strtotime($targetRow['expires_at']) <= (time() + 300));
+    $isStatusExpired = ($targetRow['status'] === 'expirado');
+
+    if (($isExpiredByDate || $isStatusExpired) && !empty($targetRow['refresh_token'])) {
+        $refreshedToken = vds_refresh_token($targetRow['id']);
+        if ($refreshedToken) {
+            return $refreshedToken;
+        }
+    }
+
+    return $targetRow['bearer_token'];
 }
 
 /**
