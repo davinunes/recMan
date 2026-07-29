@@ -890,7 +890,8 @@ switch ($_GET['metodo']) {
             'success' => true,
             'sugestoes' => $res['sugestoes'] ?? [],
             'httpCode' => $res['httpCode'] ?? 0,
-            'htmlLength' => $res['htmlLength'] ?? 0
+            'htmlLength' => $res['htmlLength'] ?? 0,
+            'snippet' => $res['snippet'] ?? ''
         ], JSON_UNESCAPED_UNICODE);
         break;
 }
