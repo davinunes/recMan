@@ -1,0 +1,405 @@
+{
+	"info": {
+		"_postman_id": "vds-api-v8-conselho-collection",
+		"name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
+		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo), portaria, entregas e mapeamento de blocos e unidades.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://apiv8.vds.app.br",
+			"type": "string"
+		},
+		{
+			"key": "origin",
+			"value": "https://app1.vidadesindico.com.br",
+			"type": "string"
+		},
+		{
+			"key": "anonToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bearerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ocorrenciaUuid",
+			"value": "f8a912b4-5678-4cd3-8e99-0123456789ab",
+			"type": "string"
+		},
+		{
+			"key": "protocolo",
+			"value": "259564",
+			"type": "string"
+		},
+		{
+			"key": "blocoUuid",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "unidadeUuid",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Autenticação & Sessão",
+			"item": [
+				{
+					"name": "1.1 Obter Token Anônimo (Boot)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/anon",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "anon"]
+						},
+						"description": "Obtém o token temporário anônimo necessário para realizar a chamada de login."
+					}
+				},
+				{
+					"name": "1.2 Login de Usuário (Obter Bearer Token)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{anonToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"app\": \"976\",\n  \"username\": \"SEU_USUARIO\",\n  \"password\": \"SUA_SENHA\",\n  \"crypt\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						},
+						"description": "Autentica usuário e retorna o Bearer Token definitivo de sessão."
+					}
+				},
+				{
+					"name": "1.3 Checar Status da Sessão (Health Check)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/usuario/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["usuario", "status"]
+						},
+						"description": "Valida se o Bearer Token continua ativo. Retorna HTTP 200 se ativo ou 401 se expirado."
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Ocorrências e Fale Com",
+			"item": [
+				{
+					"name": "2.1 Listar Ocorrências (Geral / Busca)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "50" },
+								{ "key": "sortBy", "value": "dtExibicao" },
+								{ "key": "order", "value": "desc" },
+								{ "key": "Caixa", "value": "0" },
+								{ "key": "Lida", "value": "9" }
+							]
+						},
+						"description": "Retorna o feed de ocorrências com status, autor, unidade e categoria."
+					}
+				},
+				{
+					"name": "2.2 Buscar Ocorrência por Protocolo (Ex: 259564)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Protocolo={{protocolo}}&Caixa=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "sortBy", "value": "dtExibicao" },
+								{ "key": "order", "value": "desc" },
+								{ "key": "Lida", "value": "9" },
+								{ "key": "Protocolo", "value": "{{protocolo}}" },
+								{ "key": "Caixa", "value": "0" }
+							]
+						},
+						"description": "Busca direta de uma ocorrência pelo número de protocolo especificado."
+					}
+				},
+				{
+					"name": "2.3 Obter Detalhes e Chat da Ocorrência por UUID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia/{{ocorrenciaUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia", "{{ocorrenciaUuid}}"]
+						},
+						"description": "Retorna o histórico cronológico de mensagens e anexos (eventos[]) da ocorrência."
+					}
+				},
+				{
+					"name": "2.4 Enviar Mensagem/Resposta na Ocorrência",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ocorrenciaUuid\": \"{{ocorrenciaUuid}}\",\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia/mensagem",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia", "mensagem"]
+						},
+						"description": "Publica uma resposta na ocorrência em nome do conselheiro autenticado."
+					}
+				},
+				{
+					"name": "2.5 Upload de Imagem / Anexo (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"base64String\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/upload",
+							"host": ["{{baseUrl}}"],
+							"path": ["upload"]
+						},
+						"description": "Envia um arquivo codificado em base64 para inclusão na resposta."
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Portaria e Eventos de Acesso",
+			"item": [
+				{
+					"name": "3.1 Eventos de Acesso por Período e Unidade",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio=2026-07-29T00:00&dtFim=2026-07-29T23:59&unidade.uuid={{unidadeUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["evento_acesso"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "21" },
+								{ "key": "sortBy", "value": "dthora" },
+								{ "key": "order", "value": "desc" },
+								{ "key": "dtInicio", "value": "2026-07-29T00:00" },
+								{ "key": "dtFim", "value": "2026-07-29T23:59" },
+								{ "key": "unidade.uuid", "value": "{{unidadeUuid}}" }
+							]
+						},
+						"description": "Retorna entradas e saídas de pedestres e veículos da unidade no período informado."
+					}
+				},
+				{
+					"name": "3.2 Entregas e Correspondências por Unidade",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/entrega?page=1&limit=21&sortBy=dthora&order=desc&Unidade.Uuid={{unidadeUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["entrega"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "21" },
+								{ "key": "sortBy", "value": "dthora" },
+								{ "key": "order", "value": "desc" },
+								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" }
+							]
+						},
+						"description": "Consulta o histórico de pacotes e correspondências recebidos pela portaria."
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Estrutura Física e UUIDs",
+			"item": [
+				{
+					"name": "4.1 Listar Blocos do Condomínio",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bloco?Combo=True&IsAdmin=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["bloco"],
+							"query": [
+								{ "key": "Combo", "value": "True" },
+								{ "key": "IsAdmin", "value": "false" }
+							]
+						},
+						"description": "Retorna a lista de blocos e seus respectivos UUIDs."
+					}
+				},
+				{
+					"name": "4.2 Listar Unidades por Bloco UUID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/unidade?Combo=True&bloco.uuid={{blocoUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["unidade"],
+							"query": [
+								{ "key": "Combo", "value": "True" },
+								{ "key": "bloco.uuid", "value": "{{blocoUuid}}" }
+							]
+						},
+						"description": "Retorna as unidades de um determinado bloco para resolução de chave composta (bloco:unidade -> UUID)."
+					}
+				}
+			]
+		}
+	]
+}

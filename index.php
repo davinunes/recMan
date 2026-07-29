@@ -82,6 +82,12 @@ switch ($pag) {
 	case "configuracoes_ia":
 		include "palco/configuracoes_ia.php";
 		break;
+	case "livroDeOcorrencias":
+		include "livroDeOcorrencias.php";
+		break;
+	case "configVds":
+		include "forms/configVds.php";
+		break;
 	case "dashboard":
 		include "palco/dashboard.php";
 		break;
