@@ -443,6 +443,28 @@
 						},
 						"description": "Consulta o histórico de pacotes e correspondências recebidos pela portaria."
 					}
+				},
+				{
+					"name": "3.3 Obter Detalhes da Entrega por UUID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/entrega/{{ocorrenciaUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["entrega", "{{ocorrenciaUuid}}"]
+						},
+						"description": "Retorna o detalhamento completo de uma entrega contendo o código rastreador (identificador), histórico de eventos (Recebido -> Entregue), dados de quem retirou (retiradoPor), foto do pacote e anexos."
+					}
 				}
 			]
 		},

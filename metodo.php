@@ -938,4 +938,18 @@ switch ($_GET['metodo']) {
 
         echo $htmlResult;
         break;
+
+    case "obterDetalhesEntrega":
+        header('Content-Type: application/json; charset=utf-8');
+        require_once __DIR__ . "/classes/vds_acesso_service.php";
+        
+        $uuid = $_GET['uuid'] ?? ($_POST['uuid'] ?? '');
+        if (empty($uuid)) {
+            echo json_encode(['success' => false, 'message' => 'UUID é obrigatório.']);
+            break;
+        }
+
+        $res = vds_get_entrega_detalhe($uuid);
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        break;
 }

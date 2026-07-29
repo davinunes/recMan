@@ -52,6 +52,35 @@ Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comun
 ### C. Entregas e Encomendas
 - **Listar Entregas:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc`
 - **Listar Entregas por Unidade:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
+- **Obter Detalhes da Entrega por UUID:** `GET /entrega/{uuid}`
+- **Marcar Ocorrência/Entrega como Visualizada:** `PUT /ocorrencia/visualizar/{uuid}`
+- **Estrutura do Payload de Retorno do Detalhe (`GET /entrega/{uuid}`):**
+  ```json
+  {
+    "uuid": "f362a58e-cfc7-446b-bc38-4b82d9d3d426",
+    "protocolo": "259972",
+    "identificador": "TBR403931961",
+    "descricao": "Prezado ..., encontra-se na sala da correspondência ...",
+    "foto": "/app/dados/cond/1441/ocorrencia/13f230c0-6004-4c17-8864-efbde0232bff.jpg",
+    "dthora": "29/07/2026 17:36:32",
+    "dtFim": "29/07/2026 18:21:47",
+    "status": true,
+    "tipo": { "uuid": "33", "nome": "Entrega", "nomeCompleto": "Entrega" },
+    "destinoNome": "Bloco A - 1306",
+    "unidade": { "uuid": "7b006c67-...", "nome": "1306", "bloco": { "uuid": "f0a6b46d-...", "nome": "Bloco A" } },
+    "registradoPor": { "uuid": "ae295eaf-...", "nome": "Nome do Funcionário", "foto": "/app/dados/cond/1441/foto/PESSOA/p-1144363.jpeg" },
+    "retiradoPor": { "uuid": "2f42d2a2-...", "nome": "Nome de Quem Retirou", "foto": "/app/dados/cond/1441/foto/PESSOA/f-1140167.jpg" },
+    "anexos": [
+      { "uuid": "15880747", "nome": "Foto_x.jpg", "arquivoNome": "13f230c0-...jpg", "url": "/app/dados/cond/1441/ocorrencia/...", "dthora": "29/07/2026 17:36:39" }
+    ],
+    "eventos": [
+      { "uuid": "30041966", "status": { "uuid": "5", "nome": "Recebido" }, "registradoPor": { ... } },
+      { "uuid": "30041993", "status": { "uuid": "3", "nome": "Encaminhado" }, "registradoPor": { ... } },
+      { "uuid": "30042062", "status": { "uuid": "7", "nome": "Not. morador" }, "registradoPor": { ... } },
+      { "uuid": "30045468", "status": { "uuid": "8", "nome": "Ent. morador" }, "registradoPor": { ... }, "retiradoPor": { ... } }
+    ]
+  }
+  ```
 
 ### D. Estrutura Física
 - **Listar Blocos:** `GET /bloco?Combo=True&IsAdmin=false`

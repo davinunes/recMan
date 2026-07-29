@@ -256,11 +256,16 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         $descStr = vds_extract_string_value($ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? null)), 'Encomenda / Pacote');
                         $destStr = vds_extract_string_value($ent['destinatario'] ?? ($ent['recebidoPor'] ?? null), 'Morador');
                         $statusStr = vds_extract_string_value($ent['status'] ?? ($ent['situacao'] ?? null), 'Entregue');
+                        $fotoRel = $ent['foto'] ?? null;
+                        $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
 
                         $filtrados[] = [
+                            'uuid' => $ent['uuid'] ?? ($ent['id'] ?? null),
                             'dthoraChegada' => !empty($ent['dthora']) ? date('d/m/Y H:i', strtotime($ent['dthora'])) : ($ent['dtExibicao'] ?? 'Recente'),
                             'descricao' => $descStr,
                             'destinatario' => $destStr,
+                            'identificador' => $ent['identificador'] ?? ($ent['codigoRastreio'] ?? null),
+                            'foto' => $fotoUrl,
                             'status' => $statusStr
                         ];
                     }
@@ -278,6 +283,46 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
     }
 
     return [];
+}
+
+/**
+ * Obtém os detalhes completos de uma entrega/encomenda por UUID na API v8 da VDS.
+ */
+function vds_get_entrega_detalhe($uuid, $usuarioIdConselho = null) {
+    if (empty($uuid)) return ['success' => false, 'message' => 'UUID da entrega é obrigatório'];
+
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Token VDS indisponível'];
+    }
+
+    $url = VDS_BASE_URL . '/entrega/' . urlencode($uuid);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200 && $response) {
+        $data = json_decode($response, true);
+        if ($data) {
+            if (!empty($data['foto']) && strpos($data['foto'], 'http') !== 0) {
+                $data['fotoUrlCompleta'] = 'https://app.vidadesindico.com.br' . $data['foto'];
+            } else {
+                $data['fotoUrlCompleta'] = $data['foto'] ?? null;
+            }
+            return ['success' => true, 'data' => $data];
+        }
+    }
+
+    return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Entrega não encontrada ou erro na API VDS'];
 }
 
 /**

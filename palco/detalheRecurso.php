@@ -623,15 +623,105 @@ if ($esseRecurso == null) {
             html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
             html += '</table>';
         } else if (tipo === 'entrega') {
-            html += '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
-            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Descrição / Pacote:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
-            html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinatario) + '</td></tr>';
-            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada) + '</td></tr>';
-            html += '<tr><td><b>Status Atual:</b></td><td><span class="badge green white-text" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.status) + '</span></td></tr>';
-            html += '</table>';
+            inspecionarEntregaComDetalhes(data.uuid || '', data);
+            return;
         }
         
+        document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
+        var elem = document.getElementById('modalInspecionarAcelerador');
+        var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
+        instance.open();
+    }
+
+    // Fetch em segundo plano para obter identificador e foto de cada entrega
+    document.addEventListener("DOMContentLoaded", function() {
+        const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
+        entregasRows.forEach(function(row) {
+            const uuid = row.getAttribute('data-entrega-uuid');
+            if (!uuid) return;
+
+            fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData && resData.success && resData.data) {
+                        const d = resData.data;
+
+                        // Atualizar Identificador / Código de Rastreio
+                        if (d.identificador) {
+                            const colId = row.querySelector('.col-identificador');
+                            if (colId) {
+                                colId.innerHTML = `
+                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                        <i class="material-icons tiny">qr_code</i> ${d.identificador}
+                                    </span>
+                                `;
+                            }
+                        }
+
+                        // Atualizar Foto do Pacote
+                        const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
+                        if (fotoUrl) {
+                            const colFoto = row.querySelector('.col-foto');
+                            if (colFoto) {
+                                colFoto.innerHTML = `
+                                    <img src="${fotoUrl}" class="responsive-img materialboxed z-depth-1" style="max-height:42px; border-radius:4px; cursor:pointer;" alt="Foto Pacote">
+                                `;
+                                if (typeof M !== 'undefined' && M.Materialbox) {
+                                    M.Materialbox.init(row.querySelectorAll('.materialboxed'));
+                                }
+                            }
+                        }
+
+                        row.dataset.detalhesCompletos = JSON.stringify(d);
+                    }
+                })
+                .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
+        });
+    });
+
+    function inspecionarEntregaComDetalhes(uuid, baseData) {
+        let data = baseData || {};
+        const row = document.querySelector(`.linha-entrega-item[data-entrega-uuid="${uuid}"]`);
+        if (row && row.dataset.detalhesCompletos) {
+            try { data = Object.assign({}, data, JSON.parse(row.dataset.detalhesCompletos)); } catch(e){}
+        }
+
+        var html = '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
+        
+        const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
+        if (fotoUrl) {
+            html += '<div style="text-align:center; margin:15px 0;"><img src="' + fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:8px; border:2px solid #1e88e5; box-shadow:0 4px 12px rgba(30,136,229,0.2);"></div>';
+        }
+
+        html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+        if (data.identificador) {
+            html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
+        }
+        if (data.protocolo) {
+            html += '<tr><td><b>Protocolo VDS:</b></td><td>#' + data.protocolo + '</td></tr>';
+        }
+        html += '<tr><td><b>Descrição / Conteúdo:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
+        html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinoNome || data.destinatario) + '</td></tr>';
+        html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada || data.dthora) + '</td></tr>';
+        if (data.dtFim) {
+            html += '<tr><td><b>Data/Hora Retirada:</b></td><td>' + data.dtFim + '</td></tr>';
+        }
+        if (data.retiradoPor) {
+            const retNome = typeof data.retiradoPor === 'object' ? data.retiradoPor.nome : data.retiradoPor;
+            html += '<tr><td><b>Retirado Por:</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + retNome + '</span></td></tr>';
+        }
+        html += '</table>';
+
+        if (data.eventos && Array.isArray(data.eventos) && data.eventos.length > 0) {
+            html += '<h6 style="margin-top:15px; font-weight:bold; color:#555;">Histórico de Eventos da Portaria:</h6><ul class="collection" style="font-size:0.85rem;">';
+            data.eventos.forEach(function(ev) {
+                const stNome = ev.status ? ev.status.nome : 'Status';
+                const regNome = ev.registradoPor ? ev.registradoPor.nome : '';
+                html += '<li class="collection-item"><b>' + stNome + '</b> ' + (regNome ? '<small class="grey-text">por ' + regNome + '</small>' : '') + '</li>';
+            });
+            html += '</ul>';
+        }
+
         document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
         var elem = document.getElementById('modalInspecionarAcelerador');
         var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
@@ -689,13 +779,45 @@ if ($esseRecurso == null) {
                         <?php if (empty($entregasUnidade)): ?>
                             <p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>
                         <?php else: ?>
-                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
-                                <thead><tr><th>Chegada</th><th>Descrição</th><th>Destinatário</th><th>Inspecionar</th></tr></thead>
+                            <table class="striped highlight responsive-table" style="font-size:0.85rem;" id="tabela-entregas-acelerador">
+                                <thead>
+                                    <tr>
+                                        <th>Chegada</th>
+                                        <th>Identificador / Rastreio</th>
+                                        <th>Foto / Anexo</th>
+                                        <th>Descrição</th>
+                                        <th>Destinatário</th>
+                                        <th>Inspecionar</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <?php foreach ($entregasUnidade as $ent): ?>
-                                        <?php $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
-                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('entrega', <?= $jsonEnt ?>)">
+                                        <?php 
+                                        $entUuid = $ent['uuid'] ?? ($ent['id'] ?? ''); 
+                                        $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
+                                        ?>
+                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" class="linha-entrega-item" style="cursor:pointer;" onclick="inspecionarEntregaComDetalhes('<?= htmlspecialchars($entUuid) ?>', <?= $jsonEnt ?>)">
                                             <td><?= htmlspecialchars($ent['dthoraChegada']) ?></td>
+                                            <td class="col-identificador">
+                                                <?php if (!empty($ent['identificador'])): ?>
+                                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                                        <i class="material-icons tiny">qr_code</i> <?= htmlspecialchars($ent['identificador']) ?>
+                                                    </span>
+                                                <?php elseif (!empty($entUuid)): ?>
+                                                    <span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i> Buscando...</span>
+                                                <?php else: ?>
+                                                    <span class="grey-text">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="col-foto">
+                                                <?php if (!empty($ent['foto'])): ?>
+                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>" class="responsive-img materialboxed z-depth-1" style="max-height:42px; border-radius:4px; cursor:pointer;" alt="Foto Pacote">
+                                                <?php elseif (!empty($entUuid)): ?>
+                                                    <span class="grey-text text-lighten-1 spin-load-foto" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>
+                                                <?php else: ?>
+                                                    <span class="grey-text">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><b><?= htmlspecialchars($ent['descricao']) ?></b></td>
                                             <td><?= htmlspecialchars($ent['destinatario']) ?></td>
                                             <td>
