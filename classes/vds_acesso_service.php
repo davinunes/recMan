@@ -201,6 +201,18 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
 }
 
 /**
+ * Extrai valor em formato string caso a propriedade da API seja um objeto/array.
+ */
+function vds_extract_string_value($val, $default = 'N/A') {
+    if (empty($val)) return $default;
+    if (is_string($val) || is_numeric($val)) return (string)$val;
+    if (is_array($val)) {
+        return $val['descricao'] ?? ($val['nome'] ?? ($val['tipo'] ?? ($val['detalhe'] ?? ($val['texto'] ?? $default))));
+    }
+    return $default;
+}
+
+/**
  * Consulta entregas/correspondências recentes da unidade.
  */
 function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
@@ -241,11 +253,15 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                 foreach ($regs as $ent) {
                     $eUnid = trim($ent['unidade']['numero'] ?? ($ent['unidadeNumero'] ?? ($ent['unidade'] ?? '')));
                     if (empty($eUnid) || $eUnid === $unidadeClean || ltrim($eUnid, '0') === ltrim($unidadeClean, '0')) {
+                        $descStr = vds_extract_string_value($ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? null)), 'Encomenda / Pacote');
+                        $destStr = vds_extract_string_value($ent['destinatario'] ?? ($ent['recebidoPor'] ?? null), 'Morador');
+                        $statusStr = vds_extract_string_value($ent['status'] ?? ($ent['situacao'] ?? null), 'Entregue');
+
                         $filtrados[] = [
                             'dthoraChegada' => !empty($ent['dthora']) ? date('d/m/Y H:i', strtotime($ent['dthora'])) : ($ent['dtExibicao'] ?? 'Recente'),
-                            'descricao' => $ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? 'Encomenda / Pacote')),
-                            'destinatario' => $ent['destinatario'] ?? ($ent['recebidoPor'] ?? 'Morador'),
-                            'status' => $ent['status'] ?? ($ent['situacao'] ?? 'Entregue')
+                            'descricao' => $descStr,
+                            'destinatario' => $destStr,
+                            'status' => $statusStr
                         ];
                     }
                 }

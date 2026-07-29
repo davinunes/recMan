@@ -601,6 +601,14 @@ if ($esseRecurso == null) {
         }
     });
 
+    function formatObjStr(val) {
+        if (!val) return 'N/A';
+        if (typeof val === 'object') {
+            return val.descricao || val.nome || val.tipo || val.detalhe || JSON.stringify(val);
+        }
+        return val;
+    }
+
     function inspecionarItemAcelerador(tipo, data) {
         var html = '';
         if (tipo === 'acesso') {
@@ -609,18 +617,18 @@ if ($esseRecurso == null) {
                 html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:180px; max-height:180px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
             }
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b>' + (data.pessoaNome || 'N/A') + '</b></td></tr>';
-            html += '<tr><td><b>Perfil / Cargo:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + (data.perfil || 'N/A') + '</span></td></tr>';
-            html += '<tr><td><b>Tipo de Evento:</b></td><td>' + (data.tipoEvento || 'N/A') + '</td></tr>';
-            html += '<tr><td><b>Data / Hora:</b></td><td>' + (data.dthora || 'N/A') + '</td></tr>';
+            html += '<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b>' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
+            html += '<tr><td><b>Perfil / Cargo:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
+            html += '<tr><td><b>Tipo de Evento:</b></td><td>' + formatObjStr(data.tipoEvento) + '</td></tr>';
+            html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
             html += '</table>';
         } else if (tipo === 'entrega') {
             html += '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Descrição / Pacote:</b></td><td><b>' + (data.descricao || 'N/A') + '</b></td></tr>';
-            html += '<tr><td><b>Destinatário:</b></td><td>' + (data.destinatario || 'N/A') + '</td></tr>';
-            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + (data.dthoraChegada || 'N/A') + '</td></tr>';
-            html += '<tr><td><b>Status Atual:</b></td><td><span class="badge green white-text" style="float:none; padding:3px 8px; border-radius:4px;">' + (data.status || 'N/A') + '</span></td></tr>';
+            html += '<tr><td style="width:35%;"><b>Descrição / Pacote:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
+            html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinatario) + '</td></tr>';
+            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada) + '</td></tr>';
+            html += '<tr><td><b>Status Atual:</b></td><td><span class="badge green white-text" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.status) + '</span></td></tr>';
             html += '</table>';
         }
         
