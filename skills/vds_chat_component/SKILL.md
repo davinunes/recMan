@@ -39,11 +39,16 @@ Substitui seletores complexos por um campo de texto único `<input name="tag_inp
 
 ---
 
-## 4. Regras Visuais e Resposta em 2 Fatores
+## 4. Regras Visuais
 
 - **Notas Internas (1º Fator):**
   - Salva localmente em `ocorrencia_notas_internas` com `enviado_remoto = 0`.
   - Exibida no balão pastel com o botão **"Publicar no Remoto (VDS)"**.
+
+### 7. Regra de Negócio de Publicação de Notas Internas
+- **Publicação Restrita ao Autor**: Apenas o conselheiro que criou a nota interna (`conselheiro_id == session.user_id`) possui o botão **Publicar no Remoto (VDS)**.
+- **Apenas Leitura para Outros Conselheiros**: As notas criadas por outros membros do conselho são visíveis para leitura com o indicador `Apenas Leitura (Somente o autor pode publicar)`.
+- **Trava de Segurança no Backend**: A função `vds_publicar_nota_remoto($notaId, $usuarioIdConselho)` valida o ID do autor no banco de dados e impede tentativas não autorizadas.
 
 - **Publicação Remota (2º Fator):**
   - Dispara `POST /ocorrencia/comentario` na VDS.

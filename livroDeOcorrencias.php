@@ -589,6 +589,7 @@ $mapaCoresTipo = [
                     if ($avatarUser && strpos($avatarUser, 'http') !== 0 && strpos($avatarUser, '/') !== 0) {
                         $avatarUser = '/' . $avatarUser;
                     }
+                    $isMinhaNota = ((int)($n['conselheiro_id'] ?? 0) === (int)$usuarioIdConselho);
                     ?>
                     <div class="msg-bubble msg-internal">
                         <div class="msg-author">
@@ -607,13 +608,19 @@ $mapaCoresTipo = [
                         <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                             <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
                             
-                            <form method="POST" style="margin:0;">
-                                <input type="hidden" name="action" value="publicar_remoto">
-                                <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
-                                <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
-                                    Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
-                                </button>
-                            </form>
+                            <?php if ($isMinhaNota): ?>
+                                <form method="POST" style="margin:0;">
+                                    <input type="hidden" name="action" value="publicar_remoto">
+                                    <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
+                                    <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
+                                        Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <span style="font-size:0.72rem; color:#856404; font-style:italic; background:#fff3cd; padding:2px 8px; border-radius:4px; border:1px solid #ffeeba; display:inline-flex; align-items:center; gap:3px;">
+                                    <i class="material-icons tiny" style="vertical-align:middle; font-size:0.85rem;">lock</i> Apenas Leitura (Somente o autor pode publicar)
+                                </span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>

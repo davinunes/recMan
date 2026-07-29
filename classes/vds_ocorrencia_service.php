@@ -468,6 +468,12 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         return ['success' => false, 'message' => 'Nota interna não encontrada.'];
     }
 
+    // Regra de Negócio: Apenas o próprio autor da nota interna pode publicá-la no remoto
+    if ($usuarioIdConselho !== null && (int)($nota['conselheiro_id'] ?? 0) !== (int)$usuarioIdConselho) {
+        DBClose($link);
+        return ['success' => false, 'message' => 'Permissão negada: Apenas o autor da nota interna pode publicá-la no sistema remoto VDS.'];
+    }
+
     // Resolvendo o ID remoto real da VDS
     $remoteOcoId = (int)$nota['local_oco_id'];
     if (!empty($nota['dados_json'])) {
