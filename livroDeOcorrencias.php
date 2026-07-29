@@ -497,7 +497,47 @@ $mapaCoresTipo = [
                             <?php endif; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
+
+                <!-- Console de Diagnóstico & Debug VDS -->
+                <?php if (!empty($_GET['debug']) || empty($eventosRemotos)): ?>
+                    <div style="background:#1e1e1e; color:#00ff66; padding:15px; border-radius:6px; font-family:monospace; font-size:0.8rem; margin:15px 0; overflow-x:auto;">
+                        <strong style="color:#fff; font-size:0.9rem;"><i class="material-icons tiny">bug_report</i> Console de Diagnóstico & Debug VDS</strong>
+                        <hr style="border-color:#444; margin:8px 0;">
+                        
+                        <?php $dbg = $detalheSel['debug'] ?? []; ?>
+                        <div><strong>Input Pesquisado:</strong> <?= htmlspecialchars($dbg['input_ocorrencia_id'] ?? 'N/A') ?></div>
+                        <div><strong>Token Encontrado:</strong> <?= ($dbg['token_found'] ?? false) ? 'SIM (Ativo)' : '<span style="color:#ff4444;">NÃO (Ausente no vds_tokens)</span>' ?></div>
+                        <div><strong>Registro Local Encontrado:</strong> <?= ($dbg['local_found'] ?? false) ? 'SIM (ID: ' . ($dbg['local_record']['id'] ?? '') . ', UUID: ' . ($dbg['local_record']['uuid_remoto'] ?? 'Vazio') . ', Prot: ' . ($dbg['local_record']['protocolo_vds'] ?? 'Vazio') . ')' : 'NÃO (Registro Inexistente)' ?></div>
+                        
+                        <div style="margin-top:8px;">
+                            <strong>Busca por Protocolo na VDS:</strong> <?= ($dbg['search_api_called'] ?? false) ? 'SIM' : 'NÃO Executada' ?><br>
+                            <?php if (!empty($dbg['search_url'])): ?>
+                                URL: <code><?= htmlspecialchars($dbg['search_url']) ?></code> | HTTP Code: <strong><?= htmlspecialchars($dbg['search_http_code'] ?? 'N/A') ?></strong> | Registros Retornados: <?= htmlspecialchars($dbg['search_regs_count'] ?? 0) ?><br>
+                                Response Preview: <pre style="background:#2d2d2d; color:#ce9178; padding:5px; margin:4px 0; max-height:120px; overflow-y:auto; font-size:0.75rem;"><?= htmlspecialchars(substr($dbg['search_raw_response'] ?? 'Sem Resposta', 0, 1000)) ?></pre>
+                            <?php endif; ?>
+                        </div>
+
+                        <div style="margin-top:8px;">
+                            <strong>Consulta de Detalhes da Ocorrência (/ocorrencia/{uuid}):</strong> <?= ($dbg['detail_api_called'] ?? false) ? 'SIM' : 'NÃO Executada' ?><br>
+                            <?php if (!empty($dbg['detail_url'])): ?>
+                                URL: <code><?= htmlspecialchars($dbg['detail_url']) ?></code> | HTTP Code: <strong><?= htmlspecialchars($dbg['detail_http_code'] ?? 'N/A') ?></strong><br>
+                                Response Preview: <pre style="background:#2d2d2d; color:#ce9178; padding:5px; margin:4px 0; max-height:120px; overflow-y:auto; font-size:0.75rem;"><?= htmlspecialchars(substr($dbg['detail_raw_response'] ?? 'Sem Resposta', 0, 1000)) ?></pre>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if (!empty($dbg['error_log'])): ?>
+                            <div style="margin-top:8px; color:#ff4444;">
+                                <strong>Logs de Alertas/Erros:</strong>
+                                <ul>
+                                    <?php foreach ($dbg['error_log'] as $err): ?>
+                                        <li>• <?= htmlspecialchars($err) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Footer: Adicionar Nota Interna (1º Fator) -->

@@ -14,11 +14,11 @@
 			<li>
 				<a href="index.php?pag=dashboard" class="btn indigo">Dashboard</a>
 				<a href="index.php" class="btn blue">Recursos</a>
-				<a href="index.php?pag=livroDeOcorrencias" class="btn blue darken-3"><i class="material-icons left">question_answer</i>Ocorrências VDS</a>
+				<a href="index.php?pag=livroDeOcorrencias" class="btn blue darken-3"><i
+						class="material-icons left">question_answer</i>Ocorrências VDS</a>
 				<a href="index.php?pag=novoRecurso" class="btn">Novo Recurso</a>
 				<a href="index.php?pag=planilhaSolucoes" class="btn">Lista Com Cobrança</a>
 				<a href="index.php?pag=usuarios" class="btn teal lighten-1">Gestão e Perfil</a>
-				<a href="index.php?pag=configVds" class="btn purple darken-2"><i class="material-icons left">settings_suggest</i>Config VDS</a>
 				<a href="index.php?pag=tools" class="btn">Ferramentas</a>
 				<a href="index.php?pag=historico" class="btn orange">Historico</a>
 				<a id="logout" href="#" class="btn">Sair</a>

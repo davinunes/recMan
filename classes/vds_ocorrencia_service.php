@@ -121,6 +121,22 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
  * Se a ocorrência legada não possui uuid_remoto ou não existe localmente, busca na VDS pelo protocolo para resolver o UUID e sincronizar.
  */
 function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
+    $debug = [
+        'input_ocorrencia_id' => $ocorrenciaId,
+        'usuario_id_conselho' => $usuarioIdConselho,
+        'local_found' => false,
+        'token_found' => false,
+        'search_api_called' => false,
+        'search_url' => null,
+        'search_http_code' => null,
+        'search_raw_response' => null,
+        'detail_api_called' => false,
+        'detail_url' => null,
+        'detail_http_code' => null,
+        'detail_raw_response' => null,
+        'error_log' => []
+    ];
+
     $link = DBConnect();
 
     // 1. Tentar buscar no banco local por ID (numérico) ou por protocolo_vds (string)
@@ -133,13 +149,25 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     $ocorrencia = mysqli_fetch_assoc($res);
     mysqli_stmt_close($stmt);
 
+    if ($ocorrencia) {
+        $debug['local_found'] = true;
+        $debug['local_record'] = $ocorrencia;
+    }
+
     $token = vds_get_token($usuarioIdConselho);
+    $debug['token_found'] = !empty($token);
+    if (!$token) {
+        $debug['error_log'][] = 'Token da VDS não encontrado no banco (vds_tokens). Faça login em Configurações.';
+    }
 
     // 2. Se a ocorrência não existe no banco ou não tem uuid_remoto, consulta na VDS por Protocolo
     if ((!$ocorrencia || empty($ocorrencia['uuid_remoto'])) && $token) {
         $protoSearch = !empty($ocorrencia['protocolo_vds']) ? $ocorrencia['protocolo_vds'] : $ocoStr;
         if (!empty($protoSearch)) {
             $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoSearch);
+            $debug['search_api_called'] = true;
+            $debug['search_url'] = $urlSearch;
+
             $chSearch = curl_init($urlSearch);
             curl_setopt_array($chSearch, [
                 CURLOPT_RETURNTRANSFER => true,
@@ -150,11 +178,20 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
             ]);
             $respSearch = curl_exec($chSearch);
             $codeSearch = curl_getinfo($chSearch, CURLINFO_HTTP_CODE);
+            $curlErrStr = curl_error($chSearch);
             curl_close($chSearch);
+
+            $debug['search_http_code'] = $codeSearch;
+            $debug['search_raw_response'] = $respSearch;
+            if ($curlErrStr) {
+                $debug['error_log'][] = "Erro cURL na busca de protocolo: {$curlErrStr}";
+            }
 
             if ($codeSearch === 200 && $respSearch) {
                 $dataSearch = json_decode($respSearch, true);
                 $regsSearch = $dataSearch['regs'] ?? ($dataSearch['items'] ?? []);
+                $debug['search_regs_count'] = count($regsSearch);
+
                 if (!empty($regsSearch[0])) {
                     $item = $regsSearch[0];
                     $realOcoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
@@ -168,7 +205,6 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
 
                     if ($ocorrencia) {
-                        // Atualiza registro local existente com os dados remotos
                         $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
                         mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $ocorrencia['id']);
                         mysqli_stmt_execute($stmtUp);
@@ -179,7 +215,6 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                         $ocorrencia['oco_tipo'] = $ocoTipo;
                         $ocorrencia['dados_json'] = $jsonEnc;
                     } else {
-                        // Se não existia localmente, verifica por realOcoId antes de inserir
                         $stmtCheck = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? LIMIT 1");
                         mysqli_stmt_bind_param($stmtCheck, "i", $realOcoId);
                         mysqli_stmt_execute($stmtCheck);
@@ -206,7 +241,6 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                             mysqli_stmt_close($stmtIns);
                         }
 
-                        // Carregar o objeto ocorrência recién criado/atualizado
                         $stmtFetch = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
                         mysqli_stmt_bind_param($stmtFetch, "i", $targetId);
                         mysqli_stmt_execute($stmtFetch);
@@ -214,14 +248,24 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                         $ocorrencia = mysqli_fetch_assoc($resFetch);
                         mysqli_stmt_close($stmtFetch);
                     }
+                } else {
+                    $debug['error_log'][] = "API de busca de protocolo não retornou nenhum registro na chave 'regs'.";
                 }
+            } else {
+                $debug['error_log'][] = "HTTP {$codeSearch} ao buscar protocolo na VDS.";
             }
         }
     }
 
     if (!$ocorrencia) {
         DBClose($link);
-        return null;
+        return [
+            'local' => null,
+            'notasInternas' => [],
+            'tagsUnidades' => [],
+            'remoteData' => null,
+            'debug' => $debug
+        ];
     }
 
     // 3. Buscar Notas Internas locais do Conselho
@@ -253,7 +297,11 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     $uuidRemoto = $ocorrencia['uuid_remoto'] ?? null;
 
     if ($uuidRemoto && $token) {
-        $ch = curl_init(VDS_BASE_URL . '/ocorrencia/' . urlencode($uuidRemoto));
+        $urlDetail = VDS_BASE_URL . '/ocorrencia/' . urlencode($uuidRemoto);
+        $debug['detail_api_called'] = true;
+        $debug['detail_url'] = $urlDetail;
+
+        $ch = curl_init($urlDetail);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => [
@@ -263,10 +311,23 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $detailCurlErr = curl_error($ch);
         curl_close($ch);
+
+        $debug['detail_http_code'] = $httpCode;
+        $debug['detail_raw_response'] = $response;
+        if ($detailCurlErr) {
+            $debug['error_log'][] = "Erro cURL nos detalhes da ocorrência: {$detailCurlErr}";
+        }
 
         if ($httpCode === 200 && $response) {
             $remoteData = json_decode($response, true);
+        } else {
+            $debug['error_log'][] = "HTTP {$httpCode} ao buscar detalhes /ocorrencia/{$uuidRemoto}.";
+        }
+    } else {
+        if (empty($uuidRemoto)) {
+            $debug['error_log'][] = "uuid_remoto está vazio na ocorrência local ID {$ocorrencia['id']}.";
         }
     }
 
@@ -274,7 +335,8 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         'local' => $ocorrencia,
         'notasInternas' => $notasInternas,
         'tagsUnidades' => $tagsUnidades,
-        'remoteData' => $remoteData
+        'remoteData' => $remoteData,
+        'debug' => $debug
     ];
 }
 
