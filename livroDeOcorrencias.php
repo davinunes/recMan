@@ -494,6 +494,7 @@ $mapaCoresTipo = [
                                 </form>
                             <?php else: ?>
                                 <span class="green-text" style="font-weight:600;">✓ Enviado à VDS</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
