@@ -861,20 +861,6 @@ switch ($_GET['metodo']) {
         }
 
         $boletos = vds_get_boletos_unidade($bloco, $unidade, $ano);
-        
-        // Extrair sugestões automatizadas de multas do espelho HTML da 2ª via (Superlógica)
-        $sugestoes = [];
-        foreach ($boletos as $b) {
-            $url2Via = $b['urlSegundaVia'] ?? null;
-            if (!empty($url2Via)) {
-                $sug = vds_extrair_sugestoes_multa_boleto($url2Via, $b['status'] ?? null, $b['dtVencimento'] ?? null);
-                if (!empty($sug)) {
-                    foreach ($sug as $sItem) {
-                        $sugestoes[] = $sItem;
-                    }
-                }
-            }
-        }
 
         echo json_encode([
             'success' => true,
@@ -882,8 +868,27 @@ switch ($_GET['metodo']) {
             'unidade' => $unidade,
             'ano' => $ano,
             'count' => count($boletos),
-            'sugestoes' => $sugestoes,
             'data' => $boletos
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "extrairSugestoesBoleto":
+        header('Content-Type: application/json; charset=utf-8');
+        require_once __DIR__ . "/classes/vds_acesso_service.php";
+
+        $url = $_GET['url'] ?? ($_POST['url'] ?? '');
+        $status = $_GET['status'] ?? ($_POST['status'] ?? '');
+        $dtVencimento = $_GET['dtVencimento'] ?? ($_POST['dtVencimento'] ?? '');
+
+        if (empty($url)) {
+            echo json_encode(['success' => false, 'sugestoes' => []]);
+            break;
+        }
+
+        $sugestoes = vds_extrair_sugestoes_multa_boleto($url, $status, $dtVencimento);
+        echo json_encode([
+            'success' => true,
+            'sugestoes' => $sugestoes
         ], JSON_UNESCAPED_UNICODE);
         break;
 }

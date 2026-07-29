@@ -2002,6 +2002,49 @@ $(document).on('touchend', '.materialboxed.active', function(e) {
     isTouchDragging = false;
 });
 
+// Renderiza uma linha de sugestão de multa evitando duplicatas
+function renderSingleSuggestionRow(s) {
+    if (!s || !s.numero_ano) return;
+    const rowId = `sug-row-${s.numero_ano.replace(/[^a-zA-Z0-9]/g, '-')}`;
+    if ($(`#${rowId}`).length > 0) return;
+
+    const statusBoleto = s.boleto_status || 'N/A';
+    let statusBadge = 'blue';
+    if (statusBoleto.toLowerCase().includes('liquidado') || statusBoleto.toLowerCase().includes('pago')) {
+        statusBadge = 'green';
+    } else if (statusBoleto.toLowerCase().includes('aberto') || statusBoleto.toLowerCase().includes('vencido')) {
+        statusBadge = 'red';
+    }
+
+    const dtVencFmt = s.data_vencimento ? moment(s.data_vencimento).format('DD/MM/YYYY') : '-';
+    
+    let btnAcao = '';
+    if (s.ja_lancado) {
+        btnAcao = `<span class="badge green white-text" style="border-radius:4px; padding:4px 10px; font-weight:bold;">✓ Já Lançado</span>`;
+    } else {
+        btnAcao = `<button type="button" class="btn-small green waves-effect waves-light btn-confirmar-sugestao-multa" 
+                    data-id="${s.numero_ano}" 
+                    data-valor="${s.valor}" 
+                    data-vencimento="${s.data_vencimento}" 
+                    data-pagamento="${s.data_pagamento_sugerida || ''}">
+                        <i class="material-icons left" style="font-size:1.1rem; margin-right:4px;">check_circle</i> Confirmar Lançamento
+                   </button>`;
+    }
+
+    const html = `
+        <tr id="${rowId}">
+            <td><b class="teal-text text-darken-2" style="font-size:1.05rem;">#${s.numero_ano}</b></td>
+            <td class="left-align" style="font-size:0.85rem;">${s.item_descricao}</td>
+            <td><b class="green-text text-darken-3" style="font-size:1.05rem;">${s.valor_formatado}</b></td>
+            <td>${dtVencFmt}</td>
+            <td><span class="badge ${statusBadge} white-text" style="border-radius:4px;">${statusBoleto}</span></td>
+            <td>${btnAcao}</td>
+        </tr>
+    `;
+    $('#boletos-sugestoes-tbody').append(html);
+    $('#boletos-sugestoes-container').removeClass('hide');
+}
+
 // Manipulador do modal de inspeção de boletos da unidade
 $(document).on('click', '.btn-inspecionar-boletos', function (e) {
     e.preventDefault();
@@ -2031,49 +2074,7 @@ $(document).on('click', '.btn-inspecionar-boletos', function (e) {
         success: function (res) {
             $('#boletos-loading').addClass('hide');
 
-            // 1. Renderizar Sugestões de Lançamento de Multa (se houverem)
-            if (res && res.sugestoes && Array.isArray(res.sugestoes) && res.sugestoes.length > 0) {
-                let sugHtml = '';
-                res.sugestoes.forEach(function (s) {
-                    const statusBoleto = s.boleto_status || 'N/A';
-                    let statusBadge = 'blue';
-                    if (statusBoleto.toLowerCase().includes('liquidado') || statusBoleto.toLowerCase().includes('pago')) {
-                        statusBadge = 'green';
-                    } else if (statusBoleto.toLowerCase().includes('aberto') || statusBoleto.toLowerCase().includes('vencido')) {
-                        statusBadge = 'red';
-                    }
-
-                    const dtVencFmt = s.data_vencimento ? moment(s.data_vencimento).format('DD/MM/YYYY') : '-';
-                    
-                    let btnAcao = '';
-                    if (s.ja_lancado) {
-                        btnAcao = `<span class="badge green white-text" style="border-radius:4px; padding:4px 10px; font-weight:bold;">✓ Já Lançado</span>`;
-                    } else {
-                        btnAcao = `<button type="button" class="btn-small green waves-effect waves-light btn-confirmar-sugestao-multa" 
-                                    data-id="${s.numero_ano}" 
-                                    data-valor="${s.valor}" 
-                                    data-vencimento="${s.data_vencimento}" 
-                                    data-pagamento="${s.data_pagamento_sugerida || ''}">
-                                        <i class="material-icons left" style="font-size:1.1rem; margin-right:4px;">check_circle</i> Confirmar Lançamento
-                                   </button>`;
-                    }
-
-                    sugHtml += `
-                        <tr>
-                            <td><b class="teal-text text-darken-2" style="font-size:1.05rem;">#${s.numero_ano}</b></td>
-                            <td class="left-align" style="font-size:0.85rem;">${s.item_descricao}</td>
-                            <td><b class="green-text text-darken-3" style="font-size:1.05rem;">${s.valor_formatado}</b></td>
-                            <td>${dtVencFmt}</td>
-                            <td><span class="badge ${statusBadge} white-text" style="border-radius:4px;">${statusBoleto}</span></td>
-                            <td>${btnAcao}</td>
-                        </tr>
-                    `;
-                });
-                $('#boletos-sugestoes-tbody').html(sugHtml);
-                $('#boletos-sugestoes-container').removeClass('hide');
-            }
-
-            // 2. Renderizar Cards de Boletos Encontrados
+            // 1. Renderizar Cards de Boletos imediatamente
             if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
                 let cardsHtml = '';
                 res.data.forEach(function (b) {
@@ -2121,10 +2122,31 @@ $(document).on('click', '.btn-inspecionar-boletos', function (e) {
                     `;
                 });
                 $('#boletos-cards-container').html(cardsHtml).removeClass('hide');
+
+                // 2. Disparar verificações assíncronas em segundo plano para cada boleto que possui urlSegundaVia
+                res.data.forEach(function (b) {
+                    if (b.urlSegundaVia) {
+                        $.ajax({
+                            url: 'metodo.php?metodo=extrairSugestoesBoleto',
+                            method: 'GET',
+                            data: {
+                                url: b.urlSegundaVia,
+                                status: b.status || '',
+                                dtVencimento: b.dtVencimento || ''
+                            },
+                            dataType: 'json',
+                            success: function (sugRes) {
+                                if (sugRes && sugRes.success && Array.isArray(sugRes.sugestoes)) {
+                                    sugRes.sugestoes.forEach(function (s) {
+                                        renderSingleSuggestionRow(s);
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
             } else {
-                if (!res || !res.sugestoes || res.sugestoes.length === 0) {
-                    $('#boletos-empty').removeClass('hide');
-                }
+                $('#boletos-empty').removeClass('hide');
             }
         },
         error: function () {

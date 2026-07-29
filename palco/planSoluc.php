@@ -122,8 +122,11 @@ require "classes/repositorio.php";
             <p class="grey-text text-darken-1 font-weight-bold">Nenhum boleto encontrado para esta unidade no ano selecionado.</p>
         </div>
 
-        <!-- Seção de Sugestões de Lançamento de Multas -->
-        <div id="boletos-sugestoes-container" class="hide" style="margin-bottom: 25px;">
+        <!-- Cards de Boletos da Unidade (Exibidos em 1º Lugar) -->
+        <div id="boletos-cards-container" class="row hide"></div>
+
+        <!-- Seção de Sugestões de Lançamento de Multas (Preenchida Assincronamente) -->
+        <div id="boletos-sugestoes-container" class="hide" style="margin-top: 15px; margin-bottom: 25px;">
             <div class="card-panel amber lighten-5" style="border-left: 5px solid #ff9800; padding: 15px; border-radius: 8px;">
                 <h5 style="margin-top:0; font-size: 1.2rem; font-weight: bold; color: #e65100; display:flex; align-items:center; gap:8px;">
                     <i class="material-icons">auto_awesome</i> Sugestões Automatizadas de Lançamento de Multa
@@ -148,8 +151,6 @@ require "classes/repositorio.php";
                 </div>
             </div>
         </div>
-
-        <div id="boletos-cards-container" class="row hide"></div>
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-grey btn-flat">Fechar</a>
