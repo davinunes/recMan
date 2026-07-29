@@ -574,6 +574,7 @@ if ($esseRecurso == null) {
     $acessosUnidade = vds_get_eventos_acesso($result['bloco'], $result['unidade'], $dtInicio, $dtFim);
     $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
     $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
+?>
 
     <!-- Modal de Inspeção Detalhada dos Aceleradores -->
     <div id="modalInspecionarAcelerador" class="modal" style="border-radius:8px; max-width:550px;">
@@ -737,8 +738,7 @@ if ($esseRecurso == null) {
         </div>
     </div>
 
-
-
+<?php
     echo "<h6><b>Histórico da unidade</b></h6>";
 
     echo "<div id=\"popup\" class=\"popup\">
