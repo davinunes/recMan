@@ -576,3 +576,239 @@ function vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, $tipoVinculo 
     DBClose($link);
     return ['success' => $success];
 }
+
+/**
+ * Persiste/Atualiza um item individual vindo da API da VDS na tabela local `ocorrencias`.
+ */
+function vds_persist_item_local($item, $linkParam = null) {
+    $closeLink = false;
+    $link = $linkParam;
+    if (!$link) {
+        $link = DBConnect();
+        $closeLink = true;
+    }
+
+    $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
+    $protocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? null);
+    $uuidRemoto = $item['uuid'] ?? ($item['uuid_remoto'] ?? null);
+
+    $bloco = null;
+    $unidade = null;
+    $cargoStr = $item['cargo'] ?? '';
+    if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+        $bloco = trim($bu[1]);
+        $unidade = trim($bu[2]);
+    }
+    if (empty($bloco)) { $bloco = 'Z'; }
+    if (empty($unidade)) { $unidade = '999'; }
+
+    $rawDt = $item['dtExibicao'] ?? ($item['dthora'] ?? ($item['abertura'] ?? null));
+    if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
+        $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+    } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
+        $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
+    } else {
+        $abertura = date('Y-m-d H:i:s');
+    }
+
+    $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
+    $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
+
+    $localId = $ocoId;
+
+    if ($protocolo || $uuidRemoto || $ocoId) {
+        $stmtFind = mysqli_prepare($link, "SELECT id, bloco, unidade FROM ocorrencias WHERE id = ? OR protocolo_vds = ? OR uuid_remoto = ? LIMIT 1");
+        $protoStr = (string)($protocolo ?? $ocoId);
+        $uuidStr = (string)$uuidRemoto;
+        mysqli_stmt_bind_param($stmtFind, "iss", $ocoId, $protoStr, $uuidStr);
+        mysqli_stmt_execute($stmtFind);
+        $resFind = mysqli_stmt_get_result($stmtFind);
+        $rowFind = mysqli_fetch_assoc($resFind);
+        mysqli_stmt_close($stmtFind);
+
+        $jsonEncoded = json_encode($item, JSON_UNESCAPED_UNICODE);
+
+        if ($rowFind) {
+            $blocoReal = ($bloco !== 'Z') ? $bloco : null;
+            $unidadeReal = ($unidade !== '999') ? $unidade : null;
+            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
+            mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
+            mysqli_stmt_execute($stmtUp);
+            mysqli_stmt_close($stmtUp);
+            $localId = $rowFind['id'];
+        } else {
+            if ($ocoId > 0) {
+                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                mysqli_stmt_bind_param($stmtIns, "issssssis", $ocoId, $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+            } else {
+                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+            }
+            mysqli_stmt_execute($stmtIns);
+            $localId = mysqli_insert_id($link) ?: $ocoId;
+            mysqli_stmt_close($stmtIns);
+        }
+    }
+
+    if ($closeLink) {
+        DBClose($link);
+    }
+
+    return $localId;
+}
+
+/**
+ * Consulta a lista de chamados não lidos (Lida=0) diretamente na VDS para a Visão Prática.
+ * Cada chamado retornado é persistido no banco local.
+ */
+function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Token VDS indisponível.', 'items' => []];
+    }
+
+    $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=' . (int)$limit . '&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0';
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar chamados não lidos na VDS.', 'items' => []];
+    }
+
+    $data = json_decode($response, true);
+    $rawItems = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
+
+    $items = [];
+    $link = DBConnect();
+
+    foreach ($rawItems as $item) {
+        $localId = vds_persist_item_local($item, $link);
+
+        // Carregar a linha local completa com responsabilidade e status
+        $stmtLoc = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
+        mysqli_stmt_bind_param($stmtLoc, "i", $localId);
+        mysqli_stmt_execute($stmtLoc);
+        $resLoc = mysqli_stmt_get_result($stmtLoc);
+        $rowLoc = mysqli_fetch_assoc($resLoc);
+        mysqli_stmt_close($stmtLoc);
+
+        if ($rowLoc) {
+            $items[] = $rowLoc;
+        } else {
+            $bloco = 'Z'; $unidade = '999';
+            if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $item['cargo'] ?? '', $bu)) {
+                $bloco = trim($bu[1]); $unidade = trim($bu[2]);
+            }
+            $items[] = [
+                'id' => $localId,
+                'uuid_remoto' => $item['uuid'] ?? null,
+                'protocolo_vds' => $item['protocolo'] ?? null,
+                'abertura' => $item['dtExibicao'] ?? ($item['dthora'] ?? date('Y-m-d H:i:s')),
+                'bloco' => $bloco,
+                'unidade' => $unidade,
+                'oco_tipo' => $item['tipoId'] ?? 115,
+                'status' => $item['statusNome'] ?? 'Aberto',
+                'responsabilidade' => null,
+                'resolvido' => 0,
+                'dados_json' => json_encode($item, JSON_UNESCAPED_UNICODE)
+            ];
+        }
+    }
+
+    DBClose($link);
+    return ['success' => true, 'items' => $items];
+}
+
+/**
+ * Marca uma ocorrência como lida no ambiente remoto da VDS e atualiza os dados locais.
+ */
+function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenciaId = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    $payload = [
+        'uuid' => $uuidRemoto,
+        'ocorrenciaId' => (int)$ocorrenciaId,
+        'lida' => true
+    ];
+
+    if ($token && $uuidRemoto) {
+        $ch = curl_init(VDS_BASE_URL . '/ocorrencia/lida');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json',
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    }
+
+    // Atualizar flag local em dados_json
+    if ($ocorrenciaId || $uuidRemoto) {
+        $link = DBConnect();
+        $stmtFind = mysqli_prepare($link, "SELECT id, dados_json FROM ocorrencias WHERE id = ? OR uuid_remoto = ? LIMIT 1");
+        $ocoInt = (int)$ocorrenciaId;
+        $uuidStr = (string)$uuidRemoto;
+        mysqli_stmt_bind_param($stmtFind, "is", $ocoInt, $uuidStr);
+        mysqli_stmt_execute($stmtFind);
+        $resFind = mysqli_stmt_get_result($stmtFind);
+        $rowFind = mysqli_fetch_assoc($resFind);
+        mysqli_stmt_close($stmtFind);
+
+        if ($rowFind) {
+            $dados = !empty($rowFind['dados_json']) ? json_decode($rowFind['dados_json'], true) : [];
+            $dados['lida'] = true;
+            $dados['isLida'] = true;
+            $jsonUp = json_encode($dados, JSON_UNESCAPED_UNICODE);
+
+            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET dados_json = ? WHERE id = ?");
+            mysqli_stmt_bind_param($stmtUp, "si", $jsonUp, $rowFind['id']);
+            mysqli_stmt_execute($stmtUp);
+            mysqli_stmt_close($stmtUp);
+        }
+        DBClose($link);
+    }
+
+    return ['success' => true, 'message' => 'Ocorrência marcada como lida!'];
+}
+
+/**
+ * Adiciona uma tag livre com auto-detecção de tipo (Unidade B1108 ou Notificação 123/2026).
+ */
+function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
+    $tagInput = trim($tagInput);
+    if (empty($tagInput)) {
+        return ['success' => false, 'message' => 'Tag vazia.'];
+    }
+
+    // 1. Notificação / Recurso (ex: 123/2026, 45/26, N123/2026)
+    if (preg_match('/(?:N[oº\.\s]*)?(\d+)\/(\d{2,4})/i', $tagInput, $m)) {
+        $num = $m[1];
+        $ano = strlen($m[2]) == 2 ? '20' . $m[2] : $m[2];
+        return vds_vincular_unidade_tag($ocorrenciaId, 'NOTIF', "{$num}/{$ano}", 'notificacao');
+    }
+
+    // 2. Unidade (ex: B1108, Bloco B - 1108, Bl. A 102, 1108, B-102)
+    if (preg_match('/(?:Bl(?:oco|\.)?\s*)?([A-Za-z]?)\s*[-:]?\s*(\d{2,4})/i', $tagInput, $m)) {
+        $bloco = !empty($m[1]) ? strtoupper($m[1]) : 'Z';
+        $unidade = $m[2];
+        return vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, 'unidade');
+    }
+
+    // 3. Tag livre genérica
+    return vds_vincular_unidade_tag($ocorrenciaId, 'TAG', $tagInput, 'tag');
+}

@@ -10,7 +10,10 @@ require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 $usuarioIdConselho = $_SESSION['usuario_id'] ?? 1;
 $toastAlert = vds_get_toast_alerts($usuarioIdConselho);
 
-// Processar Ações POST (Sync, Nova Nota Interna, Publicar no Remoto, Atualizar Responsabilidade/Status, Vincular Tag/Recurso)
+// Visão atual (Prático = padrão; Analítico = baseado no banco local)
+$visao = $_GET['visao'] ?? 'pratico';
+
+// Processar Ações POST
 $msg = null;
 $msgType = 'info';
 
@@ -34,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($texto)) {
             $resNota = vds_adicionar_nota_interna($ocorrenciaId, $usuarioIdConselho, $conselheiroNome, $texto);
             if ($resNota['success']) {
-                $msg = "Nota interna adicionada com sucesso no Conselho (salva localmente por padrão).";
+                $msg = "Nota interna salva no Conselho com sucesso.";
                 $msgType = "success";
             }
         }
@@ -51,24 +54,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'atualizar_responsabilidade') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
         $resp = $_POST['responsabilidade'] ?? null;
-        $resolvido = isset($_POST['resolvido']) ? 1 : 0;
         
         $link = DBConnect();
-        $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET responsabilidade = ?, resolvido = ? WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "sii", $resp, $resolvido, $ocorrenciaId);
+        $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET responsabilidade = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, "si", $resp, $ocorrenciaId);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         DBClose($link);
-        $msg = "Responsabilidade e status atualizados com sucesso!";
+        $msg = "Responsabilidade atualizada com sucesso!";
         $msgType = "success";
-    } elseif ($action === 'vincular_tag') {
+    } elseif ($action === 'marcar_resolvido') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
-        $bloco = trim($_POST['bloco']);
-        $unidade = trim($_POST['unidade']);
-        $tipoVinculo = $_POST['tipo_vinculo'] ?? 'citada';
-        vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, $tipoVinculo);
-        $msg = "Tag da Unidade {$bloco}-{$unidade} vinculada com sucesso!";
+        $resolvidoVal = (int)($_POST['resolvido_val'] ?? 1);
+        
+        $link = DBConnect();
+        $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET resolvido = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, "ii", $resolvidoVal, $ocorrenciaId);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        DBClose($link);
+        $msg = $resolvidoVal ? "Chamado marcado como RESOLVIDO no Conselho!" : "Chamado reaberto no Conselho!";
         $msgType = "success";
+    } elseif ($action === 'marcar_como_lido') {
+        $ocorrenciaId = (int)($_POST['ocorrencia_id'] ?? 0);
+        $uuidRemoto = $_POST['uuid_remoto'] ?? null;
+        $resLido = vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $ocorrenciaId);
+        $msg = $resLido['message'] ?? 'Status de leitura atualizado na VDS.';
+        $msgType = "success";
+    } elseif ($action === 'adicionar_tag_livre') {
+        $ocorrenciaId = (int)$_POST['ocorrencia_id'];
+        $tagInput = trim($_POST['tag_input'] ?? '');
+        if (!empty($tagInput)) {
+            $resTag = vds_adicionar_tag_livre($ocorrenciaId, $tagInput);
+            if ($resTag['success']) {
+                $msg = "Tag adicionada com sucesso!";
+                $msgType = "success";
+            }
+        }
     }
 }
 
@@ -78,38 +100,49 @@ $unidadeFiltro = $_GET['unidade'] ?? '';
 $protoFiltro = $_GET['protocolo'] ?? '';
 $respFiltro = $_GET['responsabilidade'] ?? '';
 
-// Montar Query de Ocorrências (Listar até 1000 da base legada / sincronizada)
-$link = DBConnect();
-$sqlWhere = " WHERE 1=1";
-$params = [];
-$types = "";
-
-if ($blocoFiltro) { $sqlWhere .= " AND bloco = ?"; $params[] = $blocoFiltro; $types .= "s"; }
-if ($unidadeFiltro) { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltro; $types .= "s"; }
-if ($protoFiltro) { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
-if ($respFiltro) { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
-// Ocultar chamados resolvidos por padrão
-$sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0)";
-
-$sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
-$stmtList = mysqli_prepare($link, $sqlList);
-if ($types) {
-    mysqli_stmt_bind_param($stmtList, $types, ...$params);
-}
-mysqli_stmt_execute($stmtList);
-$resList = mysqli_stmt_get_result($stmtList);
-
+// Obter Lista de Ocorrências por Visão
 $ocorrencias = [];
-while ($row = mysqli_fetch_assoc($resList)) {
-    $ocorrencias[] = $row;
+
+if ($visao === 'pratico') {
+    // Visão Prática: Chamados Não Lidos da VDS (Lida=0), persistindo no banco local
+    $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
+    if ($resPratico['success']) {
+        $ocorrencias = $resPratico['items'];
+    } else {
+        $msg = $resPratico['message'] ?? "Falha ao consultar não lidos da VDS.";
+        $msgType = "warning";
+    }
+} else {
+    // Visão Analítica: Ocorrências do banco local (Não Resolvidas por padrão)
+    $link = DBConnect();
+    $sqlWhere = " WHERE (resolvido IS NULL OR resolvido = 0)";
+    $params = [];
+    $types = "";
+
+    if ($blocoFiltro) { $sqlWhere .= " AND bloco = ?"; $params[] = $blocoFiltro; $types .= "s"; }
+    if ($unidadeFiltro) { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltro; $types .= "s"; }
+    if ($protoFiltro) { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
+    if ($respFiltro) { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
+
+    $sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
+    $stmtList = mysqli_prepare($link, $sqlList);
+    if ($types) {
+        mysqli_stmt_bind_param($stmtList, $types, ...$params);
+    }
+    mysqli_stmt_execute($stmtList);
+    $resList = mysqli_stmt_get_result($stmtList);
+
+    while ($row = mysqli_fetch_assoc($resList)) {
+        $ocorrencias[] = $row;
+    }
+    mysqli_stmt_close($stmtList);
+    DBClose($link);
 }
-mysqli_stmt_close($stmtList);
-DBClose($link);
 
 // Ocorrência selecionada para visualização
 $selId = $_GET['id'] ?? null;
 
-// Se um protocolo foi digitado no filtro ou passado via URL (?protocolo=259564), resolve e seleciona diretamente o chamado
+// Se um protocolo foi digitado no filtro ou passado via URL (?protocolo=259564), resolve e seleciona diretamente
 $detalheSel = null;
 if (!empty($protoFiltro)) {
     $detalhePorProto = vds_get_ocorrencia_detalhe($protoFiltro, $usuarioIdConselho);
@@ -117,7 +150,6 @@ if (!empty($protoFiltro)) {
     if ($detalhePorProto && isset($detalhePorProto['local']['id'])) {
         $selId = $detalhePorProto['local']['id'];
 
-        // Adiciona ao topo da lista $ocorrencias se ainda não estiver nela
         $jaNaLista = false;
         foreach ($ocorrencias as $ocoItem) {
             if ($ocoItem['id'] == $selId) { $jaNaLista = true; break; }
@@ -156,7 +188,7 @@ $mapaCoresTipo = [
 <style>
     .sidebar-feed { background: #ffffff; border-right: 1px solid #e0e0e0; height: calc(100vh - 120px); overflow-y: auto; }
     .chat-container { background: #efeae2; height: calc(100vh - 120px); display: flex; flex-direction: column; }
-    .chat-header { background: #ffffff; padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header { background: #ffffff; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .chat-body { flex: 1; overflow-y: auto; padding: 20px; }
     .chat-footer { background: #ffffff; padding: 15px; border-top: 1px solid #e0e0e0; }
 
@@ -187,21 +219,37 @@ $mapaCoresTipo = [
     }
 </style>
 
+<!-- Top Bar: Título, Seleção de Visão (Prático vs Analítico) e Ações Globais -->
 <div style="padding: 10px 20px; background: #ffffff; border-bottom: 1px solid #e0e0e0;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <h5 style="margin: 0; font-weight: 600; color: #333; font-size: 1.3rem;">
-            <i class="material-icons left" style="color:#0d6efd;">book</i> Livro de Ocorrências (Condomínio Digital)
-        </h5>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <!-- Seletor de Visão: Prático x Analítico -->
+        <div style="display:flex; align-items:center; gap:8px; background:#f1f3f5; padding:4px; border-radius:6px; border:1px solid #dee2e6;">
+            <a href="index.php?pag=livroDeOcorrencias&visao=pratico<?= !empty($protoFiltro) ? '&protocolo='.urlencode($protoFiltro) : '' ?>"
+               class="btn-small waves-effect <?= $visao === 'pratico' ? 'blue darken-2 white-text font-weight-bold' : 'btn-flat grey-text text-darken-3' ?>"
+               style="height:32px; line-height:32px; padding:0 14px; font-size:0.85rem; border-radius:4px; text-transform:none;">
+                <i class="material-icons left tiny" style="margin-right:4px;">flash_on</i>
+                Visão Prática (VDS Não Lidos)
+            </a>
+
+            <a href="index.php?pag=livroDeOcorrencias&visao=analitico<?= !empty($protoFiltro) ? '&protocolo='.urlencode($protoFiltro) : '' ?>"
+               class="btn-small waves-effect <?= $visao === 'analitico' ? 'indigo darken-2 white-text font-weight-bold' : 'btn-flat grey-text text-darken-3' ?>"
+               style="height:32px; line-height:32px; padding:0 14px; font-size:0.85rem; border-radius:4px; text-transform:none;">
+                <i class="material-icons left tiny" style="margin-right:4px;">analytics</i>
+                Visão Analítica (Banco Local)
+            </a>
+        </div>
 
         <!-- Form de Busca Direta por Protocolo -->
         <form method="GET" action="index.php" style="display:flex; gap:6px; align-items:center; margin:0;">
             <input type="hidden" name="pag" value="livroDeOcorrencias">
+            <input type="hidden" name="visao" value="<?= htmlspecialchars($visao) ?>">
             <input type="text" name="protocolo" placeholder="Nº do Protocolo (ex: 259564)" value="<?= htmlspecialchars($protoFiltro) ?>" style="height:32px; font-size:0.85rem; width:200px; margin:0; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
             <button type="submit" class="btn-small waves-effect waves-light blue darken-2" style="height:32px; line-height:32px; padding:0 10px;">
                 <i class="material-icons left tiny">search</i> Ir p/ Protocolo
             </button>
         </form>
-        
+
+        <!-- Botão Sincronizar Agora (Mantido conforme solicitado) -->
         <div style="display: flex; gap: 10px; align-items: center;">
             <form method="POST" style="margin:0;">
                 <input type="hidden" name="action" value="sync_agora">
@@ -209,9 +257,6 @@ $mapaCoresTipo = [
                     <i class="material-icons left">sync</i> Sincronizar Agora
                 </button>
             </form>
-            <a href="index.php?pag=configVds" class="btn-flat btn-small purple-text">
-                <i class="material-icons left">settings</i> Configurações
-            </a>
         </div>
     </div>
 
@@ -219,23 +264,6 @@ $mapaCoresTipo = [
     <?php if ($toastAlert): ?>
         <div style="margin-top: 10px; padding: 10px 15px; background-color: <?= $toastAlert['type'] === 'danger' ? '#f8d7da' : '#fff3cd' ?>; color: <?= $toastAlert['type'] === 'danger' ? '#721c24' : '#856404' ?>; border-radius: 4px; font-size: 0.9rem;">
             <i class="material-icons tiny">warning</i> <?= htmlspecialchars($toastAlert['message']) ?>
-        </div>
-    <?php endif; ?>
-
-    <?php
-    $tokenCheck = vds_get_token($usuarioIdConselho);
-    ?>
-    <?php if (!$tokenCheck): ?>
-        <div style="margin-top: 10px; padding: 12px 15px; background: #fff3cd; border-left: 5px solid #ffc107; border-radius: 4px; color: #856404; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div>
-                <strong style="display:flex; align-items:center; gap:6px;">
-                    <i class="material-icons tiny">vpn_key</i> Autenticação com a VDS Pendente
-                </strong>
-                Nenhum token de acesso ativo foi encontrado na tabela <code>vds_tokens</code>. Faça login uma vez para autorizar a sincronização.
-            </div>
-            <a href="index.php?pag=configVds" class="btn btn-small purple white-text">
-                <i class="material-icons left tiny">settings</i> Ir para Configurações VDS
-            </a>
         </div>
     <?php endif; ?>
 
@@ -247,29 +275,22 @@ $mapaCoresTipo = [
 </div>
 
 <div class="row" style="margin: 0;">
-    <!-- Sidebar Left: Feed de Ocorrências (Mostra base legada e sincronizada) -->
+    <!-- Sidebar Left: Feed de Ocorrências -->
     <div class="col s12 m4 l3 sidebar-feed">
-        <!-- Filtros Rápidos -->
-        <form method="GET" action="index.php" style="padding: 10px 0;">
-            <input type="hidden" name="pag" value="livroDeOcorrencias">
-            <div style="margin-bottom: 8px;">
-                <input type="text" name="protocolo" placeholder="Ir para Nº Protocolo (ex: 259564)" value="<?= htmlspecialchars($protoFiltro) ?>" style="margin:0; height:32px; font-size:0.85rem; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
-            </div>
-            <div class="row" style="margin-bottom: 0;">
-                <div class="input-field col s6" style="margin:0;">
-                    <input type="text" name="bloco" placeholder="Bloco" value="<?= htmlspecialchars($blocoFiltro) ?>">
-                </div>
-                <div class="input-field col s6" style="margin:0;">
-                    <input type="text" name="unidade" placeholder="Unidade" value="<?= htmlspecialchars($unidadeFiltro) ?>">
-                </div>
-            </div>
-            <button type="submit" class="btn-small waves-effect waves-light grey darken-2" style="width:100%; margin-top:5px;">
-                Filtrar / Ir p/ Protocolo (<?= count($ocorrencias) ?>)
-            </button>
-        </form>
+        <!-- Subcabeçalho de Contexto da Lista -->
+        <div style="padding: 10px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size:0.8rem; color:#555; display:flex; justify-content:space-between; align-items:center;">
+            <span>
+                <strong>Modo <?= $visao === 'pratico' ? 'Prático' : 'Analítico' ?>:</strong> 
+                <?= count($ocorrencias) ?> item(ns)
+            </span>
+            <small style="color:#888;"><?= $visao === 'pratico' ? 'Não lidos (VDS)' : 'Banco Local' ?></small>
+        </div>
 
         <?php if (empty($ocorrencias)): ?>
-            <div style="padding: 20px; text-align: center; color: #999;">Nenhuma ocorrência encontrada no banco de dados.</div>
+            <div style="padding: 25px 15px; text-align: center; color: #888; font-size:0.9rem;">
+                <i class="material-icons medium" style="color:#ccc;">check_circle_outline</i><br>
+                <?= $visao === 'pratico' ? 'Nenhuma ocorrência não lida no momento na VDS!' : 'Nenhuma ocorrência aberta no banco local.' ?>
+            </div>
         <?php else: ?>
             <?php foreach ($ocorrencias as $oco): ?>
                 <?php
@@ -277,7 +298,7 @@ $mapaCoresTipo = [
                 $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
                 $isSel = ($selId == $oco['id']);
                 ?>
-                <div class="item-oco <?= $isSel ? 'active' : '' ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&id=<?= $oco['id'] ?>'">
+                <div class="item-oco <?= $isSel ? 'active' : '' ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>'">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
                             <?= htmlspecialchars($infoTipo['nome']) ?>
@@ -316,10 +337,10 @@ $mapaCoresTipo = [
             $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
             ?>
 
-            <!-- Header do Chat (com Botão Voltar para Mobile) -->
+            <!-- Header do Chat -->
             <div class="chat-header">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <a href="index.php?pag=livroDeOcorrencias" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;">
+                    <a href="index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;">
                         <i class="material-icons">arrow_back</i>
                     </a>
 
@@ -337,52 +358,81 @@ $mapaCoresTipo = [
                     </div>
                 </div>
 
-                <!-- Alterar Responsabilidade e Status -->
-                <form method="POST" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <input type="hidden" name="action" value="atualizar_responsabilidade">
-                    <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+                <!-- Botões Práticos: Classificação Responsabilidade, Marcar Resolvido (Local) e Marcar Lido (VDS Remoto) -->
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <!-- Dropdown de Classificação da Responsabilidade -->
+                    <form method="POST" style="display:flex; gap:4px; align-items:center; margin:0;">
+                        <input type="hidden" name="action" value="atualizar_responsabilidade">
+                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
 
-                    <select name="responsabilidade" class="browser-default" style="height:32px; padding:2px 5px; font-size:0.85rem; width:auto;">
-                        <option value="" <?= empty($local['responsabilidade']) ? 'selected' : '' ?>>Responsável...</option>
-                        <option value="sindico" <?= $local['responsabilidade'] === 'sindico' ? 'selected' : '' ?>>Síndico</option>
-                        <option value="sub" <?= $local['responsabilidade'] === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
-                        <option value="adm" <?= $local['responsabilidade'] === 'adm' ? 'selected' : '' ?>>ADM</option>
-                    </select>
+                        <span style="font-weight:600; font-size:0.8rem; color:#555;">Resp:</span>
+                        <select name="responsabilidade" onchange="this.form.submit()" class="browser-default" style="height:30px; padding:2px 6px; font-size:0.8rem; width:auto; border:1px solid #ced4da; border-radius:4px; background:#fff;">
+                            <option value="" <?= empty($local['responsabilidade']) ? 'selected' : '' ?>>Definir...</option>
+                            <option value="conselho" <?= $local['responsabilidade'] === 'conselho' ? 'selected' : '' ?>>Conselho</option>
+                            <option value="sindico" <?= $local['responsabilidade'] === 'sindico' ? 'selected' : '' ?>>Síndico</option>
+                            <option value="sub" <?= $local['responsabilidade'] === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
+                            <option value="adm" <?= $local['responsabilidade'] === 'adm' ? 'selected' : '' ?>>Administradora</option>
+                            <option value="operacional" <?= $local['responsabilidade'] === 'operacional' ? 'selected' : '' ?>>Operacional</option>
+                            <option value="juridico" <?= $local['responsabilidade'] === 'juridico' ? 'selected' : '' ?>>Jurídico</option>
+                        </select>
+                    </form>
 
-                    <label style="margin:0;">
-                        <input type="checkbox" name="resolvido" value="1" <?= $local['resolvido'] ? 'checked' : '' ?> />
-                        <span style="font-size:0.85rem; color:#333;">Resolvido</span>
-                    </label>
+                    <!-- Marcar/Desmarcar Resolvido (Local) -->
+                    <form method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="marcar_resolvido">
+                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+                        <input type="hidden" name="resolvido_val" value="<?= $local['resolvido'] ? 0 : 1 ?>">
+                        <button type="submit" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
+                            <i class="material-icons left tiny"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
+                            <?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?>
+                        </button>
+                    </form>
 
-                    <button type="submit" class="btn-small btn-flat blue-text" style="padding:0 5px;">Salvar</button>
-                </form>
+                    <!-- Marcar como Lido (Remoto VDS) -->
+                    <form method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="marcar_como_lido">
+                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+                        <input type="hidden" name="uuid_remoto" value="<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>">
+                        <button type="submit" class="btn-small waves-effect waves-light teal" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
+                            <i class="material-icons left tiny">mark_email_read</i> Marcar Lido (VDS)
+                        </button>
+                    </form>
+                </div>
             </div>
 
-            <!-- Tags de Unidades Vinculadas -->
-            <div style="background:#fff; padding:6px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div>
-                    <strong>Unidades Vinculadas (Tags):</strong>
+            <!-- Tags Vinculadas (Nova Entrada Inteligente Sem Seletores Complexos) -->
+            <div style="background:#fff; padding:8px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                    <strong>Tags / Vínculos:</strong>
                     <?php if (empty($tags)): ?>
-                        <span style="color:#999; margin-left:5px;">Nenhuma tag vinculada</span>
+                        <span style="color:#999;">Nenhuma tag vinculada</span>
                     <?php else: ?>
                         <?php foreach ($tags as $t): ?>
-                            <span class="badge blue lighten-4 blue-text" style="float:none; padding:2px 6px; margin-left:4px;">
-                                <?= htmlspecialchars($t['bloco']) ?>-<?= htmlspecialchars($t['unidade']) ?> (<?= htmlspecialchars($t['tipo_vinculo']) ?>)
-                            </span>
+                            <?php if ($t['bloco'] === 'NOTIF'): ?>
+                                <span class="badge orange lighten-4 orange-text text-darken-4" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
+                                    📋 Notificação <?= htmlspecialchars($t['unidade']) ?>
+                                </span>
+                            <?php elseif ($t['bloco'] === 'TAG'): ?>
+                                <span class="badge grey lighten-3 grey-text text-darken-3" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
+                                    🏷️ <?= htmlspecialchars($t['unidade']) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
+                                    🏢 Bloco <?= htmlspecialchars($t['bloco']) ?> - Apt <?= htmlspecialchars($t['unidade']) ?>
+                                </span>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
 
-                <form method="POST" style="display:flex; gap:5px;">
-                    <input type="hidden" name="action" value="vincular_tag">
+                <!-- Input Livre Inteligente (+ Tag) -->
+                <form method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
+                    <input type="hidden" name="action" value="adicionar_tag_livre">
                     <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
-                    <input type="text" name="bloco" placeholder="Bloco" required style="width:50px; height:24px; margin:0; font-size:0.75rem;">
-                    <input type="text" name="unidade" placeholder="Apt" required style="width:50px; height:24px; margin:0; font-size:0.75rem;">
-                    <select name="tipo_vinculo" class="browser-default" style="height:24px; font-size:0.75rem; padding:0 2px;">
-                        <option value="citada">Citada</option>
-                        <option value="reclamada">Reclamada</option>
-                    </select>
-                    <button type="submit" class="btn-small btn-flat green-text" style="height:24px; line-height:24px; padding:0 5px;">+ Tag</button>
+                    <input type="text" name="tag_input" placeholder="Digite Unidade (B1108) ou Notificação (123/2026)..." required style="height:28px; line-height:28px; margin:0; font-size:0.8rem; width:260px; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+                    <button type="submit" class="btn-small waves-effect waves-light blue darken-1" style="height:28px; line-height:28px; padding:0 8px; font-size:0.75rem;">
+                        <i class="material-icons left tiny" style="margin-right:2px;">add</i> Tag
+                    </button>
                 </form>
             </div>
 
@@ -552,10 +602,10 @@ $mapaCoresTipo = [
     </div>
 </div>
 
-<!-- Console de Diagnóstico & Debug VDS (Visível sempre com debug=1 ou se não carregou ocorrência/eventos) -->
+<!-- Console de Diagnóstico & Debug VDS (Visível com debug=1 ou se não carregou ocorrência/eventos) -->
 <?php if (!empty($_GET['debug']) || !$detalheSel || empty($eventosRemotos)): ?>
     <div style="background:#1e1e1e; color:#00ff66; padding:15px; border-radius:6px; font-family:monospace; font-size:0.8rem; margin:15px; overflow-x:auto;">
-        <strong style="color:#fff; font-size:0.9rem;"><i class="material-icons tiny">bug_report</i> Console de Diagnóstico & Debug VDS</strong>
+        <strong style="color:#fff; font-size:0.9rem;"><i class="material-icons tiny">bug_report</i> Console de Diagnóstico & Debug VDS (Visão: <?= strtoupper($visao) ?>)</strong>
         <hr style="border-color:#444; margin:8px 0;">
         
         <?php $dbg = $detalheSel['debug'] ?? []; ?>
