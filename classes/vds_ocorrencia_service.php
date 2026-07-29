@@ -466,12 +466,15 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
     curl_close($ch);
 
     if ($httpCode === 200 || $httpCode === 201) {
-        $stmtUp = mysqli_prepare($link, "UPDATE ocorrencia_notas_internas SET enviado_remoto = 1, data_envio_remoto = NOW() WHERE id = ?");
-        mysqli_stmt_bind_param($stmtUp, "i", $notaId);
+        $resJson = json_decode($response, true);
+        $vdsEventoId = (string)($resJson['ocorrenciaId'] ?? ($resJson['id'] ?? null));
+
+        $stmtUp = mysqli_prepare($link, "UPDATE ocorrencia_notas_internas SET enviado_remoto = 1, data_envio_remoto = NOW(), vds_evento_uuid = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp, "si", $vdsEventoId, $notaId);
         mysqli_stmt_execute($stmtUp);
         mysqli_stmt_close($stmtUp);
         DBClose($link);
-        return ['success' => true, 'message' => "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId})!"];
+        return ['success' => true, 'message' => "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId}" . ($vdsEventoId ? ", Evento VDS {$vdsEventoId}" : "") . ")!"];
     }
 
     DBClose($link);

@@ -416,7 +416,14 @@ $mapaCoresTipo = [
                                 'foto' => $dadosJsonLocal['foto'] ?? '',
                                 'listaAnexo' => $dadosJsonLocal['listaAnexo'] ?? []
                             ];
-                        }
+                    }
+                }
+
+                // Coletar IDs de eventos VDS que pertencem a notas internas já publicadas pelo Conselho
+                $publishedEventIds = [];
+                foreach ($notas as $n) {
+                    if (!empty($n['vds_evento_uuid'])) {
+                        $publishedEventIds[] = (string)$n['vds_evento_uuid'];
                     }
                 }
                 ?>
@@ -424,6 +431,12 @@ $mapaCoresTipo = [
                 <?php if (!empty($eventosRemotos)): ?>
                     <?php foreach ($eventosRemotos as $ev): ?>
                         <?php
+                        $evId = (string)($ev['ocorrencia'] ?? ($ev['ocorrenciaId'] ?? ($ev['id'] ?? '')));
+                        if ($evId && in_array($evId, $publishedEventIds)) {
+                            // Evento remoto é exatamente a Nota Interna publicada pelo Conselho: ignora para evitar duplicação visual
+                            continue;
+                        }
+
                         $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
                         $cargo = $ev['cargo'] ?? 'Morador';
                         $mensagemTexto = $ev['mensagem'] ?? '';
