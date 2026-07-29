@@ -107,13 +107,22 @@ DBClose($link);
 // Ocorrência selecionada para visualização
 $selId = $_GET['id'] ?? null;
 
-// Se um protocolo foi digitado no filtro, resolve e seleciona diretamente o chamado (local ou busca VDS)
+// Se um protocolo foi digitado no filtro ou passado via URL (?protocolo=259564), resolve e seleciona diretamente o chamado
 $detalheSel = null;
-if (!empty($protoFiltro) && !$selId) {
+if (!empty($protoFiltro)) {
     $detalhePorProto = vds_get_ocorrencia_detalhe($protoFiltro, $usuarioIdConselho);
     if ($detalhePorProto && isset($detalhePorProto['local']['id'])) {
         $selId = $detalhePorProto['local']['id'];
         $detalheSel = $detalhePorProto;
+
+        // Adiciona ao topo da lista $ocorrencias se ainda não estiver nela
+        $jaNaLista = false;
+        foreach ($ocorrencias as $ocoItem) {
+            if ($ocoItem['id'] == $selId) { $jaNaLista = true; break; }
+        }
+        if (!$jaNaLista) {
+            array_unshift($ocorrencias, $detalhePorProto['local']);
+        }
     }
 }
 
