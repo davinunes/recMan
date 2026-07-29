@@ -575,93 +575,167 @@ if ($esseRecurso == null) {
     $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
     $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
 
-    echo '<div class="card border-accent" style="margin-top: 20px; border-left: 4px solid #6f42c1;">
-            <div class="card-content" style="padding: 15px;">
-                <span class="card-title purple-text text-darken-3" style="font-size: 1.1rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
-                    <i class="material-icons">search</i> Aceleradores de Análise da Defesa (Condomínio Digital)
-                </span>
-                <p class="grey-text text-darken-1" style="font-size: 0.85rem; margin-bottom: 12px;">
-                    Registros contextuais do dia da infração (<b>' . date('d/m/Y', strtotime($dataOcorrencia)) . '</b>) para Bloco <b>' . htmlspecialchars($result['bloco']) . '</b> / Apt <b>' . htmlspecialchars($result['unidade']) . '</b>.
-                </p>
+    <!-- Modal de Inspeção Detalhada dos Aceleradores -->
+    <div id="modalInspecionarAcelerador" class="modal" style="border-radius:8px; max-width:550px;">
+        <div class="modal-content" id="conteudoInspecionarAcelerador">
+            <!-- Preenchido via JavaScript -->
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-purple btn-flat font-weight-bold">Fechar</a>
+        </div>
+    </div>
 
-                <!-- Abas dos Aceleradores -->
-                <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
-                    <li>
-                        <div class="collapsible-header" style="font-weight: 600;">
-                            <i class="material-icons purple-text">fingerprint</i> 
-                            Eventos de Acesso & Visitas (' . count($acessosUnidade) . ')
-                        </div>
-                        <div class="collapsible-body" style="padding: 10px;">';
-                        if (empty($acessosUnidade)) {
-                            echo '<p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>';
-                        } else {
-                            echo '<table class="striped responsive-table" style="font-size:0.85rem;">
-                                    <thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Foto</th></tr></thead>
-                                    <tbody>';
-                            foreach ($acessosUnidade as $acc) {
-                                echo '<tr>
-                                        <td>' . date('H:i:s', strtotime($acc['dthora'])) . '</td>
-                                        <td><b>' . htmlspecialchars($acc['pessoaNome']) . '</b> <small>(' . htmlspecialchars($acc['perfil']) . ')</small></td>
-                                        <td>' . htmlspecialchars($acc['tipoEvento']) . '</td>
-                                        <td><img src="' . htmlspecialchars($acc['fotoUrl']) . '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"></td>
-                                      </tr>';
-                            }
-                            echo '</tbody></table>';
-                        }
-    echo '              </div>
-                    </li>
-                    <li>
-                        <div class="collapsible-header" style="font-weight: 600;">
-                            <i class="material-icons blue-text">markunread_mailbox</i> 
-                            Entregas e Encomendas (' . count($entregasUnidade) . ')
-                        </div>
-                        <div class="collapsible-body" style="padding: 10px;">';
-                        if (empty($entregasUnidade)) {
-                            echo '<p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>';
-                        } else {
-                            echo '<table class="striped responsive-table" style="font-size:0.85rem;">
-                                    <thead><tr><th>Chegada</th><th>Descrição</th><th>Destinatário</th><th>Status</th></tr></thead>
-                                    <tbody>';
-                            foreach ($entregasUnidade as $ent) {
-                                echo '<tr>
-                                        <td>' . htmlspecialchars($ent['dthoraChegada']) . '</td>
-                                        <td>' . htmlspecialchars($ent['descricao']) . '</td>
-                                        <td>' . htmlspecialchars($ent['destinatario']) . '</td>
-                                        <td><span class="badge green white-text" style="float:none; padding:2px 5px;">' . htmlspecialchars($ent['status']) . '</span></td>
-                                      </tr>';
-                            }
-                            echo '</tbody></table>';
-                        }
-    echo '              </div>
-                    </li>
-                    <li>
-                        <div class="collapsible-header" style="font-weight: 600;">
-                            <i class="material-icons orange-text">label</i> 
-                            Ocorrências Onde a Unidade é Autora ou Citada (' . count($chamadosTag) . ')
-                        </div>
-                        <div class="collapsible-body" style="padding: 10px;">';
-                        if (empty($chamadosTag)) {
-                            echo '<p class="grey-text" style="margin:0;">Nenhuma ocorrência vinculada a esta unidade.</p>';
-                        } else {
-                            echo '<div class="collection">';
-                            foreach ($chamadosTag as $ch) {
-                                $vinculo = $ch['vinculo_final'] ?? ($ch['tipo_vinculo'] ?? 'autora');
-                                $tagUnidStr = strtoupper(($result['bloco'] ?? '') . ($result['unidade'] ?? ''));
-                                echo '<a href="index.php?pag=livroDeOcorrencias&id=' . $ch['id'] . '" target="_blank" class="collection-item" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Inicializar Collapsibles do Materialize
+        var elemsCollapsible = document.querySelectorAll('.collapsible');
+        if (elemsCollapsible.length > 0 && typeof M !== 'undefined' && M.Collapsible) {
+            M.Collapsible.init(elemsCollapsible, { accordion: false });
+        }
+        
+        // Inicializar Modais do Materialize
+        var elemsModal = document.querySelectorAll('.modal');
+        if (elemsModal.length > 0 && typeof M !== 'undefined' && M.Modal) {
+            M.Modal.init(elemsModal);
+        }
+    });
+
+    function inspecionarItemAcelerador(tipo, data) {
+        var html = '';
+        if (tipo === 'acesso') {
+            html += '<h5 style="margin-top:0; color:#6f42c1; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso</h5>';
+            if (data.fotoUrl) {
+                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:180px; max-height:180px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
+            }
+            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+            html += '<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b>' + (data.pessoaNome || 'N/A') + '</b></td></tr>';
+            html += '<tr><td><b>Perfil / Cargo:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + (data.perfil || 'N/A') + '</span></td></tr>';
+            html += '<tr><td><b>Tipo de Evento:</b></td><td>' + (data.tipoEvento || 'N/A') + '</td></tr>';
+            html += '<tr><td><b>Data / Hora:</b></td><td>' + (data.dthora || 'N/A') + '</td></tr>';
+            html += '</table>';
+        } else if (tipo === 'entrega') {
+            html += '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
+            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+            html += '<tr><td style="width:35%;"><b>Descrição / Pacote:</b></td><td><b>' + (data.descricao || 'N/A') + '</b></td></tr>';
+            html += '<tr><td><b>Destinatário:</b></td><td>' + (data.destinatario || 'N/A') + '</td></tr>';
+            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + (data.dthoraChegada || 'N/A') + '</td></tr>';
+            html += '<tr><td><b>Status Atual:</b></td><td><span class="badge green white-text" style="float:none; padding:3px 8px; border-radius:4px;">' + (data.status || 'N/A') + '</span></td></tr>';
+            html += '</table>';
+        }
+        
+        document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
+        var elem = document.getElementById('modalInspecionarAcelerador');
+        var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
+        instance.open();
+    }
+    </script>
+
+    <div class="card border-accent" style="margin-top: 20px; border-left: 4px solid #6f42c1;">
+        <div class="card-content" style="padding: 15px;">
+            <span class="card-title purple-text text-darken-3" style="font-size: 1.1rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
+                <i class="material-icons">search</i> Aceleradores de Análise da Defesa (Condomínio Digital)
+            </span>
+            <p class="grey-text text-darken-1" style="font-size: 0.85rem; margin-bottom: 12px;">
+                Registros contextuais do dia da infração (<b><?= date('d/m/Y', strtotime($dataOcorrencia)) ?></b>) para Bloco <b><?= htmlspecialchars($result['bloco']) ?></b> / Apt <b><?= htmlspecialchars($result['unidade']) ?></b>.
+            </p>
+
+            <!-- Abas dos Aceleradores (Collapsible Ativo) -->
+            <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
+                <li class="active">
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons purple-text">fingerprint</i> 
+                        Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($acessosUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>
+                        <?php else: ?>
+                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
+                                <thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Inspecionar</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($acessosUnidade as $acc): ?>
+                                        <?php $jsonAcc = htmlspecialchars(json_encode($acc, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
+                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', <?= $jsonAcc ?>)">
+                                            <td><?= date('H:i:s', strtotime($acc['dthora'])) ?></td>
+                                            <td><b><?= htmlspecialchars($acc['pessoaNome']) ?></b> <small>(<?= htmlspecialchars($acc['perfil']) ?>)</small></td>
+                                            <td><?= htmlspecialchars($acc['tipoEvento']) ?></td>
+                                            <td>
+                                                <span class="btn-small waves-effect waves-light purple lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons blue-text">markunread_mailbox</i> 
+                        Entregas e Encomendas (<?= count($entregasUnidade) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($entregasUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>
+                        <?php else: ?>
+                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
+                                <thead><tr><th>Chegada</th><th>Descrição</th><th>Destinatário</th><th>Inspecionar</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($entregasUnidade as $ent): ?>
+                                        <?php $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
+                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('entrega', <?= $jsonEnt ?>)">
+                                            <td><?= htmlspecialchars($ent['dthoraChegada']) ?></td>
+                                            <td><b><?= htmlspecialchars($ent['descricao']) ?></b></td>
+                                            <td><?= htmlspecialchars($ent['destinatario']) ?></td>
+                                            <td>
+                                                <span class="btn-small waves-effect waves-light blue lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons orange-text">label</i> 
+                        Ocorrências Onde a Unidade é Autora ou Citada (<?= count($chamadosTag) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($chamadosTag)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhuma ocorrência vinculada a esta unidade.</p>
+                        <?php else: ?>
+                            <div class="collection">
+                                <?php foreach ($chamadosTag as $ch): ?>
+                                    <?php
+                                    $vinculo = $ch['vinculo_final'] ?? ($ch['tipo_vinculo'] ?? 'autora');
+                                    $tagUnidStr = strtoupper(($result['bloco'] ?? '') . ($result['unidade'] ?? ''));
+                                    ?>
+                                    <a href="index.php?pag=livroDeOcorrencias&id=<?= $ch['id'] ?>" target="_blank" class="collection-item" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:10px 15px;">
                                         <span>
-                                            <b>Prot ' . htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) . '</b> - Bloco ' . htmlspecialchars($ch['bloco']) . '/' . htmlspecialchars($ch['unidade']) . ' (' . date('d/m/Y', strtotime($ch['abertura'])) . ')
-                                            <span class="badge blue lighten-5 blue-text text-darken-3" style="float:none; margin-left:6px; font-weight:600;">Tag: ' . htmlspecialchars($tagUnidStr) . '</span>
+                                            <b>Prot <?= htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) ?></b> - Bloco <?= htmlspecialchars($ch['bloco']) ?>/<?= htmlspecialchars($ch['unidade']) ?> <small class="grey-text">(<?= date('d/m/Y', strtotime($ch['abertura'])) ?>)</small>
+                                            <span class="badge blue lighten-5 blue-text text-darken-3" style="float:none; margin-left:6px; font-weight:600;">Tag: <?= htmlspecialchars($tagUnidStr) ?></span>
                                         </span>
-                                        <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none; font-weight:600;">Vínculo: ' . strtoupper($vinculo) . '</span>
-                                      </a>';
-                            }
-                            echo '</div>';
-                        }
-    echo '              </div>
-                    </li>
-                </ul>
-            </div>
-          </div>';
+                                        <span style="display:flex; align-items:center; gap:8px;">
+                                            <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none; font-weight:600;">Vínculo: <?= strtoupper($vinculo) ?></span>
+                                            <span class="btn-small waves-effect waves-light purple darken-1 white-text" style="height:26px; line-height:26px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                Inspecionar Chat <i class="material-icons right tiny" style="margin-left:2px;">open_in_new</i>
+                                            </span>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
 
 
 
