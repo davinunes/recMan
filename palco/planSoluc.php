@@ -151,6 +151,26 @@ require "classes/repositorio.php";
                 </div>
             </div>
         </div>
+
+        <!-- Leitor Rápido de Fatura (Processador no Navegador / Client-side) -->
+        <div id="boletos-manual-parser" class="card-panel grey lighten-4" style="border-radius: 8px; padding: 15px; margin-top: 15px; border: 1px solid #e0e0e0;">
+            <span class="card-title" style="font-size: 1rem; font-weight: bold; color: #37474f; display:flex; align-items:center; gap:6px; margin-bottom: 5px;">
+                <i class="material-icons teal-text" style="font-size: 1.2rem;">content_paste</i> Leitor Rápido de Fatura (Processamento no Navegador)
+            </span>
+            <p style="font-size: 0.85rem; color: #666; margin: 4px 0 10px 0;">
+                Cole abaixo o texto da composição da fatura (ex: "O que estou pagando?") para que o navegador extraia as multas e monte os botões de lançamento instantaneamente:
+            </p>
+            <div class="row" style="margin-bottom:0;">
+                <div class="input-field col s12 m9" style="margin-top:0;">
+                    <textarea id="input-colar-fatura" class="materialize-textarea" placeholder="Ex: Multa Descumprimento R.I CONF. NOT. Nº 210/26 R$764,53..." style="margin-bottom:0; padding:8px 0; min-height:40px;"></textarea>
+                </div>
+                <div class="col s12 m3 center-align" style="margin-top:5px;">
+                    <button type="button" id="btn-parse-texto-fatura" class="btn waves-effect waves-light teal" style="width:100%;">
+                        <i class="material-icons left">search</i> Extrair Multas
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-grey btn-flat">Fechar</a>
