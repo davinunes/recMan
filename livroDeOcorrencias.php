@@ -107,6 +107,11 @@ $blocoFiltro = $_GET['bloco'] ?? '';
 $unidadeFiltro = $_GET['unidade'] ?? '';
 $protoFiltro = $_GET['protocolo'] ?? '';
 $respFiltro = $_GET['responsabilidade'] ?? '';
+$statusFiltro = $_GET['status'] ?? 'abertas';
+$tipoFiltro = $_GET['oco_tipo'] ?? '';
+
+$listaBlocos = [];
+$ocorrenciasAgrupadas = [];
 
 // Obter Lista de Ocorrências por Visão
 $ocorrencias = [];
@@ -116,25 +121,45 @@ if ($visao === 'pratico') {
     $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
     if ($resPratico['success']) {
         $ocorrencias = $resPratico['items'];
+        foreach ($ocorrencias as $row) {
+            $tKey = (int)($row['oco_tipo'] ?? 0);
+            $ocorrenciasAgrupadas[$tKey][] = $row;
+        }
     } else {
         $msg = $resPratico['message'] ?? "Falha ao consultar não lidos da VDS.";
         $msgType = "warning";
     }
 } else {
-    // Visão Analítica: Ocorrências do banco local (Não Resolvidas por padrão)
+    // Visão Analítica: Ocorrências do banco local
     $link = DBConnect();
-    $sqlWhere = " WHERE (resolvido IS NULL OR resolvido = 0)";
+
+    // Buscar lista distinta de blocos para o filtro
+    $resBlocos = mysqli_query($link, "SELECT DISTINCT bloco FROM ocorrencias WHERE bloco IS NOT NULL AND bloco != '' ORDER BY bloco ASC");
+    if ($resBlocos) {
+        while ($rB = mysqli_fetch_assoc($resBlocos)) {
+            $listaBlocos[] = $rB['bloco'];
+        }
+    }
+
+    $sqlWhere = " WHERE 1=1 ";
     $params = [];
     $types = "";
 
-    if ($blocoFiltro) { $sqlWhere .= " AND bloco = ?"; $params[] = $blocoFiltro; $types .= "s"; }
-    if ($unidadeFiltro) { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltro; $types .= "s"; }
-    if ($protoFiltro) { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
-    if ($respFiltro) { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
+    if ($statusFiltro === 'abertas') {
+        $sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0)";
+    } elseif ($statusFiltro === 'resolvidas') {
+        $sqlWhere .= " AND resolvido = 1";
+    }
+
+    if ($blocoFiltro !== '') { $sqlWhere .= " AND bloco = ?"; $params[] = $blocoFiltro; $types .= "s"; }
+    if ($unidadeFiltro !== '') { $sqlWhere .= " AND unidade = ?"; $params[] = $unidadeFiltro; $types .= "s"; }
+    if ($protoFiltro !== '') { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
+    if ($respFiltro !== '') { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
+    if ($tipoFiltro !== '') { $sqlWhere .= " AND oco_tipo = ?"; $params[] = (int)$tipoFiltro; $types .= "i"; }
 
     $sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
     $stmtList = mysqli_prepare($link, $sqlList);
-    if ($types) {
+    if ($types && !empty($params)) {
         mysqli_stmt_bind_param($stmtList, $types, ...$params);
     }
     mysqli_stmt_execute($stmtList);
@@ -142,6 +167,8 @@ if ($visao === 'pratico') {
 
     while ($row = mysqli_fetch_assoc($resList)) {
         $ocorrencias[] = $row;
+        $tKey = (int)($row['oco_tipo'] ?? 0);
+        $ocorrenciasAgrupadas[$tKey][] = $row;
     }
     mysqli_stmt_close($stmtList);
     DBClose($link);
@@ -257,7 +284,7 @@ $mapaCoresTipo = [
             </button>
         </form>
 
-        <!-- Botão Sincronizar Agora (Mantido conforme solicitado) -->
+        <!-- Botão Sincronizar Agora -->
         <div style="display: flex; gap: 10px; align-items: center;">
             <form method="POST" style="margin:0;">
                 <input type="hidden" name="action" value="sync_agora">
@@ -267,6 +294,83 @@ $mapaCoresTipo = [
             </form>
         </div>
     </div>
+
+    <!-- Painel de Filtros Avançados / Premium (Exibido na Visão Analítica) -->
+    <?php if ($visao === 'analitico'): ?>
+        <div class="card-panel white z-depth-1" style="margin: 12px 0 4px 0; padding: 12px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fafafa;">
+            <form method="GET" action="index.php" id="form-filtros-analitico" style="margin:0;">
+                <input type="hidden" name="pag" value="livroDeOcorrencias">
+                <input type="hidden" name="visao" value="analitico">
+
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+                    <!-- Filtro por Bloco -->
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">BLOCO</label>
+                        <select name="bloco" class="browser-default" onchange="this.form.submit()" style="height:32px; padding:2px 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; width:100%;">
+                            <option value="">Todos os Blocos</option>
+                            <?php foreach ($listaBlocos as $bVal): ?>
+                                <option value="<?= htmlspecialchars($bVal) ?>" <?= $blocoFiltro === $bVal ? 'selected' : '' ?>>Bloco <?= htmlspecialchars($bVal) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Filtro por Unidade -->
+                    <div style="flex: 1; min-width: 110px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">UNIDADE</label>
+                        <input type="text" name="unidade" placeholder="Ex: 1108" value="<?= htmlspecialchars($unidadeFiltro) ?>" onchange="this.form.submit()" style="height:32px; line-height:32px; padding:0 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; margin:0; width:100%; box-sizing:border-box;">
+                    </div>
+
+                    <!-- Filtro por Status (Resolvido) -->
+                    <div style="flex: 1; min-width: 140px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">STATUS</label>
+                        <select name="status" class="browser-default" onchange="this.form.submit()" style="height:32px; padding:2px 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; width:100%;">
+                            <option value="abertas" <?= $statusFiltro === 'abertas' ? 'selected' : '' ?>>Abertas / Pendentes</option>
+                            <option value="resolvidas" <?= $statusFiltro === 'resolvidas' ? 'selected' : '' ?>>Resolvidas</option>
+                            <option value="todas" <?= $statusFiltro === 'todas' ? 'selected' : '' ?>>Todas as Ocorrências</option>
+                        </select>
+                    </div>
+
+                    <!-- Filtro por Tipo de Ocorrência -->
+                    <div style="flex: 1.2; min-width: 160px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">TIPO / CATEGORIA</label>
+                        <select name="oco_tipo" class="browser-default" onchange="this.form.submit()" style="height:32px; padding:2px 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; width:100%;">
+                            <option value="">Todos os Tipos</option>
+                            <?php foreach ($mapaCoresTipo as $tId => $tInfo): ?>
+                                <option value="<?= $tId ?>" <?= $tipoFiltro == $tId ? 'selected' : '' ?>><?= htmlspecialchars($tInfo['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Filtro por Responsabilidade -->
+                    <div style="flex: 1.2; min-width: 140px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">RESPONSABILIDADE</label>
+                        <select name="responsabilidade" class="browser-default" onchange="this.form.submit()" style="height:32px; padding:2px 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; width:100%;">
+                            <option value="">Todas</option>
+                            <option value="conselho" <?= $respFiltro === 'conselho' ? 'selected' : '' ?>>Conselho</option>
+                            <option value="sindico" <?= $respFiltro === 'sindico' ? 'selected' : '' ?>>Síndico</option>
+                            <option value="sub" <?= $respFiltro === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
+                            <option value="adm" <?= $respFiltro === 'adm' ? 'selected' : '' ?>>Administradora</option>
+                            <option value="operacional" <?= $respFiltro === 'operacional' ? 'selected' : '' ?>>Operacional</option>
+                            <option value="juridico" <?= $respFiltro === 'juridico' ? 'selected' : '' ?>>Jurídico</option>
+                        </select>
+                    </div>
+
+                    <!-- Busca Rápida no Cliente -->
+                    <div style="flex: 1.8; min-width: 180px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">BUSCA RÁPIDA (TEXTO)</label>
+                        <input type="text" id="input-busca-rapida-oco" placeholder="Digite para filtrar instantaneamente..." style="height:32px; line-height:32px; padding:0 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; margin:0; width:100%; box-sizing:border-box;">
+                    </div>
+
+                    <!-- Botão Limpar Filtros -->
+                    <div style="margin-top: 14px;">
+                        <a href="index.php?pag=livroDeOcorrencias&visao=analitico" class="btn-small waves-effect waves-light grey lighten-1" title="Limpar Filtros" style="height:32px; line-height:32px; padding:0 10px;">
+                            <i class="material-icons tiny left">filter_alt_off</i> Limpar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
 
     <!-- Alertas Toast / Banner -->
     <?php if ($toastAlert): ?>
@@ -283,48 +387,79 @@ $mapaCoresTipo = [
 </div>
 
 <div class="row" style="margin: 0;">
-    <!-- Sidebar Left: Feed de Ocorrências -->
+    <!-- Sidebar Left: Feed de Ocorrências Agrupadas por Categoria/Tipo -->
     <div class="col s12 m4 l3 sidebar-feed">
-        <!-- Subcabeçalho de Contexto da Lista -->
+        <!-- Subcabeçalho de Contexto da Lista com Master Toggle -->
         <div style="padding: 10px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size:0.8rem; color:#555; display:flex; justify-content:space-between; align-items:center;">
             <span>
                 <strong>Modo <?= $visao === 'pratico' ? 'Prático' : 'Analítico' ?>:</strong> 
-                <?= count($ocorrencias) ?> item(ns)
+                <span id="cnt-visivel-ocorrencias"><?= count($ocorrencias) ?></span> item(ns)
             </span>
-            <small style="color:#888;"><?= $visao === 'pratico' ? 'Não lidos (VDS)' : 'Banco Local' ?></small>
+            <?php if (!empty($ocorrenciasAgrupadas) && count($ocorrenciasAgrupadas) > 1): ?>
+                <button type="button" id="btn-toggle-todos-grupos" class="btn-flat btn-small" style="padding:0 4px; height:24px; line-height:24px; font-size:0.75rem; color:#0d6efd;" title="Alternar recolhimento de todas as categorias">
+                    <i class="material-icons tiny left" style="margin-right:2px;">unfold_less</i> <span id="lbl-toggle-grupos">Recolher Todos</span>
+                </button>
+            <?php else: ?>
+                <small style="color:#888;"><?= $visao === 'pratico' ? 'Não lidos (VDS)' : 'Banco Local' ?></small>
+            <?php endif; ?>
         </div>
 
         <?php if (empty($ocorrencias)): ?>
             <div style="padding: 25px 15px; text-align: center; color: #888; font-size:0.9rem;">
                 <i class="material-icons medium" style="color:#ccc;">check_circle_outline</i><br>
-                <?= $visao === 'pratico' ? 'Nenhuma ocorrência não lida no momento na VDS!' : 'Nenhuma ocorrência aberta no banco local.' ?>
+                <?= $visao === 'pratico' ? 'Nenhuma ocorrência não lida no momento na VDS!' : 'Nenhuma ocorrência encontrada para os filtros selecionados.' ?>
             </div>
         <?php else: ?>
-            <?php foreach ($ocorrencias as $oco): ?>
+            <!-- Lista Agrupada por Tipo/Categoria de Ocorrência -->
+            <?php foreach ($ocorrenciasAgrupadas as $tId => $groupItems): ?>
                 <?php
-                $tipoId = (int)($oco['oco_tipo'] ?? 115);
-                $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
-                $isSel = ($selId == $oco['id']);
+                $infoTipo = $mapaCoresTipo[$tId] ?? ['nome' => 'Outros / Diversos', 'bg' => '#6c757d', 'color' => '#ffffff'];
+                $groupId = "grupo-tipo-" . $tId;
                 ?>
-                <div class="item-oco <?= $isSel ? 'active' : '' ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>'">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
-                            <?= htmlspecialchars($infoTipo['nome']) ?>
-                        </span>
-                        <span style="font-size: 0.75rem; color: #888;">
-                            Prot: <?= htmlspecialchars($oco['protocolo_vds'] ?? $oco['id']) ?>
+                <div class="grupo-oco-wrapper" data-tipo-id="<?= $tId ?>" style="margin-bottom: 2px;">
+                    <!-- Cabeçalho Colapsável da Categoria -->
+                    <div class="grupo-oco-header" data-target="<?= $groupId ?>" style="padding: 8px 12px; background: #e9ecef; border-bottom: 1px solid #dee2e6; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: background 0.15s;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <i class="material-icons tiny grupo-icon-toggle" style="color:#495057; font-size: 1.1rem; transition: transform 0.2s;">expand_less</i>
+                            <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;">
+                                <?= htmlspecialchars($infoTipo['nome']) ?>
+                            </span>
+                        </div>
+                        <span class="badge grey lighten-1 black-text cnt-grupo-badge" style="border-radius: 10px; font-weight: bold; font-size:0.75rem; padding: 1px 7px; float:none; margin:0;">
+                            <?= count($groupItems) ?>
                         </span>
                     </div>
 
-                    <div style="font-weight: 600; font-size: 0.95rem; color: #333;">
-                        Bloco <?= htmlspecialchars($oco['bloco']) ?> - Apt <?= htmlspecialchars($oco['unidade']) ?>
-                    </div>
+                    <!-- Corpo com as Ocorrências da Categoria -->
+                    <div class="grupo-oco-body" id="<?= $groupId ?>">
+                        <?php foreach ($groupItems as $oco): ?>
+                            <?php
+                            $isSel = ($selId == $oco['id']);
+                            $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
+                            $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
+                            ?>
+                            <div class="item-oco <?= $isSel ? 'active' : '' ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>&bloco=<?= urlencode($blocoFiltro) ?>&unidade=<?= urlencode($unidadeFiltro) ?>&status=<?= urlencode($statusFiltro) ?>&oco_tipo=<?= urlencode($tipoFiltro) ?>&responsabilidade=<?= urlencode($respFiltro) ?>'">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
+                                        <?= htmlspecialchars($infoTipo['nome']) ?>
+                                    </span>
+                                    <span style="font-size: 0.75rem; color: #888;">
+                                        Prot: <?= htmlspecialchars($oco['protocolo_vds'] ?? $oco['id']) ?>
+                                    </span>
+                                </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                        <span>Resp: <strong><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
-                        <span style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
-                            <?= $oco['resolvido'] ? '✓ Resolvido' : '• Aberto' ?>
-                        </span>
+                                <div style="font-weight: 600; font-size: 0.95rem; color: #333;">
+                                    Bloco <?= htmlspecialchars($oco['bloco']) ?> - Apt <?= htmlspecialchars($oco['unidade']) ?>
+                                </div>
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
+                                    <span>Resp: <strong><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
+                                    <span style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
+                                        <?= $oco['resolvido'] ? '✓ Resolvido' : '• Aberto' ?>
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -711,3 +846,70 @@ $mapaCoresTipo = [
         <?php endif; ?>
     </div>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Toggle individual de cabeçalho de categoria/grupo
+    $(document).on('click', '.grupo-oco-header', function() {
+        const targetId = $(this).data('target');
+        const $body = $('#' + targetId);
+        const $icon = $(this).find('.grupo-icon-toggle');
+        
+        $body.slideToggle(150, function() {
+            if ($body.is(':visible')) {
+                $icon.text('expand_less');
+            } else {
+                $icon.text('expand_more');
+            }
+        });
+    });
+
+    // 2. Master Toggle: Recolher / Expandir Todos os Grupos
+    let todosExpandidos = true;
+    $('#btn-toggle-todos-grupos').on('click', function(e) {
+        e.preventDefault();
+        todosExpandidos = !todosExpandidos;
+        if (todosExpandidos) {
+            $('.grupo-oco-body').slideDown(150);
+            $('.grupo-icon-toggle').text('expand_less');
+            $('#lbl-toggle-grupos').text('Recolher Todos');
+        } else {
+            $('.grupo-oco-body').slideUp(150);
+            $('.grupo-icon-toggle').text('expand_more');
+            $('#lbl-toggle-grupos').text('Expandir Todos');
+        }
+    });
+
+    // 3. Busca Rápida Dinâmica no Cliente (Navegador)
+    $('#input-busca-rapida-oco').on('keyup input', function() {
+        const term = $(this).val().toLowerCase().trim();
+        let visiveisTotais = 0;
+
+        $('.grupo-oco-wrapper').each(function() {
+            let visiveisNoGrupo = 0;
+            $(this).find('.item-oco').each(function() {
+                const itemData = $(this).data('search') || $(this).text().toLowerCase();
+                if (!term || itemData.indexOf(term) !== -1) {
+                    $(this).show();
+                    visiveisNoGrupo++;
+                    visiveisTotais++;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            if (visiveisNoGrupo > 0) {
+                $(this).show();
+                if (term) {
+                    $(this).find('.grupo-oco-body').show();
+                    $(this).find('.grupo-icon-toggle').text('expand_less');
+                }
+            } else {
+                $(this).hide();
+            }
+        });
+
+        $('#cnt-visivel-ocorrencias').text(visiveisTotais);
+    });
+});
+</script>
