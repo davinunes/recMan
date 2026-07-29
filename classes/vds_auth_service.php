@@ -103,13 +103,37 @@ function vds_save_condominio_token($username, $password) {
     }
 
     $link = DBConnect();
-    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('condominio', NULL, ?, ?, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), refresh_token = VALUES(refresh_token), expires_at = VALUES(expires_at), status = 'ativo', updated_at = NOW()");
-    $expiresFormatted = !empty($auth['expires']) ? date('Y-m-d H:i:s', strtotime($auth['expires'])) : null;
-    mysqli_stmt_bind_param($stmt, "sssss", $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
-    $success = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
-    DBClose($link);
+    @mysqli_query($link, "CREATE TABLE IF NOT EXISTS vds_tokens (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        tipo ENUM('condominio', 'conselheiro') NOT NULL DEFAULT 'conselheiro',
+        usuario_id_conselho INT DEFAULT NULL,
+        vds_username VARCHAR(100) DEFAULT NULL,
+        vds_user_uuid VARCHAR(100) DEFAULT NULL,
+        bearer_token TEXT NOT NULL,
+        refresh_token TEXT DEFAULT NULL,
+        status ENUM('ativo', 'expirado', 'erro') DEFAULT 'ativo',
+        expires_at DATETIME DEFAULT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_tipo_usuario (tipo, usuario_id_conselho)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+    $stmtCheck = mysqli_query($link, "SELECT id FROM vds_tokens WHERE tipo = 'condominio' LIMIT 1");
+    $rowCheck = mysqli_fetch_assoc($stmtCheck);
+    $expiresFormatted = !empty($auth['expires']) ? date('Y-m-d H:i:s', strtotime($auth['expires'])) : null;
+
+    if ($rowCheck) {
+        $stmtUp = mysqli_prepare($link, "UPDATE vds_tokens SET vds_username = ?, vds_user_uuid = ?, bearer_token = ?, refresh_token = ?, expires_at = ?, status = 'ativo', updated_at = NOW() WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp, "sssssi", $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted, $rowCheck['id']);
+        $success = mysqli_stmt_execute($stmtUp);
+        mysqli_stmt_close($stmtUp);
+    } else {
+        $stmtIns = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('condominio', NULL, ?, ?, ?, ?, ?, 'ativo')");
+        mysqli_stmt_bind_param($stmtIns, "sssss", $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
+        $success = mysqli_stmt_execute($stmtIns);
+        mysqli_stmt_close($stmtIns);
+    }
+
+    DBClose($link);
     return ['success' => $success, 'token' => $auth['token']];
 }
 
@@ -123,11 +147,40 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
     }
 
     $link = DBConnect();
-    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('conselheiro', ?, ?, ?, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), refresh_token = VALUES(refresh_token), expires_at = VALUES(expires_at), status = 'ativo', updated_at = NOW()");
+    @mysqli_query($link, "CREATE TABLE IF NOT EXISTS vds_tokens (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        tipo ENUM('condominio', 'conselheiro') NOT NULL DEFAULT 'conselheiro',
+        usuario_id_conselho INT DEFAULT NULL,
+        vds_username VARCHAR(100) DEFAULT NULL,
+        vds_user_uuid VARCHAR(100) DEFAULT NULL,
+        bearer_token TEXT NOT NULL,
+        refresh_token TEXT DEFAULT NULL,
+        status ENUM('ativo', 'expirado', 'erro') DEFAULT 'ativo',
+        expires_at DATETIME DEFAULT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_tipo_usuario (tipo, usuario_id_conselho)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $stmtCheck = mysqli_prepare($link, "SELECT id FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho = ? LIMIT 1");
+    mysqli_stmt_bind_param($stmtCheck, "i", $usuarioIdConselho);
+    mysqli_stmt_execute($stmtCheck);
+    $resCheck = mysqli_stmt_get_result($stmtCheck);
+    $rowCheck = mysqli_fetch_assoc($resCheck);
+    mysqli_stmt_close($stmtCheck);
+
     $expiresFormatted = !empty($auth['expires']) ? date('Y-m-d H:i:s', strtotime($auth['expires'])) : null;
-    mysqli_stmt_bind_param($stmt, "isssss", $usuarioIdConselho, $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
-    $success = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+
+    if ($rowCheck) {
+        $stmtUp = mysqli_prepare($link, "UPDATE vds_tokens SET vds_username = ?, vds_user_uuid = ?, bearer_token = ?, refresh_token = ?, expires_at = ?, status = 'ativo', updated_at = NOW() WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp, "sssssi", $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted, $rowCheck['id']);
+        $success = mysqli_stmt_execute($stmtUp);
+        mysqli_stmt_close($stmtUp);
+    } else {
+        $stmtIns = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('conselheiro', ?, ?, ?, ?, ?, ?, 'ativo')");
+        mysqli_stmt_bind_param($stmtIns, "isssss", $usuarioIdConselho, $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
+        $success = mysqli_stmt_execute($stmtIns);
+        mysqli_stmt_close($stmtIns);
+    }
 
     // Mapear também na vds_uuid_mapping para consulta rápida
     if (!empty($auth['userUuid'])) {
@@ -149,17 +202,33 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
 function vds_get_token($usuarioIdConselho = null) {
     $link = DBConnect();
     
+    @mysqli_query($link, "CREATE TABLE IF NOT EXISTS vds_tokens (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        tipo ENUM('condominio', 'conselheiro') NOT NULL DEFAULT 'conselheiro',
+        usuario_id_conselho INT DEFAULT NULL,
+        vds_username VARCHAR(100) DEFAULT NULL,
+        vds_user_uuid VARCHAR(100) DEFAULT NULL,
+        bearer_token TEXT NOT NULL,
+        refresh_token TEXT DEFAULT NULL,
+        status ENUM('ativo', 'expirado', 'erro') DEFAULT 'ativo',
+        expires_at DATETIME DEFAULT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_tipo_usuario (tipo, usuario_id_conselho)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
     // 1. Tentar token específico do conselheiro
     if ($usuarioIdConselho) {
         $stmt = mysqli_prepare($link, "SELECT bearer_token FROM vds_tokens WHERE usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
-        mysqli_stmt_bind_param($stmt, "i", $usuarioIdConselho);
-        mysqli_stmt_execute($stmt);
-        $res = mysqli_stmt_get_result($stmt);
-        $row = mysqli_fetch_assoc($res);
-        mysqli_stmt_close($stmt);
-        if ($row && !empty($row['bearer_token'])) {
-            DBClose($link);
-            return $row['bearer_token'];
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "i", $usuarioIdConselho);
+            mysqli_stmt_execute($stmt);
+            $res = mysqli_stmt_get_result($stmt);
+            $row = mysqli_fetch_assoc($res);
+            mysqli_stmt_close($stmt);
+            if ($row && !empty($row['bearer_token'])) {
+                DBClose($link);
+                return $row['bearer_token'];
+            }
         }
     }
 
