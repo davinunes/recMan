@@ -416,6 +416,7 @@ $mapaCoresTipo = [
                                 'foto' => $dadosJsonLocal['foto'] ?? '',
                                 'listaAnexo' => $dadosJsonLocal['listaAnexo'] ?? []
                             ];
+                        }
                     }
                 }
 
