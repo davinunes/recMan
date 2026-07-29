@@ -142,11 +142,35 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
 
     DBClose($link);
 
-    // 4. Se houver mock offline para testes de layout
-    $mockPath = __DIR__ . '/../docs/mocks/mock_ocorrencia_detalhe.json';
+    // 4. Buscar os detalhes reais na API VDS via HTTP GET /ocorrencia/{uuid}
     $remoteData = null;
-    if (file_exists($mockPath)) {
-        $remoteData = json_decode(file_get_contents($mockPath), true);
+    $uuidRemoto = $ocorrencia['uuid_remoto'] ?? null;
+    $token = vds_get_token($usuarioIdConselho);
+
+    if ($uuidRemoto && $token) {
+        $ch = curl_init(VDS_BASE_URL . '/ocorrencia/' . urlencode($uuidRemoto));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $remoteData = json_decode($response, true);
+        }
+    }
+
+    // Fallback: Se a API remota não retornar dados (ex: offline), carregar mock de layout
+    if (!$remoteData) {
+        $mockPath = __DIR__ . '/../docs/mocks/mock_ocorrencia_detalhe.json';
+        if (file_exists($mockPath)) {
+            $remoteData = json_decode(file_get_contents($mockPath), true);
+        }
     }
 
     return [

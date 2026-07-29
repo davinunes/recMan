@@ -320,21 +320,47 @@ $mapaCoresTipo = [
                 <!-- Mensagens da VDS (Morador / Remoto) -->
                 <?php if ($remote && isset($remote['eventos'])): ?>
                     <?php foreach ($remote['eventos'] as $ev): ?>
+                        <?php
+                        $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
+                        $cargo = $ev['cargo'] ?? 'Morador';
+                        $mensagemTexto = $ev['mensagem'] ?? '';
+                        $dthoraStr = $ev['dtHora'] ?? ($ev['dthora'] ?? ($ev['data'] ?? ''));
+                        if (preg_match('/^\d{4}-\d{2}-\d{2}T/', $dthoraStr)) {
+                            $dthoraStr = date('d/m/Y H:i', strtotime($dthoraStr));
+                        }
+                        
+                        $foto = $ev['foto'] ?? ($ev['fotoUrl'] ?? '');
+                        if ($foto && strpos($foto, '/') === 0) {
+                            $foto = 'https://app.vidadesindico.com.br' . $foto;
+                        }
+                        ?>
                         <div class="msg-bubble msg-left">
                             <div class="msg-author">
-                                <span><?= htmlspecialchars($ev['por']) ?> <small style="color:#666;">(<?= htmlspecialchars($ev['cargo'] ?? 'Morador') ?>)</small></span>
+                                <span style="display:flex; align-items:center; gap:6px;">
+                                    <?php if ($foto): ?>
+                                        <img src="<?= htmlspecialchars($foto) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
+                                    <?php endif; ?>
+                                    <b><?= htmlspecialchars($porNome) ?></b> 
+                                    <small style="color:#666;">(<?= htmlspecialchars($cargo) ?>)</small>
+                                </span>
                             </div>
-                            <div><?= nl2br(htmlspecialchars($ev['mensagem'])) ?></div>
+                            <div style="margin-top:4px;"><?= nl2br(htmlspecialchars($mensagemTexto)) ?></div>
                             <?php if (!empty($ev['listaAnexo'])): ?>
                                 <div style="margin-top: 8px;">
                                     <?php foreach ($ev['listaAnexo'] as $anx): ?>
-                                        <a href="<?= htmlspecialchars($anx['url']) ?>" target="_blank" class="blue-text" style="font-size:0.85rem;">
+                                        <?php
+                                        $anxUrl = $anx['url'] ?? '';
+                                        if ($anxUrl && strpos($anxUrl, '/') === 0) {
+                                            $anxUrl = 'https://app.vidadesindico.com.br' . $anxUrl;
+                                        }
+                                        ?>
+                                        <a href="<?= htmlspecialchars($anxUrl) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
                                             <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars($anx['nome']) ?>
                                         </a>
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
-                            <div class="msg-time"><?= htmlspecialchars($ev['dthora']) ?></div>
+                            <div class="msg-time"><?= htmlspecialchars($dthoraStr) ?></div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
