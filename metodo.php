@@ -885,10 +885,12 @@ switch ($_GET['metodo']) {
             break;
         }
 
-        $sugestoes = vds_extrair_sugestoes_multa_boleto($url, $status, $dtVencimento);
+        $res = vds_extrair_sugestoes_multa_boleto($url, $status, $dtVencimento);
         echo json_encode([
             'success' => true,
-            'sugestoes' => $sugestoes
+            'sugestoes' => $res['sugestoes'] ?? [],
+            'httpCode' => $res['httpCode'] ?? 0,
+            'htmlLength' => $res['htmlLength'] ?? 0
         ], JSON_UNESCAPED_UNICODE);
         break;
 }

@@ -388,82 +388,106 @@ function vds_get_boletos_unidade($bloco, $unidade, $ano = null, $usuarioIdConsel
  * Inspeciona o espelho HTML da 2ª via do Superlógica e extrai sugestões de multa por notificação (Ex: NOT. Nº 210/26).
  */
 function vds_extrair_sugestoes_multa_boleto($urlSegundaVia, $boletoStatus = null, $boletoDtVencimento = null) {
-    if (empty($urlSegundaVia)) return [];
+    if (empty($urlSegundaVia)) return ['sugestoes' => [], 'error' => 'URL vazia'];
 
     $ch = curl_init($urlSegundaVia);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT => 4,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_ENCODING => '', // Suporte crucial a compressão GZIP / Deflate do Superlógica
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        CURLOPT_HTTPHEADER => [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+        ]
     ]);
 
     $html = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
     if ($httpCode !== 200 || empty($html)) {
-        return [];
+        return [
+            'sugestoes' => [],
+            'httpCode' => $httpCode,
+            'curlErr' => $curlErr,
+            'htmlLength' => strlen($html ?? '')
+        ];
     }
 
     $sugestoes = [];
     $link = DBConnect();
 
-    // Regex para capturar linhas de composição de itens e valores do Superlógica:
-    // <tr><td ... class="item"><strong>...</strong></td><td ... class="valor">R$764,53</td></tr>
-    $pattern = '/class=["\']item["\'][^>]*>(?:<strong[^>]*>)?([\s\S]*?)(?:<\/strong>)?<\/td>\s*<td[^>]*class=["\']valor["\'][^>]*>([\s\S]*?)<\/td>/i';
-    
-    if (preg_match_all($pattern, $html, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $m) {
-            $itemDesc = trim(strip_tags($m[1]));
-            $valorRaw = trim(strip_tags($m[2]));
-            
-            // Verificar se o texto se refere a uma Multa / Notificação (padrão numero/ano)
-            if (preg_match('/(\d+)\/(\d{2,4})/', $itemDesc, $nm)) {
-                $numero = $nm[1];
-                $rawAno = $nm[2];
-                $ano = strlen($rawAno) === 2 ? '20' . $rawAno : $rawAno;
-                
-                // Converter valor R$764,53 -> 764.53
-                $valorClean = (float)str_replace(['R$', '.', ' '], ['', '', ''], str_replace(',', '.', $valorRaw));
+    // 1. Extração iterando sobre cada tag <tr> do HTML
+    if (preg_match_all('/<tr[^>]*>([\s\S]*?)<\/tr>/i', $html, $trMatches)) {
+        foreach ($trMatches[1] as $trHtml) {
+            $itemDesc = null;
+            $valorRaw = null;
 
-                // Buscar se essa notificação existe no banco local e se já foi cobrada
-                $stmt = mysqli_prepare($link, "SELECT id, numero, ano, unidade, torre, multa_cobrada, valor, data_vencimento, data_pagamento FROM notificacoes WHERE numero = ? AND ano = ? LIMIT 1");
-                $jaLancado = false;
-                $notificacaoEncontrada = false;
-                $notificacaoId = "{$numero}/{$ano}";
+            if (preg_match('/class=["\']item["\'][^>]*>([\s\S]*?)<\/td>/i', $trHtml, $mItem)) {
+                $itemDesc = trim(strip_tags($mItem[1]));
+            }
+            if (preg_match('/class=["\']valor["\'][^>]*>([\s\S]*?)<\/td>/i', $trHtml, $mValor)) {
+                $valorRaw = trim(strip_tags($mValor[1]));
+            }
 
-                if ($stmt) {
-                    mysqli_stmt_bind_param($stmt, "ss", $numero, $ano);
-                    mysqli_stmt_execute($stmt);
-                    $res = mysqli_stmt_get_result($stmt);
-                    if ($row = mysqli_fetch_assoc($res)) {
-                        $notificacaoEncontrada = true;
-                        if (!empty($row['multa_cobrada']) && strtoupper($row['multa_cobrada']) === 'SIM' && !empty($row['valor']) && (float)$row['valor'] > 0) {
-                            $jaLancado = true;
+            if ($itemDesc && $valorRaw) {
+                // Verificar se o texto contém padrão numero/ano (Ex: 210/26 ou 155/2026)
+                if (preg_match('/(\d+)\/(\d{2,4})/', $itemDesc, $nm)) {
+                    $numero = $nm[1];
+                    $rawAno = $nm[2];
+                    $ano = strlen($rawAno) === 2 ? '20' . $rawAno : $rawAno;
+                    
+                    // Converter valor R$764,53 -> 764.53
+                    $valorClean = (float)str_replace(['R$', '.', ' '], ['', '', ''], str_replace(',', '.', $valorRaw));
+
+                    // Buscar se essa notificação existe no banco local e se já foi cobrada
+                    $stmt = mysqli_prepare($link, "SELECT id, numero, ano, unidade, torre, multa_cobrada, valor, data_vencimento, data_pagamento FROM notificacoes WHERE numero = ? AND ano = ? LIMIT 1");
+                    $jaLancado = false;
+                    $notificacaoEncontrada = false;
+                    $notificacaoId = "{$numero}/{$ano}";
+
+                    if ($stmt) {
+                        mysqli_stmt_bind_param($stmt, "ss", $numero, $ano);
+                        mysqli_stmt_execute($stmt);
+                        $res = mysqli_stmt_get_result($stmt);
+                        if ($row = mysqli_fetch_assoc($res)) {
+                            $notificacaoEncontrada = true;
+                            if (!empty($row['multa_cobrada']) && strtoupper($row['multa_cobrada']) === 'SIM' && !empty($row['valor']) && (float)$row['valor'] > 0) {
+                                $jaLancado = true;
+                            }
                         }
+                        mysqli_stmt_close($stmt);
                     }
-                    mysqli_stmt_close($stmt);
-                }
 
-                $sugestoes[] = [
-                    'numero' => $numero,
-                    'ano' => $ano,
-                    'numero_ano' => $notificacaoId,
-                    'item_descricao' => $itemDesc,
-                    'valor' => $valorClean,
-                    'valor_formatado' => 'R$ ' . number_format($valorClean, 2, ',', '.'),
-                    'boleto_status' => $boletoStatus ?? 'Desconhecido',
-                    'data_vencimento' => $boletoDtVencimento ?? date('Y-m-d'),
-                    'data_pagamento_sugerida' => (strpos(strtolower($boletoStatus ?? ''), 'liquidado') !== false || strpos(strtolower($boletoStatus ?? ''), 'pago') !== false) ? ($boletoDtVencimento ?? date('Y-m-d')) : null,
-                    'notificacao_encontrada' => $notificacaoEncontrada,
-                    'ja_lancado' => $jaLancado,
-                    'url_boleto' => $urlSegundaVia
-                ];
+                    $sugestoes[] = [
+                        'numero' => $numero,
+                        'ano' => $ano,
+                        'numero_ano' => $notificacaoId,
+                        'item_descricao' => $itemDesc,
+                        'valor' => $valorClean,
+                        'valor_formatado' => 'R$ ' . number_format($valorClean, 2, ',', '.'),
+                        'boleto_status' => $boletoStatus ?? 'Desconhecido',
+                        'data_vencimento' => $boletoDtVencimento ?? date('Y-m-d'),
+                        'data_pagamento_sugerida' => (strpos(strtolower($boletoStatus ?? ''), 'liquidado') !== false || strpos(strtolower($boletoStatus ?? ''), 'pago') !== false) ? ($boletoDtVencimento ?? date('Y-m-d')) : null,
+                        'notificacao_encontrada' => $notificacaoEncontrada,
+                        'ja_lancado' => $jaLancado,
+                        'url_boleto' => $urlSegundaVia
+                    ];
+                }
             }
         }
     }
 
     DBClose($link);
-    return $sugestoes;
+    return [
+        'sugestoes' => $sugestoes,
+        'httpCode' => $httpCode,
+        'htmlLength' => strlen($html)
+    ];
 }
