@@ -44,10 +44,37 @@ Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comun
 - **Upload de Mídia / Anexos:** `POST /upload`
   - Body: `{"base64String": "data:image/png;base64,..."}`
 
-### B. Eventos de Acesso e Portaria
-- **Listar Acessos por Período:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={YYYY-MM-DDTHH:mm}&dtFim={YYYY-MM-DDTHH:mm}`
+### B. Eventos de Acesso, Portaria e Autorizações
+- **Listar Acessos (Entradas/Saídas) por Período:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={YYYY-MM-DDTHH:mm}&dtFim={YYYY-MM-DDTHH:mm}`
 - **Listar Acessos por Unidade:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={dtInicio}&dtFim={dtFim}&unidade.bloco.uuid={blocoUuid}&unidade.uuid={unidadeUuid}`
 - **Tipos de Eventos de Acesso:** `GET /evento_tipo`
+- **Listar Autorizações de Acesso / Convites da Unidade:** `GET /autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}&dtIni={YYYY-MM-DD}&dtFim={YYYY-MM-DD}`
+  - **Diferença:** `/evento_acesso` registra os logs de passagens reais na portaria/catraca (entradas e saídas). Já `/autorizacao_acesso` retorna os convites/autorizações prévias concedidas pelos moradores para visitantes e prestadores (com `dtInicio`, `dtFim`, `documento`, `autorizadoPor`, `chave` e status).
+  - **Estrutura do Payload de Retorno (`GET /autorizacao_acesso`):**
+    ```json
+    {
+      "totalRegs": 4,
+      "page": 1,
+      "limit": 20,
+      "regs": [
+        {
+          "uuid": "3189919",
+          "nome": "NOME DO VISITANTE / PRESTADOR",
+          "foto": "/app/dados/visitante/2026/6/f-9102677.jpg",
+          "documento": { "tipo": "rg", "documento": "39888177168", "estado": null },
+          "destino": "Bloco D - 902",
+          "destinoTipo": "Unidade",
+          "status": { "uuid": "1", "nome": "Env. pend." },
+          "dtInicio": "28/03/2026 00:00",
+          "dtFim": "10/11/2026 23:59",
+          "autorizadoPor": { "uuid": null, "nome": "Nome do Morador", "foto": null },
+          "registradoPor": { "uuid": null, "nome": "Nome do Operador", "foto": null },
+          "chave": "OA59FGHM",
+          "dtHora": "28/03/2026 14:18"
+        }
+      ]
+    }
+    ```
 
 ### C. Entregas e Encomendas
 - **Listar Entregas:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc`

@@ -465,6 +465,38 @@
 						},
 						"description": "Retorna o detalhamento completo de uma entrega contendo o código rastreador (identificador), histórico de eventos (Recebido -> Entregue), dados de quem retirou (retiradoPor), foto do pacote e anexos."
 					}
+				},
+				{
+					"name": "3.4 Listar Autorizações de Acesso por Unidade",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}&dtIni=2026-07-28&dtFim=2026-07-30",
+							"host": ["{{baseUrl}}"],
+							"path": ["autorizacao_acesso"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "sortBy", "value": "nome" },
+								{ "key": "order", "value": "asc" },
+								{ "key": "Bloco.Uuid", "value": "{{blocoUuid}}" },
+								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" },
+								{ "key": "dtIni", "value": "2026-07-28" },
+								{ "key": "dtFim", "value": "2026-07-30" }
+							]
+						},
+						"description": "Retorna as autorizações de acesso e convites prévios (liberações de visitantes/prestadores) cadastrados pelos moradores da unidade."
+					}
 				}
 			]
 		},
