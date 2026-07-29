@@ -1393,7 +1393,20 @@ function linkRecursoOcorrencia($id_recurso, $id_ocorrencia)
     $id_recurso = DBEscape($id_recurso);
     $id_ocorrencia = DBEscape($id_ocorrencia);
     $sql = "INSERT IGNORE INTO recurso_ocorrencia (id_recurso, id_ocorrencia) VALUES ('$id_recurso', '$id_ocorrencia')";
-    return DBExecute($sql);
+    $res = DBExecute($sql);
+
+    // Auto-tagear a ocorrência com o bloco/unidade do recurso vinculado
+    $sqlRec = "SELECT bloco, unidade FROM recurso WHERE id = '$id_recurso' LIMIT 1";
+    $resultRec = DBExecute($sqlRec);
+    if ($resultRec && mysqli_num_rows($resultRec) > 0) {
+        $rowRec = mysqli_fetch_assoc($resultRec);
+        if (!empty($rowRec['bloco']) && !empty($rowRec['unidade'])) {
+            require_once __DIR__ . "/vds_ocorrencia_service.php";
+            vds_vincular_unidade_tag($id_ocorrencia, $rowRec['bloco'], $rowRec['unidade'], 'recurso');
+        }
+    }
+
+    return $res;
 }
 
 function getOcorrenciasVinculadas($id_recurso)

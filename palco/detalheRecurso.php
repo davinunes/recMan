@@ -49,6 +49,10 @@ $parecer = getParecer($result['numero']);
 
 if (isset($result['unidade']) && isset($result['bloco'])) {
     $historico = getNotificacoes($result['unidade'], $result['bloco']);
+    
+    // Silenciosamente verificar e resolver UUIDs do bloco e unidade na VDS (persistindo no vds_uuid_mapping)
+    require_once __DIR__ . "/../classes/vds_acesso_service.php";
+    $uuidsResolvidos = vds_resolve_bloco_unidade_uuid($result['bloco'], $result['unidade']);
 }
 
 // Busca a notificação para recuperar o artigo (em notação regimento, ex: "14.1")
@@ -641,10 +645,14 @@ if ($esseRecurso == null) {
                         } else {
                             echo '<div class="collection">';
                             foreach ($chamadosTag as $ch) {
-                                $vinculo = $ch['tipo_vinculo'] ?? 'autora';
-                                echo '<a href="livroDeOcorrencias.php?id=' . $ch['id'] . '" target="_blank" class="collection-item" style="display:flex; justify-space-between; font-size:0.85rem;">
-                                        <span><b>Prot ' . htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) . '</b> - Bloco ' . htmlspecialchars($ch['bloco']) . '/' . htmlspecialchars($ch['unidade']) . ' (' . date('d/m/Y', strtotime($ch['abertura'])) . ')</span>
-                                        <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none;">Vínculo: ' . strtoupper($vinculo) . '</span>
+                                $vinculo = $ch['vinculo_final'] ?? ($ch['tipo_vinculo'] ?? 'autora');
+                                $tagUnidStr = strtoupper(($result['bloco'] ?? '') . ($result['unidade'] ?? ''));
+                                echo '<a href="index.php?pag=livroDeOcorrencias&id=' . $ch['id'] . '" target="_blank" class="collection-item" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
+                                        <span>
+                                            <b>Prot ' . htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) . '</b> - Bloco ' . htmlspecialchars($ch['bloco']) . '/' . htmlspecialchars($ch['unidade']) . ' (' . date('d/m/Y', strtotime($ch['abertura'])) . ')
+                                            <span class="badge blue lighten-5 blue-text text-darken-3" style="float:none; margin-left:6px; font-weight:600;">Tag: ' . htmlspecialchars($tagUnidStr) . '</span>
+                                        </span>
+                                        <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none; font-weight:600;">Vínculo: ' . strtoupper($vinculo) . '</span>
                                       </a>';
                             }
                             echo '</div>';
