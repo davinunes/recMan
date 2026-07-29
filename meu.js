@@ -2045,87 +2045,8 @@ function renderSingleSuggestionRow(s) {
     $('#boletos-sugestoes-container').removeClass('hide');
 }
 
-// Manipulador do Leitor Rápido de Fatura no Navegador (Client-side)
-$(document).on('click', '#btn-parse-texto-fatura', function (e) {
-    e.preventDefault();
-    const rawText = $('#input-colar-fatura').val() || '';
-    if (!rawText.trim()) {
-        M.toast({ html: 'Cole o texto da composição do boleto no campo acima.', classes: 'amber darken-2 rounded' });
-        return;
-    }
 
-    const sugestoes = [];
-    const lines = rawText.split(/\r?\n/);
 
-    lines.forEach(function (line) {
-        if (!line.trim()) return;
-
-        const matchNum = line.match(/(\d+)\/(\d{2,4})/);
-        const matchVal = line.match(/R\$\s*([\d\.,]+)/i);
-
-        if (matchNum && matchVal) {
-            const numero = matchNum[1];
-            const rawAno = matchNum[2];
-            const ano = rawAno.length === 2 ? '20' + rawAno : rawAno;
-
-            const valorCleanStr = matchVal[1].replace(/\./g, '').replace(',', '.');
-            const valorNum = parseFloat(valorCleanStr);
-
-            if (!isNaN(valorNum) && valorNum > 0) {
-                sugestoes.push({
-                    numero: numero,
-                    ano: ano,
-                    numero_ano: `${numero}/${ano}`,
-                    item_descricao: line.trim(),
-                    valor: valorNum,
-                    valor_formatado: 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                    boleto_status: 'Extraído no Navegador',
-                    data_vencimento: moment().format('YYYY-MM-DD'),
-                    data_pagamento_sugerida: moment().format('YYYY-MM-DD'),
-                    ja_lancado: false
-                });
-            }
-        }
-    });
-
-    // Se o texto colado for contínuo (sem quebras de linha explicitas)
-    if (sugestoes.length === 0) {
-        const regexGlobal = /([\s\S]*?)(\d{1,6})\/(\d{2,4})[\s\S]*?R\$\s*([\d\.,]+)/gi;
-        let match;
-        while ((match = regexGlobal.exec(rawText)) !== null) {
-            const numero = match[2];
-            const rawAno = match[3];
-            const ano = rawAno.length === 2 ? '20' + rawAno : rawAno;
-            const valorCleanStr = match[4].replace(/\./g, '').replace(',', '.');
-            const valorNum = parseFloat(valorCleanStr);
-
-            if (!isNaN(valorNum) && valorNum > 0) {
-                sugestoes.push({
-                    numero: numero,
-                    ano: ano,
-                    numero_ano: `${numero}/${ano}`,
-                    item_descricao: `Multa Notificação #${numero}/${ano}`,
-                    valor: valorNum,
-                    valor_formatado: 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                    boleto_status: 'Extraído no Navegador',
-                    data_vencimento: moment().format('YYYY-MM-DD'),
-                    data_pagamento_sugerida: moment().format('YYYY-MM-DD'),
-                    ja_lancado: false
-                });
-            }
-        }
-    }
-
-    if (sugestoes.length > 0) {
-        sugestoes.forEach(function (s) {
-            renderSingleSuggestionRow(s);
-        });
-        M.toast({ html: `<b>${sugestoes.length}</b> sugestão(ões) extraída(s) pelo navegador!`, classes: 'green rounded' });
-        $('#input-colar-fatura').val('');
-    } else {
-        M.toast({ html: 'Nenhuma notificação com formato válido (ex: 210/26 e R$) foi encontrada no texto colado.', classes: 'orange darken-3 rounded' });
-    }
-});
 
 // Manipulador do modal de inspeção de boletos da unidade
 $(document).on('click', '.btn-inspecionar-boletos', function (e) {
@@ -2240,10 +2161,12 @@ $(document).on('click', '.btn-inspecionar-boletos', function (e) {
 
                                 elements.forEach(el => {
                                     const text = el.textContent || '';
+                                    // Filtro estrito: A linha DEVE conter termos de penalidade/multa para evitar falso-positivo em taxas mensais (ex: 08/2026)
+                                    const isMulta = /multa|infra[çc]|notifica[çc][ãa]o|not\b|penalidade|regimento|ri\b/i.test(text);
                                     const matchNum = text.match(/(\d+)\/(\d{2,4})/);
                                     const matchVal = text.match(/R\$\s*([\d\.,]+)/i);
 
-                                    if (matchNum && matchVal) {
+                                    if (isMulta && matchNum && matchVal) {
                                         const numero = matchNum[1];
                                         const rawAno = matchNum[2];
                                         const ano = rawAno.length === 2 ? '20' + rawAno : rawAno;

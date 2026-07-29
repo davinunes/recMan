@@ -461,8 +461,11 @@ function vds_extrair_sugestoes_multa_boleto($urlSegundaVia, $boletoStatus = null
         foreach ($trMatches[1] as $trHtml) {
             $textClean = trim(preg_replace('/\s+/', ' ', strip_tags($trHtml)));
 
+            // Garantir que a linha contenha termos de multa/penalidade para evitar capturar taxas ordinárias (Ex: 08/2026)
+            $isMulta = preg_match('/multa|infra[çc]|notifica[çc][ãa]o|not\b|penalidade|regimento|ri\b/i', $textClean);
+
             // Procurar se a linha possui o padrão numero/ano (Ex: 210/26 ou 155/2026) E um valor em R$
-            if (preg_match('/(\d+)\/(\d{2,4})/', $textClean, $nm) && preg_match('/R\$\s*([\d\.,]+)/i', $textClean, $vm)) {
+            if ($isMulta && preg_match('/(\d+)\/(\d{2,4})/', $textClean, $nm) && preg_match('/R\$\s*([\d\.,]+)/i', $textClean, $vm)) {
                 $numero = $nm[1];
                 $rawAno = $nm[2];
                 $ano = strlen($rawAno) === 2 ? '20' . $rawAno : $rawAno;
