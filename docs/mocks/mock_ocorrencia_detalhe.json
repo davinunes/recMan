@@ -1,0 +1,41 @@
+{
+  "uuid": "f8a912b4-5678-4cd3-8e99-0123456789ab",
+  "protocolo": "259564",
+  "titulo": "Ruído excessivo após o horário regimental",
+  "abertura": "2026-07-28T22:45:00",
+  "status": "Em Andamento",
+  "ocoTipo": 115,
+  "tipoNome": "Fale com o Conselho",
+  "condominioUuid": "c3a1b2c4-8899-4411-b223-112233445566",
+  "autor": {
+    "nome": "Carlos Eduardo Silva",
+    "bloco": "A",
+    "unidade": "102",
+    "perfilFotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/MORADOR/p-1024.jpg"
+  },
+  "eventos": [
+    {
+      "uuid": "ev-001",
+      "dthora": "2026-07-28 22:45:12",
+      "por": "Carlos Eduardo Silva",
+      "cargo": "Morador",
+      "fotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/MORADOR/p-1024.jpg",
+      "mensagem": "Gostaria de registrar barulho constante de arrastar móveis vindo da unidade 202 acima da minha a partir das 22h30.",
+      "listaAnexo": [
+        {
+          "nome": "audio_evidencia.mp3",
+          "url": "https://app1.vidadesindico.com.br/anexos/2026/07/audio_evidencia.mp3"
+        }
+      ]
+    },
+    {
+      "uuid": "ev-002",
+      "dthora": "2026-07-29 08:30:00",
+      "por": "Conselho Consultivo",
+      "cargo": "Conselheiro",
+      "fotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/PESSOA/f-501.jpg",
+      "mensagem": "Prezado morador, sua mensagem foi recebida pelo Conselho e estamos verificando o histórico da unidade citada.",
+      "listaAnexo": []
+    }
+  ]
+}

@@ -561,6 +561,101 @@ if ($esseRecurso == null) {
     }
     echo '</div>';
 
+    // --- ACELERADORES DE ANÁLISE (CONDOMÍNIO DIGITAL API v8) ---
+    require_once __DIR__ . "/../classes/vds_acesso_service.php";
+    $dataOcorrencia = !empty($result['data']) ? $result['data'] : date('Y-m-d H:i:s');
+    $dtInicio = date('Y-m-d\T00:00', strtotime($dataOcorrencia));
+    $dtFim = date('Y-m-d\T23:59', strtotime($dataOcorrencia));
+
+    $acessosUnidade = vds_get_eventos_acesso($result['bloco'], $result['unidade'], $dtInicio, $dtFim);
+    $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
+    $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
+
+    echo '<div class="card border-accent" style="margin-top: 20px; border-left: 4px solid #6f42c1;">
+            <div class="card-content" style="padding: 15px;">
+                <span class="card-title purple-text text-darken-3" style="font-size: 1.1rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
+                    <i class="material-icons">search</i> Aceleradores de Análise da Defesa (Condomínio Digital)
+                </span>
+                <p class="grey-text text-darken-1" style="font-size: 0.85rem; margin-bottom: 12px;">
+                    Registros contextuais do dia da infração (<b>' . date('d/m/Y', strtotime($dataOcorrencia)) . '</b>) para Bloco <b>' . htmlspecialchars($result['bloco']) . '</b> / Apt <b>' . htmlspecialchars($result['unidade']) . '</b>.
+                </p>
+
+                <!-- Abas dos Aceleradores -->
+                <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
+                    <li>
+                        <div class="collapsible-header" style="font-weight: 600;">
+                            <i class="material-icons purple-text">fingerprint</i> 
+                            Eventos de Acesso & Visitas (' . count($acessosUnidade) . ')
+                        </div>
+                        <div class="collapsible-body" style="padding: 10px;">';
+                        if (empty($acessosUnidade)) {
+                            echo '<p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>';
+                        } else {
+                            echo '<table class="striped responsive-table" style="font-size:0.85rem;">
+                                    <thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Foto</th></tr></thead>
+                                    <tbody>';
+                            foreach ($acessosUnidade as $acc) {
+                                echo '<tr>
+                                        <td>' . date('H:i:s', strtotime($acc['dthora'])) . '</td>
+                                        <td><b>' . htmlspecialchars($acc['pessoaNome']) . '</b> <small>(' . htmlspecialchars($acc['perfil']) . ')</small></td>
+                                        <td>' . htmlspecialchars($acc['tipoEvento']) . '</td>
+                                        <td><img src="' . htmlspecialchars($acc['fotoUrl']) . '" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"></td>
+                                      </tr>';
+                            }
+                            echo '</tbody></table>';
+                        }
+    echo '              </div>
+                    </li>
+                    <li>
+                        <div class="collapsible-header" style="font-weight: 600;">
+                            <i class="material-icons blue-text">markunread_mailbox</i> 
+                            Entregas e Encomendas (' . count($entregasUnidade) . ')
+                        </div>
+                        <div class="collapsible-body" style="padding: 10px;">';
+                        if (empty($entregasUnidade)) {
+                            echo '<p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>';
+                        } else {
+                            echo '<table class="striped responsive-table" style="font-size:0.85rem;">
+                                    <thead><tr><th>Chegada</th><th>Descrição</th><th>Destinatário</th><th>Status</th></tr></thead>
+                                    <tbody>';
+                            foreach ($entregasUnidade as $ent) {
+                                echo '<tr>
+                                        <td>' . htmlspecialchars($ent['dthoraChegada']) . '</td>
+                                        <td>' . htmlspecialchars($ent['descricao']) . '</td>
+                                        <td>' . htmlspecialchars($ent['destinatario']) . '</td>
+                                        <td><span class="badge green white-text" style="float:none; padding:2px 5px;">' . htmlspecialchars($ent['status']) . '</span></td>
+                                      </tr>';
+                            }
+                            echo '</tbody></table>';
+                        }
+    echo '              </div>
+                    </li>
+                    <li>
+                        <div class="collapsible-header" style="font-weight: 600;">
+                            <i class="material-icons orange-text">label</i> 
+                            Ocorrências Onde a Unidade é Autora ou Citada (' . count($chamadosTag) . ')
+                        </div>
+                        <div class="collapsible-body" style="padding: 10px;">';
+                        if (empty($chamadosTag)) {
+                            echo '<p class="grey-text" style="margin:0;">Nenhuma ocorrência vinculada a esta unidade.</p>';
+                        } else {
+                            echo '<div class="collection">';
+                            foreach ($chamadosTag as $ch) {
+                                $vinculo = $ch['tipo_vinculo'] ?? 'autora';
+                                echo '<a href="livroDeOcorrencias.php?id=' . $ch['id'] . '" target="_blank" class="collection-item" style="display:flex; justify-space-between; font-size:0.85rem;">
+                                        <span><b>Prot ' . htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) . '</b> - Bloco ' . htmlspecialchars($ch['bloco']) . '/' . htmlspecialchars($ch['unidade']) . ' (' . date('d/m/Y', strtotime($ch['abertura'])) . ')</span>
+                                        <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none;">Vínculo: ' . strtoupper($vinculo) . '</span>
+                                      </a>';
+                            }
+                            echo '</div>';
+                        }
+    echo '              </div>
+                    </li>
+                </ul>
+            </div>
+          </div>';
+
+
 
     echo "<h6><b>Histórico da unidade</b></h6>";
 
