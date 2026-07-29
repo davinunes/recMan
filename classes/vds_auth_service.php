@@ -253,7 +253,7 @@ function vds_refresh_token($tokenId) {
     }
 
     if ($newToken) {
-        $expiresFormatted = !empty($newExpires) ? date('Y-m-d H:i:s', strtotime($newExpires)) : date('Y-m-d H:i:s', strtotime('+4 hours'));
+        $expiresFormatted = !empty($newExpires) ? date('Y-m-d H:i:s', strtotime($newExpires)) : null;
         $stmtUp = mysqli_prepare($link, "UPDATE vds_tokens SET bearer_token = ?, refresh_token = ?, expires_at = ?, status = 'ativo', updated_at = NOW() WHERE id = ?");
         mysqli_stmt_bind_param($stmtUp, "sssi", $newToken, $newRefreshToken, $expiresFormatted, $row['id']);
         mysqli_stmt_execute($stmtUp);
@@ -261,17 +261,30 @@ function vds_refresh_token($tokenId) {
         DBClose($link);
         return $newToken;
     } else {
-        $stmtErr = mysqli_prepare($link, "UPDATE vds_tokens SET status = 'expirado' WHERE id = ?");
-        mysqli_stmt_bind_param($stmtErr, "i", $row['id']);
-        mysqli_stmt_execute($stmtErr);
-        mysqli_stmt_close($stmtErr);
         DBClose($link);
         return null;
     }
 }
 
 /**
- * Recupera o Token ativo do banco de dados com auto-renovação automática se o token estiver expirado ou prestes a expirar.
+ * Marca explicitamente um token como expirado quando a API retorna HTTP 401.
+ */
+function vds_mark_token_expired($token) {
+    if (!$token) return;
+    $link = DBConnect();
+    $stmt = mysqli_prepare($link, "UPDATE vds_tokens SET status = 'expirado' WHERE bearer_token = ?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $token);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
+    DBClose($link);
+}
+
+/**
+ * Recupera o Token ativo do banco de dados.
+ * Se $usuarioIdConselho for fornecido, busca especificamente tipo='conselheiro'.
+ * Se for null, busca especificamente tipo='condominio'.
  */
 function vds_get_token($usuarioIdConselho = null) {
     $link = DBConnect();
@@ -292,9 +305,9 @@ function vds_get_token($usuarioIdConselho = null) {
 
     $targetRow = null;
 
-    // 1. Tentar token específico do conselheiro
+    // 1. Se fornecido ID de conselheiro, buscar token do conselheiro
     if ($usuarioIdConselho) {
-        $stmt = mysqli_prepare($link, "SELECT * FROM vds_tokens WHERE usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+        $stmt = mysqli_prepare($link, "SELECT * FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "i", $usuarioIdConselho);
             mysqli_stmt_execute($stmt);
@@ -304,11 +317,19 @@ function vds_get_token($usuarioIdConselho = null) {
         }
     }
 
-    // 2. Fallback para qualquer Token cadastrado na vds_tokens (tipo 'condominio' ou mais recente)
-    if (!$targetRow) {
-        $resCond = mysqli_query($link, "SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+    // 2. Se $usuarioIdConselho for null (sistema/sincronização global), buscar especificamente o token de condomínio
+    if (!$targetRow && !$usuarioIdConselho) {
+        $resCond = mysqli_query($link, "SELECT * FROM vds_tokens WHERE tipo = 'condominio' AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         if ($resCond) {
             $targetRow = mysqli_fetch_assoc($resCond);
+        }
+    }
+
+    // 3. Fallback genérico para qualquer Token cadastrado na vds_tokens
+    if (!$targetRow) {
+        $resAny = mysqli_query($link, "SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+        if ($resAny) {
+            $targetRow = mysqli_fetch_assoc($resAny);
         }
     }
 
@@ -318,11 +339,8 @@ function vds_get_token($usuarioIdConselho = null) {
         return null;
     }
 
-    // Checar se o token já expirou ou vence nos próximos 5 minutos
-    $isExpiredByDate = !empty($targetRow['expires_at']) && (strtotime($targetRow['expires_at']) <= (time() + 300));
-    $isStatusExpired = ($targetRow['status'] === 'expirado');
-
-    if (($isExpiredByDate || $isStatusExpired) && !empty($targetRow['refresh_token'])) {
+    // Se o status local estiver marcado como 'expirado', tentar renovar via refresh_token
+    if ($targetRow['status'] === 'expirado' && !empty($targetRow['refresh_token'])) {
         $refreshedToken = vds_refresh_token($targetRow['id']);
         if ($refreshedToken) {
             return $refreshedToken;

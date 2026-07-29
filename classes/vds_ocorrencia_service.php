@@ -49,6 +49,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     curl_close($ch);
 
     if ($httpCode === 401) {
+        vds_mark_token_expired($token);
         return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao sincronizar ocorrências.'];
     }
 
