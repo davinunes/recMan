@@ -1,10 +1,8 @@
 <?php
-/**
- * Script de Sincronização Automática & Auto-Refresh de Token para Crontab
- * 
- * Exemplo de configuração no crontab do servidor (executar a cada 15 minutos):
- * */15 * * * * php /var/www/html/cron_vds_sync.php >> /var/www/html/storage/cron_vds.log 2>&1
- */
+// Script de Sincronização Automática & Auto-Refresh de Token para Crontab
+// 
+// Exemplo de configuração no crontab do servidor (executar a cada 15 minutos):
+// */15 * * * * php /var/www/html/cron_vds_sync.php >> /var/www/html/storage/cron_vds.log 2>&1
 
 if (php_sapi_name() !== 'cli' && !isset($_GET['secret_cron_key'])) {
     // Proteger acesso via web simples
