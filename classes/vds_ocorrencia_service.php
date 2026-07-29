@@ -127,8 +127,56 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
     mysqli_stmt_close($stmt);
 
     if (!$ocorrencia) {
-        DBClose($link);
-        return null;
+        $token = vds_get_token($usuarioIdConselho);
+        $protoStr = (string)$ocorrenciaId;
+        if (!empty($protoStr) && $token) {
+            $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoStr);
+            $chSearch = curl_init($urlSearch);
+            curl_setopt_array($chSearch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Origin: ' . VDS_ORIGIN_HEADER
+                ]
+            ]);
+            $respSearch = curl_exec($chSearch);
+            $codeSearch = curl_getinfo($chSearch, CURLINFO_HTTP_CODE);
+            curl_close($chSearch);
+
+            if ($codeSearch === 200 && $respSearch) {
+                $dataSearch = json_decode($respSearch, true);
+                $regsSearch = $dataSearch['regs'] ?? ($dataSearch['items'] ?? []);
+                if (!empty($regsSearch[0])) {
+                    $item = $regsSearch[0];
+                    $protocolo = $item['protocolo'] ?? $protoStr;
+                    $uuidRemoto = $item['uuid'] ?? null;
+                    $bloco = $item['bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null);
+                    $unidade = $item['unidade'] ?? ($item['unidade']['numero'] ?? null);
+                    $abertura = $item['dtExibicao'] ?? date('Y-m-d H:i:s');
+                    $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? 115));
+                    $status = $item['statusNome'] ?? 'Aberto';
+                    $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
+
+                    $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidRemoto, $protocolo, $ocoTipo, $jsonEnc);
+                    mysqli_stmt_execute($stmtIns);
+                    $newId = mysqli_insert_id($link);
+                    mysqli_stmt_close($stmtIns);
+
+                    $stmtFetch = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
+                    mysqli_stmt_bind_param($stmtFetch, "i", $newId);
+                    mysqli_stmt_execute($stmtFetch);
+                    $resFetch = mysqli_stmt_get_result($stmtFetch);
+                    $ocorrencia = mysqli_fetch_assoc($resFetch);
+                    mysqli_stmt_close($stmtFetch);
+                }
+            }
+        }
+
+        if (!$ocorrencia) {
+            DBClose($link);
+            return null;
+        }
     }
 
     $token = vds_get_token($usuarioIdConselho);

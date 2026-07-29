@@ -106,13 +106,26 @@ DBClose($link);
 
 // Ocorrência selecionada para visualização
 $selId = $_GET['id'] ?? null;
+
+// Se um protocolo foi digitado no filtro, resolve e seleciona diretamente o chamado (local ou busca VDS)
+$detalheSel = null;
+if (!empty($protoFiltro) && !$selId) {
+    $detalhePorProto = vds_get_ocorrencia_detalhe($protoFiltro, $usuarioIdConselho);
+    if ($detalhePorProto && isset($detalhePorProto['local']['id'])) {
+        $selId = $detalhePorProto['local']['id'];
+        $detalheSel = $detalhePorProto;
+    }
+}
+
 // Em telas grandes (desktop), se nenhuma foi especificada na URL, seleciona a primeira por padrão
 $isMobileView = isset($_SERVER['HTTP_USER_AGENT']) && preg_match('/Mobile|Android|iPhone/i', $_SERVER['HTTP_USER_AGENT']);
 if (!$selId && !$isMobileView && !empty($ocorrencias)) {
     $selId = $ocorrencias[0]['id'];
 }
 
-$detalheSel = $selId ? vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho) : null;
+if (!$detalheSel && $selId) {
+    $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
+}
 
 // Mapa de cores para ocoTipo
 $mapaCoresTipo = [
@@ -151,12 +164,12 @@ $mapaCoresTipo = [
     /* Responsividade Mobile (Telas até 992px) */
     @media (max-width: 992px) {
         .sidebar-feed {
-            display: <?= isset($_GET['id']) ? 'none' : 'block' ?> !important;
+            display: <?= ($selId || $detalheSel) ? 'none' : 'block' ?> !important;
             width: 100% !important;
             height: auto !important;
         }
         .chat-container {
-            display: <?= isset($_GET['id']) ? 'flex' : 'none' ?> !important;
+            display: <?= ($selId || $detalheSel) ? 'flex' : 'none' ?> !important;
             width: 100% !important;
             height: calc(100vh - 120px) !important;
         }
@@ -168,6 +181,15 @@ $mapaCoresTipo = [
         <h5 style="margin: 0; font-weight: 600; color: #333; font-size: 1.3rem;">
             <i class="material-icons left" style="color:#0d6efd;">book</i> Livro de Ocorrências (Condomínio Digital)
         </h5>
+
+        <!-- Form de Busca Direta por Protocolo -->
+        <form method="GET" action="index.php" style="display:flex; gap:6px; align-items:center; margin:0;">
+            <input type="hidden" name="pag" value="livroDeOcorrencias">
+            <input type="text" name="protocolo" placeholder="Nº do Protocolo (ex: 259564)" value="<?= htmlspecialchars($protoFiltro) ?>" style="height:32px; font-size:0.85rem; width:200px; margin:0; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+            <button type="submit" class="btn-small waves-effect waves-light blue darken-2" style="height:32px; line-height:32px; padding:0 10px;">
+                <i class="material-icons left tiny">search</i> Ir p/ Protocolo
+            </button>
+        </form>
         
         <div style="display: flex; gap: 10px; align-items: center;">
             <form method="POST" style="margin:0;">
@@ -202,6 +224,9 @@ $mapaCoresTipo = [
         <!-- Filtros Rápidos -->
         <form method="GET" action="index.php" style="padding: 10px 0;">
             <input type="hidden" name="pag" value="livroDeOcorrencias">
+            <div style="margin-bottom: 8px;">
+                <input type="text" name="protocolo" placeholder="Ir para Nº Protocolo (ex: 259564)" value="<?= htmlspecialchars($protoFiltro) ?>" style="margin:0; height:32px; font-size:0.85rem; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+            </div>
             <div class="row" style="margin-bottom: 0;">
                 <div class="input-field col s6" style="margin:0;">
                     <input type="text" name="bloco" placeholder="Bloco" value="<?= htmlspecialchars($blocoFiltro) ?>">
@@ -211,7 +236,7 @@ $mapaCoresTipo = [
                 </div>
             </div>
             <button type="submit" class="btn-small waves-effect waves-light grey darken-2" style="width:100%; margin-top:5px;">
-                Filtrar (<?= count($ocorrencias) ?> encontradas)
+                Filtrar / Ir p/ Protocolo (<?= count($ocorrencias) ?>)
             </button>
         </form>
 
