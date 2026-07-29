@@ -53,6 +53,9 @@ Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comun
 - **Listar Entregas:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc`
 - **Listar Entregas por Unidade:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
 
-### D. Estrutura Física e Boletos
+### D. Estrutura Física
 - **Listar Blocos:** `GET /bloco?Combo=True&IsAdmin=false`
 - **Listar Unidades:** `GET /unidade?Combo=True&bloco.uuid={blocoUuid}`
+
+### E. Financeiro e Boletos
+- **Listar Boletos por Unidade:** `GET /boleto?page=1&limit=20&sortBy=status&order=asc&Ano={Ano}&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`

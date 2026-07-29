@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "vds-api-v8-conselho-collection",
 		"name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
-		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas e mapeamento de blocos e unidades.",
+		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas, boletos e mapeamento de blocos e unidades.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -479,6 +479,42 @@
 							]
 						},
 						"description": "Retorna as unidades de um determinado bloco para resolução de chave composta (bloco:unidade -> UUID)."
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Financeiro e Boletos",
+			"item": [
+				{
+					"name": "5.1 Listar Boletos por Bloco e Unidade",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/boleto?page=1&limit=20&sortBy=status&order=asc&Ano=2026&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["boleto"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "sortBy", "value": "status" },
+								{ "key": "order", "value": "asc" },
+								{ "key": "Ano", "value": "2026" },
+								{ "key": "Bloco.Uuid", "value": "{{blocoUuid}}" },
+								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" }
+							]
+						},
+						"description": "Consulta os boletos e lançamentos financeiros de uma unidade filtrados por ano, bloco e unidade."
 					}
 				}
 			]
