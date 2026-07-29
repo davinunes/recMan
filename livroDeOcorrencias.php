@@ -494,10 +494,9 @@ $mapaCoresTipo = [
                                 </form>
                             <?php else: ?>
                                 <span class="green-text" style="font-weight:600;">✓ Enviado à VDS</span>
-                            <?php endif; ?>
                         </div>
                     </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
 
                 <!-- Console de Diagnóstico & Debug VDS -->
                 <?php if (!empty($_GET['debug']) || empty($eventosRemotos)): ?>
