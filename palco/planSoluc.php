@@ -122,6 +122,33 @@ require "classes/repositorio.php";
             <p class="grey-text text-darken-1 font-weight-bold">Nenhum boleto encontrado para esta unidade no ano selecionado.</p>
         </div>
 
+        <!-- Seção de Sugestões de Lançamento de Multas -->
+        <div id="boletos-sugestoes-container" class="hide" style="margin-bottom: 25px;">
+            <div class="card-panel amber lighten-5" style="border-left: 5px solid #ff9800; padding: 15px; border-radius: 8px;">
+                <h5 style="margin-top:0; font-size: 1.2rem; font-weight: bold; color: #e65100; display:flex; align-items:center; gap:8px;">
+                    <i class="material-icons">auto_awesome</i> Sugestões Automatizadas de Lançamento de Multa
+                </h5>
+                <p style="margin-bottom: 12px; font-size:0.9rem; color:#555;">
+                    Identificamos itens de penalidade no espelho da fatura Superlógica. Clique em <b>Confirmar Lançamento</b> para registrar no sistema:
+                </p>
+                <div class="table-responsive" style="overflow-x:auto;">
+                    <table class="striped centered" style="background:#fff; border-radius:6px; overflow:hidden; border: 1px solid #ffe0b2;">
+                        <thead>
+                            <tr class="amber lighten-4" style="color: #e65100; font-size: 0.85rem;">
+                                <th>Notificação</th>
+                                <th>Descrição no Boleto</th>
+                                <th>Valor Extrator</th>
+                                <th>Vencimento</th>
+                                <th>Status Fatura</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boletos-sugestoes-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="boletos-cards-container" class="row hide"></div>
     </div>
     <div class="modal-footer">

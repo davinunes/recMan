@@ -861,12 +861,28 @@ switch ($_GET['metodo']) {
         }
 
         $boletos = vds_get_boletos_unidade($bloco, $unidade, $ano);
+        
+        // Extrair sugestões automatizadas de multas do espelho HTML da 2ª via (Superlógica)
+        $sugestoes = [];
+        foreach ($boletos as $b) {
+            $url2Via = $b['urlSegundaVia'] ?? null;
+            if (!empty($url2Via)) {
+                $sug = vds_extrair_sugestoes_multa_boleto($url2Via, $b['status'] ?? null, $b['dtVencimento'] ?? null);
+                if (!empty($sug)) {
+                    foreach ($sug as $sItem) {
+                        $sugestoes[] = $sItem;
+                    }
+                }
+            }
+        }
+
         echo json_encode([
             'success' => true,
             'bloco' => $bloco,
             'unidade' => $unidade,
             'ano' => $ano,
             'count' => count($boletos),
+            'sugestoes' => $sugestoes,
             'data' => $boletos
         ], JSON_UNESCAPED_UNICODE);
         break;
