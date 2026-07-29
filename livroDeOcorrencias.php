@@ -7,7 +7,7 @@ require_once __DIR__ . "/classes/database.php";
 require_once __DIR__ . "/classes/vds_auth_service.php";
 require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 
-$usuarioIdConselho = $_SESSION['usuario_id'] ?? 1;
+$usuarioIdConselho = $_SESSION['user_id'] ?? ($_SESSION['usuario_id'] ?? 1);
 $toastAlert = vds_get_toast_alerts($usuarioIdConselho);
 
 // Visão atual (Prático = padrão; Analítico = baseado no banco local)
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'adicionar_nota_interna') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
         $texto = trim($_POST['texto'] ?? '');
-        $conselheiroNome = $_SESSION['usuario_nome'] ?? 'Conselheiro';
+        $conselheiroNome = $_SESSION['user_nome'] ?? ($_SESSION['nome'] ?? ($_SESSION['usuario_nome'] ?? 'Conselheiro'));
         
         if (!empty($texto)) {
             $resNota = vds_adicionar_nota_interna($ocorrenciaId, $usuarioIdConselho, $conselheiroNome, $texto);
@@ -583,6 +583,9 @@ $mapaCoresTipo = [
                     <?php if ($n['enviado_remoto']) continue; ?>
                     <?php
                     $avatarUser = !empty($n['conselheiro_avatar']) ? $n['conselheiro_avatar'] : '';
+                    if (empty($avatarUser) && isset($_SESSION['avatar']) && $n['conselheiro_id'] == $usuarioIdConselho) {
+                        $avatarUser = $_SESSION['avatar'];
+                    }
                     if ($avatarUser && strpos($avatarUser, 'http') !== 0 && strpos($avatarUser, '/') !== 0) {
                         $avatarUser = '/' . $avatarUser;
                     }

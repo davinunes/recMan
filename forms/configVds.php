@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . "/../classes/vds_auth_service.php";
 
-$usuarioIdConselho = $_SESSION['usuario_id'] ?? 1;
+$usuarioIdConselho = $_SESSION['user_id'] ?? ($_SESSION['usuario_id'] ?? 1);
 $msg = null;
 $msgType = 'info';
 
