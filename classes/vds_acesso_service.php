@@ -326,6 +326,84 @@ function vds_get_entrega_detalhe($uuid, $usuarioIdConselho = null) {
 }
 
 /**
+ * Consulta autorizações de acesso e convites prévios da unidade na API v8 da VDS.
+ */
+function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = null, $usuarioIdConselho = null) {
+    // 1. Resolver UUIDs de Bloco e Unidade
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+    $blocoUuid = $uuids['blocoUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+
+    if ($token) {
+        $url = VDS_BASE_URL . '/autorizacao_acesso?page=1&limit=50&sortBy=nome&order=asc';
+        if ($unidadeUuid) {
+            $url .= '&Unidade.Uuid=' . urlencode($unidadeUuid);
+        }
+        if ($blocoUuid) {
+            $url .= '&Bloco.Uuid=' . urlencode($blocoUuid);
+        }
+        if ($dtIni) {
+            $url .= '&dtIni=' . urlencode($dtIni);
+        }
+        if ($dtFim) {
+            $url .= '&dtFim=' . urlencode($dtFim);
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+            if (!empty($regs) && is_array($regs)) {
+                $processados = [];
+                foreach ($regs as $aut) {
+                    $fotoRel = $aut['foto'] ?? null;
+                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+                    
+                    $docStr = 'N/A';
+                    if (!empty($aut['documento']) && is_array($aut['documento'])) {
+                        $docTipo = strtoupper($aut['documento']['tipo'] ?? 'DOC');
+                        $docNum = $aut['documento']['documento'] ?? '';
+                        $docStr = $docTipo . ': ' . $docNum;
+                    }
+
+                    $processados[] = [
+                        'uuid' => $aut['uuid'] ?? null,
+                        'nome' => $aut['nome'] ?? 'Visitante / Prestador',
+                        'foto' => $fotoUrl,
+                        'documento' => $docStr,
+                        'destino' => $aut['destino'] ?? '',
+                        'dtInicio' => $aut['dtInicio'] ?? '',
+                        'dtFim' => $aut['dtFim'] ?? '',
+                        'autorizadoPor' => $aut['autorizadoPor']['nome'] ?? 'Morador',
+                        'registradoPor' => $aut['registradoPor']['nome'] ?? 'Portaria',
+                        'status' => $aut['status']['nome'] ?? ($aut['status'] ?? 'Ativo'),
+                        'chave' => $aut['chave'] ?? null,
+                        'dtHora' => $aut['dtHora'] ?? ''
+                    ];
+                }
+                return $processados;
+            }
+        }
+    }
+
+    return [];
+}
+
+/**
  * Busca todos os chamados/ocorrências onde a unidade é autora, reclamada, citada ou possui tag vinculada.
  */
 function vds_get_chamados_unidade($bloco, $unidade) {

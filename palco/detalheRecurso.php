@@ -571,7 +571,11 @@ if ($esseRecurso == null) {
     $dtInicio = date('Y-m-d\T00:00', strtotime($dataOcorrencia));
     $dtFim = date('Y-m-d\T23:59', strtotime($dataOcorrencia));
 
+    $dtIniJanela = date('Y-m-d', strtotime($dataOcorrencia . ' -1 day'));
+    $dtFimJanela = date('Y-m-d', strtotime($dataOcorrencia . ' +1 day'));
+
     $acessosUnidade = vds_get_eventos_acesso($result['bloco'], $result['unidade'], $dtInicio, $dtFim);
+    $autorizacoesUnidade = vds_get_autorizacoes_acesso($result['bloco'], $result['unidade'], $dtIniJanela, $dtFimJanela);
     $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
     $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
 ?>
@@ -621,6 +625,24 @@ if ($esseRecurso == null) {
             html += '<tr><td><b>Perfil / Cargo:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
             html += '<tr><td><b>Tipo de Evento:</b></td><td>' + formatObjStr(data.tipoEvento) + '</td></tr>';
             html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
+            html += '</table>';
+        } else if (tipo === 'autorizacao') {
+            html += '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Inspecionar Autorização de Acesso</h5>';
+            if (data.foto) {
+                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:180px; max-height:180px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
+            }
+            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+            html += '<tr><td style="width:35%;"><b>Visitante / Prestador:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.nome) + '</b></td></tr>';
+            if (data.documento) {
+                html += '<tr><td><b>Documento:</b></td><td>' + formatObjStr(data.documento) + '</td></tr>';
+            }
+            html += '<tr><td><b>Validade da Liberação:</b></td><td>' + formatObjStr(data.dtInicio) + ' até ' + formatObjStr(data.dtFim) + '</td></tr>';
+            html += '<tr><td><b>Autorizado Por (Morador):</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.autorizadoPor) + '</span></td></tr>';
+            html += '<tr><td><b>Cadastrado Por:</b></td><td>' + formatObjStr(data.registradoPor) + '</td></tr>';
+            if (data.chave) {
+                html += '<tr><td><b>Chave / Código QR:</b></td><td><code style="background:#e8f5e9; color:#1b5e20; padding:2px 8px; border-radius:4px; font-weight:bold;">' + data.chave + '</code></td></tr>';
+            }
+            html += '<tr><td><b>Status:</b></td><td>' + formatObjStr(data.status) + '</td></tr>';
             html += '</table>';
         } else if (tipo === 'entrega') {
             inspecionarEntregaComDetalhes(data.uuid || '', data);
@@ -760,6 +782,56 @@ if ($esseRecurso == null) {
                                             <td><?= htmlspecialchars($acc['tipoEvento']) ?></td>
                                             <td>
                                                 <span class="btn-small waves-effect waves-light purple lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons green-text">verified_user</i> 
+                        Autorizações de Acesso / Convites (<?= count($autorizacoesUnidade) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($autorizacoesUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a unidade no período.</p>
+                        <?php else: ?>
+                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Visitante / Prestador</th>
+                                        <th>Documento</th>
+                                        <th>Validade</th>
+                                        <th>Autorizado Por</th>
+                                        <th>Status</th>
+                                        <th>Inspecionar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($autorizacoesUnidade as $aut): ?>
+                                        <?php $jsonAut = htmlspecialchars(json_encode($aut, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
+                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('autorizacao', <?= $jsonAut ?>)">
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <?php if (!empty($aut['foto'])): ?>
+                                                        <img src="<?= htmlspecialchars($aut['foto']) ?>" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">
+                                                    <?php else: ?>
+                                                        <i class="material-icons grey-text tiny">person</i>
+                                                    <?php endif; ?>
+                                                    <b><?= htmlspecialchars($aut['nome']) ?></b>
+                                                </div>
+                                            </td>
+                                            <td><?= htmlspecialchars($aut['documento']) ?></td>
+                                            <td><small><?= htmlspecialchars($aut['dtInicio']) ?><br>até <?= htmlspecialchars($aut['dtFim']) ?></small></td>
+                                            <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['autorizadoPor']) ?></span></td>
+                                            <td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['status']) ?></span></td>
+                                            <td>
+                                                <span class="btn-small waves-effect waves-light green darken-1 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
                                                     Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
                                                 </span>
                                             </td>
