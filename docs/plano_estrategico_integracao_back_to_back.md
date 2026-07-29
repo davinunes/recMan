@@ -1,100 +1,157 @@
-# Plano Estratégico de Integração Back-to-Back (API v8 Vida de Síndico) no Conselho
+# Plano Estratégico de Integração Back-to-Back (API v8 Vida de Síndico) - Versão Final
 
-Este documento estabelece o plano arquitetural e de implementação para integrar o Sistema do Conselho diretamente com a API REST v8 da Vida de Síndico (`apiv8.vds.app.br`), eliminando dependências de extensões de navegador e capacitando os conselheiros com ferramentas avançadas de decisão e monitoramento.
+Este documento estabelece o plano arquitetural e de implementação reestruturado para integrar o Sistema do Conselho diretamente com a API REST v8 da Vida de Síndico (`apiv8.vds.app.br`), contemplando todas as regras de segurança, mocks de teste e sinalização visual.
 
 ---
 
-## 1. Arquitetura Geral do Sistema de Integração
+## 1. Arquitetura Geral Reestruturada
 
 ```mermaid
 graph TD
     subgraph Sistema do Conselho
-        CONFIG["Tela Config / Token Condomínio"]
-        ULTRA["Tela Ultra-Login Conselheiros"]
-        CRON["Worker / Cron Refresh Token"]
-        MAP["Tabela vds_uuid_mapping"]
-        LIVRO["Menu livroDeOcorrencias (Chat WhatsApp)"]
-        REC["Tela detalheRecurso.php (Aceleradores)"]
+        CONFIG["Tela Config / Ultra-Login Conselheiros"]
+        CRON["Sync Background (15 em 15 min) + Botão Sincronizar"]
+        LEGADO["Reaproveitamento ocorrencias (Responsabilidade Síndico/Sub & Resolvido Interno)"]
+        MAP["Tabela vds_uuid_mapping (Cache UUIDs)"]
+        LIVRO["Menu livroDeOcorrencias (Chat WhatsApp + Badges por Tipo)"]
+        NOTAS["Notas Internas (Padrão) & Postagem em 2 Fatores no Remoto"]
+        TRAVA["Trava de Segurança (Escrita APENAS no Protocolo 259564 em dev/teste)"]
+        REC["Tela detalheRecurso.php (Aceleradores de Análise)"]
     end
 
     subgraph API REST v8 (Vida de Síndico)
-        AUTH_API["/auth/anon & /login"]
-        OCOR_API["/ocorrencia & /ocorrencia/{uuid}"]
+        AUTH_API["/auth/anon & /login & Refresh Token"]
+        OCOR_API["/ocorrencia & /ocorrencia/{uuid} & /upload"]
         ACCESS_API["/evento_acesso"]
         ENT_API["/entrega"]
-        STRUC_API["/bloco & /unidade"]
     end
 
-    CONFIG -->|Login Central| AUTH_API
-    ULTRA -->|Login Conselheiro| AUTH_API
-    CRON -->|Valida & Renova 401| AUTH_API
-    LIVRO -->|Responde com Token Conselheiro| OCOR_API
-    REC -->|Busca Acessos, Visitas, Entregas| ACCESS_API
-    REC -->|Busca Chamados Vinc.| OCOR_API
-    MAP <-->|Cache de UUIDs| STRUC_API
+    CONFIG -->|Boot / Renovação Automática| AUTH_API
+    CRON -->|Sync 15min / Manual| OCOR_API
+    LIVRO -->|Cria Nota Interna Por Padrão| NOTAS
+    NOTAS -->|Sinalização Explícita (2º Fator)| TRAVA
+    TRAVA -->|Valida Protocolo = 259564 em teste| OCOR_API
+    REC -->|Consulta Acessos/Visitas/Entregas| ACCESS_API
+    LEGADO <-->|Preserva Responsabilidades & Status| LIVRO
 ```
 
 ---
 
-## 2. Decisões Arquiteturais e Destaques
+## 2. Regras Específicas de Negócio e Testes
 
-### 2.1. Tabela de Anotação/Mapeamento de UUIDs (`vds_uuid_mapping`)
-- Para evitar chamadas repetitivas de tradução de estrutura (bloco/unidade -> UUID da VDS) e resolução de usuários/entregas, o Conselho usará a tabela `vds_uuid_mapping`.
-- Suporta busca indexada pela chave composta (`bloco:unidade`, ex: `B1:102`) ou pelo ID/Protocolo interno do Conselho.
+### 2.1. Trava de Segurança para Testes de Escrita (Protocolo 259564)
+- **Protocolo Exclusivo de Testes:** Durante todo o desenvolvimento e fase de homologação, **qualquer tentativa de escrita/postagem remota de notas será RESTRITA ao Protocolo `259564`**.
+- **Trava no Backend (`vds_ocorrencia_service.php`):** Se for solicitada a publicação remota de uma nota em uma ocorrência cujo protocolo seja diferente de `259564` durante o modo de teste, a requisição remota será bloqueada com aviso seguro na interface.
 
-### 2.2. Gestão de Tokens e "Ultra-Login"
-- **Token do Condomínio (Sincronização Central):** Mantido via credencial de administração para rotinas automáticas de fundo (cron).
-- **"Ultra-Login" dos Conselheiros:**
-  - O conselheiro faz o login na VDS através de uma tela de configuração no Conselho.
-  - O sistema envia a requisição de login para a VDS e armazena **apenas o Bearer Token e UUID do conselheiro**.
-  - **A senha nunca é salva no banco.**
-  - Quando um conselheiro responde a uma ocorrência no Conselho, o sistema envia o payload à VDS autenticado com o **token individual daquele conselheiro**, registrando a autoria com precisão na VDS.
+### 2.2. Sinalizadores Visuais por Tipo/Categoria de Chamado
+- **Badges Coloridos na Interface:** Na sidebar da lista de ocorrências e no cabeçalho do Chat (`livroDeOcorrencias.php`), cada chamado terá um badge/tag com cor distinta conforme o tipo:
+  - 🟣 **`Fale com - Fale com o Conselho`**: Tag Roxa / Destaque Institucional.
+  - 🟠 **`Fale com - Monitoramento`**: Tag Laranja / Alerta de Segurança.
+  - 🔵 **`Livro de Ocorrências`**: Tag Azul / Registro Geral.
+  - 🟢 **Outros Tipos (Sugestões, Manutenção, etc.)**: Tags de categorias mapeadas.
 
-### 2.3. Menu `livroDeOcorrencias` e Chat Estilo WhatsApp
-- Interface dedicada no Conselho para gerenciar os chamados da VDS.
-- **Visualização Chat:**
-  - Mensagens do Autor (Morador/Solicitante) alinhadas à esquerda com avatar (`.../MORADOR/p-{ID}.jpg`), dados da unidade e anexos.
-  - Mensagens da Administração/Conselho alinhadas à direita com avatar (`.../PESSOA/f-{ID}.jpg`), identificando o conselheiro respondente e anexos.
-- **Suporte a Upload:** Permite anexar arquivos/fotos nas respostas utilizando a rota `/upload` da API v8.
-
-### 2.4. Tags de Unidades e Links com Recursos/Notificações
-- **Vínculos / Tags de Unidades (`ocorrencia_unidade_tag`):** Permite vincular uma ocorrência a uma ou mais unidades (além da autora). Exemplo: ocorrência registrada pela portaria a respeito de barulho vindo da Unidade 204.
-- **Vínculo com Recursos/Notificações (`ocorrencia_recurso_link`):** Associa um chamado da VDS diretamente a uma Notificação ou Recurso em andamento no Conselho.
-
-### 2.5. Aceleradores na Tela de Análise de Recurso (`palco/detalheRecurso.php`)
-Ao julgar um recurso no Conselho, o conselheiro terá um painel contextual que busca em tempo real (com cache local via UUIDs):
-1. **Eventos de Acesso na Data do Ocorrido:** Entradas/saídas de moradores, biometrias, portaria e veículos no dia/horário da infração (`GET /evento_acesso`).
-2. **Visitas e Prestadores:** Registros de visitantes que acessaram a unidade na data, com foto do visitante.
-3. **Histórico de Chamados:** Todos os chamados abertos **pela** unidade ou **contra/citando** a unidade.
-4. **Encomendas Recentes:** Entregas e correspondências recebidas/retiradas nas proximidades da ocorrência.
+### 2.3. Mocks JSON de Resposta (`docs/mocks/`)
+- Antes do desenvolvimento de layout final do Chat WhatsApp e Aceleradores, salvaremos amostras completas das respostas de API em `docs/mocks/`:
+  - `mock_ocorrencia_detalhe.json`
+  - `mock_evento_acesso.json`
+  - `mock_entrega.json`
 
 ---
 
-## 3. Estrutura de Arquivos a Serem Criados/Modificados
+## 3. Decisões Arquiteturais Consolidadas
 
-### Banco de Dados
-- `migrate_vds_integration.php`: Script SQL/PHP para criação das tabelas (`vds_uuid_mapping`, `vds_tokens`, `ocorrencia_unidade_tag`, `ocorrencia_recurso_link`).
+### 3.1. Periodicidade do Sync & Sincronização Sob Demanda
+- **Background Cron Job:** Execução automática a cada **15 minutos**.
+- **Botão "Sincronizar Agora":** Presente no cabeçalho da tela `livroDeOcorrencias.php` para acionamento imediato.
 
-### Backend / Services
-- `classes/vds_auth_service.php`: Serviço central de autenticação, renovação de tokens (tratamento de HTTP 401 retry) e execução de requisições.
-- `classes/vds_ocorrencia_service.php`: Serviço para consulta, resposta com token do conselheiro, upload de mídias e tagging.
-- `classes/vds_acesso_service.php`: Serviço para consulta de acessos, visitas e entregas por unidade/período.
+### 3.2. Gestão de Tokens, Toast/Banner e Renovação Automática
+- **Alertas Visual:** Notificações tipo **Toast/Banner** no topo do painel quando o token precisar de renovação.
+- **Refresh Automático:** Validação via `GET /usuario/status` e renovação transparente com interceptador 401.
 
-### Frontend / Telas
-- `forms/configVds.php`: Tela de configuração de sincronização do Condomínio e Ultra-Login do conselheiro.
-- `livroDeOcorrencias.php`: Interface principal do livro de ocorrências com feed e layout Chat WhatsApp.
-- `palco/detalheRecurso.php`: Adição dos Aceleradores de Análise de Recurso.
+### 3.3. Notas Internas por Padrão & Resposta em 2 Fatores
+- **1º Fator:** Toda nota é gravada **somente no banco do Conselho** (`ocorrencia_notas_internas`).
+- **2º Fator:** Ação explícita **"Publicar no Sistema Remoto (VDS)"**, que dispara a postagem usando o **Bearer Token do Conselheiro logado**.
 
-### Skills
-- `skills/vds_uuid_mapper/SKILL.md`: Padrões e convenções para resolução e cache de UUIDs remotos.
-- `skills/vds_chat_component/SKILL.md`: Padrões de UI/UX para o chat estilo WhatsApp.
-- `skills/recurso_accelerators/SKILL.md`: Padrões de agregação contextual de dados em julgamentos do Conselho.
+### 3.4. Reaproveitamento do Legado (`ocorrenciasCondominioDigital`)
+- Evolução da tabela `ocorrencias` existente no banco de dados do Conselho:
+  - Manutenção do campo `responsabilidade` (`sindico`, `sub`, `adm`, `nenhum`).
+  - Manutenção do status de `resolvido` interno (0 ou 1).
+  - Preservação da compatibilidade com `quantitativos.php` e `relatorio.php`.
 
 ---
 
-## 4. Plano de Validação e Testes
+## 4. Detalhamento dos Componentes
 
-1. **Teste de Autenticação & Retry 401:** Script CLI verificando fluxo `/auth/anon` -> `/login` e renovação sob demanda.
-2. **Teste de Ultra-Login:** Validação de login individual de conselheiro sem armazenamento de senha.
-3. **Teste de Resposta com Token do Conselheiro:** Envio de mensagem de teste e conferência da autoria na VDS.
-4. **Teste de Aceleradores em `detalheRecurso.php`:** Conferência de carregamento de acessos e visitas da unidade na data estipulada.
+---
+
+### Componente 1: Banco de Dados (`migrate_vds_integration.php`)
+
+#### [NEW] [migrate_vds_integration.php](file:///e:/DEV/recMan/migrate_vds_integration.php)
+1. **`ALTER TABLE ocorrencias`**:
+   - Adicionar `uuid_remoto`, `protocolo_vds`, `tipo_categoria`, `dados_json`.
+2. **`vds_uuid_mapping`**: Cache de UUIDs (`bloco:unidade`, pessoas, condomínio).
+3. **`vds_tokens`**: Bearer Tokens do Condomínio e dos Conselheiros (Ultra-Login).
+4. **`ocorrencia_notas_internas`**: Armazenamento local das notas com flag `enviado_remoto`.
+5. **`ocorrencia_unidade_tag`** & **`ocorrencia_recurso_link`**: Tags de unidades e vínculos com recursos/notificações.
+
+---
+
+### Componente 2: Serviços Backend (`classes/`)
+
+#### [NEW] [vds_auth_service.php](file:///e:/DEV/recMan/classes/vds_auth_service.php)
+Gestão de sessão, refresh automático e emissão de alertas em Toast/Banner.
+
+#### [NEW] [vds_ocorrencia_service.php](file:///e:/DEV/recMan/classes/vds_ocorrencia_service.php)
+Consulta de ocorrências, busca por protocolo, postagem de notas com **trava para o protocolo `259564` em modo de teste** e upload de mídias (`POST /upload`).
+
+---
+
+### Componente 3: Menu `livroDeOcorrencias` & Chat com Badges e 2 Fatores
+
+#### [NEW] [livroDeOcorrencias.php](file:///e:/DEV/recMan/livroDeOcorrencias.php)
+- **Cabeçalho:** Botão **"Sincronizar Agora"**, seletores de **Responsabilidade** (`Síndico`, `Subsíndico`, `ADM`).
+- **Sidebar & Feed:** Ocorrências acompanhadas de **Badges Visuais por Categoria** (`Fale com o Conselho`, `Monitoramento`, `Livro de Ocorrências`, etc.).
+- **Chat WhatsApp Reestruturado:**
+  - Balões à esquerda para o Autor (morador) com foto de perfil (`.../MORADOR/p-{ID}.jpg`).
+  - Notas Internas (Padrão) alinhadas ao centro/direita com destaque de conselheiro autor.
+  - Botão **"Publicar no Sistema Remoto (VDS)" (2º Fator)** com validação do protocolo `259564` na fase de homologação.
+
+---
+
+### Componente 4: Aceleradores na Tela de Análise de Recurso (`palco/detalheRecurso.php`)
+
+#### [MODIFY] [detalheRecurso.php](file:///e:/DEV/recMan/palco/detalheRecurso.php)
+Widget **"Aceleradores de Análise (Condomínio Digital)"**:
+1. **Acessos da Unidade:** Entradas/saídas na data/hora do fato gerador.
+2. **Visitas & Prestadores:** Fotos e nomes de visitantes no dia do ocorrido.
+3. **Histórico de Chamados:** Chamados onde a unidade é autora, reclamada ou citada (`ocorrencia_unidade_tag`).
+4. **Entregas:** Correspondências recentes.
+
+---
+
+### Componente 5: Mocks e Skills
+
+#### [NEW] [docs/mocks/](file:///e:/DEV/recMan/docs/mocks/)
+Arquivos JSON de retorno de amostra das chamadas REST.
+
+#### [NEW] [skills/vds_uuid_mapper/SKILL.md](file:///e:/DEV/recMan/skills/vds_uuid_mapper/SKILL.md)
+Cache local e resolução de UUIDs VDS.
+
+#### [NEW] [skills/vds_chat_component/SKILL.md](file:///e:/DEV/recMan/skills/vds_chat_component/SKILL.md)
+Layout Chat WhatsApp, badges por categoria e fluxo de publicação em 2 fatores.
+
+#### [NEW] [skills/recurso_accelerators/SKILL.md](file:///e:/DEV/recMan/skills/recurso_accelerators/SKILL.md)
+Consultas aceleradas de prova na análise de recursos.
+
+---
+
+## 5. Plano de Validação e Testes
+
+1. **Captura de Mocks:** Gerar JSONs em `docs/mocks/` para validação offline dos componentes.
+2. **Teste da Trava de Escrita (Protocolo 259564):**
+   - Tentar publicar nota remota no protocolo `259564` -> **Permitido com sucesso**.
+   - Tentar publicar nota remota em qualquer outro protocolo durante a fase de teste -> **Bloqueado com aviso visual seguro**.
+3. **Teste de Badges por Categoria:** Verificar renderização correta das tags coloridas por tipo de chamado na lista.
+4. **Teste de Sync Fundo (15 min) & Manual:** Cron automático e botão "Sincronizar Agora".
+5. **Teste de Toast/Banner e Token:** Expiração forçada e refresh automático.
+6. **Teste de Compatibilidade Legada:** Validação contínua de `quantitativos.php` e `relatorio.php`.
