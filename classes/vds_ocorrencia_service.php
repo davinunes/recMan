@@ -61,10 +61,20 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     foreach ($items as $item) {
         $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
         $protocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? null);
-        $uuidRemoto = $item['uuid'] ?? ($item['Uuid'] ?? null);
         $bloco = $item['bloco'] ?? ($item['Bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null));
         $unidade = $item['unidade'] ?? ($item['Unidade'] ?? ($item['unidade']['numero'] ?? null));
-        $abertura = $item['dtExibicao'] ?? ($item['abertura'] ?? date('Y-m-d H:i:s'));
+        if (empty($bloco)) { $bloco = 'Z'; }
+        if (empty($unidade)) { $unidade = '999'; }
+
+        $rawDt = $item['dtExibicao'] ?? ($item['abertura'] ?? null);
+        if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
+            $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+        } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
+            $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
+        } else {
+            $abertura = date('Y-m-d H:i:s');
+        }
+
         $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
         $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
 
@@ -197,9 +207,21 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     $realOcoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
                     $realProtocolo = $item['protocolo'] ?? $protoSearch;
                     $realUuid = $item['uuid'] ?? null;
+                    
                     $bloco = $item['bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null);
                     $unidade = $item['unidade'] ?? ($item['unidade']['numero'] ?? null);
-                    $abertura = $item['dtExibicao'] ?? date('Y-m-d H:i:s');
+                    if (empty($bloco)) { $bloco = 'Z'; }
+                    if (empty($unidade)) { $unidade = '999'; }
+
+                    $rawDt = $item['dtExibicao'] ?? ($item['dthora'] ?? null);
+                    if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
+                        $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+                    } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
+                        $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
+                    } else {
+                        $abertura = date('Y-m-d H:i:s');
+                    }
+
                     $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? 115));
                     $status = $item['statusNome'] ?? 'Aberto';
                     $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
@@ -207,7 +229,9 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     if ($ocorrencia) {
                         $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
                         mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $ocorrencia['id']);
-                        mysqli_stmt_execute($stmtUp);
+                        if (!mysqli_stmt_execute($stmtUp)) {
+                            $debug['error_log'][] = "Erro MySQL UPDATE: " . mysqli_stmt_error($stmtUp);
+                        }
                         mysqli_stmt_close($stmtUp);
 
                         $ocorrencia['uuid_remoto'] = $realUuid;
@@ -225,7 +249,9 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                         if ($rowCheck) {
                             $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
                             mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $realOcoId);
-                            mysqli_stmt_execute($stmtUp);
+                            if (!mysqli_stmt_execute($stmtUp)) {
+                                $debug['error_log'][] = "Erro MySQL UPDATE (rowCheck): " . mysqli_stmt_error($stmtUp);
+                            }
                             mysqli_stmt_close($stmtUp);
                             $targetId = $realOcoId;
                         } else {
@@ -236,7 +262,9 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                                 $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                 mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $realUuid, $realProtocolo, $ocoTipo, $jsonEnc);
                             }
-                            mysqli_stmt_execute($stmtIns);
+                            if (!mysqli_stmt_execute($stmtIns)) {
+                                $debug['error_log'][] = "Erro MySQL INSERT ocorrencia: " . mysqli_stmt_error($stmtIns);
+                            }
                             $targetId = ($realOcoId > 0) ? $realOcoId : mysqli_insert_id($link);
                             mysqli_stmt_close($stmtIns);
                         }
