@@ -420,11 +420,11 @@ $mapaCoresTipo = [
                     }
                 }
 
-                // Coletar IDs de eventos VDS que pertencem a notas internas já publicadas pelo Conselho
-                $publishedEventIds = [];
+                // Mapear IDs de eventos VDS publicados pelo Conselho => nome do conselheiro
+                $publishedEventMap = [];
                 foreach ($notas as $n) {
                     if (!empty($n['vds_evento_uuid'])) {
-                        $publishedEventIds[] = (string)$n['vds_evento_uuid'];
+                        $publishedEventMap[(string)$n['vds_evento_uuid']] = $n['conselheiro_nome'] ?? 'Conselheiro';
                     }
                 }
                 ?>
@@ -433,10 +433,7 @@ $mapaCoresTipo = [
                     <?php foreach ($eventosRemotos as $ev): ?>
                         <?php
                         $evId = (string)($ev['ocorrencia'] ?? ($ev['ocorrenciaId'] ?? ($ev['id'] ?? '')));
-                        if ($evId && in_array($evId, $publishedEventIds)) {
-                            // Evento remoto é exatamente a Nota Interna publicada pelo Conselho: ignora para evitar duplicação visual
-                            continue;
-                        }
+                        $conselheiroAutor = ($evId && isset($publishedEventMap[$evId])) ? $publishedEventMap[$evId] : null;
 
                         $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
                         $cargo = $ev['cargo'] ?? 'Morador';
@@ -495,19 +492,28 @@ $mapaCoresTipo = [
                                 </div>
                             <?php endif; ?>
 
-                            <div class="msg-time"><?= htmlspecialchars($dthoraStr) ?></div>
+                            <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><?= htmlspecialchars($dthoraStr) ?></span>
+                                <?php if ($conselheiroAutor): ?>
+                                    <span style="background:#e8f5e9; color:#2e7d32; padding:2px 6px; border-radius:3px; font-size:0.7rem; font-weight:600;">
+                                        <i class="material-icons tiny" style="vertical-align:middle;">person</i>
+                                        Publicado por <?= htmlspecialchars($conselheiroAutor) ?> (Conselho)
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
 
-                <!-- Notas Internas do Conselho -->
+                <!-- Notas Internas do Conselho (somente as NÃO publicadas no remoto) -->
                 <?php foreach ($notas as $n): ?>
-                    <div class="msg-bubble <?= $n['enviado_remoto'] ? 'msg-right' : 'msg-internal' ?>">
+                    <?php if ($n['enviado_remoto']) continue; ?>
+                    <div class="msg-bubble msg-internal">
                         <div class="msg-author">
                             <span>
-                                <i class="material-icons tiny"><?= $n['enviado_remoto'] ? 'cloud_done' : 'lock_outline' ?></i> 
+                                <i class="material-icons tiny">lock_outline</i> 
                                 <?= htmlspecialchars($n['conselheiro_nome']) ?> 
-                                <small>(<?= $n['enviado_remoto'] ? 'Publicado no Remoto' : 'Nota Interna do Conselho' ?>)</small>
+                                <small>(Nota Interna do Conselho)</small>
                             </span>
                         </div>
                         <div><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
@@ -515,17 +521,13 @@ $mapaCoresTipo = [
                         <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
                             <span><?= htmlspecialchars($n['created_at']) ?></span>
                             
-                            <?php if (!$n['enviado_remoto']): ?>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="action" value="publicar_remoto">
-                                    <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
-                                    <button type="submit" class="btn-small orange white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:3px;">
-                                        Publicar no Remoto (VDS) <i class="material-icons right tiny">send</i>
-                                    </button>
-                                </form>
-                            <?php else: ?>
-                                <span class="green-text" style="font-weight:600;">✓ Enviado à VDS</span>
-                            <?php endif; ?>
+                            <form method="POST" style="margin:0;">
+                                <input type="hidden" name="action" value="publicar_remoto">
+                                <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
+                                <button type="submit" class="btn-small orange white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:3px;">
+                                    Publicar no Remoto (VDS) <i class="material-icons right tiny">send</i>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 <?php endforeach; ?>
