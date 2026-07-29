@@ -1,45 +1,51 @@
 ---
 name: vds_chat_component
-description: Diretrizes de UI/UX e componentes de layout para renderização de ocorrências em formato de Chat estilo WhatsApp, notas internas com publicação em 2 fatores e badges visuais por categoria de chamado (ocoTipo).
+description: Diretrizes de UI/UX e componentes de layout para renderização de ocorrências em formato de Chat estilo WhatsApp, com suporte às Visões Prática (VDS Não Lidos) e Analítica (Banco Local), marcação de leitura remota (PUT /ocorrencia/leitura), botão toggle de leitura e tags inteligentes.
 ---
 
-# Skill: Layout de Chat Estilo WhatsApp & Badges de Categoria
+# Skill: Layout de Chat Estilo WhatsApp & Componente de Ocorrências
 
-Esta skill define os padrões de design, estrutura HTML/CSS e lógica JS para exibir o histórico de mensagens de ocorrências vindas da API v8 Vida de Síndico.
+Esta skill define os padrões de design, estrutura HTML/CSS e lógica JS/PHP para exibir o histórico de mensagens de ocorrências vindas da API v8 Vida de Síndico.
 
-## 1. Mapeamento Visual de Categorias de Ocorrência (`ocoTipo`)
+## 1. Visões do Sistema (Prática vs Analítica)
 
-Cada ocorrência possui uma categoria (`ocoTipo`). As categorias conhecidas devem ser renderizadas com badges coloridos no feed e no cabeçalho do Chat:
+- **Visão Prática (`visao=pratico` - PADRÃO):**
+  - Consulta chamados não lidos diretamente na VDS (`GET /ocorrencia?Lida=0`).
+  - Cada chamado exibido é persistido/atualizado automaticamente no banco local.
+  - Ao marcar como lido, o chamado é atualizado via `PUT /ocorrencia/leitura/{uuid}` e **removido dinamicamente da lista de não lidos**, proporcionando uma navegação ultra-fluida.
 
-| ocoTipo | Nome da Categoria | Estilo do Badge / Cor |
-|---|---|---|
-| **115** | Fale com o Conselho | 🟣 Purple (`#6f42c1`) |
-| **247** | Monitoramento | 🟠 Orange (`#fd7e14`) |
-| **114** | Livro de ocorrência | 🔵 Blue (`#0d6efd`) |
-| **86** | Fale com o Síndico | 🔴 Red / Crimson (`#dc3545`) |
-| **109** | Fale com o Síndico de Bloco | 🔴 Dark Red (`#b02a37`) |
-| **102** | Fale com a Administração | 🟢 Teal / Green (`#20c997`) |
-| **145** | Fale com a Mensageria | 🟡 Yellow / Amber (`#ffc107`) |
-| **87** | Fale com a Portaria | 🟤 Brown (`#795548`) |
-| **126** | Fale com a Supervisão | 🔷 Cyan (`#0dcaf0`) |
-| **172** | Suporte ao Controle de Acesso | ⚙️ Dark Gray (`#495057`) |
-| *Outros* | Categoria Genérica | ⚪ Neutral Gray (`#6c757d`) |
+- **Visão Analítica (`visao=analitico`):**
+  - Consulta o banco de dados local `ocorrencias`.
+  - Exibe por padrão chamados não resolvidos (`resolvido IS NULL OR resolvido = 0`).
 
-*Nota: Se um novo `ocoTipo` for retornado pela VDS, o sistema o anotará localmente em `vds_uuid_mapping` com `entidade_tipo = 'categoria_ocorrencia'` e renderizará o badge cinza neutro padrão.*
+---
 
-## 2. Regras Visuais e Alinhamento de Balões no Chat
+## 2. Ações Rápidas no Cabeçalho do Chat
 
-- **Esquerda (Autor / Solicitante / Morador):**
-  - **Fundo do Balão:** Verde claro suave (`#E7FFDB`) ou cinza neutro.
-  - **Avatar:** URL da foto do morador (`.../MORADOR/p-{ID}.jpg`).
-  - **Cabeçalho:** Nome do Morador + Bloco / Unidade.
+1. **Responsabilidade Dropdown:** Permite atribuir rapidamente o chamado a `Conselho`, `Síndico`, `Subsíndico`, `Administradora`, `Operacional` ou `Jurídico`.
+2. **Botão Toggle Resolvido (Local):** Alterna o status local entre Resolvido e Aberto (`resolvido = 1` ou `0`).
+3. **Botão Toggle Leitura (VDS Remoto):**
+   - Se **Não Lido**: Exibe `Marcar Lido (VDS)` (botão `teal` / ícone `mark_email_read`).
+   - Se **Lido**: Exibe `Marcar NÃO Lido (VDS)` (botão `orange` / ícone `mark_email_unread`).
 
-- **Centro / Notas Internas do Conselho (1º Fator - Padrão):**
-  - **Fundo do Balão:** Amarelo pastel ou Azul claro destacado com aviso "Nota Interna do Conselho".
-  - **Visibilidade:** Salva **apenas no banco do Conselho**. Morador não visualiza.
-  - **Ação:** Botão **"Publicar no Sistema Remoto (VDS)"** (2º Fator).
+---
 
-- **Direita / Mensagens Publicadas no Remoto:**
-  - **Fundo do Balão:** Azul escuro/Verde WhatsApp (`#DCF8C6`).
-  - **Avatar:** URL da foto do conselheiro/pessoa (`.../PESSOA/f-{ID}.jpg`).
-  - **Status:** Ícone de confirmação de publicação remota.
+## 3. Tagging Inteligente (Input Único)
+
+Substitui seletores complexos por um campo de texto único `<input name="tag_input" />`:
+- **Padrão Unidade** (ex: `B1108`, `Bl. A 102`, `1108`): auto-detecta e gera badge `🏢 Bloco B - Apt 1108`.
+- **Padrão Notificação / Recurso** (ex: `123/2026`, `45/26`): auto-detecta e gera badge `📋 Notificação 123/2026`.
+- **Tag Genérica** (ex: `Vazamento`): gera badge `🏷️ Vazamento`.
+
+---
+
+## 4. Regras Visuais e Resposta em 2 Fatores
+
+- **Notas Internas (1º Fator):**
+  - Salva localmente em `ocorrencia_notas_internas` com `enviado_remoto = 0`.
+  - Exibida no balão pastel com o botão **"Publicar no Remoto (VDS)"**.
+
+- **Publicação Remota (2º Fator):**
+  - Dispara `POST /ocorrencia/comentario` na VDS.
+  - Grava o ID do comentário VDS em `vds_evento_uuid`.
+  - A nota sai do bloco interno e é exibida no feed remoto com a anotação visual `Publicado por [Conselheiro] (Conselho)`.

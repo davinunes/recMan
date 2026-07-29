@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "vds-api-v8-conselho-collection",
 		"name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
-		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo), portaria, entregas e mapeamento de blocos e unidades.",
+		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas e mapeamento de blocos e unidades.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -28,7 +28,7 @@
 		},
 		{
 			"key": "ocorrenciaUuid",
-			"value": "f8a912b4-5678-4cd3-8e99-0123456789ab",
+			"value": "6c1da1e7-c49b-4623-bfb7-2775999f3f64",
 			"type": "string"
 		},
 		{
@@ -135,7 +135,37 @@
 			"name": "2. Ocorrências e Fale Com",
 			"item": [
 				{
-					"name": "2.1 Listar Ocorrências (Geral / Busca)",
+					"name": "2.1 Listar Ocorrências Não Lidas (Modo Prático)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "50" },
+								{ "key": "sortBy", "value": "dtExibicao" },
+								{ "key": "order", "value": "asc" },
+								{ "key": "Lida", "value": "0" },
+								{ "key": "Caixa", "value": "0" }
+							]
+						},
+						"description": "Retorna os chamados pendentes não lidos para a Visão Prática usando o token do conselheiro."
+					}
+				},
+				{
+					"name": "2.2 Listar Todas as Ocorrências (Sincronização Global)",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -161,11 +191,11 @@
 								{ "key": "Lida", "value": "9" }
 							]
 						},
-						"description": "Retorna o feed de ocorrências com status, autor, unidade e categoria."
+						"description": "Retorna todas as ocorrências do condomínio (lidas e não lidas) para sincronização de fundo."
 					}
 				},
 				{
-					"name": "2.2 Buscar Ocorrência por Protocolo (Ex: 259564)",
+					"name": "2.3 Buscar Ocorrência por Protocolo (Ex: 259564)",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -196,7 +226,7 @@
 					}
 				},
 				{
-					"name": "2.3 Obter Detalhes e Chat da Ocorrência por UUID",
+					"name": "2.4 Obter Detalhes e Chat da Ocorrência por UUID",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -218,7 +248,7 @@
 					}
 				},
 				{
-					"name": "2.4 Enviar Mensagem/Resposta na Ocorrência",
+					"name": "2.5 Publicar Resposta / Comentário em Ocorrência",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -237,18 +267,70 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"ocorrenciaPaiId\": 51970481,\n  \"ocorrenciaUuid\": \"{{ocorrenciaUuid}}\",\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
+							"raw": "{\n  \"uuid\": \"{{ocorrenciaUuid}}\",\n  \"ocorrenciaPaiId\": 51970481,\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/ocorrencia",
+							"raw": "{{baseUrl}}/ocorrencia/comentario",
 							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia"]
+							"path": ["ocorrencia", "comentario"]
 						},
-						"description": "Publica uma resposta na ocorrência enviando ocorrenciaPaiId ou ocorrenciaUuid."
+						"description": "Publica um comentário/resposta em uma ocorrência existente na VDS."
 					}
 				},
 				{
-					"name": "2.5 Upload de Imagem / Anexo (Base64)",
+					"name": "2.6 Alternar Estado de Leitura (PUT /ocorrencia/leitura)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Content-Length",
+								"value": "0"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia/leitura/{{ocorrenciaUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia", "leitura", "{{ocorrenciaUuid}}"]
+						},
+						"description": "Executa o toggle de marcação de leitura na VDS (Lido x Não Lido)."
+					}
+				},
+				{
+					"name": "2.7 Marcar como Visualizada (PUT /ocorrencia/visualizar)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{bearerToken}}"
+							},
+							{
+								"key": "Content-Length",
+								"value": "0"
+							},
+							{
+								"key": "Origin",
+								"value": "{{origin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ocorrencia/visualizar/{{ocorrenciaUuid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ocorrencia", "visualizar", "{{ocorrenciaUuid}}"]
+						},
+						"description": "Marca a ocorrência como visualizada pelo usuário."
+					}
+				},
+				{
+					"name": "2.8 Upload de Imagem / Anexo (Base64)",
 					"request": {
 						"method": "POST",
 						"header": [
