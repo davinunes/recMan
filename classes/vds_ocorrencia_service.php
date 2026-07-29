@@ -400,7 +400,7 @@ function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroN
 function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
     $link = DBConnect();
 
-    $stmt = mysqli_prepare($link, "SELECT n.*, o.uuid_remoto FROM ocorrencia_notas_internas n JOIN ocorrencias o ON o.id = n.ocorrencia_id WHERE n.id = ? LIMIT 1");
+    $stmt = mysqli_prepare($link, "SELECT n.*, o.id as local_oco_id, o.uuid_remoto, o.dados_json FROM ocorrencia_notas_internas n JOIN ocorrencias o ON o.id = n.ocorrencia_id WHERE n.id = ? LIMIT 1");
     mysqli_stmt_bind_param($stmt, "i", $notaId);
     mysqli_stmt_execute($stmt);
     $res = mysqli_stmt_get_result($stmt);
@@ -410,6 +410,17 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
     if (!$nota) {
         DBClose($link);
         return ['success' => false, 'message' => 'Nota interna não encontrada.'];
+    }
+
+    // Resolvendo o ID remoto real da VDS
+    $remoteOcoId = (int)$nota['local_oco_id'];
+    if (!empty($nota['dados_json'])) {
+        $dataDec = json_decode($nota['dados_json'], true);
+        if (!empty($dataDec['ocorrenciaId'])) {
+            $remoteOcoId = (int)$dataDec['ocorrenciaId'];
+        } elseif (!empty($dataDec['id'])) {
+            $remoteOcoId = (int)$dataDec['id'];
+        }
     }
 
     // TRAVA DE SEGURANÇA PARA TESTES DE ESCRITA
@@ -429,14 +440,16 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         return ['success' => false, 'message' => 'Nenhum token ativo para publicar no remoto.'];
     }
 
-    // Enviar mensagem/comentário para a API VDS (Endpoint: POST /ocorrencia com ocorrenciaPaiId ou ocorrenciaUuid)
-    $payload = json_encode([
-        'ocorrenciaPaiId' => (int)($nota['ocorrencia_id'] ?? 0),
-        'ocorrenciaUuid' => $nota['uuid_remoto'],
-        'mensagem' => $nota['texto']
-    ]);
+    // Enviar mensagem/comentário para a API VDS (Endpoint: POST /ocorrencia/comentario)
+    $payloadData = [
+        'uuid' => $nota['uuid_remoto'],
+        'mensagem' => $nota['texto'],
+        'ocorrenciaPaiId' => $remoteOcoId
+    ];
 
-    $ch = curl_init(VDS_BASE_URL . '/ocorrencia');
+    $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
+
+    $ch = curl_init(VDS_BASE_URL . '/ocorrencia/comentario');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
@@ -458,11 +471,11 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         mysqli_stmt_execute($stmtUp);
         mysqli_stmt_close($stmtUp);
         DBClose($link);
-        return ['success' => true, 'message' => 'Nota publicada com sucesso no sistema remoto!'];
+        return ['success' => true, 'message' => "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId})!"];
     }
 
     DBClose($link);
-    return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao enviar mensagem para a VDS (' . $httpCode . ').'];
+    return ['success' => false, 'httpCode' => $httpCode, 'message' => "Erro ao enviar mensagem para a VDS ({$httpCode}). Resposta: " . substr($response, 0, 300)];
 }
 
 /**
