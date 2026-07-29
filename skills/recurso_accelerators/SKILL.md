@@ -21,6 +21,10 @@ Ao analisar uma notificação/multa objeto de recurso, o Conselho precisa correl
    - Exibir ocorrências onde a unidade é autora, ré ou citada (`ocorrencia_unidade_tag`).
 5. **Entregas e Encomendas:**
    - Entregas recebidas/retiradas no período para a unidade.
+6. **Auditoria Financeira & Detecção de Multa/RI em Boletos (`GET /boleto`):**
+   - Buscar os boletos da unidade (`Ano`, `Bloco.Uuid`, `Unidade.Uuid`).
+   - Verificar se o boleto do mês/ano correspondente à notificação possui lançamento de penalidade disciplinar.
+   - Seguir o link `urlSegundaVia` (Superlógica) para efetuar o scraping em HTML (`-FaturaHtml-flSegundaVia`) ou extrair texto do PDF buscando ocorrência de "Multa", "Infração" ou "Regimento Interno/RI", destacando o valor e o status de pagamento (Liquidado / Em Aberto).
 
 ## 2. Apresentação em Abas / Widgets
 

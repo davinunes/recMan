@@ -146,6 +146,31 @@ A plataforma Vida de Síndico opera com uma arquitetura de API REST centralizada
   - `Bloco.Uuid`: `<BLOCO_UUID>`
   - `Unidade.Uuid`: `<UNIDADE_UUID>`
 - **Objetivo:** Rastrear o histórico financeiro da unidade, verificando emissão de 2ª via e identificando lançamento de cobranças extras ou multas.
+- **Formato da Resposta:**
+  ```json
+  {
+    "totalRegs": 8,
+    "page": 1,
+    "regs": [
+      {
+        "uuid": "49096814",
+        "nomeSacado": "NOME DO MORADOR",
+        "dtVencimento": "2026-01-10",
+        "valor": 552.57,
+        "status": "Liquidado",
+        "descricao": "Taxa Condominial",
+        "urlSegundaVia": "https://solucoesdf.superlogica.net/clients/areadocondomino/publico/cobranca/c/49096814-6f020be4485ef84d6a7685ebd9aa4162128592de-200-FaturaHtml-flSegundaVia",
+        "tipo": "Unidade",
+        "dtReferencia": "2026-01-10",
+        "fonte": "SL"
+      }
+    ]
+  }
+  ```
+- **Rastreamento de Multas e Infração do Regimento Interno (RI):**
+  1. **Filtro Primário:** Inspeção do campo `descricao` no JSON do boleto.
+  2. **Scraping HTML (`urlSegundaVia` Superlógica):** A URL com sufixo `-FaturaHtml-flSegundaVia` permite requisição HTTP GET direta. Parsear a tabela de itens discriminados da fatura procurando por palavras-chave: `Multa`, `Infração`, `Advertência`, `Regimento Interno` ou `RI`.
+  3. **Parsing PDF (Fallback):** Se o link retornar ou redirecionar para documento PDF (`Content-Type: application/pdf`), utilizar parser de PDF (`smalot/pdfparser` ou `pdftotext`) para extrair os itens detalhados da cobrança.
 
 ---
 

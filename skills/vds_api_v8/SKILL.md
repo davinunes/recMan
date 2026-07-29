@@ -59,3 +59,44 @@ Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comun
 
 ### E. Financeiro e Boletos
 - **Listar Boletos por Unidade:** `GET /boleto?page=1&limit=20&sortBy=status&order=asc&Ano={Ano}&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
+  - **Estrutura do Payload de Retorno:**
+    ```json
+    {
+      "totalRegs": 8,
+      "page": 1,
+      "limit": 0,
+      "regs": [
+        {
+          "uuid": "49096814",
+          "nomeSacado": "NOME DO MORADOR",
+          "dtVencimento": "2026-01-10",
+          "valor": 552.57,
+          "status": "Liquidado",
+          "descricao": "Taxa Condominial",
+          "msgReserva": null,
+          "urlSegundaVia": "https://solucoesdf.superlogica.net/clients/areadocondomino/publico/cobranca/c/49096814-6f020be4485ef84d6a7685ebd9aa4162128592de-200-FaturaHtml-flSegundaVia",
+          "tipo": "Unidade",
+          "dtReferencia": "2026-01-10",
+          "fonte": "SL"
+        }
+      ]
+    }
+    ```
+
+#### Pipeline de Auditoria e Detecção de Multa / Regimento Interno (RI) em Faturas:
+Para verificar se uma infração/multa ou penalidade do Regimento Interno foi efetivamente cobrada no boleto da unidade:
+
+1. **Nível 1 (Análise Primária no JSON):**
+   - Inspecionar os campos `descricao` e `msgReserva` no objeto do boleto.
+   - Caso contenha palavras-chave (`Multa`, `Infração`, `Regimento Interno`, `RI`, `Advertência`, `Penalidade`), sinalizar diretamente como cobrança disciplinar.
+
+2. **Nível 2 (Inspecionar Espelho HTML - Superlógica `FaturaHtml`):**
+   - O campo `urlSegundaVia` fornece o link público tokenizado do Superlógica (`-FaturaHtml-flSegundaVia`).
+   - Efetuar uma requisição `HTTP GET` pública na `urlSegundaVia` (sem necessity do header `Authorization` da VDS).
+   - Parsear a resposta HTML e analisar os itens discriminados da fatura (ex: tabela de composição do boleto).
+   - Regex de busca por termos disciplinares: `/(multa|infra[çc][ãa]o|regimento\s*interno|\bri\b|penalidade|artigo)/i`.
+
+3. **Nível 3 (Parsing de PDF - Fallback):**
+   - Se a `urlSegundaVia` redirecionar para um arquivo PDF ou se a requisição retornar `Content-Type: application/pdf`, capturar o stream binário.
+   - Processar a extração de texto do PDF via biblioteca de parser (`smalot/pdfparser` ou `pdftotext`).
+   - Aplicar a mesma busca por regex nos itens da fatura discriminada para extrair o valor e a justificativa da multa lançada.
