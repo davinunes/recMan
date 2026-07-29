@@ -894,4 +894,48 @@ switch ($_GET['metodo']) {
             'snippet' => $res['snippet'] ?? ''
         ], JSON_UNESCAPED_UNICODE);
         break;
+
+    case "proxyFaturaHtml":
+        header('Content-Type: text/html; charset=utf-8');
+        $url = $_GET['url'] ?? ($_POST['url'] ?? '');
+        if (empty($url)) {
+            echo '';
+            break;
+        }
+
+        $urls = [$url];
+        if (preg_match('/-FaturaHtml-flSegundaVia$/i', $url)) {
+            $urls[] = preg_replace('/-FaturaHtml-flSegundaVia$/i', '', $url);
+            $urls[] = preg_replace('/-FaturaHtml-flSegundaVia$/i', '-flSegundaVia', $url);
+        }
+
+        $htmlResult = '';
+        foreach ($urls as $targetUrl) {
+            $ch = curl_init($targetUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_ENCODING => '',
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_TIMEOUT => 6,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ]);
+            $html = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($code === 200 && !empty($html)) {
+                if (preg_match('/corpoComposicao|Composição|class=["\']item["\']/i', $html)) {
+                    $htmlResult = $html;
+                    break;
+                } elseif (empty($htmlResult)) {
+                    $htmlResult = $html;
+                }
+            }
+        }
+
+        echo $htmlResult;
+        break;
 }

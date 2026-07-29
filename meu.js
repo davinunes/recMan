@@ -2208,6 +2208,7 @@ $(document).on('click', '.btn-inspecionar-boletos', function (e) {
                 // 2. Disparar verificações assíncronas em segundo plano para cada boleto que possui urlSegundaVia
                 res.data.forEach(function (b) {
                     if (b.urlSegundaVia) {
+                        // A. Verificação via backend API
                         $.ajax({
                             url: 'metodo.php?metodo=extrairSugestoesBoleto',
                             method: 'GET',
@@ -2218,13 +2219,55 @@ $(document).on('click', '.btn-inspecionar-boletos', function (e) {
                             },
                             dataType: 'json',
                             success: function (sugRes) {
-                                if (sugRes && sugRes.success && Array.isArray(sugRes.sugestoes)) {
+                                if (sugRes && sugRes.success && Array.isArray(sugRes.sugestoes) && sugRes.sugestoes.length > 0) {
                                     sugRes.sugestoes.forEach(function (s) {
                                         renderSingleSuggestionRow(s);
                                     });
                                 }
                             }
                         });
+
+                        // B. Verificação Dinâmica pelo DOMParser do Navegador (Client-side)
+                        fetch(`metodo.php?metodo=proxyFaturaHtml&url=${encodeURIComponent(b.urlSegundaVia)}`)
+                            .then(response => response.text())
+                            .then(htmlText => {
+                                if (!htmlText || htmlText.length < 50) return;
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(htmlText, 'text/html');
+
+                                const corpo = doc.querySelector('#corpoComposicao') || doc.body;
+                                const elements = corpo.querySelectorAll('tr, div, p, li');
+
+                                elements.forEach(el => {
+                                    const text = el.textContent || '';
+                                    const matchNum = text.match(/(\d+)\/(\d{2,4})/);
+                                    const matchVal = text.match(/R\$\s*([\d\.,]+)/i);
+
+                                    if (matchNum && matchVal) {
+                                        const numero = matchNum[1];
+                                        const rawAno = matchNum[2];
+                                        const ano = rawAno.length === 2 ? '20' + rawAno : rawAno;
+                                        const valorCleanStr = matchVal[1].replace(/\./g, '').replace(',', '.');
+                                        const valorNum = parseFloat(valorCleanStr);
+
+                                        if (!isNaN(valorNum) && valorNum > 0) {
+                                            renderSingleSuggestionRow({
+                                                numero: numero,
+                                                ano: ano,
+                                                numero_ano: `${numero}/${ano}`,
+                                                item_descricao: text.trim().replace(/\s+/g, ' '),
+                                                valor: valorNum,
+                                                valor_formatado: 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                                                boleto_status: b.status || 'Em Aberto',
+                                                data_vencimento: b.dtVencimento || moment().format('YYYY-MM-DD'),
+                                                data_pagamento_sugerida: b.dtVencimento || moment().format('YYYY-MM-DD'),
+                                                ja_lancado: false
+                                            });
+                                        }
+                                    }
+                                });
+                            })
+                            .catch(err => console.error('Erro no parser dinâmico do navegador:', err));
                     }
                 });
             } else {
