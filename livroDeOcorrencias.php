@@ -78,9 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'marcar_como_lido') {
         $ocorrenciaId = (int)($_POST['ocorrencia_id'] ?? 0);
         $uuidRemoto = $_POST['uuid_remoto'] ?? null;
-        $resLido = vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $ocorrenciaId);
+        $novoStatusLido = isset($_POST['novo_status_lido']) ? (bool)(int)$_POST['novo_status_lido'] : true;
+        
+        $resLido = vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $ocorrenciaId, $novoStatusLido);
         $msg = $resLido['message'] ?? 'Status de leitura atualizado na VDS.';
         $msgType = "success";
+
+        // No modo Prático, ao marcar como lido, redireciona para o feed unread atualizado
+        if ($visao === 'pratico' && $novoStatusLido) {
+            header("Location: index.php?pag=livroDeOcorrencias&visao=pratico");
+            exit;
+        }
     } elseif ($action === 'adicionar_tag_livre') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
         $tagInput = trim($_POST['tag_input'] ?? '');
@@ -335,6 +343,9 @@ $mapaCoresTipo = [
             $remote = $detalheSel['remoteData'];
             $tipoId = (int)($local['oco_tipo'] ?? 115);
             $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
+
+            $dadosJsonLoc = !empty($local['dados_json']) ? json_decode($local['dados_json'], true) : [];
+            $isLidaVds = !empty($dadosJsonLoc['lida']) || !empty($dadosJsonLoc['isLida']) || !empty($remote['lida']) || !empty($remote['isLida']);
             ?>
 
             <!-- Header do Chat -->
@@ -388,13 +399,15 @@ $mapaCoresTipo = [
                         </button>
                     </form>
 
-                    <!-- Marcar como Lido (Remoto VDS) -->
+                    <!-- Marcar como Lido / Não Lido (VDS Remoto - Toggle) -->
                     <form method="POST" style="margin:0;">
                         <input type="hidden" name="action" value="marcar_como_lido">
                         <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
                         <input type="hidden" name="uuid_remoto" value="<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>">
-                        <button type="submit" class="btn-small waves-effect waves-light teal" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
-                            <i class="material-icons left tiny">mark_email_read</i> Marcar Lido (VDS)
+                        <input type="hidden" name="novo_status_lido" value="<?= $isLidaVds ? '0' : '1' ?>">
+                        <button type="submit" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
+                            <i class="material-icons left tiny"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
+                            <?= $isLidaVds ? 'Marcar NÃO Lido (VDS)' : 'Marcar Lido (VDS)' ?>
                         </button>
                     </form>
                 </div>

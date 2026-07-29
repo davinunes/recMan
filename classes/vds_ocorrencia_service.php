@@ -736,11 +736,11 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
 /**
  * Marca uma ocorrência como lida no ambiente remoto da VDS e atualiza os dados locais.
  */
-function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenciaId = null) {
+function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenciaId = null, $novoStatusLido = true) {
     $token = vds_get_token($usuarioIdConselho);
 
     if ($token && $uuidRemoto) {
-        // 1. Disparar PUT em /ocorrencia/leitura/{uuid}
+        // Disparar PUT em /ocorrencia/leitura/{uuid} (Toggle endpoint da VDS)
         $urlLeitura = VDS_BASE_URL . '/ocorrencia/leitura/' . urlencode($uuidRemoto);
         $ch = curl_init($urlLeitura);
         curl_setopt_array($ch, [
@@ -756,20 +756,22 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        // 2. Disparar PUT em /ocorrencia/visualizar/{uuid}
-        $urlVisualizar = VDS_BASE_URL . '/ocorrencia/visualizar/' . urlencode($uuidRemoto);
-        $chVis = curl_init($urlVisualizar);
-        curl_setopt_array($chVis, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => 'PUT',
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Content-Length: 0',
-                'Origin: ' . VDS_ORIGIN_HEADER
-            ]
-        ]);
-        curl_exec($chVis);
-        curl_close($chVis);
+        // Se estamos marcando como lido, também dispara visualização
+        if ($novoStatusLido) {
+            $urlVisualizar = VDS_BASE_URL . '/ocorrencia/visualizar/' . urlencode($uuidRemoto);
+            $chVis = curl_init($urlVisualizar);
+            curl_setopt_array($chVis, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'PUT',
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Content-Length: 0',
+                    'Origin: ' . VDS_ORIGIN_HEADER
+                ]
+            ]);
+            curl_exec($chVis);
+            curl_close($chVis);
+        }
     }
 
     // Atualizar flag local em dados_json
@@ -786,8 +788,8 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
 
         if ($rowFind) {
             $dados = !empty($rowFind['dados_json']) ? json_decode($rowFind['dados_json'], true) : [];
-            $dados['lida'] = true;
-            $dados['isLida'] = true;
+            $dados['lida'] = (bool)$novoStatusLido;
+            $dados['isLida'] = (bool)$novoStatusLido;
             $jsonUp = json_encode($dados, JSON_UNESCAPED_UNICODE);
 
             $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET dados_json = ? WHERE id = ?");
@@ -798,7 +800,7 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
         DBClose($link);
     }
 
-    return ['success' => true, 'message' => 'Ocorrência marcada como lida!'];
+    return ['success' => true, 'message' => $novoStatusLido ? 'Ocorrência marcada como LIDA na VDS!' : 'Ocorrência marcada como NÃO LIDA na VDS!'];
 }
 
 /**
