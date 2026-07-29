@@ -21,7 +21,11 @@ function vds_format_mensagem_text($text) {
  * Consulta a lista de ocorrências da VDS e sincroniza na tabela `ocorrencias`.
  */
 function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null) {
-    $token = vds_get_token($usuarioIdConselho);
+    // Para sincronização automática global, priorizar o token do condomínio/sistema
+    $token = vds_get_token(null);
+    if (!$token) {
+        $token = vds_get_token($usuarioIdConselho);
+    }
     if (!$token) {
         return ['success' => false, 'message' => 'Nenhum token ativo disponível para sincronização.'];
     }
@@ -734,27 +738,38 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
  */
 function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenciaId = null) {
     $token = vds_get_token($usuarioIdConselho);
-    $payload = [
-        'uuid' => $uuidRemoto,
-        'ocorrenciaId' => (int)$ocorrenciaId,
-        'lida' => true
-    ];
 
     if ($token && $uuidRemoto) {
-        $ch = curl_init(VDS_BASE_URL . '/ocorrencia/lida');
+        // 1. Disparar PUT em /ocorrencia/leitura/{uuid}
+        $urlLeitura = VDS_BASE_URL . '/ocorrencia/leitura/' . urlencode($uuidRemoto);
+        $ch = curl_init($urlLeitura);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_CUSTOMREQUEST => 'PUT',
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
-                'Content-Type: application/json',
+                'Content-Length: 0',
                 'Origin: ' . VDS_ORIGIN_HEADER
             ]
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
+        // 2. Disparar PUT em /ocorrencia/visualizar/{uuid}
+        $urlVisualizar = VDS_BASE_URL . '/ocorrencia/visualizar/' . urlencode($uuidRemoto);
+        $chVis = curl_init($urlVisualizar);
+        curl_setopt_array($chVis, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Content-Length: 0',
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        curl_exec($chVis);
+        curl_close($chVis);
     }
 
     // Atualizar flag local em dados_json
