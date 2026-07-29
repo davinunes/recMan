@@ -144,12 +144,14 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
 }
 
 /**
- * Recupera o Token ativo do banco de dados (prioriza token de conselheiro se fornecido ID).
+ * Recupera o Token ativo do banco de dados (prioriza token de conselheiro se fornecido ID e faz fallback para qualquer token válido na tabela).
  */
 function vds_get_token($usuarioIdConselho = null) {
     $link = DBConnect();
+    
+    // 1. Tentar token específico do conselheiro
     if ($usuarioIdConselho) {
-        $stmt = mysqli_prepare($link, "SELECT bearer_token, vds_username, status FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho = ? AND status = 'ativo' LIMIT 1");
+        $stmt = mysqli_prepare($link, "SELECT bearer_token FROM vds_tokens WHERE usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         mysqli_stmt_bind_param($stmt, "i", $usuarioIdConselho);
         mysqli_stmt_execute($stmt);
         $res = mysqli_stmt_get_result($stmt);
@@ -161,12 +163,19 @@ function vds_get_token($usuarioIdConselho = null) {
         }
     }
 
-    // Fallback para Token do Condomínio
-    $resCond = mysqli_query($link, "SELECT bearer_token FROM vds_tokens WHERE tipo = 'condominio' AND status = 'ativo' LIMIT 1");
-    $rowCond = mysqli_fetch_assoc($resCond);
-    DBClose($link);
+    // 2. Fallback para qualquer Token válido cadastrado na vds_tokens (tipo 'condominio' ou mais recente)
+    $resCond = mysqli_query($link, "SELECT bearer_token FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
+    if ($resCond) {
+        $rowCond = mysqli_fetch_assoc($resCond);
+        DBClose($link);
+        if (!empty($rowCond['bearer_token'])) {
+            return $rowCond['bearer_token'];
+        }
+    } else {
+        DBClose($link);
+    }
 
-    return $rowCond['bearer_token'] ?? null;
+    return null;
 }
 
 /**
