@@ -100,8 +100,11 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
         $jsonEncoded = json_encode($item, JSON_UNESCAPED_UNICODE);
 
         if ($rowFind) {
+            // Só atualizar bloco/unidade se temos dados reais (não fallback)
+            $blocoReal = ($bloco !== 'Z') ? $bloco : null;
+            $unidadeReal = ($unidade !== '999') ? $unidade : null;
             $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $bloco, $unidade, $status, $jsonEncoded, $rowFind['id']);
+            mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
             mysqli_stmt_execute($stmtUp);
             mysqli_stmt_close($stmtUp);
         } else {
@@ -240,8 +243,11 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                     $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
 
                     if ($ocorrencia) {
-                        $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
-                        mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $ocorrencia['id']);
+                        // Atualizar dados remotos e corrigir bloco/unidade se necessário
+                        $blocoReal = ($bloco !== 'Z') ? $bloco : null;
+                        $unidadeReal = ($unidade !== '999') ? $unidade : null;
+                        $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), dados_json = ? WHERE id = ?");
+                        mysqli_stmt_bind_param($stmtUp, "ssisssi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $jsonEnc, $ocorrencia['id']);
                         if (!mysqli_stmt_execute($stmtUp)) {
                             $debug['error_log'][] = "Erro MySQL UPDATE: " . mysqli_stmt_error($stmtUp);
                         }
@@ -251,6 +257,8 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                         $ocorrencia['protocolo_vds'] = $realProtocolo;
                         $ocorrencia['oco_tipo'] = $ocoTipo;
                         $ocorrencia['dados_json'] = $jsonEnc;
+                        if ($blocoReal) { $ocorrencia['bloco'] = $blocoReal; }
+                        if ($unidadeReal) { $ocorrencia['unidade'] = $unidadeReal; }
                     } else {
                         $stmtCheck = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? LIMIT 1");
                         mysqli_stmt_bind_param($stmtCheck, "i", $realOcoId);
@@ -260,8 +268,10 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
                         mysqli_stmt_close($stmtCheck);
 
                         if ($rowCheck) {
-                            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, dados_json = ? WHERE id = ?");
-                            mysqli_stmt_bind_param($stmtUp, "ssisi", $realUuid, $realProtocolo, $ocoTipo, $jsonEnc, $realOcoId);
+                            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), dados_json = ? WHERE id = ?");
+                            $blocoReal2 = ($bloco !== 'Z') ? $bloco : null;
+                            $unidadeReal2 = ($unidade !== '999') ? $unidade : null;
+                            mysqli_stmt_bind_param($stmtUp, "ssisssi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal2, $unidadeReal2, $jsonEnc, $realOcoId);
                             if (!mysqli_stmt_execute($stmtUp)) {
                                 $debug['error_log'][] = "Erro MySQL UPDATE (rowCheck): " . mysqli_stmt_error($stmtUp);
                             }
