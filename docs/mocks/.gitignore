@@ -1,0 +1,4 @@
+# Ignorar arquivos brutos de teste e capturas de resposta contendo dados sensíveis do condomínio
+retornos dos endpoints
+*.log
+*.tmp

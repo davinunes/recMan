@@ -42,7 +42,7 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
 
         if ($httpCode === 200 && $response) {
             $json = json_decode($response, true);
-            return $json['data'] ?? ($json['items'] ?? $json);
+            return $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? $json));
         }
     }
 
@@ -50,7 +50,7 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
     $mockPath = __DIR__ . '/../docs/mocks/mock_evento_acesso.json';
     if (file_exists($mockPath)) {
         $mock = json_decode(file_get_contents($mockPath), true);
-        return $mock['data'] ?? [];
+        return $mock['regs'] ?? ($mock['data'] ?? []);
     }
 
     return [];
@@ -77,7 +77,7 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
 
         if ($httpCode === 200 && $response) {
             $json = json_decode($response, true);
-            return $json['data'] ?? [];
+            return $json['regs'] ?? ($json['data'] ?? []);
         }
     }
 

@@ -71,10 +71,14 @@ function vds_authenticate($username, $password, $app = "976") {
     if ($httpCode === 200 && $response) {
         $json = json_decode($response, true);
         $userToken = $json['token'] ?? ($json['bearerToken'] ?? null);
+        $refreshToken = $json['refreshToken'] ?? null;
+        $expires = $json['expires'] ?? null;
         if ($userToken) {
             return [
                 'success' => true,
                 'token' => $userToken,
+                'refreshToken' => $refreshToken,
+                'expires' => $expires,
                 'userUuid' => $json['usuarioUuid'] ?? ($json['uuid'] ?? null),
                 'username' => $username,
                 'raw' => $json
@@ -99,8 +103,9 @@ function vds_save_condominio_token($username, $password) {
     }
 
     $link = DBConnect();
-    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, status) VALUES ('condominio', NULL, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), status = 'ativo', updated_at = NOW()");
-    mysqli_stmt_bind_param($stmt, "sss", $auth['username'], $auth['userUuid'], $auth['token']);
+    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('condominio', NULL, ?, ?, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), refresh_token = VALUES(refresh_token), expires_at = VALUES(expires_at), status = 'ativo', updated_at = NOW()");
+    $expiresFormatted = !empty($auth['expires']) ? date('Y-m-d H:i:s', strtotime($auth['expires'])) : null;
+    mysqli_stmt_bind_param($stmt, "sssss", $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
     $success = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     DBClose($link);
@@ -118,8 +123,9 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
     }
 
     $link = DBConnect();
-    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, status) VALUES ('conselheiro', ?, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), status = 'ativo', updated_at = NOW()");
-    mysqli_stmt_bind_param($stmt, "isss", $usuarioIdConselho, $auth['username'], $auth['userUuid'], $auth['token']);
+    $stmt = mysqli_prepare($link, "INSERT INTO vds_tokens (tipo, usuario_id_conselho, vds_username, vds_user_uuid, bearer_token, refresh_token, expires_at, status) VALUES ('conselheiro', ?, ?, ?, ?, ?, ?, 'ativo') ON DUPLICATE KEY UPDATE vds_username = VALUES(vds_username), vds_user_uuid = VALUES(vds_user_uuid), bearer_token = VALUES(bearer_token), refresh_token = VALUES(refresh_token), expires_at = VALUES(expires_at), status = 'ativo', updated_at = NOW()");
+    $expiresFormatted = !empty($auth['expires']) ? date('Y-m-d H:i:s', strtotime($auth['expires'])) : null;
+    mysqli_stmt_bind_param($stmt, "isssss", $usuarioIdConselho, $auth['username'], $auth['userUuid'], $auth['token'], $auth['refreshToken'], $expiresFormatted);
     $success = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 

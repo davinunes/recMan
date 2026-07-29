@@ -237,14 +237,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"ocorrenciaUuid\": \"{{ocorrenciaUuid}}\",\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
+							"raw": "{\n  \"ocorrenciaPaiId\": 51970481,\n  \"ocorrenciaUuid\": \"{{ocorrenciaUuid}}\",\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/ocorrencia/mensagem",
+							"raw": "{{baseUrl}}/ocorrencia",
 							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia", "mensagem"]
+							"path": ["ocorrencia"]
 						},
-						"description": "Publica uma resposta na ocorrência em nome do conselheiro autenticado."
+						"description": "Publica uma resposta na ocorrência enviando ocorrenciaPaiId ou ocorrenciaUuid."
 					}
 				},
 				{

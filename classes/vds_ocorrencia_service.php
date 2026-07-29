@@ -42,7 +42,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     }
 
     $data = json_decode($response, true);
-    $items = $data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : []));
+    $items = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
 
     $link = DBConnect();
     $count = 0;
@@ -53,8 +53,8 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
         $bloco = $item['bloco'] ?? ($item['Bloco'] ?? ($item['unidade']['bloco']['nome'] ?? null));
         $unidade = $item['unidade'] ?? ($item['Unidade'] ?? ($item['unidade']['numero'] ?? null));
         $abertura = $item['dtExibicao'] ?? ($item['abertura'] ?? date('Y-m-d H:i:s'));
-        $ocoTipo = (int)($item['tipo'] ?? ($item['ocoTipo'] ?? 115));
-        $status = $item['statusStr'] ?? ($item['status'] ?? 'Aberto');
+        $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
+        $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
 
         if (!$protocolo && !$uuidRemoto) continue;
 
@@ -218,13 +218,14 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         return ['success' => false, 'message' => 'Nenhum token ativo para publicar no remoto.'];
     }
 
-    // Enviar mensagem para a API VDS
+    // Enviar mensagem/comentário para a API VDS (Endpoint: POST /ocorrencia com ocorrenciaPaiId ou ocorrenciaUuid)
     $payload = json_encode([
+        'ocorrenciaPaiId' => (int)($nota['ocorrencia_id'] ?? 0),
         'ocorrenciaUuid' => $nota['uuid_remoto'],
         'mensagem' => $nota['texto']
     ]);
 
-    $ch = curl_init(VDS_BASE_URL . '/ocorrencia/mensagem');
+    $ch = curl_init(VDS_BASE_URL . '/ocorrencia');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,

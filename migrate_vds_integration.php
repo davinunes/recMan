@@ -73,6 +73,7 @@ $sqlTokens = "CREATE TABLE IF NOT EXISTS vds_tokens (
     vds_username VARCHAR(100) DEFAULT NULL,
     vds_user_uuid VARCHAR(100) DEFAULT NULL,
     bearer_token TEXT NOT NULL,
+    refresh_token TEXT DEFAULT NULL,
     status ENUM('ativo', 'expirado', 'erro') DEFAULT 'ativo',
     expires_at DATETIME DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -80,6 +81,7 @@ $sqlTokens = "CREATE TABLE IF NOT EXISTS vds_tokens (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
 
 mysqli_query($link, $sqlTokens);
+@mysqli_query($link, "ALTER TABLE vds_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT DEFAULT NULL;");
 
 // 4. Tabela de Notas Internas do Conselho (ocorrencia_notas_internas)
 $sqlNotas = "CREATE TABLE IF NOT EXISTS ocorrencia_notas_internas (
