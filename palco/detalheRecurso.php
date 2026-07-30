@@ -618,7 +618,7 @@ if ($esseRecurso == null) {
         if (tipo === 'acesso') {
             html += '<h5 style="margin-top:0; color:#6f42c1; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso</h5>';
             if (data.fotoUrl) {
-                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:180px; max-height:180px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
+                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
             }
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
             html += '<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b>' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
@@ -629,7 +629,7 @@ if ($esseRecurso == null) {
         } else if (tipo === 'autorizacao') {
             html += '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Inspecionar Autorização de Acesso</h5>';
             if (data.foto) {
-                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:180px; max-height:180px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
+                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
             }
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
             html += '<tr><td style="width:35%;"><b>Visitante / Prestador:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.nome) + '</b></td></tr>';
@@ -680,17 +680,14 @@ if ($esseRecurso == null) {
                             }
                         }
 
-                        // Atualizar Foto do Pacote
+                        // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
                         const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
                         if (fotoUrl) {
                             const colFoto = row.querySelector('.col-foto');
                             if (colFoto) {
                                 colFoto.innerHTML = `
-                                    <img src="${fotoUrl}" class="responsive-img materialboxed z-depth-1" style="max-height:42px; border-radius:4px; cursor:pointer;" alt="Foto Pacote">
+                                    <img src="${fotoUrl}" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
                                 `;
-                                if (typeof M !== 'undefined' && M.Materialbox) {
-                                    M.Materialbox.init(row.querySelectorAll('.materialboxed'));
-                                }
                             }
                         }
 
@@ -712,7 +709,7 @@ if ($esseRecurso == null) {
         
         const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
         if (fotoUrl) {
-            html += '<div style="text-align:center; margin:15px 0;"><img src="' + fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:8px; border:2px solid #1e88e5; box-shadow:0 4px 12px rgba(30,136,229,0.2);"></div>';
+            html += '<div style="text-align:center; margin:15px 0;"><img src="' + fotoUrl + '" style="max-width:280px; max-height:220px; border-radius:8px; border:2px solid #1e88e5; box-shadow:0 4px 12px rgba(30,136,229,0.2);"></div>';
         }
 
         html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
@@ -778,7 +775,19 @@ if ($esseRecurso == null) {
                                         <?php $jsonAcc = htmlspecialchars(json_encode($acc, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
                                         <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', <?= $jsonAcc ?>)">
                                             <td><?= date('H:i:s', strtotime($acc['dthora'])) ?></td>
-                                            <td><b><?= htmlspecialchars($acc['pessoaNome']) ?></b> <small>(<?= htmlspecialchars($acc['perfil']) ?>)</small></td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <?php if (!empty($acc['fotoUrl'])): ?>
+                                                        <img src="<?= htmlspecialchars($acc['fotoUrl']) ?>" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #6f42c1;">
+                                                    <?php else: ?>
+                                                        <i class="material-icons purple-text text-lighten-2 tiny">person</i>
+                                                    <?php endif; ?>
+                                                    <div>
+                                                        <b><?= htmlspecialchars($acc['pessoaNome']) ?></b> 
+                                                        <small class="grey-text display-block" style="font-size:0.75rem;">(<?= htmlspecialchars($acc['perfil']) ?>)</small>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td><?= htmlspecialchars($acc['tipoEvento']) ?></td>
                                             <td>
                                                 <span class="btn-small waves-effect waves-light purple lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
@@ -883,7 +892,7 @@ if ($esseRecurso == null) {
                                             </td>
                                             <td class="col-foto">
                                                 <?php if (!empty($ent['foto'])): ?>
-                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>" class="responsive-img materialboxed z-depth-1" style="max-height:42px; border-radius:4px; cursor:pointer;" alt="Foto Pacote">
+                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
                                                 <?php elseif (!empty($entUuid)): ?>
                                                     <span class="grey-text text-lighten-1 spin-load-foto" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>
                                                 <?php else: ?>
