@@ -49,7 +49,7 @@ $parecer = getParecer($result['numero']);
 
 if (isset($result['unidade']) && isset($result['bloco'])) {
     $historico = getNotificacoes($result['unidade'], $result['bloco']);
-    
+
     // Silenciosamente verificar e resolver UUIDs do bloco e unidade na VDS (persistindo no vds_uuid_mapping)
     require_once __DIR__ . "/../classes/vds_acesso_service.php";
     $uuidsResolvidos = vds_resolve_bloco_unidade_uuid($result['bloco'], $result['unidade']);
@@ -578,7 +578,7 @@ if ($esseRecurso == null) {
     $autorizacoesUnidade = vds_get_autorizacoes_acesso($result['bloco'], $result['unidade'], $dtIniJanela, $dtFimJanela);
     $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
     $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
-?>
+    ?>
 
     <!-- Modal de Inspeção Detalhada dos Aceleradores -->
     <div id="modalInspecionarAcelerador" class="modal" style="border-radius:8px; max-width:550px;">
@@ -591,188 +591,191 @@ if ($esseRecurso == null) {
     </div>
 
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Inicializar Collapsibles do Materialize
-        var elemsCollapsible = document.querySelectorAll('.collapsible');
-        if (elemsCollapsible.length > 0 && typeof M !== 'undefined' && M.Collapsible) {
-            M.Collapsible.init(elemsCollapsible, { accordion: false });
+        document.addEventListener("DOMContentLoaded", function () {
+            // Inicializar Collapsibles do Materialize
+            var elemsCollapsible = document.querySelectorAll('.collapsible');
+            if (elemsCollapsible.length > 0 && typeof M !== 'undefined' && M.Collapsible) {
+                M.Collapsible.init(elemsCollapsible, { accordion: false });
+            }
+
+            // Inicializar Modais do Materialize
+            var elemsModal = document.querySelectorAll('.modal');
+            if (elemsModal.length > 0 && typeof M !== 'undefined' && M.Modal) {
+                M.Modal.init(elemsModal);
+            }
+        });
+
+        function formatObjStr(val) {
+            if (!val) return 'N/A';
+            if (typeof val === 'object') {
+                return val.descricao || val.nome || val.tipo || val.detalhe || JSON.stringify(val);
+            }
+            return val;
         }
-        
-        // Inicializar Modais do Materialize
-        var elemsModal = document.querySelectorAll('.modal');
-        if (elemsModal.length > 0 && typeof M !== 'undefined' && M.Modal) {
-            M.Modal.init(elemsModal);
+
+        function inspecionarItemAcelerador(tipo, data) {
+            var html = '';
+            if (tipo === 'acesso') {
+                html += '<h5 style="margin-top:0; color:#6f42c1; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso</h5>';
+                if (data.fotoUrl) {
+                    html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
+                }
+                html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+                html += '<tr><td style="width:35%;"><b>Pessoa / Veículo:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
+                html += '<tr><td><b>Perfil / Categoria:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
+                if (data.modulo) {
+                    html += '<tr><td><b>Ponto de Acesso:</b></td><td>' + formatObjStr(data.modulo) + '</td></tr>';
+                }
+                if (data.saida) {
+                    html += '<tr><td><b>Sentido:</b></td><td><span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px;">' + formatObjStr(data.saida) + '</span></td></tr>';
+                }
+                if (data.dispositivo || data.receptor) {
+                    html += '<tr><td><b>Dispositivo / Leitor:</b></td><td>' + formatObjStr(data.dispositivo || data.receptor) + '</td></tr>';
+                }
+                html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
+                if (data.descricao) {
+                    html += '<tr><td><b>Observações:</b></td><td>' + formatObjStr(data.descricao) + '</td></tr>';
+                }
+                html += '</table>';
+            } else if (tipo === 'autorizacao') {
+                html += '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Inspecionar Autorização de Acesso</h5>';
+                if (data.foto) {
+                    html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
+                }
+                html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+                html += '<tr><td style="width:35%;"><b>Visitante / Prestador:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.nome) + '</b></td></tr>';
+                if (data.documento) {
+                    html += '<tr><td><b>Documento:</b></td><td>' + formatObjStr(data.documento) + '</td></tr>';
+                }
+                html += '<tr><td><b>Validade da Liberação:</b></td><td>' + formatObjStr(data.dtInicio) + ' até ' + formatObjStr(data.dtFim) + '</td></tr>';
+                html += '<tr><td><b>Autorizado Por (Morador):</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.autorizadoPor) + '</span></td></tr>';
+                html += '<tr><td><b>Cadastrado Por:</b></td><td>' + formatObjStr(data.registradoPor) + '</td></tr>';
+                if (data.chave) {
+                    html += '<tr><td><b>Chave / Código QR:</b></td><td><code style="background:#e8f5e9; color:#1b5e20; padding:2px 8px; border-radius:4px; font-weight:bold;">' + data.chave + '</code></td></tr>';
+                }
+                html += '<tr><td><b>Status:</b></td><td>' + formatObjStr(data.status) + '</td></tr>';
+                html += '</table>';
+            } else if (tipo === 'entrega') {
+                inspecionarEntregaComDetalhes(data.uuid || '', data);
+                return;
+            }
+
+            document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
+            var elem = document.getElementById('modalInspecionarAcelerador');
+            var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
+            instance.open();
         }
-    });
 
-    function formatObjStr(val) {
-        if (!val) return 'N/A';
-        if (typeof val === 'object') {
-            return val.descricao || val.nome || val.tipo || val.detalhe || JSON.stringify(val);
-        }
-        return val;
-    }
+        // Fetch em segundo plano para obter identificador e foto de cada entrega
+        document.addEventListener("DOMContentLoaded", function () {
+            const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
+            entregasRows.forEach(function (row) {
+                const uuid = row.getAttribute('data-entrega-uuid');
+                if (!uuid) return;
 
-    function inspecionarItemAcelerador(tipo, data) {
-        var html = '';
-        if (tipo === 'acesso') {
-            html += '<h5 style="margin-top:0; color:#6f42c1; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso</h5>';
-            if (data.fotoUrl) {
-                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
-            }
-            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Pessoa / Veículo:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
-            html += '<tr><td><b>Perfil / Categoria:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
-            if (data.modulo) {
-                html += '<tr><td><b>Ponto de Acesso:</b></td><td>' + formatObjStr(data.modulo) + '</td></tr>';
-            }
-            if (data.saida) {
-                html += '<tr><td><b>Sentido:</b></td><td><span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px;">' + formatObjStr(data.saida) + '</span></td></tr>';
-            }
-            if (data.dispositivo || data.receptor) {
-                html += '<tr><td><b>Dispositivo / Leitor:</b></td><td>' + formatObjStr(data.dispositivo || data.receptor) + '</td></tr>';
-            }
-            html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
-            if (data.descricao) {
-                html += '<tr><td><b>Observações:</b></td><td>' + formatObjStr(data.descricao) + '</td></tr>';
-            }
-            html += '</table>';
-        } else if (tipo === 'autorizacao') {
-            html += '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Inspecionar Autorização de Acesso</h5>';
-            if (data.foto) {
-                html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
-            }
-            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Visitante / Prestador:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.nome) + '</b></td></tr>';
-            if (data.documento) {
-                html += '<tr><td><b>Documento:</b></td><td>' + formatObjStr(data.documento) + '</td></tr>';
-            }
-            html += '<tr><td><b>Validade da Liberação:</b></td><td>' + formatObjStr(data.dtInicio) + ' até ' + formatObjStr(data.dtFim) + '</td></tr>';
-            html += '<tr><td><b>Autorizado Por (Morador):</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.autorizadoPor) + '</span></td></tr>';
-            html += '<tr><td><b>Cadastrado Por:</b></td><td>' + formatObjStr(data.registradoPor) + '</td></tr>';
-            if (data.chave) {
-                html += '<tr><td><b>Chave / Código QR:</b></td><td><code style="background:#e8f5e9; color:#1b5e20; padding:2px 8px; border-radius:4px; font-weight:bold;">' + data.chave + '</code></td></tr>';
-            }
-            html += '<tr><td><b>Status:</b></td><td>' + formatObjStr(data.status) + '</td></tr>';
-            html += '</table>';
-        } else if (tipo === 'entrega') {
-            inspecionarEntregaComDetalhes(data.uuid || '', data);
-            return;
-        }
-        
-        document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
-        var elem = document.getElementById('modalInspecionarAcelerador');
-        var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
-        instance.open();
-    }
+                fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
+                    .then(res => res.json())
+                    .then(resData => {
+                        if (resData && resData.success && resData.data) {
+                            const d = resData.data;
 
-    // Fetch em segundo plano para obter identificador e foto de cada entrega
-    document.addEventListener("DOMContentLoaded", function() {
-        const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
-        entregasRows.forEach(function(row) {
-            const uuid = row.getAttribute('data-entrega-uuid');
-            if (!uuid) return;
-
-            fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
-                .then(res => res.json())
-                .then(resData => {
-                    if (resData && resData.success && resData.data) {
-                        const d = resData.data;
-
-                        // Atualizar Identificador / Código de Rastreio
-                        if (d.identificador) {
-                            const colId = row.querySelector('.col-identificador');
-                            if (colId) {
-                                colId.innerHTML = `
+                            // Atualizar Identificador / Código de Rastreio
+                            if (d.identificador) {
+                                const colId = row.querySelector('.col-identificador');
+                                if (colId) {
+                                    colId.innerHTML = `
                                     <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
                                         <i class="material-icons tiny">qr_code</i> ${d.identificador}
                                     </span>
                                 `;
+                                }
                             }
-                        }
 
-                        // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
-                        const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
-                        if (fotoUrl) {
-                            const colFoto = row.querySelector('.col-foto');
-                            if (colFoto) {
-                                colFoto.innerHTML = `
+                            // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
+                            const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
+                            if (fotoUrl) {
+                                const colFoto = row.querySelector('.col-foto');
+                                if (colFoto) {
+                                    colFoto.innerHTML = `
                                     <img src="${fotoUrl}" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
                                 `;
+                                }
                             }
+
+                            row.dataset.detalhesCompletos = JSON.stringify(d);
                         }
-
-                        row.dataset.detalhesCompletos = JSON.stringify(d);
-                    }
-                })
-                .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
-        });
-    });
-
-    function inspecionarEntregaComDetalhes(uuid, baseData) {
-        let data = baseData || {};
-        const row = document.querySelector(`.linha-entrega-item[data-entrega-uuid="${uuid}"]`);
-        if (row && row.dataset.detalhesCompletos) {
-            try { data = Object.assign({}, data, JSON.parse(row.dataset.detalhesCompletos)); } catch(e){}
-        }
-
-        var html = '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
-        
-        const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
-        if (fotoUrl) {
-            html += '<div style="text-align:center; margin:15px 0;"><img src="' + fotoUrl + '" style="max-width:280px; max-height:220px; border-radius:8px; border:2px solid #1e88e5; box-shadow:0 4px 12px rgba(30,136,229,0.2);"></div>';
-        }
-
-        html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-        if (data.identificador) {
-            html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
-        }
-        if (data.protocolo) {
-            html += '<tr><td><b>Protocolo VDS:</b></td><td>#' + data.protocolo + '</td></tr>';
-        }
-        html += '<tr><td><b>Descrição / Conteúdo:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
-        html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinoNome || data.destinatario) + '</td></tr>';
-        html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada || data.dthora) + '</td></tr>';
-        if (data.dtFim) {
-            html += '<tr><td><b>Data/Hora Retirada:</b></td><td>' + data.dtFim + '</td></tr>';
-        }
-        if (data.retiradoPor) {
-            const retNome = typeof data.retiradoPor === 'object' ? data.retiradoPor.nome : data.retiradoPor;
-            html += '<tr><td><b>Retirado Por:</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + retNome + '</span></td></tr>';
-        }
-        html += '</table>';
-
-        if (data.eventos && Array.isArray(data.eventos) && data.eventos.length > 0) {
-            html += '<h6 style="margin-top:15px; font-weight:bold; color:#555;">Histórico de Eventos da Portaria:</h6><ul class="collection" style="font-size:0.85rem;">';
-            data.eventos.forEach(function(ev) {
-                const stNome = ev.status ? ev.status.nome : 'Status';
-                const regNome = ev.registradoPor ? ev.registradoPor.nome : '';
-                html += '<li class="collection-item"><b>' + stNome + '</b> ' + (regNome ? '<small class="grey-text">por ' + regNome + '</small>' : '') + '</li>';
+                    })
+                    .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
             });
-            html += '</ul>';
-        }
+        });
 
-        document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
-        var elem = document.getElementById('modalInspecionarAcelerador');
-        var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
-        instance.open();
-    }
+        function inspecionarEntregaComDetalhes(uuid, baseData) {
+            let data = baseData || {};
+            const row = document.querySelector(`.linha-entrega-item[data-entrega-uuid="${uuid}"]`);
+            if (row && row.dataset.detalhesCompletos) {
+                try { data = Object.assign({}, data, JSON.parse(row.dataset.detalhesCompletos)); } catch (e) { }
+            }
+
+            var html = '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
+
+            const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
+            if (fotoUrl) {
+                html += '<div style="text-align:center; margin:15px 0;"><img src="' + fotoUrl + '" style="max-width:280px; max-height:220px; border-radius:8px; border:2px solid #1e88e5; box-shadow:0 4px 12px rgba(30,136,229,0.2);"></div>';
+            }
+
+            html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+            if (data.identificador) {
+                html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
+            }
+            if (data.protocolo) {
+                html += '<tr><td><b>Protocolo VDS:</b></td><td>#' + data.protocolo + '</td></tr>';
+            }
+            html += '<tr><td><b>Descrição / Conteúdo:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
+            html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinoNome || data.destinatario) + '</td></tr>';
+            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada || data.dthora) + '</td></tr>';
+            if (data.dtFim) {
+                html += '<tr><td><b>Data/Hora Retirada:</b></td><td>' + data.dtFim + '</td></tr>';
+            }
+            if (data.retiradoPor) {
+                const retNome = typeof data.retiradoPor === 'object' ? data.retiradoPor.nome : data.retiradoPor;
+                html += '<tr><td><b>Retirado Por:</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + retNome + '</span></td></tr>';
+            }
+            html += '</table>';
+
+            if (data.eventos && Array.isArray(data.eventos) && data.eventos.length > 0) {
+                html += '<h6 style="margin-top:15px; font-weight:bold; color:#555;">Histórico de Eventos da Portaria:</h6><ul class="collection" style="font-size:0.85rem;">';
+                data.eventos.forEach(function (ev) {
+                    const stNome = ev.status ? ev.status.nome : 'Status';
+                    const regNome = ev.registradoPor ? ev.registradoPor.nome : '';
+                    html += '<li class="collection-item"><b>' + stNome + '</b> ' + (regNome ? '<small class="grey-text">por ' + regNome + '</small>' : '') + '</li>';
+                });
+                html += '</ul>';
+            }
+
+            document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
+            var elem = document.getElementById('modalInspecionarAcelerador');
+            var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
+            instance.open();
+        }
     </script>
 
     <div class="card border-accent" style="margin-top: 20px; border-left: 4px solid #6f42c1;">
         <div class="card-content" style="padding: 15px;">
-            <span class="card-title purple-text text-darken-3" style="font-size: 1.1rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
+            <span class="card-title purple-text text-darken-3"
+                style="font-size: 1.1rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
                 <i class="material-icons">search</i> Aceleradores de Análise da Defesa (Condomínio Digital)
             </span>
             <p class="grey-text text-darken-1" style="font-size: 0.85rem; margin-bottom: 12px;">
-                Registros contextuais do dia da infração (<b><?= date('d/m/Y', strtotime($dataOcorrencia)) ?></b>) para Bloco <b><?= htmlspecialchars($result['bloco']) ?></b> / Apt <b><?= htmlspecialchars($result['unidade']) ?></b>.
+                Registros contextuais do dia da infração (<b><?= date('d/m/Y', strtotime($dataOcorrencia)) ?></b>) para
+                Bloco <b><?= htmlspecialchars($result['bloco']) ?></b> / Apt
+                <b><?= htmlspecialchars($result['unidade']) ?></b>.
             </p>
 
             <!-- Abas dos Aceleradores (Collapsible Ativo) -->
             <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
-                <li class="active">
+                <li>
                     <div class="collapsible-header" style="font-weight: 600;">
-                        <i class="material-icons purple-text">fingerprint</i> 
+                        <i class="material-icons purple-text">fingerprint</i>
                         Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
                     </div>
                     <div class="collapsible-body" style="padding: 10px;">
@@ -780,29 +783,41 @@ if ($esseRecurso == null) {
                             <p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>
                         <?php else: ?>
                             <table class="striped highlight responsive-table" style="font-size:0.85rem;">
-                                <thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Inspecionar</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Pessoa / Visitante</th>
+                                        <th>Tipo de Evento</th>
+                                        <th>Inspecionar</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <?php foreach ($acessosUnidade as $acc): ?>
                                         <?php $jsonAcc = htmlspecialchars(json_encode($acc, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
-                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', <?= $jsonAcc ?>)">
+                                        <tr style="cursor:pointer;"
+                                            onclick="inspecionarItemAcelerador('acesso', <?= $jsonAcc ?>)">
                                             <td><?= date('H:i:s', strtotime($acc['dthora'])) ?></td>
                                             <td>
                                                 <div style="display:flex; align-items:center; gap:8px;">
                                                     <?php if (!empty($acc['fotoUrl'])): ?>
-                                                        <img src="<?= htmlspecialchars($acc['fotoUrl']) ?>" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #6f42c1;">
+                                                        <img src="<?= htmlspecialchars($acc['fotoUrl']) ?>"
+                                                            style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #6f42c1;">
                                                     <?php else: ?>
                                                         <i class="material-icons purple-text text-lighten-2 tiny">person</i>
                                                     <?php endif; ?>
                                                     <div>
-                                                        <b><?= htmlspecialchars($acc['pessoaNome']) ?></b> 
-                                                        <small class="grey-text display-block" style="font-size:0.75rem;">(<?= htmlspecialchars($acc['perfil']) ?>)</small>
+                                                        <b><?= htmlspecialchars($acc['pessoaNome']) ?></b>
+                                                        <small class="grey-text display-block"
+                                                            style="font-size:0.75rem;">(<?= htmlspecialchars($acc['perfil']) ?>)</small>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td><?= htmlspecialchars($acc['tipoEvento']) ?></td>
                                             <td>
-                                                <span class="btn-small waves-effect waves-light purple lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                <span class="btn-small waves-effect waves-light purple lighten-2 white-text"
+                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny"
+                                                        style="margin-left:2px;">search</i>
                                                 </span>
                                             </td>
                                         </tr>
@@ -814,12 +829,13 @@ if ($esseRecurso == null) {
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
-                        <i class="material-icons green-text">verified_user</i> 
+                        <i class="material-icons green-text">verified_user</i>
                         Autorizações de Acesso / Convites (<?= count($autorizacoesUnidade) ?>)
                     </div>
                     <div class="collapsible-body" style="padding: 10px;">
                         <?php if (empty($autorizacoesUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a unidade no período.</p>
+                            <p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a
+                                unidade no período.</p>
                         <?php else: ?>
                             <table class="striped highlight responsive-table" style="font-size:0.85rem;">
                                 <thead>
@@ -835,11 +851,13 @@ if ($esseRecurso == null) {
                                 <tbody>
                                     <?php foreach ($autorizacoesUnidade as $aut): ?>
                                         <?php $jsonAut = htmlspecialchars(json_encode($aut, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
-                                        <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('autorizacao', <?= $jsonAut ?>)">
+                                        <tr style="cursor:pointer;"
+                                            onclick="inspecionarItemAcelerador('autorizacao', <?= $jsonAut ?>)">
                                             <td>
                                                 <div style="display:flex; align-items:center; gap:8px;">
                                                     <?php if (!empty($aut['foto'])): ?>
-                                                        <img src="<?= htmlspecialchars($aut['foto']) ?>" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">
+                                                        <img src="<?= htmlspecialchars($aut['foto']) ?>"
+                                                            style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">
                                                     <?php else: ?>
                                                         <i class="material-icons grey-text tiny">person</i>
                                                     <?php endif; ?>
@@ -847,12 +865,19 @@ if ($esseRecurso == null) {
                                                 </div>
                                             </td>
                                             <td><?= htmlspecialchars($aut['documento']) ?></td>
-                                            <td><small><?= htmlspecialchars($aut['dtInicio']) ?><br>até <?= htmlspecialchars($aut['dtFim']) ?></small></td>
-                                            <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['autorizadoPor']) ?></span></td>
-                                            <td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['status']) ?></span></td>
+                                            <td><small><?= htmlspecialchars($aut['dtInicio']) ?><br>até
+                                                    <?= htmlspecialchars($aut['dtFim']) ?></small></td>
+                                            <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold"
+                                                    style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['autorizadoPor']) ?></span>
+                                            </td>
+                                            <td><span class="badge blue lighten-4 blue-text text-darken-4"
+                                                    style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['status']) ?></span>
+                                            </td>
                                             <td>
-                                                <span class="btn-small waves-effect waves-light green darken-1 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                <span class="btn-small waves-effect waves-light green darken-1 white-text"
+                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny"
+                                                        style="margin-left:2px;">search</i>
                                                 </span>
                                             </td>
                                         </tr>
@@ -864,14 +889,15 @@ if ($esseRecurso == null) {
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
-                        <i class="material-icons blue-text">markunread_mailbox</i> 
+                        <i class="material-icons blue-text">markunread_mailbox</i>
                         Entregas e Encomendas (<?= count($entregasUnidade) ?>)
                     </div>
                     <div class="collapsible-body" style="padding: 10px;">
                         <?php if (empty($entregasUnidade)): ?>
                             <p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>
                         <?php else: ?>
-                            <table class="striped highlight responsive-table" style="font-size:0.85rem;" id="tabela-entregas-acelerador">
+                            <table class="striped highlight responsive-table" style="font-size:0.85rem;"
+                                id="tabela-entregas-acelerador">
                                 <thead>
                                     <tr>
                                         <th>Chegada</th>
@@ -884,28 +910,37 @@ if ($esseRecurso == null) {
                                 </thead>
                                 <tbody>
                                     <?php foreach ($entregasUnidade as $ent): ?>
-                                        <?php 
-                                        $entUuid = $ent['uuid'] ?? ($ent['id'] ?? ''); 
+                                        <?php
+                                        $entUuid = $ent['uuid'] ?? ($ent['id'] ?? '');
                                         $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
                                         ?>
-                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" class="linha-entrega-item" style="cursor:pointer;" onclick="inspecionarEntregaComDetalhes('<?= htmlspecialchars($entUuid) ?>', <?= $jsonEnt ?>)">
+                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" class="linha-entrega-item"
+                                            style="cursor:pointer;"
+                                            onclick="inspecionarEntregaComDetalhes('<?= htmlspecialchars($entUuid) ?>', <?= $jsonEnt ?>)">
                                             <td><?= htmlspecialchars($ent['dthoraChegada']) ?></td>
                                             <td class="col-identificador">
                                                 <?php if (!empty($ent['identificador'])): ?>
-                                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
-                                                        <i class="material-icons tiny">qr_code</i> <?= htmlspecialchars($ent['identificador']) ?>
+                                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold"
+                                                        style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                                        <i class="material-icons tiny">qr_code</i>
+                                                        <?= htmlspecialchars($ent['identificador']) ?>
                                                     </span>
                                                 <?php elseif (!empty($entUuid)): ?>
-                                                    <span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i> Buscando...</span>
+                                                    <span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i
+                                                            class="material-icons tiny spinning">sync</i> Buscando...</span>
                                                 <?php else: ?>
                                                     <span class="grey-text">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="col-foto">
                                                 <?php if (!empty($ent['foto'])): ?>
-                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
+                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>"
+                                                        style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;"
+                                                        alt="Pacote">
                                                 <?php elseif (!empty($entUuid)): ?>
-                                                    <span class="grey-text text-lighten-1 spin-load-foto" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>
+                                                    <span class="grey-text text-lighten-1 spin-load-foto"
+                                                        style="font-size:0.8rem;"><i
+                                                            class="material-icons tiny spinning">sync</i></span>
                                                 <?php else: ?>
                                                     <span class="grey-text">-</span>
                                                 <?php endif; ?>
@@ -913,8 +948,10 @@ if ($esseRecurso == null) {
                                             <td><b><?= htmlspecialchars($ent['descricao']) ?></b></td>
                                             <td><?= htmlspecialchars($ent['destinatario']) ?></td>
                                             <td>
-                                                <span class="btn-small waves-effect waves-light blue lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                                                <span class="btn-small waves-effect waves-light blue lighten-2 white-text"
+                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                    Inspecionar <i class="material-icons right tiny"
+                                                        style="margin-left:2px;">search</i>
                                                 </span>
                                             </td>
                                         </tr>
@@ -926,7 +963,7 @@ if ($esseRecurso == null) {
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
-                        <i class="material-icons orange-text">label</i> 
+                        <i class="material-icons orange-text">label</i>
                         Ocorrências Onde a Unidade é Autora ou Citada (<?= count($chamadosTag) ?>)
                     </div>
                     <div class="collapsible-body" style="padding: 10px;">
@@ -939,15 +976,24 @@ if ($esseRecurso == null) {
                                     $vinculo = $ch['vinculo_final'] ?? ($ch['tipo_vinculo'] ?? 'autora');
                                     $tagUnidStr = strtoupper(($result['bloco'] ?? '') . ($result['unidade'] ?? ''));
                                     ?>
-                                    <a href="index.php?pag=livroDeOcorrencias&id=<?= $ch['id'] ?>" target="_blank" class="collection-item" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:10px 15px;">
+                                    <a href="index.php?pag=livroDeOcorrencias&id=<?= $ch['id'] ?>" target="_blank"
+                                        class="collection-item"
+                                        style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:10px 15px;">
                                         <span>
-                                            <b>Prot <?= htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) ?></b> - Bloco <?= htmlspecialchars($ch['bloco']) ?>/<?= htmlspecialchars($ch['unidade']) ?> <small class="grey-text">(<?= date('d/m/Y', strtotime($ch['abertura'])) ?>)</small>
-                                            <span class="badge blue lighten-5 blue-text text-darken-3" style="float:none; margin-left:6px; font-weight:600;">Tag: <?= htmlspecialchars($tagUnidStr) ?></span>
+                                            <b>Prot <?= htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) ?></b> - Bloco
+                                            <?= htmlspecialchars($ch['bloco']) ?>/<?= htmlspecialchars($ch['unidade']) ?> <small
+                                                class="grey-text">(<?= date('d/m/Y', strtotime($ch['abertura'])) ?>)</small>
+                                            <span class="badge blue lighten-5 blue-text text-darken-3"
+                                                style="float:none; margin-left:6px; font-weight:600;">Tag:
+                                                <?= htmlspecialchars($tagUnidStr) ?></span>
                                         </span>
                                         <span style="display:flex; align-items:center; gap:8px;">
-                                            <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none; font-weight:600;">Vínculo: <?= strtoupper($vinculo) ?></span>
-                                            <span class="btn-small waves-effect waves-light purple darken-1 white-text" style="height:26px; line-height:26px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                Inspecionar Chat <i class="material-icons right tiny" style="margin-left:2px;">open_in_new</i>
+                                            <span class="badge orange lighten-4 orange-text text-darken-3"
+                                                style="float:none; font-weight:600;">Vínculo: <?= strtoupper($vinculo) ?></span>
+                                            <span class="btn-small waves-effect waves-light purple darken-1 white-text"
+                                                style="height:26px; line-height:26px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                                                Inspecionar Chat <i class="material-icons right tiny"
+                                                    style="margin-left:2px;">open_in_new</i>
                                             </span>
                                         </span>
                                     </a>
@@ -960,7 +1006,7 @@ if ($esseRecurso == null) {
         </div>
     </div>
 
-<?php
+    <?php
     echo "<h6><b>Histórico da unidade</b></h6>";
 
     echo "<div id=\"popup\" class=\"popup\">
@@ -1090,46 +1136,46 @@ if ($esseRecurso == null) {
 
                                 if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
                                     cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center; border: 1px solid #f0f0f0;">' +
-                                                    '<img src="' + file.url + '" class="responsive-img materialboxed" style="max-height: 180px; max-width: 100%; cursor: pointer;" alt="' + file.nome_arquivo + '">' +
-                                                '</div>' +
-                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                                        file.nome_arquivo +
-                                                    '</span>' +
-                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                                '</div>';
+                                        '<img src="' + file.url + '" class="responsive-img materialboxed" style="max-height: 180px; max-width: 100%; cursor: pointer;" alt="' + file.nome_arquivo + '">' +
+                                        '</div>' +
+                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                        file.nome_arquivo +
+                                        '</span>' +
+                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                        '</div>';
                                 } else if (['mp4', 'webm', 'ogg', 'mov'].indexOf(ext) !== -1) {
                                     cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #000; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center;">' +
-                                                    '<video controls style="max-width: 100%; max-height: 180px;"><source src="' + file.url + '" type="video/' + (ext === 'mov' ? 'mp4' : ext) + '">Seu navegador não suporta vídeos.</video>' +
-                                                '</div>' +
-                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                                        file.nome_arquivo +
-                                                    '</span>' +
-                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                                '</div>';
+                                        '<video controls style="max-width: 100%; max-height: 180px;"><source src="' + file.url + '" type="video/' + (ext === 'mov' ? 'mp4' : ext) + '">Seu navegador não suporta vídeos.</video>' +
+                                        '</div>' +
+                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                        file.nome_arquivo +
+                                        '</span>' +
+                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                        '</div>';
                                 } else if (ext === 'pdf') {
                                     cardHtml += '<div style="padding: 10px; background: #ffebee; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
-                                                    '<i class="material-icons red-text" style="font-size: 3rem;">picture_as_pdf</i>' +
-                                                    '<span style="font-weight: 500; font-size: 0.9rem; color: #c62828;">Documento PDF</span>' +
-                                                '</div>' +
-                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                                        file.nome_arquivo +
-                                                    '</span>' +
-                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small red lighten-5 red-text" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">open_in_new</i>Abrir</a>' +
-                                                '</div>';
+                                        '<i class="material-icons red-text" style="font-size: 3rem;">picture_as_pdf</i>' +
+                                        '<span style="font-weight: 500; font-size: 0.9rem; color: #c62828;">Documento PDF</span>' +
+                                        '</div>' +
+                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                        file.nome_arquivo +
+                                        '</span>' +
+                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small red lighten-5 red-text" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">open_in_new</i>Abrir</a>' +
+                                        '</div>';
                                 } else {
                                     cardHtml += '<div style="padding: 10px; background: #eceff1; border-radius: 6px; margin-bottom: 10px; border: 1px solid #cfd8dc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
-                                                    '<i class="material-icons grey-text text-darken-1" style="font-size: 3rem;">insert_drive_file</i>' +
-                                                    '<span style="font-weight: 500; font-size: 0.9rem; color: #37474f;">Arquivo .' + ext.toUpperCase() + '</span>' +
-                                                '</div>' +
-                                                '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                                    '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                                        file.nome_arquivo +
-                                                    '</span>' +
-                                                    '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                                '</div>';
+                                        '<i class="material-icons grey-text text-darken-1" style="font-size: 3rem;">insert_drive_file</i>' +
+                                        '<span style="font-weight: 500; font-size: 0.9rem; color: #37474f;">Arquivo .' + ext.toUpperCase() + '</span>' +
+                                        '</div>' +
+                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                        file.nome_arquivo +
+                                        '</span>' +
+                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                        '</div>';
                                 }
 
                                 cardHtml += '</div>';
@@ -1303,9 +1349,9 @@ if ($esseRecurso == null) {
                     <div class="chip teal  white-text">Revogar</div>
                 </td>
                 <?php if (!empty($notifRecurso['notificacao']) && strtoupper($notifRecurso['notificacao']) === 'MULTA'): ?>
-                <td class="opVoto" voto="converter">
-                    <div class="chip">Converter</div>
-                </td>
+                    <td class="opVoto" voto="converter">
+                        <div class="chip">Converter</div>
+                    </td>
                 <?php endif; ?>
             </tr>
         </table>
@@ -1362,4 +1408,3 @@ if ($esseRecurso == null) {
         <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
     </div>
 </div>
-
