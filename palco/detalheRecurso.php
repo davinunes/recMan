@@ -59,6 +59,7 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
 $parts = explode('/', $result['numero']);
 $num = isset($parts[0]) ? (int) $parts[0] : 0;
 $ano = isset($parts[1]) ? (int) $parts[1] : 0;
+$anoNotifCurto = $ano ? substr((string)$ano, -2) : '';
 $notifRecurso = getNotificacaoByNumeroAno($num, $ano);
 $artigoNota = ($notifRecurso && isset($notifRecurso['artigo'])) ? $notifRecurso['artigo'] : null;
 
@@ -202,7 +203,7 @@ if ($esseRecurso == null) {
                     </div>
                     <div>
                         <span style="font-size: 0.8rem; color: #757575; display: block;">Data de Retirada</span>
-                        <strong style="font-size: 0.95rem; color: #37474f;">' . $diaRetirada . '</strong>
+                        <strong class="detalhe-dia-retirada" style="font-size: 0.95rem; color: #37474f;">' . $diaRetirada . '</strong>
                     </div>
                     <div>
                         <span style="font-size: 0.8rem; color: #757575; display: block;">Apresentação do Recurso</span>
@@ -812,6 +813,8 @@ if ($esseRecurso == null) {
                 try { data = Object.assign({}, data, JSON.parse(row.dataset.detalhesCompletos)); } catch (e) { }
             }
 
+            const isMatch = checarMatchNotificacao(data.identificador) || checarMatchNotificacao(data.descricao);
+
             var html = '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
 
             const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
@@ -821,7 +824,6 @@ if ($esseRecurso == null) {
 
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
             if (data.identificador) {
-                const isMatch = checarMatchNotificacao(data.identificador) || checarMatchNotificacao(data.descricao);
                 if (isMatch) {
                     html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="amber-text text-darken-4" style="font-size:1.05rem;"><i class="material-icons tiny">star</i> ' + data.identificador + ' <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">⭐ Correspondente à Notificação ' + recNumCompleto + '</span></b></td></tr>';
                 } else {
@@ -853,10 +855,102 @@ if ($esseRecurso == null) {
                 html += '</ul>';
             }
 
+            // === Botão de Upsert da Data de Retirada (somente quando é correspondente à notificação) ===
+            if (isMatch && recNumCompleto) {
+                // Extrair somente a data (DD/MM/YYYY) da chegada na portaria para pré-preencher
+                const dtChegadaRaw = data.dthoraChegada || data.dthoraFormatada || data.dthora || '';
+                let dataSugerida = '';
+                const matchDt = String(dtChegadaRaw).match(/(\d{2}\/\d{2}\/\d{4})/);
+                if (matchDt) {
+                    dataSugerida = matchDt[1];
+                }
+
+                const diaRetiradaAtual = '<?= addslashes($diaRetirada ?? "Indisponível") ?>';
+                const jaTemRetirada = diaRetiradaAtual && diaRetiradaAtual !== 'Indisponível';
+
+                html += '<div style="margin-top:18px; padding:14px; background: linear-gradient(135deg, #fff3e0 0%, #fff8e1 100%); border:1px solid #ffe082; border-radius:8px; box-shadow:0 2px 8px rgba(255,160,0,0.12);">';
+                html += '<h6 style="margin:0 0 10px 0; font-weight:700; color:#e65100; display:flex; align-items:center; gap:6px; font-size:0.95rem;"><i class="material-icons" style="font-size:1.2rem;">assignment_returned</i> Ciência / Retirada da Notificação ' + recNumCompleto + '</h6>';
+
+                if (jaTemRetirada) {
+                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#555;"><i class="material-icons tiny green-text">check_circle</i> Data de ciência atual: <b class="green-text text-darken-3">' + diaRetiradaAtual + '</b></p>';
+                } else {
+                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#c62828;"><i class="material-icons tiny">warning</i> <b>Nenhuma data de ciência cadastrada.</b> A entrega na portaria indica que a notificação chegou em <b>' + (dataSugerida || 'data desconhecida') + '</b>.</p>';
+                }
+
+                html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
+                html += '<label style="font-size:0.8rem; font-weight:600; color:#795548;">Data de Ciência:</label>';
+                html += '<input type="text" id="input-data-retirada-modal" value="' + (dataSugerida || diaRetiradaAtual.replace('Indisponível','')) + '" placeholder="DD/MM/AAAA" style="width:130px; height:32px; padding:4px 8px; border:1px solid #bdbdbd; border-radius:4px; font-size:0.9rem; text-align:center;" maxlength="10">';
+                html += '<button type="button" onclick="upsertDataRetiradaNotificacao()" id="btn-salvar-retirada-modal" class="btn waves-effect waves-light amber darken-3 white-text" style="height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;">';
+                html += '<i class="material-icons left tiny" style="margin-right:4px;">save</i> ' + (jaTemRetirada ? 'Atualizar Data' : 'Salvar Data de Ciência');
+                html += '</button>';
+                html += '</div>';
+                html += '<div id="feedback-retirada-modal" style="margin-top:6px; font-size:0.8rem;"></div>';
+                html += '</div>';
+            }
+
             document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
             var elem = document.getElementById('modalInspecionarAcelerador');
             var instance = M.Modal.getInstance(elem) || M.Modal.init(elem);
             instance.open();
+        }
+
+        function upsertDataRetiradaNotificacao() {
+            const input = document.getElementById('input-data-retirada-modal');
+            const feedback = document.getElementById('feedback-retirada-modal');
+            const btn = document.getElementById('btn-salvar-retirada-modal');
+            if (!input || !recNumCompleto) return;
+
+            const valor = input.value.trim();
+            if (!valor || !/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+                if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Formato inválido. Use DD/MM/AAAA.</span>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="material-icons left tiny spinning">sync</i> Salvando...';
+            if (feedback) feedback.innerHTML = '<span class="grey-text"><i class="material-icons tiny spinning">hourglass_empty</i> Gravando...</span>';
+
+            const formData = new FormData();
+            formData.append('virtual', recNumCompleto);
+            formData.append('dia_retirada', valor);
+
+            fetch('metodo.php?metodo=atualizaDataRetiradaNotificacao', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.text())
+            .then(txt => {
+                if (txt.trim() === 'success') {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">check</i> Salvo!';
+                    btn.className = 'btn waves-effect waves-light green darken-2 white-text';
+                    btn.style.cssText += 'height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;';
+                    if (feedback) feedback.innerHTML = '<span class="green-text text-darken-3"><i class="material-icons tiny">check_circle</i> Data de ciência da notificação <b>' + recNumCompleto + '</b> atualizada para <b>' + valor + '</b>.</span>';
+
+                    // Atualizar a exibição do dia de retirada na página (se houver elemento)
+                    const elemRetirada = document.querySelector('.detalhe-dia-retirada');
+                    if (elemRetirada) {
+                        elemRetirada.innerHTML = valor;
+                        elemRetirada.classList.remove('red-text');
+                        elemRetirada.classList.add('green-text', 'text-darken-3');
+                    }
+
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Atualizar Data';
+                        btn.className = 'btn waves-effect waves-light amber darken-3 white-text';
+                        btn.style.cssText += 'height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;';
+                    }, 3000);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Tentar Novamente';
+                    if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro ao salvar: ' + txt + '</span>';
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Tentar Novamente';
+                if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro de conexão: ' + err.message + '</span>';
+            });
         }
     </script>
 
