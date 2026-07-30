@@ -156,7 +156,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=\"Bearer \" + $json.token"
+              "value": "=Bearer {{ $json.token }}"
             },
             {
               "name": "Content-Type",
@@ -191,7 +191,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=\"Bearer \" + $json.token"
+              "value": "=Bearer {{ $json.token }}"
             },
             {
               "name": "Content-Type",
