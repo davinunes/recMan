@@ -73,11 +73,16 @@ $(document).ready(function () {
         setTimeout(() => $topLoader.css('width', '65%'), 150);
         setTimeout(() => $topLoader.css('width', '90%'), 400);
 
-        // 2. Se o link for para Ocorrências VDS, exibe o Esqueleto Tela Cheia instantaneamente
+        // 2. Se o link for para Ocorrências VDS, exibe o Esqueleto exclusivamente na área de Conteúdo (<main>)
         if (href.indexOf('livroDeOcorrencias') !== -1) {
-            if ($('#vds-full-page-skeleton-overlay').length === 0) {
+            const $main = $('main');
+            if ($main.length > 0) {
+                $main.css('position', 'relative');
+            }
+
+            if ($('#vds-content-skeleton-overlay').length === 0) {
                 const skeletonHtml = `
-                    <div id="vds-full-page-skeleton-overlay" style="position:fixed; top:0; left:0; width:100%; height:100vh; background:#f8f9fa; z-index:9998; padding:20px; display:flex; flex-direction:column; gap:15px; box-sizing:border-box;">
+                    <div id="vds-content-skeleton-overlay" style="position:absolute; top:0; left:0; width:100%; min-height:calc(100vh - 70px); background:#f8f9fa; z-index:99; padding:20px; display:flex; flex-direction:column; gap:15px; box-sizing:border-box;">
                         <style>
                             @keyframes vds-shimmer-pulse-g { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
                             .vds-sk-g { background: linear-gradient(90deg, #eef0f3 25%, #dbe0e6 37%, #eef0f3 63%) !important; background-size: 200% 100% !important; animation: vds-shimmer-pulse-g 1.4s ease-in-out infinite !important; border-radius:6px; }
@@ -89,7 +94,7 @@ $(document).ready(function () {
                                 <div class="vds-sk-g" style="height:32px; width:140px;"></div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:15px; flex:1; overflow:hidden;">
+                        <div style="display:flex; gap:15px; flex:1; min-height:550px;">
                             <div style="width:28%; background:#fff; border-radius:8px; border:1px solid #e0e0e0; padding:15px; display:flex; flex-direction:column; gap:12px;">
                                 <div class="vds-sk-g" style="height:36px; width:100%;"></div>
                                 <div class="vds-sk-g" style="height:65px; width:100%;"></div>
@@ -108,9 +113,13 @@ $(document).ready(function () {
                         </div>
                     </div>
                 `;
-                $('body').append(skeletonHtml);
+                if ($main.length > 0) {
+                    $main.append(skeletonHtml);
+                } else {
+                    $('body').append(skeletonHtml);
+                }
             } else {
-                $('#vds-full-page-skeleton-overlay').show();
+                $('#vds-content-skeleton-overlay').show();
             }
         }
     });

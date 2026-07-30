@@ -1,18 +1,18 @@
-# Walkthrough / Taklin: Skeleton Loader Global no Menu & Navegação
+# Walkthrough / Taklin: Skeleton Loader Restrito à Área de Conteúdo (<main>)
 
 **Data:** 30/07/2026  
-**Status:** Concluído  
+**Status:** Concluído e Ajustado  
 
 ---
 
 ## 📌 O que foi feito
 
-### 1. Suporte Global em `meu.js`
-- Adicionado detector de cliques no menu (`.sidenav a`, `nav a`).
-- Ao clicar em **"Ocorrências VDS"** a partir de qualquer outra tela/aba do sistema, o **Skeleton Screen de Tela Cheia** (`#vds-full-page-skeleton-overlay`) e a barra de progresso superior são exibidos no exato milissegundo do clique (0ms).
+### 1. Desbloqueio do Menu Lateral (`meu.js`)
+- Alterado o elemento `#vds-content-skeleton-overlay` para ser inserido exclusivamente dentro do container `<main>` com `position: absolute`.
+- A menu lateral `.sidenav` e o topo da aplicação continuam **100% livres e interativos**. Se o usuário decidir trocar de tela antes do carregamento da API VDS terminar, ele pode clicar em qualquer outra opção do menu normalmente.
 
-### 2. Finalização de Carga (`livroDeOcorrencias.php`)
-- Quando a página chega ao navegador com os dados da API VDS processados, a barra completa a animação (100%) e o esqueleto desaparece com `fadeOut(250)`.
+### 2. Animação de Carregamento na Área Central
+- A área de conteúdo do `<main>` exibe o Esqueleto Shimmer (`.vds-sk-g`) e a barra de progresso superior (`#vds-top-loader`) continua ativa até a renderização do PHP.
 
 ---
 

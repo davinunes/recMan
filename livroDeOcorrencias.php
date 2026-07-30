@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => $loader.css('width', '0%'), 400);
         }, 200);
     }
-    $('#vds-full-page-skeleton-overlay').fadeOut(250);
+    $('#vds-content-skeleton-overlay, #vds-full-page-skeleton-overlay').fadeOut(250);
     // Controller de Skeleton Screen & Progress Bar (Vercel Style)
     window.triggerVdsSkeleton = function(onlyChat = true) {
         // 1. Mostrar barra de progresso horizontal no topo da janela

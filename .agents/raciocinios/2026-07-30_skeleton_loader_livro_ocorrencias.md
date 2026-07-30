@@ -1,4 +1,4 @@
-# Raciocínio & Diagnóstico: Skeleton Screen Loader Global para Navegação e Menu
+# Raciocínio & Diagnóstico: Skeleton Screen Loader Restrito à Área de Conteúdo (<main>)
 
 **Data:** 30/07/2026  
 **Projeto:** recMan  
@@ -6,26 +6,24 @@
 
 ---
 
-## 1. Problema Identificado
-- Ao estar em qualquer outra aba/página do sistema (como Dashboard ou Recursos) e clicar no menu lateral para acessar **Ocorrências VDS** (`index.php?pag=livroDeOcorrencias`), ocorria uma demora de 1 a 3 segundos.
-- Durante esse tempo de requisição HTTP, a página anterior ficava congelada sem nenhum indicativo de carregamento.
+## 1. Ajuste de Experiência Solicitado pelo Usuário
+- O usuário apontou que congelar/bloquear a tela inteira (incluindo a barra de navegação superior e a barra lateral de menu `.sidenav`) era excessivo.
+- Se o carregamento da API VDS demorasse, o usuário ficava impossibilitado de desistir da ação e mudar de menu.
 
 ---
 
 ## 2. Solução Implementada
 
-### A. Gatilho Global de Navegação em `meu.js`
-- Adicionado ouvinte de cliques global nos links de navegação (`.sidenav a`, `nav a`, `a[href*="livroDeOcorrencias"]`).
-- No instante **0ms** do clique no menu:
-  1. A barra de progresso no topo (`#vds-top-loader`) avança instantaneamente de 0% a 90% com efeito *glow*.
-  2. É injetado e exibido o **Skeleton Screen de Tela Cheia** (`#vds-full-page-skeleton-overlay`), simulando a barra de filtros, a lista de ocorrencias e o container de chat com animação shimmer.
+### A. Escopo Restrito do Overlay (`#vds-content-skeleton-overlay`)
+- Alterado o container do Skeleton Overlay em `meu.js`.
+- Em vez de usar `position: fixed` cobrindo o `body` inteiro, o elemento é injetado com `position: absolute` diretamente dentro da tag `<main>` (`div` principal de conteúdo).
+- **Resultado:** A barra lateral de menu (`.sidenav`), o avatar do perfil e a barra azul do topo continuam **100% visíveis, ativos e interativos**. Caso o usuário decida clicar em "Dashboard", "Recursos", "Historico" ou qualquer outro menu enquanto a VDS carrega, a navegação ocorre imediatamente sem impedimento.
 
-### B. Finalização Suave em `livroDeOcorrencias.php`
-- Assim que o PHP termina a consulta à API VDS e renderiza o HTML final, o script de `DOMContentLoaded`:
-  - Faz a barra de progresso ir de 90% a 100% e desaparecer com fade.
-  - Executa um `fadeOut(250)` suave no esqueleto de tela cheia, revelando a interface pronta.
+### B. Manutenção do Feedback Visual
+- A barra de progresso no topo (`#vds-top-loader`) continua avançando no topo da janela como um elegante indicador visual.
+- Assim que o conteúdo de `livroDeOcorrencias.php` chega do servidor, o `#vds-content-skeleton-overlay` sofre um `fadeOut(250)` dentro do `<main>`.
 
 ---
 
 ## 3. Conclusão
-Agora, a transição vinda de qualquer menu ou aba da aplicação aciona um efeito esqueleto global imediato (Single Page Application feel), acabando com a sensação de travamento ao entrar na tela.
+A interface atingiu o equilíbrio ideal de UX: feedback instantâneo de carregamento na área de conteúdo sem comprometer a liberdade de navegação do usuário no menu lateral.
