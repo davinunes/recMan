@@ -170,12 +170,12 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
         if ($httpCode === 200 && $response) {
             $json = json_decode($response, true);
             $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
-            if (!empty($regs) && is_array($regs)) {
+            if (is_array($regs)) {
                 $filtrados = [];
                 $unidadeClean = trim($unidade);
                 foreach ($regs as $acc) {
-                    $accUnid = trim($acc['unidade']['numero'] ?? ($acc['unidadeNumero'] ?? ($acc['unidade'] ?? '')));
-                    if (empty($accUnid) || $accUnid === $unidadeClean || ltrim($accUnid, '0') === ltrim($unidadeClean, '0')) {
+                    $accUnid = trim($acc['unidade']['numero'] ?? ($acc['unidade']['nome'] ?? ($acc['unidadeNumero'] ?? ($acc['unidade'] ?? ''))));
+                    if (($accUnid !== '' && ($accUnid === $unidadeClean || ltrim($accUnid, '0') === ltrim($unidadeClean, '0'))) || ($accUnid === '' && !empty($unidadeUuid))) {
                         $filtrados[] = [
                             'dthora' => $acc['dthora'] ?? ($acc['dtExibicao'] ?? date('Y-m-d H:i:s')),
                             'pessoaNome' => $acc['pessoa']['nome'] ?? ($acc['pessoaNome'] ?? ($acc['nome'] ?? 'Visitante/Morador')),
@@ -185,16 +185,9 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
                         ];
                     }
                 }
-                return !empty($filtrados) ? $filtrados : $regs;
+                return $filtrados;
             }
         }
-    }
-
-    // Fallback: Mock para testes offline
-    $mockPath = __DIR__ . '/../docs/mocks/mock_evento_acesso.json';
-    if (file_exists($mockPath)) {
-        $mock = json_decode(file_get_contents($mockPath), true);
-        return $mock['regs'] ?? ($mock['data'] ?? []);
     }
 
     return [];
@@ -247,12 +240,12 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
         if ($httpCode === 200 && $response) {
             $json = json_decode($response, true);
             $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
-            if (!empty($regs) && is_array($regs)) {
+            if (is_array($regs)) {
                 $filtrados = [];
                 $unidadeClean = trim($unidade);
                 foreach ($regs as $ent) {
-                    $eUnid = trim($ent['unidade']['numero'] ?? ($ent['unidadeNumero'] ?? ($ent['unidade'] ?? '')));
-                    if (empty($eUnid) || $eUnid === $unidadeClean || ltrim($eUnid, '0') === ltrim($unidadeClean, '0')) {
+                    $eUnid = trim($ent['unidade']['numero'] ?? ($ent['unidade']['nome'] ?? ($ent['unidadeNumero'] ?? ($ent['unidade'] ?? ''))));
+                    if (($eUnid !== '' && ($eUnid === $unidadeClean || ltrim($eUnid, '0') === ltrim($unidadeClean, '0'))) || ($eUnid === '' && !empty($unidadeUuid))) {
                         $descStr = vds_extract_string_value($ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? null)), 'Encomenda / Pacote');
                         $destStr = vds_extract_string_value($ent['destinatario'] ?? ($ent['recebidoPor'] ?? null), 'Morador');
                         $statusStr = vds_extract_string_value($ent['status'] ?? ($ent['situacao'] ?? null), 'Entregue');
@@ -270,16 +263,9 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         ];
                     }
                 }
-                return !empty($filtrados) ? $filtrados : $regs;
+                return $filtrados;
             }
         }
-    }
-
-    // Fallback Mock
-    $mockPath = __DIR__ . '/../docs/mocks/mock_entrega.json';
-    if (file_exists($mockPath)) {
-        $mock = json_decode(file_get_contents($mockPath), true);
-        return $mock['data'] ?? ($mock['regs'] ?? []);
     }
 
     return [];
@@ -340,8 +326,7 @@ function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = n
         $url = VDS_BASE_URL . '/autorizacao_acesso?page=1&limit=50&sortBy=nome&order=asc';
         if ($unidadeUuid) {
             $url .= '&Unidade.Uuid=' . urlencode($unidadeUuid);
-        }
-        if ($blocoUuid) {
+        } elseif ($blocoUuid) {
             $url .= '&Bloco.Uuid=' . urlencode($blocoUuid);
         }
         if ($dtIni) {
@@ -367,33 +352,37 @@ function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = n
         if ($httpCode === 200 && $response) {
             $json = json_decode($response, true);
             $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
-            if (!empty($regs) && is_array($regs)) {
+            if (is_array($regs)) {
                 $processados = [];
+                $unidadeClean = trim($unidade);
                 foreach ($regs as $aut) {
-                    $fotoRel = $aut['foto'] ?? null;
-                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
-                    
-                    $docStr = 'N/A';
-                    if (!empty($aut['documento']) && is_array($aut['documento'])) {
-                        $docTipo = strtoupper($aut['documento']['tipo'] ?? 'DOC');
-                        $docNum = $aut['documento']['documento'] ?? '';
-                        $docStr = $docTipo . ': ' . $docNum;
-                    }
+                    $aUnid = trim($aut['unidade']['numero'] ?? ($aut['unidade']['nome'] ?? ($aut['unidadeNumero'] ?? ($aut['unidade'] ?? ''))));
+                    if (($aUnid !== '' && ($aUnid === $unidadeClean || ltrim($aUnid, '0') === ltrim($unidadeClean, '0'))) || ($aUnid === '' && !empty($unidadeUuid))) {
+                        $fotoRel = $aut['foto'] ?? null;
+                        $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+                        
+                        $docStr = 'N/A';
+                        if (!empty($aut['documento']) && is_array($aut['documento'])) {
+                            $docTipo = strtoupper($aut['documento']['tipo'] ?? 'DOC');
+                            $docNum = $aut['documento']['documento'] ?? '';
+                            $docStr = $docTipo . ': ' . $docNum;
+                        }
 
-                    $processados[] = [
-                        'uuid' => $aut['uuid'] ?? null,
-                        'nome' => $aut['nome'] ?? 'Visitante / Prestador',
-                        'foto' => $fotoUrl,
-                        'documento' => $docStr,
-                        'destino' => $aut['destino'] ?? '',
-                        'dtInicio' => $aut['dtInicio'] ?? '',
-                        'dtFim' => $aut['dtFim'] ?? '',
-                        'autorizadoPor' => $aut['autorizadoPor']['nome'] ?? 'Morador',
-                        'registradoPor' => $aut['registradoPor']['nome'] ?? 'Portaria',
-                        'status' => $aut['status']['nome'] ?? ($aut['status'] ?? 'Ativo'),
-                        'chave' => $aut['chave'] ?? null,
-                        'dtHora' => $aut['dtHora'] ?? ''
-                    ];
+                        $processados[] = [
+                            'uuid' => $aut['uuid'] ?? null,
+                            'nome' => $aut['nome'] ?? 'Visitante / Prestador',
+                            'foto' => $fotoUrl,
+                            'documento' => $docStr,
+                            'destino' => $aut['destino'] ?? '',
+                            'dtInicio' => $aut['dtInicio'] ?? '',
+                            'dtFim' => $aut['dtFim'] ?? '',
+                            'autorizadoPor' => $aut['autorizadoPor']['nome'] ?? 'Morador',
+                            'registradoPor' => $aut['registradoPor']['nome'] ?? 'Portaria',
+                            'status' => $aut['status']['nome'] ?? ($aut['status'] ?? 'Ativo'),
+                            'chave' => $aut['chave'] ?? null,
+                            'dtHora' => $aut['dtHora'] ?? ''
+                        ];
+                    }
                 }
                 return $processados;
             }
