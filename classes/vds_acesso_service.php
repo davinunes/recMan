@@ -135,6 +135,32 @@ function vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho = n
 /**
  * Consulta eventos de acesso da unidade na VDS para a janela temporal especificada.
  */
+/**
+ * Formata com segurança strings de data/hora vindas da API VDS em múltiplos formatos (ISO ou BR).
+ * Evita que strtotime("DD/MM/YYYY") retorne false e vire 31/12/1969.
+ */
+function vds_format_datetime($rawDate, $format = 'd/m/Y H:i', $default = 'N/A') {
+    if (empty($rawDate) || is_array($rawDate)) return $default;
+
+    $rawStr = trim((string)$rawDate);
+    if (empty($rawStr)) return $default;
+
+    // Converter barras em traços para o strtotime interpretar como formato europeu/BR (DD-MM-YYYY)
+    $normalized = str_replace('/', '-', $rawStr);
+    $ts = strtotime($normalized);
+
+    if ($ts !== false && $ts > 0) {
+        return date($format, $ts);
+    }
+
+    // Se já estiver formatada em BR legível (ex: "29/07/2026 13:54")
+    if (preg_match('/^\d{2}\/\d{2}\/\d{4}/', $rawStr)) {
+        return $rawStr;
+    }
+
+    return $default;
+}
+
 function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdConselho = null) {
     // 1. Resolver UUIDs de Bloco e Unidade silenciosamente
     $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
@@ -196,7 +222,7 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
 
                         $filtrados[] = [
                             'uuid' => $acc['uuid'] ?? null,
-                            'dthora' => !empty($acc['dthora']) ? date('d/m/Y H:i:s', strtotime($acc['dthora'])) : ($acc['dtExibicao'] ?? date('d/m/Y H:i:s')),
+                            'dthora' => vds_format_datetime($acc['dthora'] ?? ($acc['dtExibicao'] ?? null), 'd/m/Y H:i:s'),
                             'pessoaNome' => $pessoaNome,
                             'perfil' => $perfil,
                             'tipoEvento' => $detalheEvento,
@@ -269,7 +295,7 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                 $filtrados = [];
                 $unidadeClean = trim($unidade);
                 foreach ($regs as $ent) {
-                    $eUnid = trim($ent['unidade']['numero'] ?? ($ent['unidade']['nome'] ?? ($ent['unidadeNumero'] ?? ($ent['unidade'] ?? ''))));
+                    $eUnid = trim(is_array($ent['unidade'] ?? null) ? ($ent['unidade']['numero'] ?? ($ent['unidade']['nome'] ?? '')) : ($ent['unidade'] ?? ($ent['unidadeNumero'] ?? '')));
                     if (($eUnid !== '' && ($eUnid === $unidadeClean || ltrim($eUnid, '0') === ltrim($unidadeClean, '0'))) || ($eUnid === '' && !empty($unidadeUuid))) {
                         $descStr = vds_extract_string_value($ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? null)), 'Encomenda / Pacote');
                         $destStr = vds_extract_string_value($ent['destinatario'] ?? ($ent['recebidoPor'] ?? null), 'Morador');
@@ -277,9 +303,11 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         $fotoRel = $ent['foto'] ?? null;
                         $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
 
+                        $rawDtChegada = $ent['dthora'] ?? ($ent['dtCadastro'] ?? ($ent['dtExibicao'] ?? null));
+
                         $filtrados[] = [
                             'uuid' => $ent['uuid'] ?? ($ent['id'] ?? null),
-                            'dthoraChegada' => !empty($ent['dthora']) ? date('d/m/Y H:i', strtotime($ent['dthora'])) : ($ent['dtExibicao'] ?? 'Recente'),
+                            'dthoraChegada' => vds_format_datetime($rawDtChegada, 'd/m/Y H:i', 'Recente'),
                             'descricao' => $descStr,
                             'destinatario' => $destStr,
                             'identificador' => $ent['identificador'] ?? ($ent['codigoRastreio'] ?? null),
@@ -329,6 +357,14 @@ function vds_get_entrega_detalhe($uuid, $usuarioIdConselho = null) {
             } else {
                 $data['fotoUrlCompleta'] = $data['foto'] ?? null;
             }
+
+            if (!empty($data['dthora'])) {
+                $data['dthoraFormatada'] = vds_format_datetime($data['dthora'], 'd/m/Y H:i');
+            }
+            if (!empty($data['dtFim'])) {
+                $data['dtFimFormatada'] = vds_format_datetime($data['dtFim'], 'd/m/Y H:i');
+            }
+
             return ['success' => true, 'data' => $data];
         }
     }
@@ -381,7 +417,7 @@ function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = n
                 $processados = [];
                 $unidadeClean = trim($unidade);
                 foreach ($regs as $aut) {
-                    $aUnid = trim($aut['unidade']['numero'] ?? ($aut['unidade']['nome'] ?? ($aut['unidadeNumero'] ?? ($aut['unidade'] ?? ''))));
+                    $aUnid = trim(is_array($aut['unidade'] ?? null) ? ($aut['unidade']['numero'] ?? ($aut['unidade']['nome'] ?? '')) : ($aut['unidade'] ?? ($aut['unidadeNumero'] ?? '')));
                     if (($aUnid !== '' && ($aUnid === $unidadeClean || ltrim($aUnid, '0') === ltrim($unidadeClean, '0'))) || ($aUnid === '' && !empty($unidadeUuid))) {
                         $fotoRel = $aut['foto'] ?? null;
                         $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
@@ -399,13 +435,13 @@ function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = n
                             'foto' => $fotoUrl,
                             'documento' => $docStr,
                             'destino' => $aut['destino'] ?? '',
-                            'dtInicio' => $aut['dtInicio'] ?? '',
-                            'dtFim' => $aut['dtFim'] ?? '',
+                            'dtInicio' => vds_format_datetime($aut['dtInicio'] ?? null, 'd/m/Y H:i'),
+                            'dtFim' => vds_format_datetime($aut['dtFim'] ?? null, 'd/m/Y H:i'),
                             'autorizadoPor' => $aut['autorizadoPor']['nome'] ?? 'Morador',
                             'registradoPor' => $aut['registradoPor']['nome'] ?? 'Portaria',
                             'status' => $aut['status']['nome'] ?? ($aut['status'] ?? 'Ativo'),
                             'chave' => $aut['chave'] ?? null,
-                            'dtHora' => $aut['dtHora'] ?? ''
+                            'dtHora' => vds_format_datetime($aut['dtHora'] ?? null, 'd/m/Y H:i:s')
                         ];
                     }
                 }

@@ -732,9 +732,9 @@ if ($esseRecurso == null) {
             }
             html += '<tr><td><b>Descrição / Conteúdo:</b></td><td><b>' + formatObjStr(data.descricao) + '</b></td></tr>';
             html += '<tr><td><b>Destinatário:</b></td><td>' + formatObjStr(data.destinoNome || data.destinatario) + '</td></tr>';
-            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada || data.dthora) + '</td></tr>';
-            if (data.dtFim) {
-                html += '<tr><td><b>Data/Hora Retirada:</b></td><td>' + data.dtFim + '</td></tr>';
+            html += '<tr><td><b>Chegada na Portaria:</b></td><td>' + formatObjStr(data.dthoraChegada || (data.dthoraFormatada || data.dthora)) + '</td></tr>';
+            if (data.dtFimFormatada || data.dtFim) {
+                html += '<tr><td><b>Data/Hora Retirada:</b></td><td>' + formatObjStr(data.dtFimFormatada || data.dtFim) + '</td></tr>';
             }
             if (data.retiradoPor) {
                 const retNome = typeof data.retiradoPor === 'object' ? data.retiradoPor.nome : data.retiradoPor;
