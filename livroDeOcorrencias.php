@@ -252,6 +252,55 @@ $mapaCoresTipo = [
             height: calc(100vh - 120px) !important;
         }
     }
+
+    /* Top Progress Bar (Vercel / GitHub Premium Style) */
+    #vds-top-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        width: 0%;
+        background: linear-gradient(90deg, #0d6efd, #0dcaf0, #6f42c1, #0d6efd);
+        background-size: 200% 100%;
+        z-index: 999999;
+        box-shadow: 0 0 14px rgba(13, 110, 253, 0.9);
+        transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+        pointer-events: none;
+    }
+
+    /* Skeleton Screen Shimmer Animation Effect (Modern UX) */
+    @keyframes vds-shimmer-pulse {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .vds-skeleton-shimmer {
+        background: linear-gradient(90deg, #eef0f3 25%, #dbe0e6 37%, #eef0f3 63%) !important;
+        background-size: 200% 100% !important;
+        animation: vds-shimmer-pulse 1.4s ease-in-out infinite !important;
+        border-color: transparent !important;
+        color: transparent !important;
+        user-select: none !important;
+        pointer-events: none !important;
+    }
+
+    .vds-skeleton-box {
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    /* Container Skeleton do Chat */
+    #vds-skeleton-chat-container {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        background: #efeae2;
+    }
+
+    #vds-skeleton-chat-container.active {
+        display: flex !important;
+    }
 </style>
 
 <!-- Top Bar: Título, Seleção de Visão (Prático vs Analítico) e Ações Globais -->
@@ -468,6 +517,66 @@ $mapaCoresTipo = [
 
     <!-- Main Chat & Details -->
     <div class="col s12 m8 l9 chat-container" style="padding:0;">
+        <!-- Skeleton Placeholder (Exibido Instantaneamente ao Clicar em Qualquer Ocorrência ou Filtro) -->
+        <div id="vds-skeleton-chat-container">
+            <!-- Header do Chat Skeleton -->
+            <div class="chat-header" style="background:#ffffff; padding:12px 20px; border-bottom:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:12px; width:55%;">
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="width:40px; height:40px; border-radius:50%;"></div>
+                    <div style="flex:1;">
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:16px; width:45%; margin-bottom:6px;"></div>
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:12px; width:75%;"></div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:30px; width:90px; border-radius:4px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:30px; width:130px; border-radius:4px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:30px; width:130px; border-radius:4px;"></div>
+                </div>
+            </div>
+
+            <!-- Body do Chat Skeleton (Balões de Conversa Shimmer Estilo WhatsApp) -->
+            <div class="chat-body" style="padding:20px; display:flex; flex-direction:column; gap:18px; background:#efeae2; flex:1; overflow-y:auto;">
+                <!-- Balão 1: Morador (Esquerda - Branco) -->
+                <div class="msg-bubble msg-left" style="width:68%; background:#ffffff; box-shadow:0 1px 2px rgba(0,0,0,0.08); padding:14px 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:14px; width:30%;"></div>
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:12px; width:20%;"></div>
+                    </div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:92%; margin-bottom:6px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:80%; margin-bottom:6px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:60%;"></div>
+                </div>
+
+                <!-- Balão 2: Resposta do Conselho (Direita - Verde) -->
+                <div class="msg-bubble msg-right" style="width:62%; background:#dcf8c6; margin-left:auto; box-shadow:0 1px 2px rgba(0,0,0,0.08); padding:14px 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:14px; width:35%;"></div>
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:12px; width:22%;"></div>
+                    </div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:88%; margin-bottom:6px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:70%;"></div>
+                </div>
+
+                <!-- Balão 3: Nota Interna (Direita - Amarelo) -->
+                <div class="msg-bubble msg-internal" style="width:58%; background:#fff3cd; border:1px solid #ffeba0; margin-left:auto; box-shadow:0 1px 2px rgba(0,0,0,0.08); padding:14px 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:14px; width:45%;"></div>
+                        <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:12px; width:20%;"></div>
+                    </div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:85%; margin-bottom:6px;"></div>
+                    <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:13px; width:50%;"></div>
+                </div>
+            </div>
+
+            <!-- Footer Input Skeleton -->
+            <div class="chat-footer" style="background:#ffffff; padding:15px; border-top:1px solid #e0e0e0; display:flex; gap:10px; align-items:center;">
+                <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:42px; flex:1; border-radius:6px;"></div>
+                <div class="vds-skeleton-box vds-skeleton-shimmer" style="height:42px; width:110px; border-radius:6px;"></div>
+            </div>
+        </div>
+
+        <div id="chat-real-content" style="height:100%; display:flex; flex-direction:column;">
         <?php if (!$detalheSel): ?>
             <div style="padding: 40px; text-align: center; color: #888;">Selecione uma ocorrência na lista para visualizar o chat e mensagens.</div>
         <?php else: ?>
@@ -846,9 +955,48 @@ $mapaCoresTipo = [
         <?php endif; ?>
     </div>
 <?php endif; ?>
+        </div> <!-- Fecha #chat-real-content -->
+    </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Controller de Skeleton Screen & Progress Bar (Vercel Style)
+    window.triggerVdsSkeleton = function(onlyChat = true) {
+        // 1. Mostrar barra de progresso horizontal no topo da janela
+        let $loader = $('#vds-top-loader');
+        if (!$loader.length) {
+            $('body').append('<div id="vds-top-loader"></div>');
+            $loader = $('#vds-top-loader');
+        }
+        $loader.css({ width: '20%', opacity: 1 });
+        setTimeout(() => $loader.css('width', '55%'), 150);
+        setTimeout(() => $loader.css('width', '85%'), 400);
+
+        // 2. Ocultar o conteúdo real e exibir o Esqueleto instantaneamente
+        if (onlyChat) {
+            $('#chat-real-content').hide();
+            $('#vds-skeleton-chat-container').addClass('active').show();
+        } else {
+            $('#chat-real-content').hide();
+            $('#vds-skeleton-chat-container').addClass('active').show();
+            $('.sidebar-feed').css('opacity', '0.55');
+        }
+    };
+
+    // Ativar o Skeleton ao clicar em qualquer item de ocorrência na lista
+    $(document).on('click', '.item-oco', function() {
+        triggerVdsSkeleton(true);
+    });
+
+    // Ativar o Skeleton ao trocar de visão (Prático x Analítico), sincronizar ou filtrar
+    $(document).on('click', 'a[href*="livroDeOcorrencias"], button[type="submit"]', function() {
+        triggerVdsSkeleton(false);
+    });
+
+    // Ativar ao submeter formulários de filtro / ação
+    $(document).on('submit', 'form', function() {
+        triggerVdsSkeleton(false);
+    });
     // 1. Toggle individual de cabeçalho de categoria/grupo
     $(document).on('click', '.grupo-oco-header', function() {
         const targetId = $(this).data('target');
