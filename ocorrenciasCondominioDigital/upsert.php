@@ -3,8 +3,9 @@
 header('Content-Type: application/json; charset=utf-8');
 header("Access-Control-Allow-Origin: *");
 
-// Inclui o arquivo com as funções de banco de dados
-require_once '../classes/database.php';
+// Inclui as funções de banco de dados e o serviço da API VDS v8
+require_once __DIR__ . '/../classes/database.php';
+require_once __DIR__ . '/../classes/vds_ocorrencia_service.php';
 
 // Função para enviar a resposta JSON e encerrar o script
 function send_response($data) {
@@ -59,8 +60,6 @@ if ($abertura_raw) {
 $resolvido = (isset($_POST['resolvido']) && strtolower($_POST['resolvido']) === 'sim') ? 1 : 0;
 $sindico = (isset($_POST['sindico']) && strtolower($_POST['sindico']) === 'sim') ? 1 : 0;
 $sub = (isset($_POST['subsindico']) && strtolower($_POST['subsindico']) === 'sim') ? 1 : 0;
-// --- CORREÇÃO AQUI ---
-// O script esperava 'administracao', mas a requisição envia 'adm'.
 $adm = (isset($_POST['adm']) && strtolower($_POST['adm']) === 'sim') ? 1 : 0;
 
 if (empty($id)) {
@@ -68,24 +67,27 @@ if (empty($id)) {
     send_response(['status' => 'error', 'message' => 'O campo ID é obrigatório.']);
 }
 
-$id = (int)$id;
+$idInt = (int)$id;
+$protoStr = (string)$id;
 $link = null;
 
 try {
     $link = DBConnect();
 
-    $stmt = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ?");
-    mysqli_stmt_bind_param($stmt, "i", $id);
+    // 1. Procurar ocorrência existente por protocolo_vds ou por id numérico
+    $stmt = mysqli_prepare($link, "SELECT id, uuid_remoto FROM ocorrencias WHERE protocolo_vds = ? OR id = ? LIMIT 1");
+    mysqli_stmt_bind_param($stmt, "si", $protoStr, $idInt);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $ocorrenciaExistente = mysqli_fetch_assoc($result);
     mysqli_stmt_close($stmt);
 
     if ($ocorrenciaExistente) {
-        // ATUALIZAR OCORRÊNCIA EXISTENTE
-        $fieldsToUpdate = [];
-        $params = [];
-        $types = '';
+        // ATUALIZAR OCORRÊNCIA EXISTENTE - Garantindo preenchimento de protocolo_vds
+        $targetId = $ocorrenciaExistente['id'];
+        $fieldsToUpdate = ['protocolo_vds = ?'];
+        $params = [$protoStr];
+        $types = 's';
 
         if ($abertura) { $fieldsToUpdate[] = 'abertura = ?'; $types .= 's'; $params[] = $abertura; }
         if (isset($_POST['bloco'])) { $fieldsToUpdate[] = 'bloco = ?'; $types .= 's'; $params[] = $bloco; }
@@ -94,8 +96,6 @@ try {
         if (isset($_POST['status'])) { $fieldsToUpdate[] = 'status = ?'; $types .= 's'; $params[] = $status; }
         if (isset($_POST['sindico'])) { $fieldsToUpdate[] = 'sindico = ?'; $types .= 'i'; $params[] = $sindico; }
         if (isset($_POST['subsindico'])) { $fieldsToUpdate[] = 'sub = ?'; $types .= 'i'; $params[] = $sub; }
-        // --- CORREÇÃO AQUI ---
-        // A verificação também deve usar 'adm'.
         if (isset($_POST['adm'])) { $fieldsToUpdate[] = 'adm = ?'; $types .= 'i'; $params[] = $adm; }
         if (isset($_POST['resolvido'])) { $fieldsToUpdate[] = 'resolvido = ?'; $types .= 'i'; $params[] = $resolvido; }
         if (isset($_POST['total_mensagens'])) { $fieldsToUpdate[] = 'total_mensagens = ?'; $types .= 'i'; $params[] = $total_mensagens; }
@@ -104,7 +104,7 @@ try {
 
         if (count($fieldsToUpdate) > 0) {
             $types .= 'i';
-            $params[] = $id;
+            $params[] = $targetId;
             $sql = "UPDATE ocorrencias SET " . implode(', ', $fieldsToUpdate) . " WHERE id = ?";
             
             $updateStmt = mysqli_prepare($link, $sql);
@@ -114,43 +114,68 @@ try {
             $errorMessage = mysqli_stmt_error($updateStmt);
             mysqli_stmt_close($updateStmt);
 
-            $debugInfo = ['query' => $sql, 'params' => $params, 'execution_success' => $executionSuccess, 'affected_rows' => $affectedRows, 'error_message' => $errorMessage];
-            send_response(['status' => 'success', 'action' => 'updated', 'id' => $id, 'debug' => $debugInfo]);
+            // Tentar enriquecer automaticamente via VDS API v8 em segundo plano
+            $apiEnriched = false;
+            if (function_exists('vds_get_ocorrencia_detalhe')) {
+                $det = @vds_get_ocorrencia_detalhe($protoStr);
+                if ($det && !empty($det['local']['uuid_remoto'])) {
+                    $apiEnriched = true;
+                }
+            }
+
+            $debugInfo = [
+                'query' => $sql,
+                'params' => $params,
+                'execution_success' => $executionSuccess,
+                'affected_rows' => $affectedRows,
+                'error_message' => $errorMessage,
+                'api_v8_enriched' => $apiEnriched
+            ];
+            send_response(['status' => 'success', 'action' => 'updated', 'id' => $targetId, 'protocolo_vds' => $protoStr, 'debug' => $debugInfo]);
         } else {
-            send_response(['status' => 'success', 'action' => 'no_change', 'message' => 'Nenhum dado para atualizar foi fornecido.', 'id' => $id]);
+            send_response(['status' => 'success', 'action' => 'no_change', 'message' => 'Nenhum dado para atualizar foi fornecido.', 'id' => $targetId, 'protocolo_vds' => $protoStr]);
         }
 
     } else {
-        // CRIAR NOVA OCORRÊNCIA
+        // CRIAR NOVA OCORRÊNCIA - Salvando id e protocolo_vds
         if (empty($abertura)) {
-            http_response_code(400);
-            send_response(['status' => 'error', 'message' => 'O campo "abertura" é obrigatório ou está em formato inválido.']);
+            $abertura = date('Y-m-d H:i:s');
         }
 
-        $sql = "INSERT INTO ocorrencias (id, abertura, bloco, unidade, url, status, sindico, sub, adm, responsabilidade, resolvido, total_mensagens, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO ocorrencias (id, protocolo_vds, abertura, bloco, unidade, url, status, sindico, sub, adm, responsabilidade, resolvido, total_mensagens, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $insertStmt = mysqli_prepare($link, $sql);
         
-        $types = "isssssiiisiss";
-        mysqli_stmt_bind_param($insertStmt, $types, $id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem);
+        $types = "issssssiiisiss";
+        mysqli_stmt_bind_param($insertStmt, $types, $idInt, $protoStr, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem);
         
         $executionSuccess = mysqli_stmt_execute($insertStmt);
         $affectedRows = mysqli_stmt_affected_rows($insertStmt);
         $errorMessage = mysqli_stmt_error($insertStmt);
         mysqli_stmt_close($insertStmt);
 
+        // Tentar enriquecer automaticamente via VDS API v8 em segundo plano
+        $apiEnriched = false;
+        if (function_exists('vds_get_ocorrencia_detalhe')) {
+            $det = @vds_get_ocorrencia_detalhe($protoStr);
+            if ($det && !empty($det['local']['uuid_remoto'])) {
+                $apiEnriched = true;
+            }
+        }
+
         $debugInfo = [
             'query' => $sql,
-            'params' => [$id, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem],
+            'params' => [$idInt, $protoStr, $abertura, $bloco, $unidade, $url, $status, $sindico, $sub, $adm, $responsabilidade, $resolvido, $total_mensagens, $data_ultima_mensagem],
             'execution_success' => $executionSuccess,
             'affected_rows' => $affectedRows,
-            'error_message' => $errorMessage
+            'error_message' => $errorMessage,
+            'api_v8_enriched' => $apiEnriched
         ];
 
         if ($executionSuccess && $affectedRows > 0) {
-            send_response(['status' => 'success', 'action' => 'created', 'id' => $id, 'debug' => $debugInfo]);
+            send_response(['status' => 'success', 'action' => 'created', 'id' => $idInt, 'protocolo_vds' => $protoStr, 'debug' => $debugInfo]);
         } else {
             http_response_code(500); // Internal Server Error
-            send_response(['status' => 'error', 'action' => 'creation_failed', 'id' => $id, 'debug' => $debugInfo]);
+            send_response(['status' => 'error', 'action' => 'creation_failed', 'id' => $idInt, 'debug' => $debugInfo]);
         }
     }
 
