@@ -1,11 +1,11 @@
 {
   "info": {
-    "_postman_id": "326ef7d4-bdff-4ec9-877f-ed82cc3f58f8",
+    "_postman_id": "0b3a0e26-a477-4932-a589-414755dcb2df",
     "name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
     "description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas, boletos e mapeamento de blocos e unidades.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "27094489",
-    "_collection_link": "https://go.postman.co/collection/27094489-326ef7d4-bdff-4ec9-877f-ed82cc3f58f8?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/27094489-0b3a0e26-a477-4932-a589-414755dcb2df?source=collection_link"
   },
   "item": [
     {
@@ -183,68 +183,55 @@
             "header": [
               {
                 "key": "accept",
-                "value": "application/json, text/plain, */*",
-                "disabled": false
+                "value": "application/json, text/plain, */*"
               },
               {
                 "key": "accept-language",
-                "value": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-                "disabled": false
+                "value": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
               },
               {
                 "key": "content-type",
-                "value": "application/json",
-                "disabled": false
+                "value": "application/json"
               },
               {
                 "key": "origin",
-                "value": "https://app1.vidadesindico.com.br",
-                "disabled": false
+                "value": "https://app1.vidadesindico.com.br"
               },
               {
                 "key": "priority",
-                "value": "u=1, i",
-                "disabled": false
+                "value": "u=1, i"
               },
               {
                 "key": "referer",
-                "value": "https://app1.vidadesindico.com.br/",
-                "disabled": false
+                "value": "https://app1.vidadesindico.com.br/"
               },
               {
                 "key": "sec-ch-ua",
-                "value": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\"",
-                "disabled": false
+                "value": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\""
               },
               {
                 "key": "sec-ch-ua-mobile",
-                "value": "?0",
-                "disabled": false
+                "value": "?0"
               },
               {
                 "key": "sec-ch-ua-platform",
-                "value": "\"Windows\"",
-                "disabled": false
+                "value": "\"Windows\""
               },
               {
                 "key": "sec-fetch-dest",
-                "value": "empty",
-                "disabled": false
+                "value": "empty"
               },
               {
                 "key": "sec-fetch-mode",
-                "value": "cors",
-                "disabled": false
+                "value": "cors"
               },
               {
                 "key": "sec-fetch-site",
-                "value": "cross-site",
-                "disabled": false
+                "value": "cross-site"
               },
               {
                 "key": "user-agent",
-                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
-                "disabled": false
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
               }
             ],
             "body": {
@@ -813,6 +800,32 @@
       "item": [
         {
           "name": "4.1 Listar Blocos do Condomínio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"response\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "    pm.expect(jsonData[0].uuid).to.be.a(\"string\").and.not.empty;\r",
+                  "});\r",
+                  "\r",
+                  "// Verifica se existe e pega o UUID\r",
+                  "if (jsonData && jsonData.length > 0 && jsonData[0].uuid) {\r",
+                  "    pm.collectionVariables.set(\"blocoUuid\", jsonData[0].uuid);\r",
+                  "    console.log(\"UUID do bloco salvo:\", jsonData[0].uuid);\r",
+                  "} else {\r",
+                  "    console.log(\"Nenhum UUID encontrado na resposta\");\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -850,6 +863,32 @@
         },
         {
           "name": "4.2 Listar Unidades por Bloco UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"response\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "    pm.expect(jsonData[0].uuid).to.be.a(\"string\").and.not.empty;\r",
+                  "});\r",
+                  "\r",
+                  "// Verifica se existe e pega o UUID\r",
+                  "if (jsonData && jsonData.length > 0 && jsonData[0].uuid) {\r",
+                  "    pm.collectionVariables.set(\"unidadeUuid\", jsonData[0].uuid);\r",
+                  "    console.log(\"UUID do bloco salvo:\", jsonData[0].uuid);\r",
+                  "} else {\r",
+                  "    console.log(\"Nenhum UUID encontrado na resposta\");\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -882,6 +921,119 @@
               ]
             },
             "description": "Retorna as unidades de um determinado bloco para resolução de chave composta (bloco:unidade -> UUID)."
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Listar Morador por unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json, text/plain, */*"
+              },
+              {
+                "key": "accept-language",
+                "value": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+              },
+              {
+                "key": "authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "origin",
+                "value": "https://app1.vidadesindico.com.br"
+              },
+              {
+                "key": "priority",
+                "value": "u=1, i",
+                "disabled": true
+              },
+              {
+                "key": "referer",
+                "value": "https://app1.vidadesindico.com.br/",
+                "disabled": true
+              },
+              {
+                "key": "sec-ch-ua",
+                "value": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\"",
+                "disabled": true
+              },
+              {
+                "key": "sec-ch-ua-mobile",
+                "value": "?0",
+                "disabled": true
+              },
+              {
+                "key": "sec-ch-ua-platform",
+                "value": "\"Windows\"",
+                "disabled": true
+              },
+              {
+                "key": "sec-fetch-dest",
+                "value": "empty",
+                "disabled": true
+              },
+              {
+                "key": "sec-fetch-mode",
+                "value": "cors",
+                "disabled": true
+              },
+              {
+                "key": "sec-fetch-site",
+                "value": "cross-site",
+                "disabled": true
+              },
+              {
+                "key": "user-agent",
+                "value": "",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/morador?Unidade.Uuid={{unidadeUuid}}&sortBy=Pessoa.Nome&order=asc&Combo=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "morador"
+              ],
+              "query": [
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "1000",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "Pessoa.Nome"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "Combo",
+                  "value": "true"
+                },
+                {
+                  "key": "Entrega",
+                  "value": "false",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Generated from cURL: curl 'https://apiv8.vds.app.br/morador?Unidade.Uuid=ec283937-fb6b-4df0-b049-92918396f657&limit=1000&status=true&sortBy=Pessoa.Nome&order=asc&Combo=true&Entrega=false' \\\r\n  -H 'accept: application/json, text/plain, */*' \\\r\n  -H 'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7' \\\r\n  -H 'authorization: Bearer token' \\\r\n  -H 'origin: https://app1.vidadesindico.com.br' \\\r\n  -H 'priority: u=1, i' \\\r\n  -H 'referer: https://app1.vidadesindico.com.br/' \\\r\n  -H 'sec-ch-ua: \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\"' \\\r\n  -H 'sec-ch-ua-mobile: ?0' \\\r\n  -H 'sec-ch-ua-platform: \"Windows\"' \\\r\n  -H 'sec-fetch-dest: empty' \\\r\n  -H 'sec-fetch-mode: cors' \\\r\n  -H 'sec-fetch-site: cross-site' \\\r\n  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit"
           },
           "response": []
         }
