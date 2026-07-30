@@ -960,6 +960,16 @@ $mapaCoresTipo = [
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Finalizar a barra de progresso superior e ocultar o Skeleton Global de Tela Cheia
+    let $loader = $('#vds-top-loader');
+    if ($loader.length) {
+        $loader.css('width', '100%');
+        setTimeout(function() {
+            $loader.css('opacity', 0);
+            setTimeout(() => $loader.css('width', '0%'), 400);
+        }, 200);
+    }
+    $('#vds-full-page-skeleton-overlay').fadeOut(250);
     // Controller de Skeleton Screen & Progress Bar (Vercel Style)
     window.triggerVdsSkeleton = function(onlyChat = true) {
         // 1. Mostrar barra de progresso horizontal no topo da janela

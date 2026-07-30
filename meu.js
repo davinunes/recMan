@@ -57,6 +57,63 @@ $(document).ready(function () {
     initMaterialboxed();
     $('.chips').chips();
     $('.sidenav').sidenav();
+
+    // Feedback Visual Instantâneo: Top Progress Bar & Full Skeleton Overlay para links do Menu / Sidenav
+    $(document).on('click', 'a[href*="livroDeOcorrencias"], .sidenav a, nav a', function (e) {
+        const href = $(this).attr('href');
+        if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+        // 1. Barra de Progresso Topo (Vercel Style)
+        let $topLoader = $('#vds-top-loader');
+        if (!$topLoader.length) {
+            $('body').append('<div id="vds-top-loader" style="position:fixed; top:0; left:0; height:4px; width:0%; background:linear-gradient(90deg, #0d6efd, #0dcaf0, #6f42c1, #0d6efd); background-size:200% 100%; z-index:999999; box-shadow:0 0 14px rgba(13,110,253,0.9); transition:width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; pointer-events:none;"></div>');
+            $topLoader = $('#vds-top-loader');
+        }
+        $topLoader.css({ width: '25%', opacity: 1 });
+        setTimeout(() => $topLoader.css('width', '65%'), 150);
+        setTimeout(() => $topLoader.css('width', '90%'), 400);
+
+        // 2. Se o link for para Ocorrências VDS, exibe o Esqueleto Tela Cheia instantaneamente
+        if (href.indexOf('livroDeOcorrencias') !== -1) {
+            if ($('#vds-full-page-skeleton-overlay').length === 0) {
+                const skeletonHtml = `
+                    <div id="vds-full-page-skeleton-overlay" style="position:fixed; top:0; left:0; width:100%; height:100vh; background:#f8f9fa; z-index:9998; padding:20px; display:flex; flex-direction:column; gap:15px; box-sizing:border-box;">
+                        <style>
+                            @keyframes vds-shimmer-pulse-g { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+                            .vds-sk-g { background: linear-gradient(90deg, #eef0f3 25%, #dbe0e6 37%, #eef0f3 63%) !important; background-size: 200% 100% !important; animation: vds-shimmer-pulse-g 1.4s ease-in-out infinite !important; border-radius:6px; }
+                        </style>
+                        <div style="background:#fff; padding:12px 20px; border-radius:8px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center;">
+                            <div class="vds-sk-g" style="height:32px; width:240px;"></div>
+                            <div style="display:flex; gap:10px;">
+                                <div class="vds-sk-g" style="height:32px; width:120px;"></div>
+                                <div class="vds-sk-g" style="height:32px; width:140px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:15px; flex:1; overflow:hidden;">
+                            <div style="width:28%; background:#fff; border-radius:8px; border:1px solid #e0e0e0; padding:15px; display:flex; flex-direction:column; gap:12px;">
+                                <div class="vds-sk-g" style="height:36px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:65px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:65px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:65px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:65px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:65px; width:100%;"></div>
+                            </div>
+                            <div style="flex:1; background:#efeae2; border-radius:8px; border:1px solid #e0e0e0; padding:20px; display:flex; flex-direction:column; gap:16px;">
+                                <div class="vds-sk-g" style="height:55px; width:100%;"></div>
+                                <div class="vds-sk-g" style="height:110px; width:65%;"></div>
+                                <div class="vds-sk-g" style="height:90px; width:58%; margin-left:auto;"></div>
+                                <div class="vds-sk-g" style="height:85px; width:52%; margin-left:auto;"></div>
+                                <div class="vds-sk-g" style="height:45px; width:100%; margin-top:auto;"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(skeletonHtml);
+            } else {
+                $('#vds-full-page-skeleton-overlay').show();
+            }
+        }
+    });
     $('#listaRecursos').DataTable({
         searching: false, // Oculta o campo de busca
         paging: false, // Desativa a paginação
