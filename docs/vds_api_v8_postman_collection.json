@@ -1,597 +1,991 @@
 {
-	"info": {
-		"_postman_id": "vds-api-v8-conselho-collection",
-		"name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
-		"description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas, boletos e mapeamento de blocos e unidades.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "https://apiv8.vds.app.br",
-			"type": "string"
-		},
-		{
-			"key": "origin",
-			"value": "https://app1.vidadesindico.com.br",
-			"type": "string"
-		},
-		{
-			"key": "anonToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "bearerToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "ocorrenciaUuid",
-			"value": "6c1da1e7-c49b-4623-bfb7-2775999f3f64",
-			"type": "string"
-		},
-		{
-			"key": "protocolo",
-			"value": "259564",
-			"type": "string"
-		},
-		{
-			"key": "blocoUuid",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "unidadeUuid",
-			"value": "",
-			"type": "string"
-		}
-	],
-	"item": [
-		{
-			"name": "1. Autenticação & Sessão",
-			"item": [
-				{
-					"name": "1.1 Obter Token Anônimo (Boot)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/anon",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "anon"]
-						},
-						"description": "Obtém o token temporário anônimo necessário para realizar a chamada de login."
-					}
-				},
-				{
-					"name": "1.2 Login de Usuário (Obter Bearer Token)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"",
-									"pm.test(\"Login bem-sucedido e token recebido\", function () {",
-									"    pm.response.to.have.status(200);",
-									"    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;",
-									"});",
-									"",
-									"if (jsonData.token) {",
-									"    pm.collectionVariables.set(\"bearerToken\", jsonData.token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{anonToken}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"app\": \"976\",\n  \"username\": \"SEU_USUARIO\",\n  \"password\": \"SUA_SENHA\",\n  \"crypt\": false\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["login"]
-						},
-						"description": "Autentica usuário e retorna o Bearer Token definitivo de sessão."
-					}
-				},
-				{
-					"name": "1.3 Checar Status da Sessão (Health Check)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/usuario/status",
-							"host": ["{{baseUrl}}"],
-							"path": ["usuario", "status"]
-						},
-						"description": "Valida se o Bearer Token continua ativo. Retorna HTTP 200 se ativo ou 401 se expirado."
-					}
-				}
-			]
-		},
-		{
-			"name": "2. Ocorrências e Fale Com",
-			"item": [
-				{
-					"name": "2.1 Listar Ocorrências Não Lidas (Modo Prático)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "50" },
-								{ "key": "sortBy", "value": "dtExibicao" },
-								{ "key": "order", "value": "asc" },
-								{ "key": "Lida", "value": "0" },
-								{ "key": "Caixa", "value": "0" }
-							]
-						},
-						"description": "Retorna os chamados pendentes não lidos para a Visão Prática usando o token do conselheiro."
-					}
-				},
-				{
-					"name": "2.2 Listar Todas as Ocorrências (Sincronização Global)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "50" },
-								{ "key": "sortBy", "value": "dtExibicao" },
-								{ "key": "order", "value": "desc" },
-								{ "key": "Caixa", "value": "0" },
-								{ "key": "Lida", "value": "9" }
-							]
-						},
-						"description": "Retorna todas as ocorrências do condomínio (lidas e não lidas) para sincronização de fundo."
-					}
-				},
-				{
-					"name": "2.3 Buscar Ocorrência por Protocolo (Ex: 259564)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Protocolo={{protocolo}}&Caixa=0",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "20" },
-								{ "key": "sortBy", "value": "dtExibicao" },
-								{ "key": "order", "value": "desc" },
-								{ "key": "Lida", "value": "9" },
-								{ "key": "Protocolo", "value": "{{protocolo}}" },
-								{ "key": "Caixa", "value": "0" }
-							]
-						},
-						"description": "Busca direta de uma ocorrência pelo número de protocolo especificado."
-					}
-				},
-				{
-					"name": "2.4 Obter Detalhes e Chat da Ocorrência por UUID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia/{{ocorrenciaUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia", "{{ocorrenciaUuid}}"]
-						},
-						"description": "Retorna o histórico cronológico de mensagens e anexos (eventos[]) da ocorrência."
-					}
-				},
-				{
-					"name": "2.5 Publicar Resposta / Comentário em Ocorrência",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"uuid\": \"{{ocorrenciaUuid}}\",\n  \"ocorrenciaPaiId\": 51970481,\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia/comentario",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia", "comentario"]
-						},
-						"description": "Publica um comentário/resposta em uma ocorrência existente na VDS."
-					}
-				},
-				{
-					"name": "2.6 Alternar Estado de Leitura (PUT /ocorrencia/leitura)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Content-Length",
-								"value": "0"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia/leitura/{{ocorrenciaUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia", "leitura", "{{ocorrenciaUuid}}"]
-						},
-						"description": "Executa o toggle de marcação de leitura na VDS (Lido x Não Lido)."
-					}
-				},
-				{
-					"name": "2.7 Marcar como Visualizada (PUT /ocorrencia/visualizar)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Content-Length",
-								"value": "0"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/ocorrencia/visualizar/{{ocorrenciaUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ocorrencia", "visualizar", "{{ocorrenciaUuid}}"]
-						},
-						"description": "Marca a ocorrência como visualizada pelo usuário."
-					}
-				},
-				{
-					"name": "2.8 Upload de Imagem / Anexo (Base64)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"base64String\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/upload",
-							"host": ["{{baseUrl}}"],
-							"path": ["upload"]
-						},
-						"description": "Envia um arquivo codificado em base64 para inclusão na resposta."
-					}
-				}
-			]
-		},
-		{
-			"name": "3. Portaria e Eventos de Acesso",
-			"item": [
-				{
-					"name": "3.1 Eventos de Acesso por Período e Unidade",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio=2026-07-29T00:00&dtFim=2026-07-29T23:59&unidade.uuid={{unidadeUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["evento_acesso"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "21" },
-								{ "key": "sortBy", "value": "dthora" },
-								{ "key": "order", "value": "desc" },
-								{ "key": "dtInicio", "value": "2026-07-29T00:00" },
-								{ "key": "dtFim", "value": "2026-07-29T23:59" },
-								{ "key": "unidade.uuid", "value": "{{unidadeUuid}}" }
-							]
-						},
-						"description": "Retorna entradas e saídas de pedestres e veículos da unidade no período informado."
-					}
-				},
-				{
-					"name": "3.2 Entregas e Correspondências por Unidade",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/entrega?page=1&limit=21&sortBy=dthora&order=desc&Unidade.Uuid={{unidadeUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["entrega"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "21" },
-								{ "key": "sortBy", "value": "dthora" },
-								{ "key": "order", "value": "desc" },
-								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" }
-							]
-						},
-						"description": "Consulta o histórico de pacotes e correspondências recebidos pela portaria."
-					}
-				},
-				{
-					"name": "3.3 Obter Detalhes da Entrega por UUID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/entrega/{{ocorrenciaUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["entrega", "{{ocorrenciaUuid}}"]
-						},
-						"description": "Retorna o detalhamento completo de uma entrega contendo o código rastreador (identificador), histórico de eventos (Recebido -> Entregue), dados de quem retirou (retiradoPor), foto do pacote e anexos."
-					}
-				},
-				{
-					"name": "3.4 Listar Autorizações de Acesso por Unidade",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}&dtIni=2026-07-28&dtFim=2026-07-30",
-							"host": ["{{baseUrl}}"],
-							"path": ["autorizacao_acesso"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "20" },
-								{ "key": "sortBy", "value": "nome" },
-								{ "key": "order", "value": "asc" },
-								{ "key": "Bloco.Uuid", "value": "{{blocoUuid}}" },
-								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" },
-								{ "key": "dtIni", "value": "2026-07-28" },
-								{ "key": "dtFim", "value": "2026-07-30" }
-							]
-						},
-						"description": "Retorna as autorizações de acesso e convites prévios (liberações de visitantes/prestadores) cadastrados pelos moradores da unidade."
-					}
-				}
-			]
-		},
-		{
-			"name": "4. Estrutura Física e UUIDs",
-			"item": [
-				{
-					"name": "4.1 Listar Blocos do Condomínio",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/bloco?Combo=True&IsAdmin=false",
-							"host": ["{{baseUrl}}"],
-							"path": ["bloco"],
-							"query": [
-								{ "key": "Combo", "value": "True" },
-								{ "key": "IsAdmin", "value": "false" }
-							]
-						},
-						"description": "Retorna a lista de blocos e seus respectivos UUIDs."
-					}
-				},
-				{
-					"name": "4.2 Listar Unidades por Bloco UUID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/unidade?Combo=True&bloco.uuid={{blocoUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["unidade"],
-							"query": [
-								{ "key": "Combo", "value": "True" },
-								{ "key": "bloco.uuid", "value": "{{blocoUuid}}" }
-							]
-						},
-						"description": "Retorna as unidades de um determinado bloco para resolução de chave composta (bloco:unidade -> UUID)."
-					}
-				}
-			]
-		},
-		{
-			"name": "5. Financeiro e Boletos",
-			"item": [
-				{
-					"name": "5.1 Listar Boletos por Bloco e Unidade",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{bearerToken}}"
-							},
-							{
-								"key": "Origin",
-								"value": "{{origin}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/boleto?page=1&limit=20&sortBy=status&order=asc&Ano=2026&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["boleto"],
-							"query": [
-								{ "key": "page", "value": "1" },
-								{ "key": "limit", "value": "20" },
-								{ "key": "sortBy", "value": "status" },
-								{ "key": "order", "value": "asc" },
-								{ "key": "Ano", "value": "2026" },
-								{ "key": "Bloco.Uuid", "value": "{{blocoUuid}}" },
-								{ "key": "Unidade.Uuid", "value": "{{unidadeUuid}}" }
-							]
-						},
-						"description": "Consulta os boletos e lançamentos financeiros de uma unidade filtrados por ano, bloco e unidade."
-					}
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "326ef7d4-bdff-4ec9-877f-ed82cc3f58f8",
+    "name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
+    "description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas, boletos e mapeamento de blocos e unidades.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "27094489",
+    "_collection_link": "https://go.postman.co/collection/27094489-326ef7d4-bdff-4ec9-877f-ed82cc3f58f8?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "1. Autenticação & Sessão",
+      "item": [
+        {
+          "name": "1.1 Obter Token Anônimo (Boot)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Login bem-sucedido e token recebido\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;\r",
+                  "});\r",
+                  "\r",
+                  "if (jsonData.token) {\r",
+                  "    pm.collectionVariables.set(\"anonToken\", jsonData.token);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/anon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "anon"
+              ]
+            },
+            "description": "Obtém o token temporário anônimo necessário para realizar a chamada de login."
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Login de Usuário (Obter Bearer Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Login bem-sucedido e token recebido\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(jsonData.refreshToken).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.token);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{anonToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app\": \"976\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{SUA_SENHA}}\",\n  \"crypt\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Autentica usuário e retorna o Bearer Token definitivo de sessão."
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Checar Status da Sessão (Health Check)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usuario/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "status"
+              ]
+            },
+            "description": "Valida se o Bearer Token continua ativo. Retorna HTTP 200 se ativo ou 401 se expirado."
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Renovar Token (Refresh)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Login bem-sucedido e token recebido\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;\r",
+                  "    pm.expect(jsonData.refreshToken).to.be.a(\"string\").and.not.empty;\r",
+                  "});\r",
+                  "\r",
+                  "if (jsonData.token) {\r",
+                  "    pm.collectionVariables.set(\"bearerToken\", jsonData.token);\r",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.refreshToken);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json, text/plain, */*",
+                "disabled": false
+              },
+              {
+                "key": "accept-language",
+                "value": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                "disabled": false
+              },
+              {
+                "key": "content-type",
+                "value": "application/json",
+                "disabled": false
+              },
+              {
+                "key": "origin",
+                "value": "https://app1.vidadesindico.com.br",
+                "disabled": false
+              },
+              {
+                "key": "priority",
+                "value": "u=1, i",
+                "disabled": false
+              },
+              {
+                "key": "referer",
+                "value": "https://app1.vidadesindico.com.br/",
+                "disabled": false
+              },
+              {
+                "key": "sec-ch-ua",
+                "value": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\"",
+                "disabled": false
+              },
+              {
+                "key": "sec-ch-ua-mobile",
+                "value": "?0",
+                "disabled": false
+              },
+              {
+                "key": "sec-ch-ua-platform",
+                "value": "\"Windows\"",
+                "disabled": false
+              },
+              {
+                "key": "sec-fetch-dest",
+                "value": "empty",
+                "disabled": false
+              },
+              {
+                "key": "sec-fetch-mode",
+                "value": "cors",
+                "disabled": false
+              },
+              {
+                "key": "sec-fetch-site",
+                "value": "cross-site",
+                "disabled": false
+              },
+              {
+                "key": "user-agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"{{bearerToken}}\",\"refreshToken\":\"{{refreshToken}}\",\"crypt\":false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://apiv8.vds.app.br/login/refresh",
+              "protocol": "https",
+              "host": [
+                "apiv8",
+                "vds",
+                "app",
+                "br"
+              ],
+              "path": [
+                "login",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Ocorrências e Fale Com",
+      "item": [
+        {
+          "name": "2.1 Listar Ocorrências Não Lidas (Modo Prático)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dtExibicao"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "Lida",
+                  "value": "0"
+                },
+                {
+                  "key": "Caixa",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Retorna os chamados pendentes não lidos para a Visão Prática usando o token do conselheiro."
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Listar Todas as Ocorrências (Sincronização Global)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dtExibicao"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "Caixa",
+                  "value": "0"
+                },
+                {
+                  "key": "Lida",
+                  "value": "9"
+                }
+              ]
+            },
+            "description": "Retorna todas as ocorrências do condomínio (lidas e não lidas) para sincronização de fundo."
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Buscar Ocorrência por Protocolo (Ex: 259564)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Protocolo={{protocolo}}&Caixa=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dtExibicao"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "Lida",
+                  "value": "9"
+                },
+                {
+                  "key": "Protocolo",
+                  "value": "{{protocolo}}"
+                },
+                {
+                  "key": "Caixa",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Busca direta de uma ocorrência pelo número de protocolo especificado."
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Obter Detalhes e Chat da Ocorrência por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/{{ocorrenciaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "{{ocorrenciaUuid}}"
+              ]
+            },
+            "description": "Retorna o histórico cronológico de mensagens e anexos (eventos[]) da ocorrência."
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Publicar Resposta / Comentário em Ocorrência",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{ocorrenciaUuid}}\",\n  \"ocorrenciaPaiId\": 51970481,\n  \"mensagem\": \"Mensagem de resposta oficial enviada pelo Conselho.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/comentario",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "comentario"
+              ]
+            },
+            "description": "Publica um comentário/resposta em uma ocorrência existente na VDS."
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Alternar Estado de Leitura (PUT /ocorrencia/leitura)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Length",
+                "value": "0"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/leitura/{{ocorrenciaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "leitura",
+                "{{ocorrenciaUuid}}"
+              ]
+            },
+            "description": "Executa o toggle de marcação de leitura na VDS (Lido x Não Lido)."
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 Marcar como Visualizada (PUT /ocorrencia/visualizar)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Length",
+                "value": "0"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/visualizar/{{ocorrenciaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "visualizar",
+                "{{ocorrenciaUuid}}"
+              ]
+            },
+            "description": "Marca a ocorrência como visualizada pelo usuário."
+          },
+          "response": []
+        },
+        {
+          "name": "2.8 Upload de Imagem / Anexo (Base64)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"base64String\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "upload"
+              ]
+            },
+            "description": "Envia um arquivo codificado em base64 para inclusão na resposta."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Portaria e Eventos de Acesso",
+      "item": [
+        {
+          "name": "3.1 Eventos de Acesso por Período e Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio=2026-07-29T00:00&dtFim=2026-07-29T23:59&unidade.uuid={{unidadeUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evento_acesso"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "21"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dthora"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "dtInicio",
+                  "value": "2026-07-29T00:00"
+                },
+                {
+                  "key": "dtFim",
+                  "value": "2026-07-29T23:59"
+                },
+                {
+                  "key": "unidade.uuid",
+                  "value": "{{unidadeUuid}}"
+                }
+              ]
+            },
+            "description": "Retorna entradas e saídas de pedestres e veículos da unidade no período informado."
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Entregas e Correspondências por Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/entrega?page=1&limit=21&sortBy=dthora&order=desc&Unidade.Uuid={{unidadeUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "entrega"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "21"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dthora"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}"
+                }
+              ]
+            },
+            "description": "Consulta o histórico de pacotes e correspondências recebidos pela portaria."
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Obter Detalhes da Entrega por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/entrega/{{ocorrenciaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "entrega",
+                "{{ocorrenciaUuid}}"
+              ]
+            },
+            "description": "Retorna o detalhamento completo de uma entrega contendo o código rastreador (identificador), histórico de eventos (Recebido -> Entregue), dados de quem retirou (retiradoPor), foto do pacote e anexos."
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Listar Autorizações de Acesso por Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}&dtIni=2026-07-28&dtFim=2026-07-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "nome"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "{{blocoUuid}}"
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}"
+                },
+                {
+                  "key": "dtIni",
+                  "value": "2026-07-28"
+                },
+                {
+                  "key": "dtFim",
+                  "value": "2026-07-30"
+                }
+              ]
+            },
+            "description": "Retorna as autorizações de acesso e convites prévios (liberações de visitantes/prestadores) cadastrados pelos moradores da unidade."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Estrutura Física e UUIDs",
+      "item": [
+        {
+          "name": "4.1 Listar Blocos do Condomínio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bloco?Combo=True&IsAdmin=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bloco"
+              ],
+              "query": [
+                {
+                  "key": "Combo",
+                  "value": "True"
+                },
+                {
+                  "key": "IsAdmin",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna a lista de blocos e seus respectivos UUIDs."
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Listar Unidades por Bloco UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/unidade?Combo=True&bloco.uuid={{blocoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "unidade"
+              ],
+              "query": [
+                {
+                  "key": "Combo",
+                  "value": "True"
+                },
+                {
+                  "key": "bloco.uuid",
+                  "value": "{{blocoUuid}}"
+                }
+              ]
+            },
+            "description": "Retorna as unidades de um determinado bloco para resolução de chave composta (bloco:unidade -> UUID)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Financeiro e Boletos",
+      "item": [
+        {
+          "name": "5.1 Listar Boletos por Bloco e Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/boleto?page=1&limit=20&sortBy=status&order=asc&Ano=2026&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "boleto"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "status"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "Ano",
+                  "value": "2026"
+                },
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "{{blocoUuid}}"
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}"
+                }
+              ]
+            },
+            "description": "Consulta os boletos e lançamentos financeiros de uma unidade filtrados por ano, bloco e unidade."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://apiv8.vds.app.br"
+    },
+    {
+      "key": "origin",
+      "value": "https://app1.vidadesindico.com.br"
+    },
+    {
+      "key": "anonToken",
+      "value": ""
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
+    },
+    {
+      "key": "ocorrenciaUuid",
+      "value": "6c1da1e7-c49b-4623-bfb7-2775999f3f64"
+    },
+    {
+      "key": "protocolo",
+      "value": "259564"
+    },
+    {
+      "key": "blocoUuid",
+      "value": ""
+    },
+    {
+      "key": "unidadeUuid",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ]
 }
