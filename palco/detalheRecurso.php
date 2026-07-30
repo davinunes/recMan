@@ -857,12 +857,23 @@ if ($esseRecurso == null) {
 
             // === Botão de Upsert da Data de Retirada (somente quando é correspondente à notificação) ===
             if (isMatch && recNumCompleto) {
-                // Extrair somente a data (DD/MM/YYYY) da chegada na portaria para pré-preencher
+                // A data de ciência = data em que o morador RETIROU a correspondência (dtFim), não a data de chegada
+                const dtRetiradaRaw = data.dtFimFormatada || data.dtFim || '';
                 const dtChegadaRaw = data.dthoraChegada || data.dthoraFormatada || data.dthora || '';
                 let dataSugerida = '';
-                const matchDt = String(dtChegadaRaw).match(/(\d{2}\/\d{2}\/\d{4})/);
-                if (matchDt) {
-                    dataSugerida = matchDt[1];
+                let fonteData = '';
+
+                // Prioridade: data de retirada (dtFim) > data de chegada (dthora) como fallback
+                const matchRetirada = String(dtRetiradaRaw).match(/(\d{2}\/\d{2}\/\d{4})/);
+                if (matchRetirada) {
+                    dataSugerida = matchRetirada[1];
+                    fonteData = 'retirada pelo morador';
+                } else {
+                    const matchChegada = String(dtChegadaRaw).match(/(\d{2}\/\d{2}\/\d{4})/);
+                    if (matchChegada) {
+                        dataSugerida = matchChegada[1];
+                        fonteData = 'chegada na portaria (retirada ainda não registrada)';
+                    }
                 }
 
                 const diaRetiradaAtual = '<?= addslashes($diaRetirada ?? "Indisponível") ?>';
@@ -874,7 +885,7 @@ if ($esseRecurso == null) {
                 if (jaTemRetirada) {
                     html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#555;"><i class="material-icons tiny green-text">check_circle</i> Data de ciência atual: <b class="green-text text-darken-3">' + diaRetiradaAtual + '</b></p>';
                 } else {
-                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#c62828;"><i class="material-icons tiny">warning</i> <b>Nenhuma data de ciência cadastrada.</b> A entrega na portaria indica que a notificação chegou em <b>' + (dataSugerida || 'data desconhecida') + '</b>.</p>';
+                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#c62828;"><i class="material-icons tiny">warning</i> <b>Nenhuma data de ciência cadastrada.</b>' + (dataSugerida ? ' Sugestão baseada na <b>' + fonteData + '</b>: <b>' + dataSugerida + '</b>.' : '') + '</p>';
                 }
 
                 html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
