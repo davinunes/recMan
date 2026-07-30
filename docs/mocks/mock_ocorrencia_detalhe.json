@@ -8,16 +8,16 @@
   "tipoNome": "Fale com o Conselho",
   "condominioUuid": "c3a1b2c4-8899-4411-b223-112233445566",
   "autor": {
-    "nome": "Carlos Eduardo Silva",
+    "nome": "Fulano de Tal",
     "bloco": "A",
     "unidade": "102",
-    "perfilFotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/MORADOR/p-1024.jpg"
+    "perfilFotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/MORADOR/p-0000.jpg"
   },
   "eventos": [
     {
       "uuid": "ev-001",
       "dthora": "2026-07-28 22:45:12",
-      "por": "Carlos Eduardo Silva",
+      "por": "Fulano de Tal",
       "cargo": "Morador",
       "fotoUrl": "https://app.vidadesindico.com.br/app/dados/cond/976/foto/MORADOR/p-1024.jpg",
       "mensagem": "Gostaria de registrar barulho constante de arrastar móveis vindo da unidade 202 acima da minha a partir das 22h30.",
