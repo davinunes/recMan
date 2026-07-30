@@ -174,14 +174,39 @@ function vds_get_eventos_acesso($bloco, $unidade, $dtInicio, $dtFim, $usuarioIdC
                 $filtrados = [];
                 $unidadeClean = trim($unidade);
                 foreach ($regs as $acc) {
-                    $accUnid = trim($acc['unidade']['numero'] ?? ($acc['unidade']['nome'] ?? ($acc['unidadeNumero'] ?? ($acc['unidade'] ?? ''))));
+                    $accUnid = trim(is_array($acc['unidade'] ?? null) ? ($acc['unidade']['numero'] ?? ($acc['unidade']['nome'] ?? '')) : ($acc['unidade'] ?? ($acc['unidadeNumero'] ?? '')));
                     if (($accUnid !== '' && ($accUnid === $unidadeClean || ltrim($accUnid, '0') === ltrim($unidadeClean, '0'))) || ($accUnid === '' && !empty($unidadeUuid))) {
+                        $fotoRel = $acc['foto'] ?? ($acc['fotoUrl'] ?? ($acc['pessoa']['fotoUrl'] ?? null));
+                        $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+
+                        $pessoaNome = $acc['moradorNome'] ?? ($acc['pessoa']['nome'] ?? ($acc['pessoaNome'] ?? ($acc['nome'] ?? 'Visitante/Morador')));
+                        $perfil = $acc['moradorTipo'] ?? ($acc['pessoa']['perfil']['descricao'] ?? ($acc['perfil'] ?? ($acc['tipoPessoa'] ?? 'Acesso')));
+                        
+                        $dispositivo = $acc['dispositivo'] ?? '';
+                        $receptor = $acc['receptor'] ?? '';
+                        $modulo = $acc['modulo'] ?? '';
+                        $saida = $acc['saida'] ?? '';
+                        $statusAcesso = $acc['nome'] ?? 'Acesso';
+
+                        $detalheEvento = $statusAcesso;
+                        $tagsContexto = array_filter([$modulo, $saida, $dispositivo, $receptor]);
+                        if (!empty($tagsContexto)) {
+                            $detalheEvento .= ' (' . implode(' • ', $tagsContexto) . ')';
+                        }
+
                         $filtrados[] = [
-                            'dthora' => $acc['dthora'] ?? ($acc['dtExibicao'] ?? date('Y-m-d H:i:s')),
-                            'pessoaNome' => $acc['pessoa']['nome'] ?? ($acc['pessoaNome'] ?? ($acc['nome'] ?? 'Visitante/Morador')),
-                            'perfil' => $acc['pessoa']['perfil']['descricao'] ?? ($acc['perfil'] ?? ($acc['tipoPessoa'] ?? 'Acesso')),
-                            'tipoEvento' => $acc['tipoEvento']['descricao'] ?? ($acc['tipoEvento'] ?? ($acc['evento'] ?? 'Registro de Acesso')),
-                            'fotoUrl' => $acc['pessoa']['fotoUrl'] ?? ($acc['fotoUrl'] ?? ($acc['foto'] ?? ''))
+                            'uuid' => $acc['uuid'] ?? null,
+                            'dthora' => !empty($acc['dthora']) ? date('d/m/Y H:i:s', strtotime($acc['dthora'])) : ($acc['dtExibicao'] ?? date('d/m/Y H:i:s')),
+                            'pessoaNome' => $pessoaNome,
+                            'perfil' => $perfil,
+                            'tipoEvento' => $detalheEvento,
+                            'statusAcesso' => $statusAcesso,
+                            'modulo' => $modulo,
+                            'saida' => $saida,
+                            'dispositivo' => $dispositivo,
+                            'receptor' => $receptor,
+                            'descricao' => $acc['descricao'] ?? '',
+                            'fotoUrl' => $fotoUrl
                         ];
                     }
                 }

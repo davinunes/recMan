@@ -621,10 +621,21 @@ if ($esseRecurso == null) {
                 html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #6f42c1; box-shadow:0 4px 12px rgba(111,66,193,0.25);"></div>';
             }
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
-            html += '<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b>' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
-            html += '<tr><td><b>Perfil / Cargo:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
-            html += '<tr><td><b>Tipo de Evento:</b></td><td>' + formatObjStr(data.tipoEvento) + '</td></tr>';
+            html += '<tr><td style="width:35%;"><b>Pessoa / Veículo:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.pessoaNome) + '</b></td></tr>';
+            html += '<tr><td><b>Perfil / Categoria:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4" style="float:none; padding:3px 8px; border-radius:4px; font-weight:600;">' + formatObjStr(data.perfil) + '</span></td></tr>';
+            if (data.modulo) {
+                html += '<tr><td><b>Ponto de Acesso:</b></td><td>' + formatObjStr(data.modulo) + '</td></tr>';
+            }
+            if (data.saida) {
+                html += '<tr><td><b>Sentido:</b></td><td><span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px;">' + formatObjStr(data.saida) + '</span></td></tr>';
+            }
+            if (data.dispositivo || data.receptor) {
+                html += '<tr><td><b>Dispositivo / Leitor:</b></td><td>' + formatObjStr(data.dispositivo || data.receptor) + '</td></tr>';
+            }
             html += '<tr><td><b>Data / Hora:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
+            if (data.descricao) {
+                html += '<tr><td><b>Observações:</b></td><td>' + formatObjStr(data.descricao) + '</td></tr>';
+            }
             html += '</table>';
         } else if (tipo === 'autorizacao') {
             html += '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Inspecionar Autorização de Acesso</h5>';

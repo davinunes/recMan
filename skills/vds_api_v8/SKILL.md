@@ -47,7 +47,34 @@ Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comun
 ### B. Eventos de Acesso, Portaria e Autorizações
 - **Listar Acessos (Entradas/Saídas) por Período:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={YYYY-MM-DDTHH:mm}&dtFim={YYYY-MM-DDTHH:mm}`
 - **Listar Acessos por Unidade:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={dtInicio}&dtFim={dtFim}&unidade.bloco.uuid={blocoUuid}&unidade.uuid={unidadeUuid}`
+- **Obter Detalhes do Evento de Acesso por UUID:** `GET /evento_acesso/{uuid}`
 - **Tipos de Eventos de Acesso:** `GET /evento_tipo`
+- **Estrutura do Payload de Retorno de Eventos de Acesso (`GET /evento_acesso`):**
+  ```json
+  {
+    "totalRegs": 231,
+    "page": 1,
+    "limit": 21,
+    "regs": [
+      {
+        "uuid": "659990713",
+        "nome": "Acesso liberado",
+        "dispositivo": "Facial",
+        "moradorNome": "Leandro Moraes Avalone",
+        "moradorTipo": "Proprietário",
+        "foto": "https://app.vidadesindico.com.br/app/dados/cond/1441/foto/PESSOA/f-1140082.jpg",
+        "bloco": "Bloco B",
+        "unidade": "1302",
+        "modulo": "Catraca P1 Saida",
+        "receptor": "Facial",
+        "saida": "Saída",
+        "dthora": "2026-07-29T17:42:50",
+        "descricao": "",
+        "processado": false
+      }
+    ]
+  }
+  ```
 - **Listar Autorizações de Acesso / Convites da Unidade:** `GET /autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}&dtIni={YYYY-MM-DD}&dtFim={YYYY-MM-DD}`
   - **Diferença:** `/evento_acesso` registra os logs de passagens reais na portaria/catraca (entradas e saídas). Já `/autorizacao_acesso` retorna os convites/autorizações prévias concedidas pelos moradores para visitantes e prestadores (com `dtInicio`, `dtFim`, `documento`, `autorizadoPor`, `chave` e status).
   - **Estrutura do Payload de Retorno (`GET /autorizacao_acesso`):**
