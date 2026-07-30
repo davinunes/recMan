@@ -19,6 +19,9 @@ foreach ($alterOcorrencias as $sql) {
     @mysqli_query($link, $sql);
 }
 
+// 1.1 Backfill do protocolo_vds para registros legados onde o id local equivalia ao número do protocolo
+@mysqli_query($link, "UPDATE ocorrencias SET protocolo_vds = CAST(id AS CHAR) WHERE (protocolo_vds IS NULL OR protocolo_vds = '') AND id > 0;");
+
 // 2. Tabela de Mapeamento/Cache Local de UUIDs e Categorias (vds_uuid_mapping)
 $sqlMapping = "CREATE TABLE IF NOT EXISTS vds_uuid_mapping (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

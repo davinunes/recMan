@@ -92,11 +92,12 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
 
         if (!$protocolo && !$uuidRemoto && !$ocoId) continue;
 
-        // Tentar obter registro local existente por ID, protocolo_vds ou uuid_remoto
-        $stmtFind = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? OR protocolo_vds = ? OR uuid_remoto = ? LIMIT 1");
+        // Tentar obter registro local existente por ID VDS, protocolo_vds, uuid_remoto ou ID legado (onde id local armazenava protocolo)
+        $stmtFind = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? OR protocolo_vds = ? OR uuid_remoto = ? OR id = ? LIMIT 1");
         $protoStr = (string)($protocolo ?? $ocoId);
+        $protoInt = (int)$protoStr;
         $uuidStr = (string)$uuidRemoto;
-        mysqli_stmt_bind_param($stmtFind, "iss", $ocoId, $protoStr, $uuidStr);
+        mysqli_stmt_bind_param($stmtFind, "issi", $ocoId, $protoStr, $uuidStr, $protoInt);
         mysqli_stmt_execute($stmtFind);
         $resFind = mysqli_stmt_get_result($stmtFind);
         $rowFind = mysqli_fetch_assoc($resFind);
@@ -847,3 +848,38 @@ function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
     // 3. Tag livre genérica
     return vds_vincular_unidade_tag($ocorrenciaId, 'TAG', $tagInput, 'tag');
 }
+
+/**
+ * Varre o banco local por ocorrências legadas (sem protocolo_vds ou sem uuid_remoto)
+ * e realiza a busca na API VDS para preencher protocolo_vds, uuid_remoto, oco_tipo e dados_json.
+ */
+function vds_enrich_legacy_ocorrencias($usuarioIdConselho = null) {
+    $link = DBConnect();
+
+    // 1. Garantir que protocolo_vds seja populado com o id numérico legado para onde estivesse NULL
+    @mysqli_query($link, "UPDATE ocorrencias SET protocolo_vds = CAST(id AS CHAR) WHERE (protocolo_vds IS NULL OR protocolo_vds = '') AND id > 0");
+
+    // 2. Buscar ocorrências que ainda não possuem uuid_remoto ou dados_json
+    $res = mysqli_query($link, "SELECT id, protocolo_vds FROM ocorrencias WHERE (uuid_remoto IS NULL OR uuid_remoto = '' OR dados_json IS NULL) AND id > 0 ORDER BY id DESC");
+
+    $count = 0;
+    $total = 0;
+
+    if ($res) {
+        $total = mysqli_num_rows($res);
+        while ($row = mysqli_fetch_assoc($res)) {
+            $proto = $row['protocolo_vds'] ?: (string)$row['id'];
+            if (!empty($proto)) {
+                // Tenta consultar detalhe via API v8 da VDS (que já faz a busca por protocolo e atualiza o banco local)
+                $detalhe = vds_get_ocorrencia_detalhe($proto, $usuarioIdConselho);
+                if ($detalhe && !empty($detalhe['local']['uuid_remoto'])) {
+                    $count++;
+                }
+            }
+        }
+    }
+
+    DBClose($link);
+    return ['success' => true, 'updated' => $count, 'total' => $total];
+}
+
