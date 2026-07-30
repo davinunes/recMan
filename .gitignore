@@ -1,0 +1,14 @@
+# Ignorar arquivos temporários e logs
+*.log
+*.tmp
+tmp/
+storage/*.log
+
+# Ignorar capturas de dados brutos e testes locais contendo sufixo .ignore
+*.ignore
+*.ignore.*
+
+# Ignorar configurações locais de IDE e ambiente
+.idea/
+.vscode/
+*.swp
