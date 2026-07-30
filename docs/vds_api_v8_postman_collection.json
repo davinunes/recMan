@@ -948,6 +948,547 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "6. Áreas Comuns & Reservas",
+      "item": [
+        {
+          "name": "6.1 Listar Áreas Comuns (Recursos Reserváveis)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/area_comum?Bloco.Uuid={{blocoUuid}}&Condominio.Uuid={{condominioUuid}}&Convite=False&Ativo=True&AgrupadorMenu=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "area_comum"
+              ],
+              "query": [
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "{{blocoUuid}}"
+                },
+                {
+                  "key": "Condominio.Uuid",
+                  "value": "{{condominioUuid}}"
+                },
+                {
+                  "key": "Convite",
+                  "value": "False"
+                },
+                {
+                  "key": "Ativo",
+                  "value": "True"
+                },
+                {
+                  "key": "AgrupadorMenu",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Retorna a lista de áreas comuns/recursos do condomínio habilitados para reserva (ex: Churrasqueiras, Espaço Zen, Gourmet, Salão de Festas, Home Cinema), suas regras de negócio e termos de uso."
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Consultar Calendário de Ocupação da Área Comum",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva_calendario?recursoUuid={{recursoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva_calendario"
+              ],
+              "query": [
+                {
+                  "key": "recursoUuid",
+                  "value": "{{recursoUuid}}"
+                }
+              ]
+            },
+            "description": "Consulta os dias ocupados/reservados no calendário para um determinado recurso de área comum."
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Consultar Horários Disponíveis (Período por Hora)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva_horario?Recurso.Uuid={{recursoUuid}}&tipoPeriodo=H&data={{dtReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva_horario"
+              ],
+              "query": [
+                {
+                  "key": "Recurso.Uuid",
+                  "value": "{{recursoUuid}}"
+                },
+                {
+                  "key": "tipoPeriodo",
+                  "value": "H"
+                },
+                {
+                  "key": "data",
+                  "value": "{{dtReserva}}"
+                }
+              ]
+            },
+            "description": "Retorna as faixas de horários disponíveis para reservas do tipo por hora (ex: Home Cinema) em uma determinada data."
+          },
+          "response": []
+        },
+        {
+          "name": "6.4 Consultar Termo de Aceite / Uso da Reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva_termo?Morador.Uuid={{moradorUuid}}&Recurso.Uuid={{recursoUuid}}&DtReserva={{dtReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva_termo"
+              ],
+              "query": [
+                {
+                  "key": "Morador.Uuid",
+                  "value": "{{moradorUuid}}"
+                },
+                {
+                  "key": "Recurso.Uuid",
+                  "value": "{{recursoUuid}}"
+                },
+                {
+                  "key": "DtReserva",
+                  "value": "{{dtReserva}}"
+                }
+              ]
+            },
+            "description": "Retorna o texto do termo de uso de área comum preenchido dinamicamente com os dados do morador e unidade para a data informada."
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 Consultar Opcionais da Área Comum",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/area_comum_opcional?DtIni={{dtReserva}}&DtFim={{dtReserva}}&Recurso.Uuid={{recursoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "area_comum_opcional"
+              ],
+              "query": [
+                {
+                  "key": "DtIni",
+                  "value": "{{dtReserva}}"
+                },
+                {
+                  "key": "DtFim",
+                  "value": "{{dtReserva}}"
+                },
+                {
+                  "key": "Recurso.Uuid",
+                  "value": "{{recursoUuid}}"
+                }
+              ]
+            },
+            "description": "Consulta itens adicionais/opcionais configuráveis para a reserva do recurso."
+          },
+          "response": []
+        },
+        {
+          "name": "6.6 Consultar Minhas Reservas / Fila de Espera",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva?page=1&limit=20&sortBy=recurso.nome&order=asc&dtIni={{dtIni}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "recurso.nome"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "dtIni",
+                  "value": "{{dtIni}}"
+                }
+              ]
+            },
+            "description": "Lista todas as reservas e posições em fila de espera efetuadas pelo usuário no condomínio."
+          },
+          "response": []
+        },
+        {
+          "name": "6.7 Consultar Ocupação / Reservas de um Recurso em Data Específica",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva?DtIni={{dtReserva}}&DtFim={{dtReserva}}&Recurso.Uuid={{recursoUuid}}&limit=1000&ReservaCalendario=true&OcultarInterditado=false&Ativo=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva"
+              ],
+              "query": [
+                {
+                  "key": "DtIni",
+                  "value": "{{dtReserva}}"
+                },
+                {
+                  "key": "DtFim",
+                  "value": "{{dtReserva}}"
+                },
+                {
+                  "key": "Recurso.Uuid",
+                  "value": "{{recursoUuid}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "1000"
+                },
+                {
+                  "key": "ReservaCalendario",
+                  "value": "true"
+                },
+                {
+                  "key": "OcultarInterditado",
+                  "value": "false"
+                },
+                {
+                  "key": "Ativo",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Verifica se já existem reservas ativas ou lista de espera para um determinado recurso em uma data específica."
+          },
+          "response": []
+        },
+        {
+          "name": "6.8 Consultar Detalhes da Reserva por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva?Uuid={{reservaUuid}}&Agendamento=false&Emprestimo=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva"
+              ],
+              "query": [
+                {
+                  "key": "Uuid",
+                  "value": "{{reservaUuid}}"
+                },
+                {
+                  "key": "Agendamento",
+                  "value": "false"
+                },
+                {
+                  "key": "Emprestimo",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Retorna os dados completos de uma reserva específica a partir do seu UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "6.9 Consultar Histórico da Reserva por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reserva_historico/{{reservaUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva_historico",
+                "{{reservaUuid}}"
+              ]
+            },
+            "description": "Retorna o histórico de auditoria e movimentações de status de uma reserva específica."
+          },
+          "response": []
+        },
+        {
+          "name": "6.10 Realizar Reserva ou Entrar na Fila de Espera",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"morador\": {\n    \"uuid\": \"{{moradorUuid}}\"\n  },\n  \"unidade\": {\n    \"uuid\": \"{{unidadeUuid}}\",\n    \"bloco\": {\n      \"uuid\": \"{{blocoUuid}}\"\n    }\n  },\n  \"recurso\": {\n    \"uuid\": \"{{recursoUuid}}\"\n  },\n  \"dtIni\": \"{{dtReserva}}\",\n  \"dtFim\": \"{{dtReserva}}\",\n  \"termoUso\": true,\n  \"permissao\": false,\n  \"isencaoTaxaReserva\": false,\n  \"taxaLimpeza\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reserva",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reserva"
+              ]
+            },
+            "description": "Tenta efetuar a reserva da área comum para a data/horário especificado. Caso o recurso já esteja ocupado mas admita fila de espera, o morador é automaticamente enfileirado."
+          },
+          "response": [
+            {
+              "name": "Reserva Aprovada (Sucesso)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"morador\": {\"uuid\": \"617e909e-ed19-42cc-9e8a-55c395df305c\"},\n  \"unidade\": {\"uuid\": \"ec283937-fb6b-4df0-b049-92918396f657\", \"bloco\": {\"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\"}},\n  \"recurso\": {\"uuid\": \"800f89be-3ddd-44c3-89c5-bf8b624fce04\"},\n  \"dtIni\": \"04/08/2026 18:00\",\n  \"dtFim\": \"04/08/2026 22:00\",\n  \"termoUso\": true,\n  \"permissao\": false,\n  \"isencaoTaxaReserva\": false,\n  \"taxaLimpeza\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/reserva",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reserva"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Registrada com status: Reserva aprovada\",\n    \"registro\": {\n        \"uuid\": \"5343594\",\n        \"data\": \"04/08/2026 | 18:00 - 22:00\",\n        \"horaIni\": null,\n        \"dtIni\": \"2026-08-04\",\n        \"dtFim\": \"2026-08-04\",\n        \"dtHoraIni\": \"2026-08-04T18:00:00\",\n        \"dtHoraFim\": \"2026-08-04T22:00:00\",\n        \"recurso\": {\n            \"uuid\": \"800f89be-3ddd-44c3-89c5-bf8b624fce04\",\n            \"nome\": \"Home Cinema\",\n            \"foto\": \"/app/dados/cond/1441/foto/RECURSO/p-8073.jpg\"\n        },\n        \"status\": {\n            \"uuid\": \"2\",\n            \"nome\": \"Reserva aprovada\",\n            \"ordem\": 1\n        },\n        \"qtdConvidados\": 0,\n        \"qtdMaxConvidados\": 4,\n        \"taxaLimpeza\": false,\n        \"valor\": null,\n        \"observacao\": null,\n        \"dtHora\": \"30/07/2026 09:49\",\n        \"escondePessoa\": true,\n        \"condominio\": {\n            \"uuid\": \"7AD5A317-7494-429C-9A9C-BBA69BA1A6BD\",\n            \"nome\": \"Residencial Top Life Miami Beach\",\n            \"nomeCurto\": null\n        },\n        \"unidade\": {\n            \"uuid\": \"ec283937-fb6b-4df0-b049-92918396f657\",\n            \"nome\": \"104\",\n            \"foto\": null,\n            \"bloco\": {\n                \"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\",\n                \"nome\": \"Bloco E\"\n            }\n        },\n        \"morador\": {\n            \"uuid\": \"617e909e-ed19-42cc-9e8a-55c395df305c\",\n            \"nome\": \"Davi Nunes de França\"\n        }\n    }\n}"
+            },
+            {
+              "name": "Entrou na Fila de Espera",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"morador\": {\"uuid\": \"617e909e-ed19-42cc-9e8a-55c395df305c\"},\n  \"unidade\": {\"uuid\": \"ec283937-fb6b-4df0-b049-92918396f657\", \"bloco\": {\"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\"}},\n  \"recurso\": {\"uuid\": \"80bc8657-5300-490f-8e48-541c054a55b3\"},\n  \"dtIni\": \"07/08/2026\",\n  \"dtFim\": \"07/08/2026\",\n  \"termoUso\": true,\n  \"permissao\": false,\n  \"isencaoTaxaReserva\": false,\n  \"taxaLimpeza\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/reserva",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reserva"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Registrada com status: Fila de espera\",\n    \"registro\": {\n        \"uuid\": \"5343596\",\n        \"data\": \"07/08/2026\",\n        \"horaIni\": null,\n        \"dtIni\": \"2026-08-07\",\n        \"dtFim\": \"2026-08-07\",\n        \"dtHoraIni\": \"2026-08-07T00:00:00\",\n        \"dtHoraFim\": \"2026-08-07T00:00:00\",\n        \"recurso\": {\n            \"uuid\": \"80bc8657-5300-490f-8e48-541c054a55b3\",\n            \"nome\": \"ESPAÇO ZEN - 18H ÀS 22H\",\n            \"foto\": \"/app/dados/cond/1441/foto/RECURSO/p-8373.png\"\n        },\n        \"status\": {\n            \"uuid\": \"5\",\n            \"nome\": \"Fila de espera\",\n            \"ordem\": 4\n        },\n        \"qtdConvidados\": 0,\n        \"qtdMaxConvidados\": 0,\n        \"taxaLimpeza\": false,\n        \"valor\": null,\n        \"observacao\": null,\n        \"dtHora\": \"30/07/2026 09:50\",\n        \"escondePessoa\": true\n    }\n}"
+            },
+            {
+              "name": "Erro - Antecedência de Data Excedida",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"morador\": {\"uuid\": \"617e909e-ed19-42cc-9e8a-55c395df305c\"},\n  \"unidade\": {\"uuid\": \"ec283937-fb6b-4df0-b049-92918396f657\", \"bloco\": {\"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\"}},\n  \"recurso\": {\"uuid\": \"80bc8657-5300-490f-8e48-541c054a55b3\"},\n  \"dtIni\": \"30/08/2026\",\n  \"dtFim\": \"30/08/2026\",\n  \"termoUso\": true,\n  \"permissao\": false,\n  \"isencaoTaxaReserva\": false,\n  \"taxaLimpeza\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/reserva",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reserva"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"status\": false,\n    \"message\": \"Data de reserva não pode ser superior a: 29/08/2026\"\n}"
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -986,6 +1527,30 @@
     {
       "key": "refreshToken",
       "value": ""
+    },
+    {
+      "key": "condominioUuid",
+      "value": "7AD5A317-7494-429C-9A9C-BBA69BA1A6BD"
+    },
+    {
+      "key": "moradorUuid",
+      "value": ""
+    },
+    {
+      "key": "recursoUuid",
+      "value": ""
+    },
+    {
+      "key": "reservaUuid",
+      "value": ""
+    },
+    {
+      "key": "dtReserva",
+      "value": "30/08/2026"
+    },
+    {
+      "key": "dtIni",
+      "value": "2026-07-30"
     }
   ]
 }
