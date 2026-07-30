@@ -208,14 +208,15 @@
         "jsonBody": "={\n  \"morador\": {\n    \"uuid\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.moradorUuid }}\"\n  },\n  \"unidade\": {\n    \"uuid\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.unidadeUuid }}\",\n    \"bloco\": {\n      \"uuid\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.blocoUuid }}\"\n    }\n  },\n  \"recurso\": {\n    \"uuid\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.recursoUuid }}\"\n  },\n  \"dtIni\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.dtIniPayload }}\",\n  \"dtFim\": \"{{ $('Calcular Data Alvo (Hoje + N Dias)').first().json.dtFimPayload }}\",\n  \"termoUso\": true,\n  \"permissao\": false,\n  \"isencaoTaxaReserva\": false,\n  \"taxaLimpeza\": false\n}",
         "options": {}
       },
-      "id": "1a2b3c4d-0006-4000-8000-000000000006",
+      "id": "b87cab0c-aaec-4c6a-bf0f-5b6a4689a90a",
       "name": "Disparar Tentativa de Reserva (POST /reserva)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         1300,
         300
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -292,7 +293,7 @@
             {
               "name": "mensagem",
               "type": "stringValue",
-              "value": "=\"Reserva realizada com SUCESSO! Registro UUID: \" + $json.registro.uuid + \" na data: \" + $json.registro.data"
+              "value": "=\"🎉 *Reserva Realizada com Sucesso!*\\n\\n• *Registro*: \" + $json.registro.uuid + \"\\n• *Data*: \" + $json.registro.data + \"\\n• *Recurso*: \" + $json.registro.recurso.nome + \"\\n• *Status*: \" + $json.registro.status.nome"
             }
           ]
         },
@@ -319,7 +320,7 @@
             {
               "name": "mensagem",
               "type": "stringValue",
-              "value": "=\"Espaço já reservado por outro morador. Entrou na FILA DE ESPERA! Registro UUID: \" + $json.registro.uuid + \" na data: \" + $json.registro.data"
+              "value": "=\"⏳ *Entrou na Fila de Espera!*\\n\\n• *Registro*: \" + $json.registro.uuid + \"\\n• *Data*: \" + $json.registro.data + \"\\n• *Recurso*: \" + $json.registro.recurso.nome + \"\\n• *Status*: Espaço já reservado por outro morador. Você está na fila!\""
             }
           ]
         },
@@ -346,7 +347,7 @@
             {
               "name": "mensagem",
               "type": "stringValue",
-              "value": "=\"FALHA ao tentar reservar: \" + ($json.message || \"Resposta desconhecida da API VDS\")"
+              "value": "=\"⚠️ *Falha na Tentativa de Reserva*\\n\\n• *Detalhes*: \" + ($json.message || $json.error || \"Resposta desconhecida da API VDS\")"
             }
           ]
         },
@@ -360,6 +361,30 @@
         1780,
         420
       ]
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "Dinovatech",
+        "chatId": "556196757676@s.whatsapp.net",
+        "text": "=🤖 *Automação de Reserva VDS*\n\n{{ $json.mensagem }}",
+        "requestOptions": {}
+      },
+      "id": "6de32d2f-cbe3-4ef8-8703-2872a03479c6",
+      "name": "Enviar Notificação WhatsApp (WAHA)",
+      "type": "@devlikeapro/n8n-nodes-waha.WAHA",
+      "typeVersion": 202502,
+      "position": [
+        2040,
+        300
+      ],
+      "credentials": {
+        "wahaApi": {
+          "id": "mTGiRp8c9dgH5riS",
+          "name": "WAHA account"
+        }
+      }
     }
   ],
   "connections": {
@@ -453,6 +478,39 @@
           }
         ]
       ]
+    },
+    "Resultado: Reserva Aprovada": {
+      "main": [
+        [
+          {
+            "node": "Enviar Notificação WhatsApp (WAHA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado: Fila de Espera": {
+      "main": [
+        [
+          {
+            "node": "Enviar Notificação WhatsApp (WAHA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado: Erro / Falha": {
+      "main": [
+        [
+          {
+            "node": "Enviar Notificação WhatsApp (WAHA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -460,7 +518,8 @@
   },
   "staticData": null,
   "meta": {
-    "templateCredsSetupCompleted": true
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3f99ecfe99a13518508c83d841a94bd09a99a44e4e27407777f360bae2015f8a"
   },
   "pinData": {}
 }
