@@ -17,8 +17,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        200,
-        300
+        -1200,
+        96
       ]
     },
     {
@@ -27,68 +27,55 @@
           "values": [
             {
               "name": "baseUrl",
-              "type": "stringValue",
-              "value": "https://apiv8.vds.app.br"
+              "stringValue": "https://apiv8.vds.app.br"
             },
             {
               "name": "origin",
-              "type": "stringValue",
-              "value": "https://app1.vidadesindico.com.br"
+              "stringValue": "https://app1.vidadesindico.com.br"
             },
             {
               "name": "username",
-              "type": "stringValue",
-              "value": "SEU_USUARIO_AQUI"
+              "stringValue": "SEU_USUARIO_AQUI"
             },
             {
               "name": "password",
-              "type": "stringValue",
-              "value": "SUA_SENHA_AQUI"
+              "stringValue": "SUA_SENHA_AQUI"
             },
             {
               "name": "appId",
-              "type": "stringValue",
-              "value": "976"
+              "stringValue": "976"
             },
             {
               "name": "blocoUuid",
-              "type": "stringValue",
-              "value": "d7835e76-18c9-4834-964f-d2463b2e03c4"
+              "stringValue": "d7835e76-18c9-4834-964f-d2463b2e03c4"
             },
             {
               "name": "unidadeUuid",
-              "type": "stringValue",
-              "value": "ec283937-fb6b-4df0-b049-92918396f657"
+              "stringValue": "ec283937-fb6b-4df0-b049-92918396f657"
             },
             {
               "name": "moradorUuid",
-              "type": "stringValue",
-              "value": "617e909e-ed19-42cc-9e8a-55c395df305c"
+              "stringValue": "617e909e-ed19-42cc-9e8a-55c395df305c"
             },
             {
               "name": "recursoUuid",
-              "type": "stringValue",
-              "value": "80bc8657-5300-490f-8e48-541c054a55b3"
+              "stringValue": "80bc8657-5300-490f-8e48-541c054a55b3"
             },
             {
               "name": "diasAntecedencia",
-              "type": "numberValue",
-              "value": 30
+              "stringValue": "30"
             },
             {
               "name": "tipoPeriodo",
-              "type": "stringValue",
-              "value": "D"
+              "stringValue": "D"
             },
             {
               "name": "horarioIni",
-              "type": "stringValue",
-              "value": "18:00"
+              "stringValue": "18:00"
             },
             {
               "name": "horarioFim",
-              "type": "stringValue",
-              "value": "22:00"
+              "stringValue": "22:00"
             }
           ]
         },
@@ -99,8 +86,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        420,
-        300
+        -992,
+        96
       ]
     },
     {
@@ -112,8 +99,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        640,
-        300
+        -784,
+        96
       ]
     },
     {
@@ -143,8 +130,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        860,
-        300
+        -576,
+        96
       ]
     },
     {
@@ -178,8 +165,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1080,
-        300
+        -368,
+        96
       ]
     },
     {
@@ -213,8 +200,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        300
+        -160,
+        96
       ],
       "onError": "continueRegularOutput"
     },
@@ -227,7 +214,8 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
@@ -249,7 +237,8 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict"
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
@@ -272,13 +261,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "1a2b3c4d-0007-4000-8000-000000000007",
+      "id": "312417c8-ad72-4405-b05d-67e9a2a2dc4d",
       "name": "Avaliar Resultado da Reserva",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        1520,
-        300
+        480,
+        720
       ]
     },
     {
@@ -287,25 +276,23 @@
           "values": [
             {
               "name": "resultado",
-              "type": "stringValue",
-              "value": "SUCESSO"
+              "stringValue": "SUCESSO"
             },
             {
               "name": "mensagem",
-              "type": "stringValue",
-              "value": "=\"🎉 *Reserva Realizada com Sucesso!*\\n\\n• *Registro*: \" + $json.registro.uuid + \"\\n• *Data*: \" + $json.registro.data + \"\\n• *Recurso*: \" + $json.registro.recurso.nome + \"\\n• *Status*: \" + $json.registro.status.nome"
+              "stringValue": "🎉 *Reserva Realizada com Sucesso!*"
             }
           ]
         },
         "options": {}
       },
-      "id": "1a2b3c4d-0008-4000-8000-000000000008",
+      "id": "e14cf5b9-0890-442e-bc41-0cd9fa4b1cd6",
       "name": "Resultado: Reserva Aprovada",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        1780,
-        180
+        736,
+        592
       ]
     },
     {
@@ -314,25 +301,23 @@
           "values": [
             {
               "name": "resultado",
-              "type": "stringValue",
-              "value": "ALERTA_FILA"
+              "stringValue": "ALERTA_FILA"
             },
             {
               "name": "mensagem",
-              "type": "stringValue",
-              "value": "=\"⏳ *Entrou na Fila de Espera!*\\n\\n• *Registro*: \" + $json.registro.uuid + \"\\n• *Data*: \" + $json.registro.data + \"\\n• *Recurso*: \" + $json.registro.recurso.nome + \"\\n• *Status*: Espaço já reservado por outro morador. Você está na fila!\""
+              "stringValue": "⏳ Entrou na fila de espera!"
             }
           ]
         },
         "options": {}
       },
-      "id": "1a2b3c4d-0009-4000-8000-000000000009",
+      "id": "cd6d86aa-5ac0-4a59-824b-5c75fe1877b0",
       "name": "Resultado: Fila de Espera",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        1780,
-        300
+        736,
+        720
       ]
     },
     {
@@ -341,25 +326,23 @@
           "values": [
             {
               "name": "resultado",
-              "type": "stringValue",
-              "value": "FALHA"
+              "stringValue": "FALHA"
             },
             {
               "name": "mensagem",
-              "type": "stringValue",
-              "value": "=\"⚠️ *Falha na Tentativa de Reserva*\\n\\n• *Detalhes*: \" + ($json.message || $json.error || \"Resposta desconhecida da API VDS\")"
+              "stringValue": "=⚠️ *Falha na Tentativa de Reserva*\n\n*Detalhes*: \n{{ $json.error.message }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "1a2b3c4d-0010-4000-8000-000000000010",
+      "id": "79c316b7-5a0e-4f69-b865-945cb082326e",
       "name": "Resultado: Erro / Falha",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        1780,
-        420
+        736,
+        832
       ]
     },
     {
@@ -371,13 +354,13 @@
         "text": "=🤖 *Automação de Reserva VDS*\n\n{{ $json.mensagem }}",
         "requestOptions": {}
       },
-      "id": "6de32d2f-cbe3-4ef8-8703-2872a03479c6",
+      "id": "e5c6db59-97f0-45c2-b063-fa79b66d0186",
       "name": "Enviar Notificação WhatsApp (WAHA)",
       "type": "@devlikeapro/n8n-nodes-waha.WAHA",
       "typeVersion": 202502,
       "position": [
-        2040,
-        300
+        1008,
+        720
       ],
       "credentials": {
         "wahaApi": {
