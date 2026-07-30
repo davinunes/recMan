@@ -182,6 +182,8 @@ function vds_save_conselheiro_token($usuarioIdConselho, $username, $password) {
 
 /**
  * Tenta renovar o Bearer Token usando o Refresh Token registrado na VDS.
+ * Endpoint confirmado via Postman (item 1.4): POST /login/refresh
+ * Body exigido: {"token":"<bearerAtual>","refreshToken":"<refreshToken>","crypt":false}
  */
 function vds_refresh_token($tokenId) {
     $link = DBConnect();
@@ -198,41 +200,44 @@ function vds_refresh_token($tokenId) {
     }
 
     $refreshToken = $row['refresh_token'];
-    $endpoints = [
-        VDS_BASE_URL . '/auth/refresh',
-        VDS_BASE_URL . '/login/refresh',
-        VDS_BASE_URL . '/token/refresh'
-    ];
+    $bearerToken  = $row['bearer_token'];
 
-    $newToken = null;
+    // Endpoint confirmado pelo mapeamento Postman (captura real do browser)
+    $url = VDS_BASE_URL . '/login/refresh';
+
+    // Body exige o token atual + refreshToken + crypt (conforme item 1.4 da collection)
+    $payload = json_encode([
+        'token'        => $bearerToken,
+        'refreshToken' => $refreshToken,
+        'crypt'        => false
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'Origin: ' . VDS_ORIGIN_HEADER,
+            'Accept: application/json, text/plain, */*'
+        ]
+    ]);
+    $response = curl_exec($ch);
+    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $newToken        = null;
     $newRefreshToken = null;
-    $newExpires = null;
+    $newExpires      = null;
 
-    foreach ($endpoints as $url) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode(['refreshToken' => $refreshToken]),
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $row['bearer_token'],
-                'Content-Type: application/json',
-                'Origin: ' . VDS_ORIGIN_HEADER
-            ]
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200 && $response) {
-            $json = json_decode($response, true);
-            $t = $json['token'] ?? ($json['bearerToken'] ?? null);
-            if ($t) {
-                $newToken = $t;
-                $newRefreshToken = $json['refreshToken'] ?? $refreshToken;
-                $newExpires = $json['expires'] ?? null;
-                break;
-            }
+    if ($httpCode === 200 && $response) {
+        $json = json_decode($response, true);
+        $t = $json['token'] ?? ($json['bearerToken'] ?? null);
+        if ($t) {
+            $newToken        = $t;
+            $newRefreshToken = $json['refreshToken'] ?? $refreshToken;
+            $newExpires      = $json['expires'] ?? null;
         }
     }
 
@@ -244,10 +249,17 @@ function vds_refresh_token($tokenId) {
         mysqli_stmt_close($stmtUp);
         DBClose($link);
         return $newToken;
-    } else {
-        DBClose($link);
-        return null;
     }
+
+    // Refresh falhou — marcar como expirado para forçar novo login manual
+    $stmtErr = mysqli_prepare($link, "UPDATE vds_tokens SET status = 'expirado', updated_at = NOW() WHERE id = ?");
+    if ($stmtErr) {
+        mysqli_stmt_bind_param($stmtErr, "i", $row['id']);
+        mysqli_stmt_execute($stmtErr);
+        mysqli_stmt_close($stmtErr);
+    }
+    DBClose($link);
+    return null;
 }
 
 /**
@@ -323,7 +335,7 @@ function vds_get_token($usuarioIdConselho = null) {
         return null;
     }
 
-    // Se o status local estiver marcado como 'expirado', tentar renovar via refresh_token
+    // Se o status local estiver marcado como 'expirado', tentar renovar imediatamente
     if ($targetRow['status'] === 'expirado') {
         if (!empty($targetRow['refresh_token'])) {
             $refreshedToken = vds_refresh_token($targetRow['id']);
@@ -331,7 +343,26 @@ function vds_get_token($usuarioIdConselho = null) {
                 return $refreshedToken;
             }
         }
-        return null; // Se está expirado e refresh falhou, NÃO envia o token quebrado
+        return null; // Expirado e refresh falhou → login manual necessário
+    }
+
+    // Verificação proativa: se expires_at está definido e vai vencer nos próximos 10 minutos, renovar agora
+    if (!empty($targetRow['expires_at']) && !empty($targetRow['refresh_token'])) {
+        $expiresTs  = strtotime($targetRow['expires_at']);
+        $nowTs      = time();
+        $windowSecs = 10 * 60; // 10 minutos de antecedência
+
+        if ($expiresTs !== false && ($expiresTs - $nowTs) <= $windowSecs) {
+            $refreshedToken = vds_refresh_token($targetRow['id']);
+            if ($refreshedToken) {
+                return $refreshedToken;
+            }
+            // Se o refresh falhou mas o token ainda não venceu, usar o atual por enquanto
+            if ($nowTs < $expiresTs) {
+                return $targetRow['bearer_token'];
+            }
+            return null;
+        }
     }
 
     return $targetRow['bearer_token'];

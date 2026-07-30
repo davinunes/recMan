@@ -26,7 +26,23 @@ $lineBreak = $isCli ? "\n" : "<br>\n";
 
 echo "[{$timestamp}] Iniciando sincronização automática e verificação de token VDS...{$lineBreak}";
 
-// 1. Obter e validar token (o vds_get_token faz a verificação prévia e tenta o refresh_token se estiver vencendo)
+// 1. Verificar estado do token antes de tentar renovar
+$link = DBConnect();
+$tokenRow = mysqli_fetch_assoc(mysqli_query($link, "SELECT id, status, expires_at, LENGTH(refresh_token) as has_refresh FROM vds_tokens WHERE tipo = 'condominio' ORDER BY id DESC LIMIT 1"));
+DBClose($link);
+
+if ($tokenRow) {
+    $statusAtual  = $tokenRow['status'] ?? 'desconhecido';
+    $expiresAt    = $tokenRow['expires_at'] ?? 'sem data';
+    $temRefresh   = !empty($tokenRow['has_refresh']) ? 'sim' : 'não';
+    $expiraEm     = $expiresAt !== 'sem data' ? round((strtotime($expiresAt) - time()) / 60, 1) . 'min' : 'N/A';
+
+    echo "[{$timestamp}] Token condominio: status={$statusAtual} | expires_at={$expiresAt} | expira_em={$expiraEm} | tem_refresh={$temRefresh}{$lineBreak}";
+} else {
+    echo "[{$timestamp}] AVISO: Nenhum token de condomínio encontrado na tabela vds_tokens.{$lineBreak}";
+}
+
+// vds_get_token renova proativamente se expires_at estiver dentro de 10min ou status='expirado'
 $token = vds_get_token(null);
 
 if (!$token) {
@@ -34,6 +50,8 @@ if (!$token) {
     echo "[{$timestamp}] Por favor, faça login uma vez na tela de Configurações para gerar o token inicial.{$lineBreak}";
     exit(1);
 }
+
+echo "[{$timestamp}] Token obtido com sucesso. Prosseguindo com a sincronização...{$lineBreak}";
 
 // 2. Executar a sincronização global (Lida=9)
 $res = vds_sync_ocorrencias(null);
