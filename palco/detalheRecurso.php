@@ -666,8 +666,91 @@ if ($esseRecurso == null) {
             instance.open();
         }
 
+        // Helper para verificar se um identificador ou descrição bate com o número/ano da notificação do recurso
+        const numNotifRecurso = <?= (int)$num ?>;
+        const anoNotifRecurso = <?= (int)$ano ?>;
+        const anoNotifCurto = "<?= $anoNotifCurto ?>";
+        const recNumCompleto = "<?= htmlspecialchars($result['numero'] ?? '') ?>";
+
+        function checarMatchNotificacao(texto) {
+            if (!texto || !numNotifRecurso) return false;
+            const str = String(texto).trim();
+            if (recNumCompleto && str.toLowerCase().includes(recNumCompleto.toLowerCase())) return true;
+            const regex = new RegExp("(?:N|NOTIF|MULTA|INFRA|\\b)?[\\s\\-_]*" + numNotifRecurso + "(?:[\\s\\/-]*(?:" + anoNotifRecurso + "|" + anoNotifCurto + "))?\\b", "i");
+            return regex.test(str);
+        }
+
+        let exibindoApenasMatches = false;
+
+        function atualizarFiltroNotificacaoEntregas() {
+            const rows = document.querySelectorAll('.linha-entrega-item');
+            let matchesCount = 0;
+            let outrosCount = 0;
+
+            rows.forEach(r => {
+                const idTxt = r.querySelector('.col-identificador') ? r.querySelector('.col-identificador').innerText : '';
+                const descTxt = r.querySelector('td:nth-child(4)') ? r.querySelector('td:nth-child(4)').innerText : '';
+
+                if (r.dataset.isNotifMatch === "true" || checarMatchNotificacao(idTxt) || checarMatchNotificacao(descTxt)) {
+                    r.dataset.isNotifMatch = "true";
+                    r.style.background = "#fff8e1";
+                    r.style.borderLeft = "4px solid #ffa000";
+                    matchesCount++;
+                } else {
+                    outrosCount++;
+                }
+            });
+
+            const painel = document.getElementById('painel-filtro-entregas');
+            const countElem = document.getElementById('count-outras-entregas');
+            const headerBadge = document.getElementById('badge-entrega-match-header');
+
+            if (matchesCount > 0) {
+                if (painel) painel.style.display = 'flex';
+                if (countElem) countElem.innerText = outrosCount;
+                if (headerBadge) headerBadge.style.display = 'inline-flex';
+
+                if (!window.filtroAplicadoAuto && outrosCount > 0) {
+                    window.filtroAplicadoAuto = true;
+                    toggleFiltroOutrasEntregas(true);
+                }
+            }
+        }
+
+        function toggleFiltroOutrasEntregas(forceOcultar) {
+            const rows = document.querySelectorAll('.linha-entrega-item');
+            const btn = document.getElementById('btn-toggle-filtro-entregas');
+
+            if (typeof forceOcultar === 'boolean') {
+                exibindoApenasMatches = forceOcultar;
+            } else {
+                exibindoApenasMatches = !exibindoApenasMatches;
+            }
+
+            rows.forEach(r => {
+                if (r.dataset.isNotifMatch !== "true") {
+                    r.style.display = exibindoApenasMatches ? 'none' : '';
+                } else {
+                    r.style.display = '';
+                }
+            });
+
+            if (btn) {
+                const outrosCount = document.getElementById('count-outras-entregas') ? document.getElementById('count-outras-entregas').innerText : '0';
+                if (exibindoApenasMatches) {
+                    btn.innerHTML = '<i class="material-icons left tiny">visibility</i> Exibir todas as entregas';
+                    btn.className = 'btn-flat btn-small blue lighten-4 blue-text text-darken-4 font-weight-bold';
+                } else {
+                    btn.innerHTML = '<i class="material-icons left tiny">visibility_off</i> Ocultar outras entregas (' + outrosCount + ')';
+                    btn.className = 'btn-flat btn-small amber lighten-4 amber-text text-darken-4 font-weight-bold';
+                }
+            }
+        }
+
         // Fetch em segundo plano para obter identificador e foto de cada entrega
         document.addEventListener("DOMContentLoaded", function () {
+            atualizarFiltroNotificacaoEntregas();
+
             const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
             entregasRows.forEach(function (row) {
                 const uuid = row.getAttribute('data-entrega-uuid');
@@ -683,11 +766,23 @@ if ($esseRecurso == null) {
                             if (d.identificador) {
                                 const colId = row.querySelector('.col-identificador');
                                 if (colId) {
-                                    colId.innerHTML = `
-                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
-                                        <i class="material-icons tiny">qr_code</i> ${d.identificador}
-                                    </span>
-                                `;
+                                    const isMatch = checarMatchNotificacao(d.identificador) || checarMatchNotificacao(d.descricao);
+                                    if (isMatch) {
+                                        colId.innerHTML = `
+                                            <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(255,160,0,0.3);">
+                                                <i class="material-icons tiny">star</i> ${d.identificador}
+                                            </span>
+                                        `;
+                                        row.dataset.isNotifMatch = "true";
+                                        row.style.background = "#fff8e1";
+                                        row.style.borderLeft = "4px solid #ffa000";
+                                    } else {
+                                        colId.innerHTML = `
+                                            <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                                <i class="material-icons tiny">qr_code</i> ${d.identificador}
+                                            </span>
+                                        `;
+                                    }
                                 }
                             }
 
@@ -703,6 +798,7 @@ if ($esseRecurso == null) {
                             }
 
                             row.dataset.detalhesCompletos = JSON.stringify(d);
+                            atualizarFiltroNotificacaoEntregas();
                         }
                     })
                     .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
@@ -725,7 +821,12 @@ if ($esseRecurso == null) {
 
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
             if (data.identificador) {
-                html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
+                const isMatch = checarMatchNotificacao(data.identificador) || checarMatchNotificacao(data.descricao);
+                if (isMatch) {
+                    html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="amber-text text-darken-4" style="font-size:1.05rem;"><i class="material-icons tiny">star</i> ' + data.identificador + ' <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">⭐ Correspondente à Notificação ' + recNumCompleto + '</span></b></td></tr>';
+                } else {
+                    html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
+                }
             }
             if (data.protocolo) {
                 html += '<tr><td><b>Protocolo VDS:</b></td><td>#' + data.protocolo + '</td></tr>';
@@ -891,11 +992,25 @@ if ($esseRecurso == null) {
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons blue-text">markunread_mailbox</i>
                         Entregas e Encomendas (<?= count($entregasUnidade) ?>)
+                        <span id="badge-entrega-match-header" class="badge amber darken-2 white-text font-weight-bold" style="display:none; float:none; margin-left:8px; padding:2px 8px; border-radius:4px; font-size:0.75rem;">
+                            <i class="material-icons tiny">star</i> Correspondente à Notificação <?= htmlspecialchars($result['numero'] ?? '') ?>
+                        </span>
                     </div>
                     <div class="collapsible-body" style="padding: 10px;">
                         <?php if (empty($entregasUnidade)): ?>
                             <p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>
                         <?php else: ?>
+                            <!-- Painel de Destaque e Filtro da Notificação -->
+                            <div id="painel-filtro-entregas" style="display:none; margin-bottom:10px; background:#fff8e1; border:1px solid #ffe082; padding:8px 12px; border-radius:6px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                <span style="color:#b78103; font-weight:600; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+                                    <i class="material-icons tiny amber-text text-darken-3">stars</i> 
+                                    Destacando recebimento da Notificação <b><?= htmlspecialchars($result['numero'] ?? '') ?></b> na portaria
+                                </span>
+                                <button type="button" id="btn-toggle-filtro-entregas" class="btn-flat btn-small amber lighten-4 amber-text text-darken-4 font-weight-bold" onclick="toggleFiltroOutrasEntregas()" style="height:26px; line-height:26px; font-size:0.75rem; text-transform:none; border-radius:4px;">
+                                    <i class="material-icons left tiny">visibility_off</i> Ocultar outras entregas (<span id="count-outras-entregas">0</span>)
+                                </button>
+                            </div>
+
                             <table class="striped highlight responsive-table" style="font-size:0.85rem;"
                                 id="tabela-entregas-acelerador">
                                 <thead>
@@ -909,22 +1024,43 @@ if ($esseRecurso == null) {
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <?php 
+                                    $numNotifRecurso = (int)$num;
+                                    $anoNotifRecurso = (int)$ano;
+                                    $anoNotifCurto = $anoNotifRecurso ? substr((string)$anoNotifRecurso, -2) : '';
+                                    $recNumStr = htmlspecialchars($result['numero'] ?? '');
+                                    $regexPatternServer = '/(?:\bN?[\-_]?\s*' . $numNotifRecurso . '\s*[\/\-_]?\s*(?:' . $anoNotifRecurso . '|' . $anoNotifCurto . ')?\b|' . preg_quote($recNumStr, '/') . ')/i';
+                                    ?>
                                     <?php foreach ($entregasUnidade as $ent): ?>
                                         <?php
                                         $entUuid = $ent['uuid'] ?? ($ent['id'] ?? '');
                                         $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
+                                        
+                                        $idStrServer = $ent['identificador'] ?? '';
+                                        $descStrServer = $ent['descricao'] ?? '';
+                                        $isMatchServer = ($numNotifRecurso > 0) && (preg_match($regexPatternServer, $idStrServer) || preg_match($regexPatternServer, $descStrServer));
                                         ?>
-                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" class="linha-entrega-item"
-                                            style="cursor:pointer;"
+                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" 
+                                            data-is-notif-match="<?= $isMatchServer ? 'true' : 'false' ?>"
+                                            class="linha-entrega-item"
+                                            style="cursor:pointer; <?= $isMatchServer ? 'background:#fff8e1; border-left:4px solid #ffa000;' : '' ?>"
                                             onclick="inspecionarEntregaComDetalhes('<?= htmlspecialchars($entUuid) ?>', <?= $jsonEnt ?>)">
                                             <td><?= htmlspecialchars($ent['dthoraChegada']) ?></td>
                                             <td class="col-identificador">
                                                 <?php if (!empty($ent['identificador'])): ?>
-                                                    <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold"
-                                                        style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
-                                                        <i class="material-icons tiny">qr_code</i>
-                                                        <?= htmlspecialchars($ent['identificador']) ?>
-                                                    </span>
+                                                    <?php if ($isMatchServer): ?>
+                                                        <span class="badge amber darken-2 white-text font-weight-bold"
+                                                            style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(255,160,0,0.3);">
+                                                            <i class="material-icons tiny">star</i>
+                                                            <?= htmlspecialchars($ent['identificador']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold"
+                                                            style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                                            <i class="material-icons tiny">qr_code</i>
+                                                            <?= htmlspecialchars($ent['identificador']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php elseif (!empty($entUuid)): ?>
                                                     <span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i
                                                             class="material-icons tiny spinning">sync</i> Buscando...</span>
