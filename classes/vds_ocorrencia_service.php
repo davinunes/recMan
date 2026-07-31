@@ -64,6 +64,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
 
     $link = DBConnect();
     $count = 0;
+    $insertedCount = 0;
 
     foreach ($items as $item) {
         $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
@@ -107,6 +108,8 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
 
         $jsonEncoded = json_encode($item, JSON_UNESCAPED_UNICODE);
 
+        $isLidoRemoto = !empty($item['lida']) || !empty($item['isLida']);
+
         if ($rowFind) {
             // Só atualizar bloco/unidade se temos dados reais (não fallback)
             $blocoReal = ($bloco !== 'Z') ? $bloco : null;
@@ -115,6 +118,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
             mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
             mysqli_stmt_execute($stmtUp);
             mysqli_stmt_close($stmtUp);
+            $localIdTarget = $rowFind['id'];
         } else {
             if ($ocoId > 0) {
                 $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -124,7 +128,22 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
                 mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
             }
             mysqli_stmt_execute($stmtIns);
+            $localIdTarget = mysqli_insert_id($link) ?: $ocoId;
             mysqli_stmt_close($stmtIns);
+            $insertedCount++;
+        }
+
+        // Se o item vindo da VDS já é marcado como LIDO remotamente, atualizar a tabela relacional
+        if ($isLidoRemoto && $localIdTarget > 0) {
+            vds_ensure_leitura_table_exists($link);
+            $resCons = mysqli_query($link, "SELECT usuario_id_conselho FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho IS NOT NULL");
+            if ($resCons) {
+                while ($cRow = mysqli_fetch_assoc($resCons)) {
+                    $cId = (int)$cRow['usuario_id_conselho'];
+                    $uuidEsc = mysqli_real_escape_string($link, $uuidStr);
+                    @mysqli_query($link, "INSERT INTO ocorrencia_leitura_conselheiro (conselheiro_id, ocorrencia_id, uuid_remoto, lido, sincronizado_remoto) VALUES ({$cId}, {$localIdTarget}, '{$uuidEsc}', 1, 1) ON DUPLICATE KEY UPDATE lido = 1, sincronizado_remoto = 1");
+                }
+            }
         }
 
         // Mapear unidade na vds_uuid_mapping se houver bloco e unidade
@@ -141,7 +160,7 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     }
 
     DBClose($link);
-    return ['success' => true, 'count' => $count];
+    return ['success' => true, 'count' => $count, 'inserted' => $insertedCount];
 }
 
 /**
@@ -739,7 +758,7 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
     $sql = "SELECT o.* FROM ocorrencias o 
             LEFT JOIN ocorrencia_leitura_conselheiro l 
               ON l.ocorrencia_id = o.id AND l.conselheiro_id = ?
-            WHERE (l.lido IS NULL OR l.lido = 0)
+            WHERE (l.lido = 0 OR (l.lido IS NULL AND (JSON_UNQUOTE(JSON_EXTRACT(o.dados_json, '$.lida')) != 'true' AND JSON_UNQUOTE(JSON_EXTRACT(o.dados_json, '$.isLida')) != 'true')))
               AND (o.resolvido IS NULL OR o.resolvido = 0)
             ORDER BY o.abertura DESC LIMIT ?";
 
