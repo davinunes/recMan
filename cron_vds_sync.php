@@ -24,34 +24,63 @@ require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 $timestamp = date('Y-m-d H:i:s');
 $lineBreak = $isCli ? "\n" : "<br>\n";
 
-echo "[{$timestamp}] Iniciando sincronização automática e verificação de token VDS...{$lineBreak}";
+echo "[{$timestamp}] Iniciando sincronização automática e verificação proativa de tokens VDS...{$lineBreak}";
 
-// 1. Verificar estado do token antes de tentar renovar
+// 1. Obter e renovar proativamente todos os tokens registrados na vds_tokens (Condomínio + Conselheiros)
 $link = DBConnect();
-$tokenRow = mysqli_fetch_assoc(mysqli_query($link, "SELECT id, status, expires_at, LENGTH(refresh_token) as has_refresh FROM vds_tokens WHERE tipo = 'condominio' ORDER BY id DESC LIMIT 1"));
+$resTokens = mysqli_query($link, "SELECT id, tipo, usuario_id_conselho, vds_username, status, expires_at, LENGTH(refresh_token) as has_refresh FROM vds_tokens ORDER BY id ASC");
+$tokensList = [];
+if ($resTokens) {
+    while ($r = mysqli_fetch_assoc($resTokens)) {
+        $tokensList[] = $r;
+    }
+}
 DBClose($link);
 
-if ($tokenRow) {
-    $statusAtual  = $tokenRow['status'] ?? 'desconhecido';
-    $expiresAt    = $tokenRow['expires_at'] ?? 'sem data';
-    $temRefresh   = !empty($tokenRow['has_refresh']) ? 'sim' : 'não';
-    $expiraEm     = $expiresAt !== 'sem data' ? round((strtotime($expiresAt) - time()) / 60, 1) . 'min' : 'N/A';
-
-    echo "[{$timestamp}] Token condominio: status={$statusAtual} | expires_at={$expiresAt} | expira_em={$expiraEm} | tem_refresh={$temRefresh}{$lineBreak}";
-} else {
-    echo "[{$timestamp}] AVISO: Nenhum token de condomínio encontrado na tabela vds_tokens.{$lineBreak}";
-}
-
-// vds_get_token renova proativamente se expires_at estiver dentro de 10min ou status='expirado'
-$token = vds_get_token(null);
-
-if (!$token) {
-    echo "[{$timestamp}] ALERTA/ERRO: Nenhum token ativo ou renovável disponível na tabela `vds_tokens`.{$lineBreak}";
-    echo "[{$timestamp}] Por favor, faça login uma vez na tela de Configurações para gerar o token inicial.{$lineBreak}";
+if (empty($tokensList)) {
+    echo "[{$timestamp}] AVISO: Nenhum token encontrado na tabela vds_tokens. Faça login na tela de Configurações para conectar.{$lineBreak}";
     exit(1);
 }
 
-echo "[{$timestamp}] Token obtido com sucesso. Prosseguindo com a sincronização...{$lineBreak}";
+echo "[{$timestamp}] Encontrados " . count($tokensList) . " registro(s) de token na tabela `vds_tokens`. Processando auto-refresh...{$lineBreak}";
+
+$tokenCondominioAtivo = null;
+
+foreach ($tokensList as $tRow) {
+    $tId = (int)$tRow['id'];
+    $tipo = $tRow['tipo'];
+    $uId = $tRow['usuario_id_conselho'] ? (int)$tRow['usuario_id_conselho'] : null;
+    $username = $tRow['vds_username'] ?? 'desconhecido';
+    $statusOld = $tRow['status'] ?? 'desconhecido';
+
+    // vds_get_token renova proativamente se expires_at estiver dentro de 10min ou status='expirado'
+    if ($tipo === 'conselheiro' && $uId) {
+        $tVal = vds_get_token($uId, false);
+        $desc = "Conselheiro ID {$uId} ({$username})";
+    } else {
+        $tVal = vds_get_token(null, false);
+        if ($tVal) {
+            $tokenCondominioAtivo = $tVal;
+        }
+        $desc = "Condomínio Geral ({$username})";
+    }
+
+    $stMsg = $tVal ? "ATIVO / RENOVADO" : "EXPIRADO / FALHA";
+    echo "[{$timestamp}] Token #{$tId} [{$desc}]: {$stMsg} (status anterior: {$statusOld}){$lineBreak}";
+}
+
+// Para a sincronização automática global das ocorrências (cron), utilizar o token de condomínio
+// Caso o condomínio não tenha token ativo, tenta utilizar o token de qualquer conselheiro com fallback permitido
+if (!$tokenCondominioAtivo) {
+    $tokenCondominioAtivo = vds_get_token(null, true);
+}
+
+if (!$tokenCondominioAtivo) {
+    echo "[{$timestamp}] ALERTA/ERRO: Nenhum token válido/renovável disponível para a sincronização global de ocorrências.{$lineBreak}";
+    exit(1);
+}
+
+echo "[{$timestamp}] Token para sincronização global pronto. Executando vds_sync_ocorrencias...{$lineBreak}";
 
 // 2. Executar a sincronização global (Lida=9)
 $res = vds_sync_ocorrencias(null);
