@@ -180,15 +180,12 @@ if ($esseRecurso == null) {
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">home</i>
                 Unidade: <span id="unidadeRecurso">' . $result['unidade'] . $result['bloco'] . '</span>
-            </div>
-            <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
-                <i class="material-icons left" style="color: #ffca28; margin-top: 4px;">local_parking</i>
-                Vaga(s): <span style="font-weight:bold;">' . htmlspecialchars($vagasTexto) . '</span>
             </div>' . ($unidadeInadimplente ? '
             <div class="chip red white-text font-weight-bold" style="background: #d32f2f; margin: 0; border: 1px solid rgba(255,255,255,0.4); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">warning</i>
                 UNIDADE INADIMPLENTE
             </div>' : '') . '
+
 
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">history</i>
