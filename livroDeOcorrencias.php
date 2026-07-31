@@ -58,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'atualizar_responsabilidade') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
         $resp = $_POST['responsabilidade'] ?? null;
+        if (empty($resp)) $resp = null;
         
         $link = DBConnect();
         $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET responsabilidade = ? WHERE id = ?");
@@ -65,6 +66,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         DBClose($link);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'action' => 'atualizar_responsabilidade',
+                'ocorrencia_id' => $ocorrenciaId,
+                'responsabilidade' => $resp,
+                'message' => "Responsabilidade atualizada com sucesso!"
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $msg = "Responsabilidade atualizada com sucesso!";
         $msgType = "success";
     } elseif ($action === 'marcar_resolvido') {
@@ -77,6 +91,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         DBClose($link);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'action' => 'marcar_resolvido',
+                'ocorrencia_id' => $ocorrenciaId,
+                'resolvido' => $resolvidoVal,
+                'message' => $resolvidoVal ? "Chamado marcado como RESOLVIDO no Conselho!" : "Chamado reaberto no Conselho!"
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $msg = $resolvidoVal ? "Chamado marcado como RESOLVIDO no Conselho!" : "Chamado reaberto no Conselho!";
         $msgType = "success";
     } elseif ($action === 'marcar_como_lido') {
@@ -85,6 +112,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $novoStatusLido = isset($_POST['novo_status_lido']) ? (bool)(int)$_POST['novo_status_lido'] : true;
         
         $resLido = vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $ocorrenciaId, $novoStatusLido);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => $resLido['success'] ?? true,
+                'action' => 'marcar_como_lido',
+                'ocorrencia_id' => $ocorrenciaId,
+                'uuid_remoto' => $uuidRemoto,
+                'isLidaVds' => $novoStatusLido,
+                'message' => $resLido['message'] ?? 'Status de leitura atualizado na VDS.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $msg = $resLido['message'] ?? 'Status de leitura atualizado na VDS.';
         $msgType = "success";
 
@@ -549,8 +590,8 @@ $mapaCoresTipo = [
                                 </div>
 
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                                    <span>Resp: <strong><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
-                                    <span style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
+                                    <span>Resp: <strong class="resp-text-label"><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
+                                    <span class="status-resolvido-label" style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
                                         <?= $oco['resolvido'] ? '✓ Resolvido' : '• Aberto' ?>
                                     </span>
                                 </div>
@@ -681,47 +722,39 @@ $mapaCoresTipo = [
                     </div>
                 </div>
 
-                <!-- Botões Práticos: Classificação Responsabilidade, Marcar Resolvido (Local) e Marcar Lido (VDS Remoto) -->
+                <!-- Botões Práticos com Ações AJAX Silenciosas (Sem Reload e Sem Skeleton) -->
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <!-- Dropdown de Classificação da Responsabilidade -->
-                    <form method="POST" style="display:flex; gap:4px; align-items:center; margin:0;">
-                        <input type="hidden" name="action" value="atualizar_responsabilidade">
-                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+                    <!-- Grupo de Ícones para Classificação de Responsabilidade -->
+                    <div style="display:flex; align-items:center; gap:4px; background:#f8f9fa; padding:2px 6px; border-radius:6px; border:1px solid #dee2e6;">
+                        <span style="font-weight:600; font-size:0.75rem; color:#555; margin-right:2px;">Resp:</span>
 
-                        <span style="font-weight:600; font-size:0.8rem; color:#555;">Resp:</span>
-                        <select name="responsabilidade" onchange="this.form.submit()" class="browser-default" style="height:30px; padding:2px 6px; font-size:0.8rem; width:auto; border:1px solid #ced4da; border-radius:4px; background:#fff;">
-                            <option value="" <?= empty($local['responsabilidade']) ? 'selected' : '' ?>>Definir...</option>
-                            <option value="conselho" <?= $local['responsabilidade'] === 'conselho' ? 'selected' : '' ?>>Conselho</option>
-                            <option value="sindico" <?= $local['responsabilidade'] === 'sindico' ? 'selected' : '' ?>>Síndico</option>
-                            <option value="sub" <?= $local['responsabilidade'] === 'sub' ? 'selected' : '' ?>>Subsíndico</option>
-                            <option value="adm" <?= $local['responsabilidade'] === 'adm' ? 'selected' : '' ?>>Administradora</option>
-                            <option value="operacional" <?= $local['responsabilidade'] === 'operacional' ? 'selected' : '' ?>>Operacional</option>
-                            <option value="juridico" <?= $local['responsabilidade'] === 'juridico' ? 'selected' : '' ?>>Jurídico</option>
-                        </select>
-                    </form>
-
-                    <!-- Marcar/Desmarcar Resolvido (Local) -->
-                    <form method="POST" style="margin:0;">
-                        <input type="hidden" name="action" value="marcar_resolvido">
-                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
-                        <input type="hidden" name="resolvido_val" value="<?= $local['resolvido'] ? 0 : 1 ?>">
-                        <button type="submit" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
-                            <i class="material-icons left tiny"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
-                            <?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?>
+                        <!-- Botão Não Atribuído -->
+                        <button type="button" id="btn-resp-none" class="btn-flat btn-small btn-resp-icon <?= empty($local['responsabilidade']) ? 'active' : '' ?>" title="Não Atribuído / Pendente" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, '')">
+                            <i class="material-icons tiny">person_off</i>
                         </button>
-                    </form>
 
-                    <!-- Marcar como Lido / Não Lido (VDS Remoto - Toggle) -->
-                    <form method="POST" style="margin:0;">
-                        <input type="hidden" name="action" value="marcar_como_lido">
-                        <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
-                        <input type="hidden" name="uuid_remoto" value="<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>">
-                        <input type="hidden" name="novo_status_lido" value="<?= $isLidaVds ? '0' : '1' ?>">
-                        <button type="submit" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;">
-                            <i class="material-icons left tiny"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
-                            <?= $isLidaVds ? 'Marcar NÃO Lido (VDS)' : 'Marcar Lido (VDS)' ?>
+                        <!-- Botão Síndico -->
+                        <button type="button" id="btn-resp-sindico" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sindico' ? 'active-sindico' : '' ?>" title="Síndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sindico')">
+                            <i class="material-icons tiny">gavel</i>
                         </button>
-                    </form>
+
+                        <!-- Botão Subsíndico -->
+                        <button type="button" id="btn-resp-sub" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sub' ? 'active-sub' : '' ?>" title="Subsíndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sub')">
+                            <i class="material-icons tiny">badge</i>
+                        </button>
+                    </div>
+
+                    <!-- Marcar/Desmarcar Resolvido (Local) via AJAX -->
+                    <button type="button" id="btn-ajax-resolvido" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $local['resolvido'] ? 'Reabrir Chamado (Local)' : 'Marcar como Resolvido (Local)' ?>" onclick="executarAcaoAjaxResolvido(<?= $local['id'] ?>, <?= $local['resolvido'] ? 0 : 1 ?>)">
+                        <i class="material-icons left tiny" id="icon-ajax-resolvido"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
+                        <span id="lbl-ajax-resolvido"><?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?></span>
+                    </button>
+
+                    <!-- Marcar como Lido / Não Lido (VDS Remoto - Icon Button Sugestivo via AJAX) -->
+                    <button type="button" id="btn-ajax-lido" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $isLidaVds ? 'Marcar como NÃO Lido na VDS' : 'Marcar como LIDO na VDS' ?>" onclick="executarAcaoAjaxLido(<?= $local['id'] ?>, '<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= $isLidaVds ? 0 : 1 ?>)">
+                        <i class="material-icons left tiny" id="icon-ajax-lido"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
+                        <span id="lbl-ajax-lido"><?= $isLidaVds ? 'Marcar NÃO Lido' : 'Marcar Lido' ?></span>
+                    </button>
                 </div>
             </div>
 
@@ -1275,4 +1308,183 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(carregarProximaPaginaPratico, 1500);
     }
 });
+
+// Funções de Ação Silenciosa por AJAX sem Reload e sem Skeleton Overlay
+function executarAcaoAjaxResponsabilidade(ocorrenciaId, respVal) {
+    $('.btn-resp-icon').css('opacity', '0.6');
+    
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'atualizar_responsabilidade',
+            ocorrencia_id: ocorrenciaId,
+            responsabilidade: respVal
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                $('.btn-resp-icon').removeClass('active active-sindico active-sub').css('opacity', '1');
+                if (!respVal) {
+                    $('#btn-resp-none').addClass('active');
+                } else if (respVal === 'sindico') {
+                    $('#btn-resp-sindico').addClass('active-sindico');
+                } else if (respVal === 'sub') {
+                    $('#btn-resp-sub').addClass('active-sub');
+                }
+
+                const respText = respVal ? respVal.toUpperCase() : 'PENDENTE';
+                $('#item-oco-' + ocorrenciaId + ' .resp-text-label').text(respText);
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Responsabilidade] Erro ao atualizar', err);
+            $('.btn-resp-icon').css('opacity', '1');
+        }
+    });
+}
+
+function executarAcaoAjaxResolvido(ocorrenciaId, novoResolvidoVal) {
+    const $btn = $('#btn-ajax-resolvido');
+    const $icon = $('#icon-ajax-resolvido');
+    const $lbl = $('#lbl-ajax-resolvido');
+
+    $btn.css('opacity', '0.7');
+    $icon.text('sync').addClass('spin-icon');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'marcar_resolvido',
+            ocorrencia_id: ocorrenciaId,
+            resolvido_val: novoResolvidoVal
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                const isResolvido = !!res.resolvido;
+                if (isResolvido) {
+                    $btn.removeClass('green darken-1').addClass('grey').attr('title', 'Reabrir Chamado (Local)');
+                    $icon.removeClass('spin-icon').text('undo');
+                    $lbl.text('Reabrir (Local)');
+                    $btn.attr('onclick', 'executarAcaoAjaxResolvido(' + ocorrenciaId + ', 0)');
+                    $('#item-oco-' + ocorrenciaId + ' .status-resolvido-label').css('color', '#28a745').text('✓ Resolvido');
+                } else {
+                    $btn.removeClass('grey').addClass('green darken-1').attr('title', 'Marcar como Resolvido (Local)');
+                    $icon.removeClass('spin-icon').text('check_circle');
+                    $lbl.text('Marcar Resolvido (Local)');
+                    $btn.attr('onclick', 'executarAcaoAjaxResolvido(' + ocorrenciaId + ', 1)');
+                    $('#item-oco-' + ocorrenciaId + ' .status-resolvido-label').css('color', '#dc3545').text('• Aberto');
+                }
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Resolvido] Erro ao atualizar', err);
+        },
+        complete: function() {
+            $btn.css('opacity', '1');
+            $icon.removeClass('spin-icon');
+        }
+    });
+}
+
+function executarAcaoAjaxLido(ocorrenciaId, uuidRemoto, novoStatusLidoVal) {
+    const $btn = $('#btn-ajax-lido');
+    const $icon = $('#icon-ajax-lido');
+    const $lbl = $('#lbl-ajax-lido');
+
+    $btn.css('opacity', '0.7');
+    $icon.text('sync').addClass('spin-icon');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'marcar_como_lido',
+            ocorrencia_id: ocorrenciaId,
+            uuid_remoto: uuidRemoto,
+            novo_status_lido: novoStatusLidoVal
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                const isLida = !!res.isLidaVds;
+                const isVisaoPratico = <?= ($visao === 'pratico') ? 'true' : 'false' ?>;
+                if (isLida) {
+                    $btn.removeClass('teal').addClass('orange darken-3').attr('title', 'Marcar como NÃO Lido na VDS');
+                    $icon.removeClass('spin-icon').text('mark_email_unread');
+                    $lbl.text('Marcar NÃO Lido');
+                    $btn.attr('onclick', 'executarAcaoAjaxLido(' + ocorrenciaId + ', "' + uuidRemoto + '", 0)');
+
+                    if (isVisaoPratico) {
+                        $('#item-oco-' + ocorrenciaId).fadeOut(300, function() {
+                            const visiveis = $('.item-oco:visible').length;
+                            $('#cnt-visivel-ocorrencias').text(visiveis);
+                        });
+                    }
+                } else {
+                    $btn.removeClass('orange darken-3').addClass('teal').attr('title', 'Marcar como LIDO na VDS');
+                    $icon.removeClass('spin-icon').text('mark_email_read');
+                    $lbl.text('Marcar Lido');
+                    $btn.attr('onclick', 'executarAcaoAjaxLido(' + ocorrenciaId + ', "' + uuidRemoto + '", 1)');
+
+                    if (isVisaoPratico) {
+                        $('#item-oco-' + ocorrenciaId).fadeIn(300, function() {
+                            const visiveis = $('.item-oco:visible').length;
+                            $('#cnt-visivel-ocorrencias').text(visiveis);
+                        });
+                    }
+                }
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Lido] Erro ao atualizar', err);
+        },
+        complete: function() {
+            $btn.css('opacity', '1');
+            $icon.removeClass('spin-icon');
+        }
+    });
+}
 </script>
+
+<style>
+.btn-resp-icon {
+    padding: 0 6px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    border-radius: 4px !important;
+    border: 1px solid #ced4da !important;
+    background: #fff !important;
+    color: #6c757d !important;
+    transition: all 0.2s ease !important;
+}
+.btn-resp-icon:hover {
+    background: #e9ecef !important;
+}
+.btn-resp-icon.active {
+    background: #6c757d !important;
+    color: #fff !important;
+    border-color: #6c757d !important;
+}
+.btn-resp-icon.active-sindico {
+    background: #dc3545 !important;
+    color: #fff !important;
+    border-color: #dc3545 !important;
+}
+.btn-resp-icon.active-sub {
+    background: #6f42c1 !important;
+    color: #fff !important;
+    border-color: #6f42c1 !important;
+}
+.spin-icon {
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+</style>
