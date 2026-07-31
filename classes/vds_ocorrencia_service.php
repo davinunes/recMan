@@ -764,7 +764,7 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
     $sql = "SELECT o.* FROM ocorrencias o 
             LEFT JOIN ocorrencia_leitura_conselheiro l 
               ON l.ocorrencia_id = o.id AND l.conselheiro_id = ?
-            WHERE (l.lido = 0 OR (l.lido IS NULL AND (JSON_UNQUOTE(JSON_EXTRACT(o.dados_json, '$.lida')) != 'true' AND JSON_UNQUOTE(JSON_EXTRACT(o.dados_json, '$.isLida')) != 'true')))
+            WHERE (l.lido IS NULL OR l.lido = 0)
               AND (o.resolvido IS NULL OR o.resolvido = 0)
             ORDER BY o.abertura DESC LIMIT ?";
 

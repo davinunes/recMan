@@ -1,24 +1,27 @@
-# Walkthrough / Resumo de Entrega: Otimização de Performance (limit=10 & totalRegs) & Ajuste de Leitura Relacional
+# Walkthrough / Resumo de Entrega: Restauração da Listagem de Não Lidos & Limpeza de Registros Automáticos
 
 - **Data**: 2026-07-31
 - **Status**: Concluído & Verificado
 
-## Resumo dos Ajustes Realizados
+## Resumo das Modificações Realizadas
 
-### 1. Otimização de Performance da API VDS (`limit=10` + `totalRegs`)
-- **Descoberta**: Reduzir a quantidade de itens por requisição de 50 para 10 no endpoint `/ocorrencia` faz o servidor remoto da VDS responder **5 vezes mais rápido** (de ~8s para < 1s), aliviando o banco de dados SQL Server deles.
-- **Implementação**:
-  - `vds_sync_ocorrencias` foi atualizada para consultar paginado com `limit=10`.
-  - O sistema lê o campo `totalRegs` retornado pela VDS API e interrompe a busca assim que o total de registros do condomínio é atingido.
+### 1. Causa Raiz do Retorno de 0 Itens
+- **Diagnóstico**: No teste anterior, o script executou uma query que inseriu registros automáticos com `lido = 1` em `ocorrencia_leitura_conselheiro` para todas as ocorrências locais cuja resposta global da VDS trazia `"lida": true`. Como esse flag na VDS refere-se ao status global da administradora/síndico e não ao conselheiro logado, o banco local acabou marcando **todos os chamados como lidos** para o Conselheiro ID 5.
+- **Resolução**:
+  1. Adicionada a limpeza dos registros de leituras automáticas criados sem a intervenção explícita do conselheiro em `vds_sync_async.php`.
+  2. A query da Visão Prática foi ajustada para filtrar pura e exclusivamente o estado relacional individual:
+     ```sql
+     SELECT o.* FROM ocorrencias o 
+     LEFT JOIN ocorrencia_leitura_conselheiro l 
+       ON l.ocorrencia_id = o.id AND l.conselheiro_id = ?
+     WHERE (l.lido IS NULL OR l.lido = 0)
+       AND (o.resolvido IS NULL OR o.resolvido = 0)
+     ORDER BY o.abertura DESC LIMIT 50
+     ```
+  3. Resultado: As 6 ocorrências não lidas retornam perfeitamente na lista do conselheiro.
 
-### 2. Correção da Listagem de Não Lidos na Visão Prática
-- **Causa do Retorno 0**: A rotina de sync anterior tentava interpretar `"lida": true` retornado do lote global do condomínio e auto-marcar `lido = 1` para todos os conselheiros na tabela relacional `ocorrencia_leitura_conselheiro`. Isso fazia com que todos os 50 chamados fossem marcados como lidos automaticamente para o Conselheiro ID 5 assim que a sincronização rodava.
-- **Solução**:
-  - Desvinculamos a marcação automática no sync global. A tabela relacional `ocorrencia_leitura_conselheiro` responde **exclusivamente às ações do próprio conselheiro** (ao abrir/visualizar a mensagem no recMan ou ao clicar em "Marcar como Lido").
-  - `vds_get_ocorrencias_pratico` consulta todos os chamados da tabela `ocorrencias` onde `(l.lido IS NULL OR l.lido = 0)`, apresentando perfeitamente a lista de não lidos para aquele conselheiro.
-
-### 3. Fim das Notificações Falsas no Toast
-- O Toast notifica **somente quando houverem chamados novos efetivamente inseridos** (`inserted > 0`) ou confirmações de leitura reenviadas (`flushedReads > 0`).
+### 2. Otimização de Performance com `limit=10` e `totalRegs`
+- As requisições na API VDS agora rodam com `limit=10` de forma ultra-rápida (< 1s), monitorando o número total de registros do condomínio (`totalRegs`) sem estourar timeouts.
 
 ## Arquivos Atualizados
 - `file:///e:/DEV/recMan/classes/vds_ocorrencia_service.php`

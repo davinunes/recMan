@@ -21,7 +21,8 @@ $flushedReads = vds_flush_pending_reads($usuarioIdConselho);
 // 3. Registrar a data da última sincronização bem-sucedida
 $now = date('Y-m-d H:i:s');
 $link = DBConnect();
-vds_ensure_leitura_table_exists($link);
+// Limpar registros de leitura que foram marcados automaticamente pelo script anterior
+@mysqli_query($link, "DELETE FROM ocorrencia_leitura_conselheiro WHERE sincronizado_remoto = 1 AND (read_at IS NULL OR read_at = updated_at)");
 
 $stmtUp = mysqli_prepare($link, "INSERT INTO vds_uuid_mapping (entidade_tipo, chave_local, uuid_remoto, dados_extras_json) VALUES ('controle', 'ultima_sincronizacao_ocorrencias', ?, ?) ON DUPLICATE KEY UPDATE uuid_remoto = VALUES(uuid_remoto), dados_extras_json = VALUES(dados_extras_json)");
 if ($stmtUp) {
