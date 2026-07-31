@@ -1594,6 +1594,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
                 window.renderToolsetDashboard(res.estatisticas);
                 window.renderToolsetMoradores(res.moradores || []);
                 window.renderToolsetVeiculos(res.veiculos || [], res.vagas || []);
+                window.renderToolsetVisitantes(res.visitantes || []);
                 window.renderToolsetNotificacoes(res.notificacoes || []);
 
                 window.renderToolsetEncomendas(res.entregas || []);
@@ -1640,13 +1641,13 @@ window.renderToolsetDashboard = function (stats) {
 
     let kpiHtml = seloInadimplencia + `
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(2);">
+            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(3);">
                 <div class="kpi-val">${stats.totalNotificacoes}</div>
                 <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(2);">
+            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(3);">
                 <div class="kpi-val">${stats.totalRecursos}</div>
                 <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
             </div>
@@ -1658,19 +1659,25 @@ window.renderToolsetDashboard = function (stats) {
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(3);">
+            <div class="kpi-card-toolset purple darken-2" onclick="window.focusToolsetSection(2);">
+                <div class="kpi-val">${stats.totalVisitantes || 0}</div>
+                <div class="kpi-lbl">Visitantes / Prestadores</div>
+            </div>
+        </div>
+        <div class="col s12 m4 l2" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(4);">
                 <div class="kpi-val">${stats.totalEntregas}</div>
                 <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(4);">
+            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(5);">
                 <div class="kpi-val">${stats.totalAutorizacoes}</div>
                 <div class="kpi-lbl">Acessos Autorizados</div>
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset blue-grey darken-4" onclick="window.focusToolsetSection(6);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset blue-grey darken-4" onclick="window.focusToolsetSection(7);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Ocorrências no Condomínio</div>
                     <div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria} | Citada/Tag: ${stats.totalChamadosTag}</div>
@@ -1679,7 +1686,7 @@ window.renderToolsetDashboard = function (stats) {
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(8);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(9);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Situação Financeira / Boletos</div>
                     <div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos} | Em Aberto: ${stats.boletosAbertos}</div>
@@ -1691,6 +1698,7 @@ window.renderToolsetDashboard = function (stats) {
 
     $('#unitBrief').html(kpiHtml);
 };
+
 
 // 0. Renderizar Moradores da Unidade (Cards com foto, nome e tipo)
 window.renderToolsetMoradores = function (list) {
@@ -1809,6 +1817,39 @@ window.renderToolsetVeiculos = function (list, vagas) {
 
     $('#conteudoVeiculos').html(cardsHtml);
 };
+
+// 0.2 Renderizar Visitantes e Prestadores da Portaria
+window.renderToolsetVisitantes = function (list) {
+    $('#badgeCountVisitantes').text(list ? list.length : 0);
+    if (!list || list.length === 0) {
+        $('#conteudoVisitantes').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">badge</i> Nenhum visitante ou prestador de serviço cadastrado na portaria para esta unidade.</div>');
+        return;
+    }
+
+    let cardsHtml = '<div class="row" style="margin-bottom:0;">';
+    list.forEach(v => {
+        let avatarEl = v.foto ? 
+            `<img src="${v.foto}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #8e24aa; margin-bottom:6px;">` : 
+            `<div style="width:64px; height:64px; border-radius:50%; background:#f3e5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #8e24aa;"><i class="material-icons purple-text text-darken-2" style="font-size:2.5rem;">person</i></div>`;
+
+        let docStr = (v.documento && v.documento !== 'N/A') ? `<div style="font-size:0.78rem; color:#616161; margin-top:4px;" class="truncate" title="${v.documento}"><i class="material-icons tiny" style="vertical-align:middle;">assignment_ind</i> ${v.documento}</div>` : '';
+
+        cardsHtml += `
+            <div class="col s12 m6 l3">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    ${avatarEl}
+                    <div style="font-weight:bold; font-size:0.98rem; color:#4a148c;" class="truncate" title="${v.nome}">${v.nome}</div>
+                    <span class="badge-mini purple darken-2 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${v.tipo || 'Visitante'}</span>
+                    ${docStr}
+                </div>
+            </div>
+        `;
+    });
+    cardsHtml += '</div>';
+
+    $('#conteudoVisitantes').html(cardsHtml);
+};
+
 
 
 

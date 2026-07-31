@@ -1,17 +1,13 @@
-# Walkthrough - Mapeamento dos Endpoints de Portaria e Visitantes (VDS v8)
+# Walkthrough - Acelerador de Visitantes & Prestadores da Portaria
 
 ## Alterações Realizadas
 
-### 🚪 Endpoints de Portaria e Visitantes Mapeados
-1. **Listar Visitantes por Destino (Unidade)**:
-   - `GET /portaria/visitante?DestinoUuid={unidadeUuid}&DestinoTipo=UNIDADE`
-   - Retorna lista de visitantes e prestadores vinculados à unidade (UUID, Foto, Nome, Documento CPF/RG/UF e Tipo).
-2. **Obter Detalhes do Visitante por UUID**:
-   - `GET /portaria/visitante/{visitanteUuid}`
-   - Retorna detalhes cadastrais completos (dados pessoais, empresa, veículo associado, telefone, e-mail, observações).
-3. **Consultar Validade e Status de Bloqueio do Visitante**:
-   - `GET /portaria/visitante/{visitanteUuid}/validade?tipo={tipoUuid}`
-   - Retorna a data/hora limite de validade e o booleano `bloqueado`.
-
-### Registro na Documentação Técnica (Skill)
-- Endpoints adicionados na especificação técnica [`skills/vds_api_v8/SKILL.md`](file:///e:/DEV/recMan/skills/vds_api_v8/SKILL.md) sob o grupo **C. Gestão Completa de Autorização de Acesso, Portaria, QR Codes & Convites Sociais**.
+### 🚪 Novo Acelerador de Visitantes & Prestadores da Portaria
+1. **Integração Backend (`vds_get_visitantes_unidade`)**:
+   - Criada a função em [vds_acesso_service.php](file:///e:/DEV/recMan/classes/vds_acesso_service.php) para consultar `GET /portaria/visitante?DestinoUuid={unidadeUuid}&DestinoTipo=UNIDADE` na API v8 da VDS.
+   - Extrai foto, nome, tipo do cadastro (ex: *Visitante*, *Prestador de Serviços*) e documento (CPF/RG/UF).
+2. **Toolset Operacional (`index.php?pag=historico`)**:
+   - Card KPI no cabeçalho (*Visitantes / Prestadores*).
+   - Seção colapsável dedicada **Visitantes & Prestadores da Portaria** com badge roxo dinâmico de contagem.
+3. **Análise de Recurso (`detalheRecurso.php`)**:
+   - Aba dedicada **Visitantes & Prestadores da Portaria (N)** adicionada ao painel de aceleradores.

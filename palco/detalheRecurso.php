@@ -57,6 +57,8 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
     $moradoresUnidade = $resMoradores['moradores'] ?? [];
     $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
     $veiculosUnidade = vds_get_veiculos_unidade($result['bloco'], $result['unidade']);
+    $visitantesUnidade = vds_get_visitantes_unidade($result['bloco'], $result['unidade']);
+
 
     $vagasUnidade = getEstacionamento($result['bloco'], $result['unidade']);
     $vagasFormatadas = [];
@@ -1114,9 +1116,40 @@ if ($esseRecurso == null) {
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons purple-text text-darken-2">badge</i>
+                        Visitantes & Prestadores da Portaria (<?= count($visitantesUnidade) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 12px;">
+                        <?php if (empty($visitantesUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhum visitante ou prestador de serviço cadastrado encontrado na portaria para esta unidade.</p>
+                        <?php else: ?>
+                            <div class="row" style="margin-bottom:0;">
+                                <?php foreach ($visitantesUnidade as $vis): ?>
+                                    <div class="col s12 m6 l3">
+                                        <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                                            <?php if (!empty($vis['foto'])): ?>
+                                                <img src="<?= htmlspecialchars($vis['foto']) ?>" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #8e24aa; margin-bottom:6px;">
+                                            <?php else: ?>
+                                                <div style="width:64px; height:64px; border-radius:50%; background:#f3e5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #8e24aa;"><i class="material-icons purple-text text-darken-2" style="font-size:2.5rem;">person</i></div>
+                                            <?php endif; ?>
+                                            <div style="font-weight:bold; font-size:0.98rem; color:#4a148c;" class="truncate" title="<?= htmlspecialchars($vis['nome']) ?>"><?= htmlspecialchars($vis['nome']) ?></div>
+                                            <span class="badge-mini purple darken-2 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;"><?= htmlspecialchars($vis['tipo']) ?></span>
+                                            <?php if (!empty($vis['documento']) && $vis['documento'] !== 'N/A'): ?>
+                                                <div style="font-size:0.78rem; color:#616161; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($vis['documento']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">assignment_ind</i> <?= htmlspecialchars($vis['documento']) ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons purple-text">fingerprint</i>
                         Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
                     </div>
+
 
 
                     <div class="collapsible-body" style="padding: 10px;">

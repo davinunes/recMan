@@ -707,6 +707,72 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
     return $veiculos;
 }
 
+/**
+ * Consulta visitantes e prestadores de serviço cadastrados para a unidade na API v8 da VDS.
+ */
+function vds_get_visitantes_unidade($bloco, $unidade, $usuarioIdConselho = null) {
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+    $visitantes = [];
+
+    if ($token && $unidadeUuid) {
+        $url = VDS_BASE_URL . '/portaria/visitante?DestinoUuid=' . urlencode($unidadeUuid) . '&DestinoTipo=UNIDADE';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+
+            if (is_array($regs)) {
+                foreach ($regs as $item) {
+                    $nome = $item['nome'] ?? 'Visitante sem nome';
+                    $fotoRel = $item['foto'] ?? null;
+                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+
+                    $tipoObj = $item['tipo'] ?? null;
+                    $tipoNome = is_array($tipoObj) ? ($tipoObj['nome'] ?? 'Visitante') : ($tipoObj ?? 'Visitante');
+
+                    $docObj = $item['documento'] ?? null;
+                    $docStr = 'N/A';
+                    if (is_array($docObj)) {
+                        $tipoDoc = strtoupper($docObj['tipo'] ?? 'DOC');
+                        $numDoc = $docObj['documento'] ?? '';
+                        $ufDoc = $docObj['estado'] ?? '';
+                        $docStr = trim("$tipoDoc $numDoc $ufDoc");
+                    } elseif (!empty($docObj)) {
+                        $docStr = (string)$docObj;
+                    }
+
+                    $visitantes[] = [
+                        'uuid' => $item['uuid'] ?? null,
+                        'nome' => $nome,
+                        'foto' => $fotoUrl,
+                        'tipo' => $tipoNome,
+                        'documento' => $docStr
+                    ];
+                }
+            }
+        }
+    }
+
+    return $visitantes;
+}
+
+
 
 
 

@@ -836,6 +836,9 @@ switch ($_GET['metodo']) {
         $vagasLocais = getEstacionamento($torre, $unidade);
         if (!is_array($vagasLocais)) $vagasLocais = [];
 
+        // 9.1 Visitantes e Prestadores da Portaria
+        $visitantes = vds_get_visitantes_unidade($torre, $unidade);
+
         // 10. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
@@ -884,6 +887,7 @@ switch ($_GET['metodo']) {
             'totalMoradores' => count($moradores),
             'totalVeiculos' => count($veiculos),
             'totalVagas' => count($vagasLocais),
+            'totalVisitantes' => count($visitantes),
             'totalNotificacoes' => $totalNotif,
             'totalMultas' => $totalMultas,
             'totalAdvertencias' => $totalAdvertencias,
@@ -908,6 +912,7 @@ switch ($_GET['metodo']) {
             'moradores' => $moradores,
             'veiculos' => $veiculos,
             'vagas' => $vagasLocais,
+            'visitantes' => $visitantes,
             'notificacoes' => $notificacoes,
             'entregas' => $entregas,
             'autorizacoes' => $autorizacoes,
@@ -917,6 +922,7 @@ switch ($_GET['metodo']) {
             'boletos' => $boletos
         ], JSON_UNESCAPED_UNICODE);
         break;
+
 
 
 

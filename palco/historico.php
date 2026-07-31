@@ -133,6 +133,24 @@ $mesAtualDefault = date('Y-m');
                     </div>
                 </li>
 
+                <!-- 0.2 Visitantes & Prestadores da Portaria -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons purple-text text-darken-2">badge</i>
+                            <b>Visitantes & Prestadores da Portaria</b>
+                            <small class="grey-text text-darken-1">(Cadastro Portaria VDS)</small>
+                        </span>
+                        <span class="badge purple darken-2 white-text font-weight-bold" id="badgeCountVisitantes">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoVisitantes">
+                            <!-- Cards dos Visitantes -->
+                        </div>
+                    </div>
+                </li>
+
+
 
                 <!-- 1. Notificações & Recursos (Histórico Completo) -->
                 <li class="active">
