@@ -1593,8 +1593,9 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
                 window.globalToolsetResponse = res;
                 window.renderToolsetDashboard(res.estatisticas);
                 window.renderToolsetMoradores(res.moradores || []);
-                window.renderToolsetVeiculos(res.veiculos || []);
+                window.renderToolsetVeiculos(res.veiculos || [], res.vagas || []);
                 window.renderToolsetNotificacoes(res.notificacoes || []);
+
                 window.renderToolsetEncomendas(res.entregas || []);
                 window.renderToolsetAutorizacoes(res.autorizacoes || []);
                 window.renderToolsetReservas(res.reservas || []);
@@ -1720,15 +1721,35 @@ window.renderToolsetMoradores = function (list) {
     $('#conteudoMoradores').html(cardsHtml);
 };
 
-// 0.1 Renderizar Veículos da Unidade (Design Centralizado com Cores por Tipo)
-window.renderToolsetVeiculos = function (list) {
+// 0.1 Renderizar Veículos da Unidade (Design Centralizado com Cores por Tipo + Vagas)
+window.renderToolsetVeiculos = function (list, vagas) {
+    list = list || [];
+    vagas = vagas || (window.globalToolsetResponse ? window.globalToolsetResponse.vagas : []) || [];
+
     $('#badgeCountVeiculos').text(list.length);
-    if (!list || list.length === 0) {
-        $('#conteudoVeiculos').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">directions_car</i> Nenhum veículo cadastrado para esta unidade.</div>');
+
+    let vagasTexto = 'Nenhuma vaga vinculada';
+    if (vagas && vagas.length > 0) {
+        vagasTexto = vagas.map(vg => `Vaga ${vg.id_estacionamento || ''} (${vg.local || ''})`).join(' | ');
+    }
+
+    let vagasBannerHtml = `
+        <div style="background:#f1f8e9; border:1px solid #c8e6c9; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <i class="material-icons green-text text-darken-2" style="font-size:1.4rem;">local_parking</i>
+            <div>
+                <span style="font-weight:bold; color:#2e7d32; font-size:0.9rem;">Vaga(s) de Garagem da Unidade:</span>
+                <span style="font-weight:600; color:#1b5e20; font-size:0.95rem; margin-left:4px;">${vagasTexto}</span>
+            </div>
+        </div>
+    `;
+
+    if (list.length === 0) {
+        $('#conteudoVeiculos').html(vagasBannerHtml + '<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">directions_car</i> Nenhum veículo cadastrado para esta unidade.</div>');
         return;
     }
 
-    let cardsHtml = '<div class="row" style="margin-bottom:0;">';
+    let cardsHtml = vagasBannerHtml + '<div class="row" style="margin-bottom:0;">';
+
     list.forEach(v => {
         let tipoLower = (v.tipo || '').toLowerCase();
         let isMoto = tipoLower.includes('moto');

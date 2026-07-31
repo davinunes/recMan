@@ -1,12 +1,12 @@
-# Walkthrough - Redesign dos Cards de Veículos
+# Walkthrough - Integração das Vagas de Garagem no Toolset e na Análise de Recurso
 
 ## Alterações Realizadas
 
-### 🚗 Layout Centralizado & Cores de Placa por Tipo
-1. **Centralização Geral**: O card passa a utilizar `center-align` com a placa em destaque central no topo, seguida pela Descrição (Marca Modelo Cor) e Nome do Proprietário/Morador na linha de baixo.
-2. **Cores da Placa por Categoria**:
-   - 🚘 **Automóveis**: Placa em tom Grafite / Azul-Escuro (`blue-grey darken-3`) com ícone `directions_car`.
-   - 🏍️ **Motocicletas**: Placa em tom Laranja / Âmbar-Escuro (`deep-orange darken-2`) com ícone `two_wheeler`.
-   - 🚲 **Bicicletas**: Placa em tom Verde (`green darken-2`) com ícone `pedal_bike`.
-3. **PCD Badge**: Posicionamento centralizado do badge de vaga acessível `<i class="material-icons">accessible</i> Vaga PCD`.
-4. **Arquivos Atualizados**: [meu.js](file:///e:/DEV/recMan/meu.js) e [palco/detalheRecurso.php](file:///e:/DEV/recMan/palco/detalheRecurso.php).
+### 🅿️ Exibição das Vagas de Garagem do Banco Local (`conselho.estacionamento`)
+1. **Recuperação das Vagas**: Utilizada a função nativa `getEstacionamento($bloco, $unidade)` para recuperar as vagas e locais atribuídos à unidade (ex: *Vaga 105 (G1)*).
+2. **Cabeçalho da Análise de Recurso (`detalheRecurso.php`)**:
+   - Inserido o chip de vaga no topo do painel premium: `<i class="material-icons">local_parking</i> Vaga(s): Vaga 105 (G1)`.
+3. **Banner na Seção de Veículos**:
+   - Adicionado um banner destacado no topo da seção/aba de **Veículos da Unidade** tanto no Toolset (`index.php?pag=historico`) quanto em `detalheRecurso.php`.
+4. **Backend (`metodo.php`)**:
+   - O endpoint `metodo=toolsetUnidade` agora consulta e retorna a lista `'vagas'` do banco local.

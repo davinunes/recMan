@@ -831,8 +831,10 @@ switch ($_GET['metodo']) {
         $moradores = $resMoradores['moradores'] ?? [];
         $inadimplente = $resMoradores['inadimplente'] ?? false;
 
-        // 9. Veículos Cadastrados na Unidade
+        // 9. Veículos Cadastrados na Unidade e Vagas de Garagem do Banco Local
         $veiculos = vds_get_veiculos_unidade($torre, $unidade);
+        $vagasLocais = getEstacionamento($torre, $unidade);
+        if (!is_array($vagasLocais)) $vagasLocais = [];
 
         // 10. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
@@ -881,6 +883,7 @@ switch ($_GET['metodo']) {
             'inadimplente' => $inadimplente,
             'totalMoradores' => count($moradores),
             'totalVeiculos' => count($veiculos),
+            'totalVagas' => count($vagasLocais),
             'totalNotificacoes' => $totalNotif,
             'totalMultas' => $totalMultas,
             'totalAdvertencias' => $totalAdvertencias,
@@ -904,6 +907,7 @@ switch ($_GET['metodo']) {
             'inadimplente' => $inadimplente,
             'moradores' => $moradores,
             'veiculos' => $veiculos,
+            'vagas' => $vagasLocais,
             'notificacoes' => $notificacoes,
             'entregas' => $entregas,
             'autorizacoes' => $autorizacoes,
@@ -913,6 +917,7 @@ switch ($_GET['metodo']) {
             'boletos' => $boletos
         ], JSON_UNESCAPED_UNICODE);
         break;
+
 
 
 

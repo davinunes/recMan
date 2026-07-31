@@ -57,7 +57,17 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
     $moradoresUnidade = $resMoradores['moradores'] ?? [];
     $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
     $veiculosUnidade = vds_get_veiculos_unidade($result['bloco'], $result['unidade']);
+
+    $vagasUnidade = getEstacionamento($result['bloco'], $result['unidade']);
+    $vagasFormatadas = [];
+    if (!empty($vagasUnidade) && is_array($vagasUnidade)) {
+        foreach ($vagasUnidade as $vg) {
+            $vagasFormatadas[] = "Vaga " . htmlspecialchars($vg['id_estacionamento'] ?? '') . " (" . htmlspecialchars($vg['local'] ?? '') . ")";
+        }
+    }
+    $vagasTexto = !empty($vagasFormatadas) ? implode(' | ', $vagasFormatadas) : 'Nenhuma vaga vinculada';
 }
+
 
 
 
@@ -170,11 +180,16 @@ if ($esseRecurso == null) {
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">home</i>
                 Unidade: <span id="unidadeRecurso">' . $result['unidade'] . $result['bloco'] . '</span>
+            </div>
+            <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
+                <i class="material-icons left" style="color: #ffca28; margin-top: 4px;">local_parking</i>
+                Vaga(s): <span style="font-weight:bold;">' . htmlspecialchars($vagasTexto) . '</span>
             </div>' . ($unidadeInadimplente ? '
             <div class="chip red white-text font-weight-bold" style="background: #d32f2f; margin: 0; border: 1px solid rgba(255,255,255,0.4); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">warning</i>
                 UNIDADE INADIMPLENTE
             </div>' : '') . '
+
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">history</i>
                 Histórico: <span id="historico">' . sizeof($historico) . '</span> Notif.
@@ -1030,8 +1045,16 @@ if ($esseRecurso == null) {
                         <i class="material-icons blue-grey-text text-darken-2">directions_car</i>
                         Veículos da Unidade (<?= count($veiculosUnidade) ?>)
                     </div>
-                    <div class="collapsible-body" style="padding: 10px;">
+                    <div class="collapsible-body" style="padding: 15px 12px;">
+                        <div style="background:#f1f8e9; border:1px solid #c8e6c9; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                            <i class="material-icons green-text text-darken-2" style="font-size:1.4rem;">local_parking</i>
+                            <div>
+                                <span style="font-weight:bold; color:#2e7d32; font-size:0.9rem;">Vaga(s) de Garagem da Unidade:</span>
+                                <span style="font-weight:600; color:#1b5e20; font-size:0.95rem; margin-left:4px;"><?= htmlspecialchars($vagasTexto) ?></span>
+                            </div>
+                        </div>
                         <?php if (empty($veiculosUnidade)): ?>
+
                             <p class="grey-text" style="margin:0;">Nenhum veículo cadastrado encontrado para esta unidade.</p>
                         <?php else: ?>
                             <div class="row" style="margin-bottom:0;">
