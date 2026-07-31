@@ -271,7 +271,7 @@ function vds_extract_string_value($val, $default = 'N/A') {
 /**
  * Consulta entregas/correspondências recentes da unidade.
  */
-function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
+function vds_get_entregas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null, $usuarioIdConselho = null) {
     // 1. Resolver UUIDs de Bloco e Unidade
     $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
     $unidadeUuid = $uuids['unidadeUuid'];
@@ -285,6 +285,12 @@ function vds_get_entregas_unidade($bloco, $unidade, $usuarioIdConselho = null) {
             $url .= '&Unidade.Uuid=' . urlencode($unidadeUuid);
         } elseif ($blocoUuid) {
             $url .= '&Bloco.Uuid=' . urlencode($blocoUuid);
+        }
+        if ($dtIni) {
+            $url .= '&dtInicio=' . urlencode($dtIni);
+        }
+        if ($dtFim) {
+            $url .= '&dtFim=' . urlencode($dtFim);
         }
 
         $ch = curl_init($url);
@@ -464,6 +470,81 @@ function vds_get_autorizacoes_acesso($bloco, $unidade, $dtIni = null, $dtFim = n
 
     return [];
 }
+
+/**
+ * Consulta reservas de área comum da unidade na API v8 da VDS.
+ */
+function vds_get_reservas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null, $usuarioIdConselho = null) {
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+    $blocoUuid = $uuids['blocoUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+
+    if ($token) {
+        $url = VDS_BASE_URL . '/reserva?page=1&limit=50&sortBy=dtReserva&order=desc';
+        if ($unidadeUuid) {
+            $url .= '&Unidade.Uuid=' . urlencode($unidadeUuid);
+        } elseif ($blocoUuid) {
+            $url .= '&Bloco.Uuid=' . urlencode($blocoUuid);
+        }
+        if ($dtIni) {
+            $url .= '&DtIni=' . urlencode($dtIni);
+        }
+        if ($dtFim) {
+            $url .= '&DtFim=' . urlencode($dtFim);
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+            if (is_array($regs)) {
+                $processados = [];
+                $unidadeClean = trim($unidade);
+                foreach ($regs as $res) {
+                    $rUnid = trim(is_array($res['unidade'] ?? null) ? ($res['unidade']['numero'] ?? ($res['unidade']['nome'] ?? '')) : ($res['unidade'] ?? ($res['unidadeNumero'] ?? '')));
+                    if (($rUnid !== '' && ($rUnid === $unidadeClean || ltrim($rUnid, '0') === ltrim($unidadeClean, '0'))) || ($rUnid === '' && !empty($unidadeUuid))) {
+                        $recursoNome = vds_extract_string_value($res['recurso'] ?? ($res['areaComum'] ?? null), 'Área Comum');
+                        $rawDtReserva = $res['dtReserva'] ?? ($res['data'] ?? ($res['dtInicio'] ?? null));
+                        $statusStr = vds_extract_string_value($res['status'] ?? ($res['situacao'] ?? null), 'Confirmada');
+                        $valorStr = isset($res['valor']) ? ('R$ ' . number_format((float)$res['valor'], 2, ',', '.')) : null;
+
+                        $horaInicio = $res['horaInicio'] ?? ($res['dtInicio'] ?? '');
+                        $horaFim = $res['horaFim'] ?? ($res['dtFim'] ?? '');
+                        $horarioStr = (!empty($horaInicio) && !empty($horaFim)) ? "{$horaInicio} - {$horaFim}" : '';
+
+                        $processados[] = [
+                            'uuid' => $res['uuid'] ?? ($res['id'] ?? null),
+                            'recurso' => $recursoNome,
+                            'dtReserva' => vds_format_datetime($rawDtReserva, 'd/m/Y'),
+                            'horario' => $horarioStr,
+                            'status' => $statusStr,
+                            'valor' => $valorStr,
+                            'solicitadoPor' => $res['morador']['nome'] ?? ($res['solicitadoPor'] ?? 'Morador')
+                        ];
+                    }
+                }
+                return $processados;
+            }
+        }
+    }
+
+    return [];
+}
+
 
 /**
  * Busca todos os chamados/ocorrências onde a unidade é autora, reclamada, citada ou possui tag vinculada.

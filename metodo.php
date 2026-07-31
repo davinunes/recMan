@@ -770,6 +770,136 @@ switch ($_GET['metodo']) {
         $response = getNotificacoes($dados['unidade'], $dados['torre']);
         echo json_encode($response);
         break;
+
+    case "toolsetUnidade":
+        header('Content-Type: application/json; charset=utf-8');
+        session_start();
+        require_once __DIR__ . "/classes/vds_acesso_service.php";
+
+        $unidade = $_GET['unidade'] ?? ($_POST['unidade'] ?? '');
+        $torre = $_GET['torre'] ?? ($_GET['bloco'] ?? ($_POST['torre'] ?? ($_POST['bloco'] ?? '')));
+        $mesAno = $_GET['mesAno'] ?? ($_POST['mesAno'] ?? date('Y-m'));
+
+        if (empty($unidade) || empty($torre)) {
+            echo json_encode(['success' => false, 'error' => 'Unidade e Bloco são obrigatórios.']);
+            break;
+        }
+
+        // 1. Notificações da Unidade (Histórico Completo sem filtro de mês)
+        $notificacoes = getNotificacoes($unidade, $torre);
+        if (!is_array($notificacoes)) $notificacoes = [];
+
+        // 2. Definir período para aceleradores baseados no mês
+        $ano = substr($mesAno, 0, 4);
+        $mes = substr($mesAno, 5, 2);
+        $dtInicio = "{$mesAno}-01";
+        $dtFim = date("Y-m-t", strtotime($dtInicio));
+
+        // 3. Encomendas do Mês
+        $entregas = vds_get_entregas_unidade($torre, $unidade, $dtInicio, $dtFim);
+
+        // 4. Autorizações de Acesso do Mês
+        $autorizacoes = vds_get_autorizacoes_acesso($torre, $unidade, $dtInicio, $dtFim);
+
+        // 5. Reservas de Área Comum do Mês
+        $reservas = vds_get_reservas_unidade($torre, $unidade, $dtInicio, $dtFim);
+
+        // 6. Chamados / Ocorrências (Autoria vs Tag)
+        $chamadosTodos = vds_get_chamados_unidade($torre, $unidade);
+        $ocorrenciasAutoria = [];
+        $ocorrenciasTag = [];
+
+        $torreClean = strtoupper(trim(str_replace(['bloco', 'bl.', 'bl'], '', strtolower($torre))));
+        $unidadeClean = trim($unidade);
+
+        foreach ($chamadosTodos as $ch) {
+            $chBloco = strtoupper(trim($ch['bloco'] ?? ''));
+            $chUnid = trim($ch['unidade'] ?? '');
+            
+            if ($chBloco === $torreClean && $chUnid === $unidadeClean) {
+                $ocorrenciasAutoria[] = $ch;
+            } else {
+                $ocorrenciasTag[] = $ch;
+            }
+        }
+
+        // 7. Lista de Boletos do Ano
+        $boletos = vds_get_boletos_unidade($torre, $unidade, $ano);
+
+        // 8. Cálculo da Dashboard Estatística (KPI)
+        $totalNotif = count($notificacoes);
+        $totalMultas = 0;
+        $totalAdvertencias = 0;
+        $totalRecursos = 0;
+        $recursosMantidos = 0;
+        $recursosRevogados = 0;
+        $recursosConvertidos = 0;
+
+        foreach ($notificacoes as $n) {
+            $tipo = strtoupper($n['notificacao'] ?? '');
+            if ($tipo === 'MULTA') $totalMultas++;
+            elseif ($tipo === 'ADVERTENCIA') $totalAdvertencias++;
+
+            if (($n['recurso'] ?? '') === 'Sim') {
+                $totalRecursos++;
+                $p = strtoupper($n['parecer'] ?? '');
+                if (strpos($p, 'MANTER') !== false) $recursosMantidos++;
+                elseif (strpos($p, 'REVOGAR') !== false) $recursosRevogados++;
+                elseif (strpos($p, 'CONVERTER') !== false) $recursosConvertidos++;
+            }
+        }
+
+        $entregasPendentes = 0;
+        foreach ($entregas as $e) {
+            $st = strtolower($e['status'] ?? '');
+            if ($st !== 'entregue' && $st !== 'retirado') {
+                $entregasPendentes++;
+            }
+        }
+
+        $boletosAbertos = 0;
+        foreach ($boletos as $b) {
+            $stB = strtolower(vds_extract_string_value($b['status'] ?? null, ''));
+            if ($stB !== 'liquidado' && $stB !== 'pago') {
+                $boletosAbertos++;
+            }
+        }
+
+        $estatisticas = [
+            'unidade' => $unidadeClean,
+            'bloco' => $torreClean,
+            'mesAno' => $mesAno,
+            'periodoExtenso' => date('m/Y', strtotime($dtInicio)),
+            'totalNotificacoes' => $totalNotif,
+            'totalMultas' => $totalMultas,
+            'totalAdvertencias' => $totalAdvertencias,
+            'totalRecursos' => $totalRecursos,
+            'recursosMantidos' => $recursosMantidos,
+            'recursosRevogados' => $recursosRevogados,
+            'recursosConvertidos' => $recursosConvertidos,
+            'totalEntregas' => count($entregas),
+            'entregasPendentes' => $entregasPendentes,
+            'totalAutorizacoes' => count($autorizacoes),
+            'totalReservas' => count($reservas),
+            'totalChamadosAutoria' => count($ocorrenciasAutoria),
+            'totalChamadosTag' => count($ocorrenciasTag),
+            'totalBoletos' => count($boletos),
+            'boletosAbertos' => $boletosAbertos
+        ];
+
+        echo json_encode([
+            'success' => true,
+            'estatisticas' => $estatisticas,
+            'notificacoes' => $notificacoes,
+            'entregas' => $entregas,
+            'autorizacoes' => $autorizacoes,
+            'reservas' => $reservas,
+            'ocorrenciasAutoria' => $ocorrenciasAutoria,
+            'ocorrenciasTag' => $ocorrenciasTag,
+            'boletos' => $boletos
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
     case "atualizaDataRetiradaNotificacao":
         session_start();
         $dados = $_POST;

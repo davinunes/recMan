@@ -1506,136 +1506,649 @@ $(document).on('click', '.parecer', function (e) {
     }
 });
 
-// --- Histórico por Unidade ---
-window.globalHistoryData = [];
-window.historyPageSize = 10; // Aumentado para 10 por página
+// --- Toolset Operacional por Unidade ---
+window.globalToolsetResponse = null;
 
+// Handlers dos botões de navegação temporal por Mês
+$(document).on('click', '#btnMesAnterior', function () {
+    let inputMes = $('#mesAnoFiltro');
+    let curVal = inputMes.val();
+    if (!curVal) curVal = new Date().toISOString().slice(0, 7);
+    
+    let parts = curVal.split('-');
+    let d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 2, 1);
+    let newMes = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    inputMes.val(newMes);
+    
+    if ($('#unidade').val() && $('#bloco').val()) {
+        $('#buscaHistoricoUnidade').click();
+    }
+});
+
+$(document).on('click', '#btnProximoMes', function () {
+    let inputMes = $('#mesAnoFiltro');
+    let curVal = inputMes.val();
+    if (!curVal) curVal = new Date().toISOString().slice(0, 7);
+    
+    let parts = curVal.split('-');
+    let d = new Date(parseInt(parts[0]), parseInt(parts[1]), 1);
+    let newMes = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    inputMes.val(newMes);
+    
+    if ($('#unidade').val() && $('#bloco').val()) {
+        $('#buscaHistoricoUnidade').click();
+    }
+});
+
+$(document).on('click', '#btnMesAtual', function () {
+    let inputMes = $('#mesAnoFiltro');
+    let newMes = new Date().toISOString().slice(0, 7);
+    inputMes.val(newMes);
+    
+    if ($('#unidade').val() && $('#bloco').val()) {
+        $('#buscaHistoricoUnidade').click();
+    }
+});
+
+$(document).on('change', '#mesAnoFiltro', function () {
+    if ($('#unidade').val() && $('#bloco').val()) {
+        $('#buscaHistoricoUnidade').click();
+    }
+});
+
+// Handler da Busca de Histórico / Toolset
 $(document).on('click', '#buscaHistoricoUnidade', function (e) {
-    var unidade = $("#unidade").val();
-    var bloco = $("#bloco").val();
+    let unidade = $("#unidade").val();
+    let bloco = $("#bloco").val();
+    let mesAno = $("#mesAnoFiltro").val() || new Date().toISOString().slice(0, 7);
 
     if (!unidade || !bloco) {
-        M.toast({ html: 'Informe unidade e bloco!', classes: 'orange' });
+        M.toast({ html: 'Informe a Unidade e o Bloco!', classes: 'orange rounded' });
         return;
     }
 
-    $('#containerBriefBtn').addClass('hide');
-    $('#historyPagination').html('');
-    $('#listaRetornoCards').html('<div class="col s12 center-align"><div class="preloader-wrapper big active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p>Buscando histórico...</p></div>');
+    $('#emptyState').addClass('hide');
+    $('#toolsetContainer').addClass('hide');
+    $('#unitBrief').addClass('hide');
+    $('#toolsetLoader').removeClass('hide');
+
+    // Atualizar labels de mês nos aceleradores
+    let anoStr = mesAno.substring(0, 4);
+    let mesStr = mesAno.substring(5, 7);
+    let mesExtenso = mesStr + '/' + anoStr;
+    
+    $('#labelMesEncomendas').text('(' + mesExtenso + ')');
+    $('#labelMesAutorizacoes').text('(' + mesExtenso + ')');
+    $('#labelMesReservas').text('(' + mesExtenso + ')');
+    $('#labelAnoBoletos').text('(' + anoStr + ')');
 
     $.ajax({
-        url: 'metodo.php?metodo=historicoPorUnidade&unidade=' + unidade + '&torre=' + bloco,
-        method: 'POST',
-        data: "",
+        url: `metodo.php?metodo=toolsetUnidade&unidade=${encodeURIComponent(unidade)}&bloco=${encodeURIComponent(bloco)}&mesAno=${encodeURIComponent(mesAno)}`,
+        method: 'GET',
         dataType: 'json',
-        success: function (response) {
-            if (response && response.length > 0) {
-                window.globalHistoryData = response;
-                window.setupHistoryBrief(response);
-                window.renderHistoryPage(1);
+        success: function (res) {
+            $('#toolsetLoader').addClass('hide');
+
+            if (res && res.success) {
+                window.globalToolsetResponse = res;
+                window.renderToolsetDashboard(res.estatisticas);
+                window.renderToolsetNotificacoes(res.notificacoes || []);
+                window.renderToolsetEncomendas(res.entregas || []);
+                window.renderToolsetAutorizacoes(res.autorizacoes || []);
+                window.renderToolsetReservas(res.reservas || []);
+                window.renderToolsetOcorrenciasAutoria(res.ocorrenciasAutoria || []);
+                window.renderToolsetOcorrenciasTag(res.ocorrenciasTag || []);
+                window.renderToolsetBoletos(res.boletos || []);
+
+                $('#toolsetContainer').removeClass('hide');
+                $('#unitBrief').removeClass('hide');
+
+                // Reinicializar collapsibles e tooltips
+                $('.collapsible').collapsible({ accordion: false });
+                $('.tooltipped').tooltip();
             } else {
-                $('#historyPagination').html('');
-                $('#listaRetornoCards').html('<div class="col s12 center-align grey-text" style="padding: 50px;"><i class="material-icons" style="font-size: 5rem; opacity: 0.2;">search_off</i><p>Nenhum registro encontrado para esta unidade.</p></div>');
+                M.toast({ html: res.error || 'Erro ao consultar toolset da unidade', classes: 'red rounded' });
+                $('#emptyState').removeClass('hide');
             }
         },
         error: function () {
-            console.log('Erro de requisição AJAX');
+            $('#toolsetLoader').addClass('hide');
+            $('#emptyState').removeClass('hide');
+            M.toast({ html: 'Erro de comunicação com o servidor', classes: 'red rounded' });
         }
     });
 });
 
-window.setupHistoryBrief = function (data) {
-    let totalNotif = data.length;
-    let totalRecursos = data.filter(d => d.recurso === 'Sim').length;
-    let motivos = {};
+// Renderização da Dashboard KPI da Unidade
+window.renderToolsetDashboard = function (stats) {
+    if (!stats) return;
 
-    data.forEach(d => {
-        let motivo = d.assunto || 'Não Informado';
-        motivos[motivo] = (motivos[motivo] || 0) + 1;
-    });
-
-    let topMotivos = Object.entries(motivos)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(m => `<span class="badge-mini blue-grey lighten-4 blue-grey-text" style="margin:2px">${m[0]} (${m[1]})</span>`)
-        .join('');
-
-    let briefHtml = `
-        <div class="col s12 m4 center-align" style="border-right: 1px solid #eee;">
-            <b class="indigo-text" style="font-size: 1.2rem;">${totalNotif}</b>
-            <div class="grey-text" style="font-size: 0.8rem; text-transform: uppercase;">Notificações</div>
+    let kpiHtml = `
+        <div class="col s12 m4 l3" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(0);">
+                <div class="kpi-val">${stats.totalNotificacoes}</div>
+                <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
+            </div>
         </div>
-        <div class="col s12 m4 center-align" style="border-right: 1px solid #eee;">
-            <b class="teal-text" style="font-size: 1.2rem;">${totalRecursos}</b>
-            <div class="grey-text" style="font-size: 0.8rem; text-transform: uppercase;">Recursos</div>
+        <div class="col s12 m4 l3" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(0);">
+                <div class="kpi-val">${stats.totalRecursos}</div>
+                <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
+            </div>
         </div>
-        <div class="col s12 m4">
-            <div class="grey-text" style="font-size: 0.7rem; text-transform: uppercase; margin-bottom: 5px;">Principais Ocorrências:</div>
-            ${topMotivos}
+        <div class="col s12 m4 l2" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(1);">
+                <div class="kpi-val">${stats.totalEntregas}</div>
+                <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
+            </div>
+        </div>
+        <div class="col s12 m4 l2" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(2);">
+                <div class="kpi-val">${stats.totalAutorizacoes}</div>
+                <div class="kpi-lbl">Acessos Autorizados</div>
+            </div>
+        </div>
+        <div class="col s12 m4 l2" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset indigo darken-1" onclick="window.focusToolsetSection(3);">
+                <div class="kpi-val">${stats.totalReservas}</div>
+                <div class="kpi-lbl">Reservas no Mês</div>
+            </div>
+        </div>
+        <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
+            <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(4);" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Ocorrências no Condomínio</div>
+                    <div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria} | Citada/Tag: ${stats.totalChamadosTag}</div>
+                </div>
+                <i class="material-icons">forum</i>
+            </div>
+        </div>
+        <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
+            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(6);" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Situação Financeira / Boletos</div>
+                    <div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos} | Em Aberto: ${stats.boletosAbertos}</div>
+                </div>
+                <i class="material-icons">monetization_on</i>
+            </div>
         </div>
     `;
-    $('#unitBrief').html(briefHtml).removeClass('hide');
-}
 
-window.renderHistoryPage = function (page) {
-    let totalItems = window.globalHistoryData.length;
-    let totalPages = Math.ceil(totalItems / window.historyPageSize);
-    let start = (page - 1) * window.historyPageSize;
-    let end = start + window.historyPageSize;
-    let dataSlice = window.globalHistoryData.slice(start, end);
-
-    window.renderHistoryCardsLayout(dataSlice);
-    window.renderHistoryPagination(page, totalPages);
+    $('#unitBrief').html(kpiHtml);
 };
 
-window.renderHistoryCardsLayout = function (data) {
-    let cardsHtml = '';
-    data.forEach((d) => {
-        let tipoClass = (d.notificacao || '').toUpperCase();
-        if (d.recurso === 'Sim') tipoClass += ' RECURSO';
+window.focusToolsetSection = function (index) {
+    let collapsible = M.Collapsible.getInstance($('#toolsetCollapsible'));
+    if (collapsible) {
+        collapsible.open(index);
+        $('html, body').animate({
+            scrollTop: $('#toolsetCollapsible').offset().top - 80
+        }, 400);
+    }
+};
 
-        let bgStyle = '';
+// 1. Renderizar Notificações (Histórico Completo)
+window.renderToolsetNotificacoes = function (list) {
+    $('#badgeCountNotificacoes').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoNotificacoes').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">info</i> Nenhuma notificação cadastrada para esta unidade.</div>');
+        return;
+    }
+
+    let html = '';
+    list.forEach(d => {
+        let tipo = (d.notificacao || '').toUpperCase();
+        let virtual = d.numero_ano_virtual || (d.numero + '/' + d.ano);
+        
+        let bgParecer = '';
         if (d.parecer) {
             let p = d.parecer.toUpperCase();
-            if (p.includes('MANTER')) bgStyle = 'parecer-manter';
-            else if (p.includes('CONVERTER')) bgStyle = 'parecer-converter';
-            else if (p.includes('REVOGAR')) bgStyle = 'parecer-revogar';
+            if (p.includes('MANTER')) bgParecer = 'parecer-manter';
+            else if (p.includes('CONVERTER')) bgParecer = 'parecer-converter';
+            else if (p.includes('REVOGAR')) bgParecer = 'parecer-revogar';
         }
 
         let linkRecurso = d.recurso === 'Sim' ?
-            `<a href="index.php?pag=recurso&rec=${encodeURIComponent(d.numero_ano_virtual)}" class="btn-small blue waves-effect waves-light" style="margin-right:5px"><i class="material-icons left" style="margin-right:0">visibility</i></a>` : '';
+            `<a href="index.php?pag=recurso&rec=${encodeURIComponent(virtual)}" class="btn-small blue waves-effect waves-light tooltipped" data-tooltip="Visualizar Recurso"><i class="material-icons left" style="margin-right:4px;">visibility</i> Recurso</a>` :
+            `<span class="grey-text text-lighten-1" style="font-size:0.85rem;"><i class="material-icons tiny">do_not_disturb</i> Sem recurso</span>`;
 
-        cardsHtml += `
-            <div class="col s12">
-                <div class="card hoverable card-notificacao ${tipoClass} ${bgStyle}" style="margin: 0.5rem 0;">
-                    <div class="card-content" style="padding: 10px 20px;">
-                        <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
-                            <div class="col s12 m1 center-align">
-                                <span class="badge-mini ${d.notificacao === 'MULTA' ? 'red' : 'orange'} white-text" style="display:block; margin-bottom:5px">${d.notificacao || 'N/A'}</span>
-                                <span class="grey-text" style="font-size: 0.75rem;">#${d.numero_ano_virtual}</span>
-                            </div>
-                            <div class="col s12 m5">
-                                <span class="card-title truncate" style="font-size: 1.05rem; font-weight: 500; margin: 0;">${d.assunto || 'Sem Assunto'}</span>
-                                ${d.recurso === 'Sim' ? '<small class="blue-text" style="font-weight:bold">POSSUI RECURSO</small>' : ''}
-                            </div>
-                            <div class="col s12 m4">
-                                <div style="font-size: 0.9rem;" class="grey-text text-darken-2">
-                                    <i class="material-icons tiny">calendar_today</i> <b>Ocorrido:</b> ${d.data_ocorrido || '-'}
-                                    <span class="hide-on-small-only"> | </span> 
-                                    <br class="hide-on-med-and-up">
-                                    <i class="material-icons tiny">assignment_returned</i> <b>Retirada:</b> ${d.dia_retirada || '-'}
-                                </div>
-                                ${d.parecer ? `<div class="truncate grey-text text-darken-3" style="font-size: 0.85rem; font-weight: 500;"><b>Resultado:</b> ${d.parecer}</div>` : ''}
-                            </div>
-                            <div class="col s12 m2 right-align">${linkRecurso}</div>
+        let btnCiencia = `
+            <button type="button" class="btn-small waves-effect waves-light grey lighten-3 grey-text text-darken-3 btn-abrir-modal-ciencia" data-virtual="${virtual}" data-retirada="${d.dia_retirada || ''}" style="margin-right:5px;" title="Registrar Ciência/Retirada">
+                <i class="material-icons left tiny" style="margin-right:2px;">event_available</i> ${d.dia_retirada ? d.dia_retirada : 'Add Ciência'}
+            </button>
+        `;
+
+        let btnCobranca = `
+            <button type="button" class="btn-small waves-effect waves-light green lighten-4 green-text text-darken-4 btn-abrir-modal-cobranca" data-virtual="${virtual}" data-multa="${d.multa_cobrada || ''}" data-valor="${d.valor || ''}" data-vencimento="${d.data_vencimento || ''}" data-pagamento="${d.data_pagamento || ''}" title="Confirmar Cobrança de Multa">
+                <i class="material-icons left tiny" style="margin-right:2px;">attach_money</i> ${d.multa_cobrada === 'Sim' ? ('Cobrado: R$ ' + d.valor) : 'Lançar Cobrança'}
+            </button>
+        `;
+
+        html += `
+            <div class="card hoverable card-notificacao-toolset ${tipo} ${bgParecer}" style="margin: 0.8rem 0;">
+                <div class="card-content" style="padding: 12px 18px;">
+                    <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
+                        <div class="col s12 m2">
+                            <span class="badge-mini ${tipo === 'MULTA' ? 'red' : 'orange'} white-text" style="display:inline-block; margin-bottom:4px;">${tipo || 'N/A'}</span>
+                            <div style="font-weight: bold; font-size:1.05rem;">#${virtual}</div>
+                            <small class="grey-text">${d.data_ocorrido ? ('Ocorrido: ' + d.data_ocorrido) : ''}</small>
+                        </div>
+                        <div class="col s12 m4">
+                            <div style="font-weight: 600; font-size: 1.05rem;" class="indigo-text text-darken-3">${d.assunto || 'Sem Assunto'}</div>
+                            ${d.detalhes ? `<div class="truncate grey-text text-darken-2" style="font-size:0.85rem;">${d.detalhes}</div>` : ''}
+                            ${d.parecer ? `<div style="font-size:0.85rem; margin-top:4px;" class="teal-text text-darken-4"><b>Parecer:</b> ${d.parecer}</div>` : ''}
+                        </div>
+                        <div class="col s12 m6 right-align flex-responsive" style="gap:5px; justify-content:flex-end;">
+                            ${btnCiencia}
+                            ${btnCobranca}
+                            ${linkRecurso}
                         </div>
                     </div>
                 </div>
             </div>
         `;
     });
-    $('#listaRetornoCards').html(cardsHtml);
-}
+
+    $('#conteudoNotificacoes').html(html);
+};
+
+// 2. Renderizar Encomendas
+window.renderToolsetEncomendas = function (list) {
+    $('#badgeCountEncomendas').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoEncomendas').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">mark_email_read</i> Nenhuma encomenda registrada no mês selecionado.</div>');
+        return;
+    }
+
+    let tableHtml = `
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>Foto</th>
+                    <th>Rastreio / ID</th>
+                    <th>Descrição</th>
+                    <th>Destinatário</th>
+                    <th>Data / Hora Chegada</th>
+                    <th>Status</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    list.forEach(e => {
+        let fotoImg = e.foto ? `<img src="${e.foto}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer;" class="img-preview-entrega" data-uuid="${e.uuid}">` : `<i class="material-icons grey-text">inventory_2</i>`;
+        let statusBadge = (e.status || '').toLowerCase().includes('entregue') || (e.status || '').toLowerCase().includes('retirado') ? 
+            `<span class="badge-mini green white-text">${e.status}</span>` : 
+            `<span class="badge-mini amber darken-2 white-text">${e.status || 'Pendente'}</span>`;
+
+        tableHtml += `
+            <tr>
+                <td class="center-align">${fotoImg}</td>
+                <td><b>${e.identificador || 'N/A'}</b></td>
+                <td>${e.descricao || 'Pacote'}</td>
+                <td>${e.destinatario || 'Morador'}</td>
+                <td><i class="material-icons tiny grey-text">access_time</i> ${e.dthoraChegada || 'N/A'}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3 btn-inspect-entrega" data-uuid="${e.uuid}">
+                        <i class="material-icons tiny left">visibility</i> Ver
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table>`;
+    $('#conteudoEncomendas').html(tableHtml);
+};
+
+// 3. Renderizar Autorizações de Acesso
+window.renderToolsetAutorizacoes = function (list) {
+    $('#badgeCountAutorizacoes').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoAutorizacoes').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">no_accounts</i> Nenhuma autorização de acesso registrada no mês selecionado.</div>');
+        return;
+    }
+
+    let cardsHtml = '<div class="row" style="margin-bottom:0;">';
+    list.forEach(a => {
+        let fotoUrl = a.foto || 'https://via.placeholder.com/60?text=Pessoa';
+        cardsHtml += `
+            <div class="col s12 m6 l4">
+                <div class="card-panel grey lighten-5" style="border-radius:8px; padding:12px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <img src="${fotoUrl}" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #009688;">
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-weight:bold; font-size:0.95rem;" class="truncate">${a.nome}</div>
+                            <small class="grey-text">${a.documento || 'Documento N/A'}</small>
+                            <div style="font-size:0.8rem; margin-top:2px;" class="teal-text text-darken-3"><b>Vigência:</b> ${a.dtInicio} até ${a.dtFim}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px; border-top:1px solid #eee; padding-top:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;" class="grey-text">
+                        <span>Por: ${a.autorizadoPor}</span>
+                        <span class="badge-mini teal white-text">${a.status}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    cardsHtml += '</div>';
+
+    $('#conteudoAutorizacoes').html(cardsHtml);
+};
+
+// 4. Renderizar Reservas de Área Comum
+window.renderToolsetReservas = function (list) {
+    $('#badgeCountReservas').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoReservas').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">event_busy</i> Nenhuma reserva de área comum encontrada para o mês selecionado.</div>');
+        return;
+    }
+
+    let html = '<div class="row" style="margin-bottom:0;">';
+    list.forEach(r => {
+        html += `
+            <div class="col s12 m6 l4">
+                <div class="card-panel white" style="border-left: 4px solid #3f51b5; border-radius:6px; padding:12px; margin-bottom:10px; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    <div style="font-weight:bold; font-size:1rem;" class="indigo-text text-darken-3">${r.recurso}</div>
+                    <div style="font-size:0.85rem; margin-top:4px;" class="grey-text text-darken-2">
+                        <i class="material-icons tiny">event</i> <b>Data:</b> ${r.dtReserva} ${r.horario ? ('(' + r.horario + ')') : ''}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px dotted #ccc; padding-top:6px;">
+                        <span class="badge-mini indigo lighten-4 indigo-text text-darken-4">${r.status}</span>
+                        <span style="font-weight:bold; font-size:0.9rem;" class="green-text text-darken-2">${r.valor || 'Sem taxa'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    $('#conteudoReservas').html(html);
+};
+
+// 5. Renderizar Ocorrências de Autoria
+window.renderToolsetOcorrenciasAutoria = function (list) {
+    $('#badgeCountOcorrenciasAutoria').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoOcorrenciasAutoria').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">chat_bubble_outline</i> Nenhuma ocorrência registrada pela própria unidade.</div>');
+        return;
+    }
+
+    let html = '';
+    list.forEach(o => {
+        let prot = o.protocolo || (o.numero + '/' + o.ano);
+        html += `
+            <div class="card-panel white" style="border-left:4px solid #2196f3; padding:12px 18px; margin: 8px 0;">
+                <div class="row valign-wrapper flex-responsive" style="margin-bottom:0;">
+                    <div class="col s12 m2">
+                        <span class="badge-mini blue white-text">Prot #${prot}</span>
+                        <div style="font-size:0.75rem; margin-top:4px;" class="grey-text">${o.abertura || 'N/A'}</div>
+                    </div>
+                    <div class="col s12 m7">
+                        <div style="font-weight:bold; font-size:1rem;" class="blue-text text-darken-4">${o.assunto || 'Ocorrência Morador'}</div>
+                        <div style="font-size:0.85rem;" class="grey-text text-darken-2">${o.mensagem || o.descricao || ''}</div>
+                    </div>
+                    <div class="col s12 m3 right-align">
+                        <a href="index.php?pag=livroDeOcorrencias&prot=${encodeURIComponent(prot)}" class="btn-small blue waves-effect waves-light">
+                            <i class="material-icons left tiny">chat</i> Abrir Chat
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    $('#conteudoOcorrenciasAutoria').html(html);
+};
+
+// 6. Renderizar Ocorrências com Tag
+window.renderToolsetOcorrenciasTag = function (list) {
+    $('#badgeCountOcorrenciasTag').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoOcorrenciasTag').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">loyalty</i> Nenhuma ocorrência citando ou marcando a unidade.</div>');
+        return;
+    }
+
+    let html = '';
+    list.forEach(o => {
+        let prot = o.protocolo || (o.numero + '/' + o.ano);
+        let tagTipo = (o.vinculo_final || 'citada').toUpperCase();
+        html += `
+            <div class="card-panel white" style="border-left:4px solid #9c27b0; padding:12px 18px; margin: 8px 0;">
+                <div class="row valign-wrapper flex-responsive" style="margin-bottom:0;">
+                    <div class="col s12 m2">
+                        <span class="badge-mini purple white-text">Tag: ${tagTipo}</span>
+                        <div style="font-size:0.75rem; margin-top:4px;" class="grey-text">Prot #${prot}</div>
+                    </div>
+                    <div class="col s12 m7">
+                        <div style="font-weight:bold; font-size:1rem;" class="purple-text text-darken-4">${o.assunto || 'Ocorrência Citada'}</div>
+                        <div style="font-size:0.85rem;" class="grey-text text-darken-2">Autor: Bl. ${o.bloco || ''} - Unid. ${o.unidade || ''} | ${o.abertura || ''}</div>
+                    </div>
+                    <div class="col s12 m3 right-align">
+                        <a href="index.php?pag=livroDeOcorrencias&prot=${encodeURIComponent(prot)}" class="btn-small purple waves-effect waves-light">
+                            <i class="material-icons left tiny">chat</i> Ver Conversa
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    $('#conteudoOcorrenciasTag').html(html);
+};
+
+// 7. Renderizar Lista de Boletos
+window.renderToolsetBoletos = function (list) {
+    $('#badgeCountBoletos').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoBoletos').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">account_balance_wallet</i> Nenhum boleto registrado na VDS para este ano.</div>');
+        return;
+    }
+
+    let tableHtml = `
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>Vencimento</th>
+                    <th>Referência / Doc</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
+                    <th>2ª Via / Multas</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    list.forEach(b => {
+        let statusStr = vds_extract_string_value(b.status || b.situacao, 'Em Aberto');
+        let isPago = statusStr.toLowerCase().includes('liquidado') || statusStr.toLowerCase().includes('pago');
+        let statusBadge = isPago ? `<span class="badge-mini green white-text">${statusStr}</span>` : `<span class="badge-mini orange darken-2 white-text">${statusStr}</span>`;
+
+        let valorFmt = b.valorTotal ? ('R$ ' + parseFloat(b.valorTotal).toFixed(2).replace('.', ',')) : (b.valor ? ('R$ ' + parseFloat(b.valor).toFixed(2).replace('.', ',')) : 'R$ 0,00');
+
+        let btnSegundaVia = b.urlSegundaVia ? 
+            `<a href="${b.urlSegundaVia}" target="_blank" class="btn-small green waves-effect waves-light" style="margin-right:4px;" title="Ver 2ª Via no Superlógica"><i class="material-icons tiny left">picture_as_pdf</i> 2ª Via</a>` : 
+            '';
+
+        let btnExtrairMultas = b.urlSegundaVia ?
+            `<button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3 btn-extrair-multas-boleto" data-url="${encodeURIComponent(b.urlSegundaVia)}" data-status="${statusStr}" data-vencimento="${b.dtVencimento || ''}">
+                <i class="material-icons tiny left">search</i> Extrair Multas
+            </button>` : '';
+
+        tableHtml += `
+            <tr>
+                <td><b>${b.dtVencimento ? window.formatDateBR(b.dtVencimento) : 'N/A'}</b></td>
+                <td>${b.nossoNumero || b.referencia || 'Boleto Condominial'}</td>
+                <td style="font-weight:bold;" class="green-text text-darken-3">${valorFmt}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    ${btnSegundaVia}
+                    ${btnExtrairMultas}
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table>`;
+    $('#conteudoBoletos').html(tableHtml);
+};
+
+// Helper simples para formatar data BR YYYY-MM-DD -> DD/MM/YYYY
+window.formatDateBR = function(dtStr) {
+    if (!dtStr) return 'N/A';
+    if (dtStr.includes('/')) return dtStr;
+    let parts = dtStr.split('-');
+    if (parts.length === 3) {
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+    return dtStr;
+};
+
+// Handlers dos Modais de Ação Contextual nas Notificações
+$(document).on('click', '.btn-abrir-modal-ciencia', function () {
+    let virtual = $(this).data('virtual');
+    let retirada = $(this).data('retirada');
+    
+    $('#virtualNotificacaoTarget').val(virtual);
+    $('#lblNotificacaoVirtual').text('#' + virtual);
+    
+    if (retirada) {
+        // Converter DD/MM/YYYY para YYYY-MM-DD se necessário
+        let parts = retirada.split('/');
+        if (parts.length === 3) {
+            $('#inputDataRetirada').val(parts[2] + '-' + parts[1] + '-' + parts[0]);
+        } else {
+            $('#inputDataRetirada').val(retirada);
+        }
+    } else {
+        $('#inputDataRetirada').val(new Date().toISOString().slice(0, 10));
+    }
+
+    M.Modal.getInstance($('#modalCienciaNotificacao')).open();
+});
+
+$(document).on('click', '#btnSalvarCiencia', function () {
+    let virtual = $('#virtualNotificacaoTarget').val();
+    let dataRetirada = $('#inputDataRetirada').val();
+
+    if (!dataRetirada) {
+        M.toast({ html: 'Informe a data de retirada!', classes: 'orange' });
+        return;
+    }
+
+    $.post('metodo.php?metodo=atualizaDataRetiradaNotificacao', { virtual: virtual, dia_retirada: dataRetirada }, function (res) {
+        if (res.trim() === 'success') {
+            M.toast({ html: 'Data de ciência atualizada com sucesso!', classes: 'green rounded' });
+            M.Modal.getInstance($('#modalCienciaNotificacao')).close();
+            $('#buscaHistoricoUnidade').click();
+        } else {
+            M.toast({ html: 'Erro ao atualizar data de ciência', classes: 'red rounded' });
+        }
+    });
+});
+
+$(document).on('click', '.btn-abrir-modal-cobranca', function () {
+    let virtual = $(this).data('virtual');
+    let valor = $(this).data('valor');
+    let vencimento = $(this).data('vencimento');
+    let pagamento = $(this).data('pagamento');
+
+    $('#cobrancaNotificacaoTarget').val(virtual);
+    $('#lblCobrancaVirtual').text('#' + virtual);
+    $('#inputValorMulta').val(valor || '');
+    $('#inputVencimentoMulta').val(vencimento || '');
+    $('#inputPagamentoMulta').val(pagamento || '');
+
+    M.Modal.getInstance($('#modalCobrancaMulta')).open();
+});
+
+$(document).on('click', '#btnSalvarCobranca', function () {
+    let virtual = $('#cobrancaNotificacaoTarget').val();
+    let valor = $('#inputValorMulta').val();
+    let vencimento = $('#inputVencimentoMulta').val();
+    let pagamento = $('#inputPagamentoMulta').val();
+
+    if (!valor || !vencimento) {
+        M.toast({ html: 'Preencha valor e data de vencimento!', classes: 'orange' });
+        return;
+    }
+
+    $.post('metodo.php?metodo=upsertMultaCobrada', {
+        id: virtual,
+        valor: valor,
+        data_vencimento: vencimento,
+        data_pagamento: pagamento
+    }, function (res) {
+        if (res.trim() === 'success') {
+            M.toast({ html: 'Lançamento de cobrança registrado!', classes: 'green rounded' });
+            M.Modal.getInstance($('#modalCobrancaMulta')).close();
+            $('#buscaHistoricoUnidade').click();
+        } else {
+            M.toast({ html: res || 'Erro ao registrar cobrança', classes: 'red rounded' });
+        }
+    });
+});
+
+// Handler para inspeção de fotos de entrega
+$(document).on('click', '.btn-inspect-entrega, .img-preview-entrega', function () {
+    let uuid = $(this).data('uuid');
+    if (!uuid) return;
+
+    let modal = M.Modal.getInstance($('#modalDetalhesEntrega'));
+    $('#conteudoModalEntrega').html('<div class="preloader-wrapper active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div></div></div><p>Buscando detalhes...</p>');
+    modal.open();
+
+    $.get(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`, function (res) {
+        if (res && res.success && res.data) {
+            let d = res.data;
+            let foto = d.fotoUrlCompleta ? `<img src="${d.fotoUrlCompleta}" style="max-width:100%; max-height:350px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">` : '<p class="grey-text">Sem foto registrada</p>';
+            
+            let html = `
+                ${foto}
+                <div class="left-align" style="background:#f5f5f5; padding:15px; border-radius:8px;">
+                    <p><b>Identificador:</b> ${d.identificador || 'N/A'}</p>
+                    <p><b>Descrição:</b> ${d.descricao || 'N/A'}</p>
+                    <p><b>Destinatário:</b> ${d.destinatario || 'Morador'}</p>
+                    <p><b>Data / Hora Chegada:</b> ${d.dthoraFormatada || d.dthora || 'N/A'}</p>
+                    <p><b>Situação:</b> ${d.status || 'N/A'}</p>
+                </div>
+            `;
+            $('#conteudoModalEntrega').html(html);
+        } else {
+            $('#conteudoModalEntrega').html('<p class="red-text">Não foi possível carregar os detalhes da entrega.</p>');
+        }
+    }, 'json');
+});
+
+// Handler para extrair sugestões de multa de boletos
+$(document).on('click', '.btn-extrair-multas-boleto', function () {
+    let $btn = $(this);
+    let url = decodeURIComponent($btn.data('url'));
+    let status = $btn.data('status');
+    let vencimento = $btn.data('vencimento');
+
+    $btn.prop('disabled', true).html('<i class="material-icons tiny left spin">refresh</i> Analisando...');
+
+    $.get(`metodo.php?metodo=extrairSugestoesBoleto&url=${encodeURIComponent(url)}&status=${encodeURIComponent(status)}&dtVencimento=${encodeURIComponent(vencimento)}`, function (res) {
+        $btn.prop('disabled', false).html('<i class="material-icons tiny left">search</i> Extrair Multas');
+
+        if (res && res.success && res.sugestoes && res.sugestoes.length > 0) {
+            let count = res.sugestoes.length;
+            M.toast({ html: `Encontrada(s) ${count} sugestão(ões) de multa no boleto!`, classes: 'green rounded' });
+            
+            // Focar na aba de Notificações
+            window.focusToolsetSection(0);
+        } else {
+            M.toast({ html: 'Nenhuma multa por notificação detectada neste boleto.', classes: 'amber darken-2 rounded' });
+        }
+    }, 'json').fail(function() {
+        $btn.prop('disabled', false).html('<i class="material-icons tiny left">search</i> Extrair Multas');
+        M.toast({ html: 'Erro ao analisar fatura do boleto.', classes: 'red rounded' });
+    });
+});
+
 
 window.renderHistoryPagination = function (currentPage, totalPages) {
     if (totalPages <= 1) {
