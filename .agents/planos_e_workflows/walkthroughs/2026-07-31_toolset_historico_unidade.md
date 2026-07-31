@@ -1,23 +1,19 @@
-# Walkthrough - Toolset Operacional por Unidade & Análise de Recurso
+# Walkthrough - Acelerador de Moradores & Foto do Objeto Pessoa
 
-## Resumo das Alterações Realizadas
+## Atualizações Realizadas
 
-### 👥 1. Acelerador de Moradores da Unidade
-- **Nova Função Backend (`vds_get_moradores_unidade`)**: Adicionada em `classes/vds_acesso_service.php` para realizar a consulta de moradores cadastrados no endpoint `/morador?Unidade.Uuid={uuid}&Combo=true` da API v8 Vida de Síndico.
-- **Formato dos Cards**: Exibe cards compactos e responsivos por morador contendo exclusivamente:
-  - 📷 Foto / Avatar
-  - 👤 Nome do Morador
-  - 🏷️ Tipo / Perfil (ex: Proprietário Residente, Inquilino, Morador)
-- **Integração no Toolset (`index.php?pag=historico`)**: Adicionada seção colapsável `Moradores da Unidade` e indicador no badge.
-- **Integração na Análise de Recurso (`detalheRecurso.php`)**: Adicionada aba de moradores no painel contextual de aceleradores.
-
-### ⚠️ 2. Sinalização de Inadimplência da Unidade
-- **Verificação no Endpoint de Moradores**: Mapeia flags de inadimplência no morador e na unidade vinculada.
-- **Selo na Dashboard do Toolset (`index.php?pag=historico`)**: Quando a unidade possui pendências financeiras, renderiza um painel de alerta em vermelho no topo da dashboard KPI: `⚠️ UNIDADE INADIMPLENTE`.
-- **Selo na Tela de Análise de Recurso (`detalheRecurso.php`)**: Exibe o badge vermelho `UNIDADE INADIMPLENTE` no cabeçalho premium do recurso e uma tag `INADIMPLENTE` com efeito pulse no título do acelerador.
+### 📷 1. Extração da Foto do Objeto `pessoa` e Fallback por Ícone
+- **Estrutura da API VDS v8**: Ajustado o extrator backend em `classes/vds_acesso_service.php` para recuperar a foto exatamente de `$m['pessoa']['foto']` (e nome de `$m['pessoa']['nome']`, tipo de `$m['tipo']['nome']` e inadimplência de `$m['unidade']['inadimplente']`).
+- **URL Completa da Imagem**: Se o campo `foto` contiver um caminho relativo (ex: `/app/dados/cond/...`), é prefixado automaticamente por `https://app.vidadesindico.com.br`.
+- **Fallback por Ícone**: Caso a foto esteja `null` ou não cadastrada, é renderizado um avatar redondo estilizado com o ícone `<i class="material-icons cyan-text">account_circle</i>` em vez de imagens externas broken/placeholder.
 
 ---
 
-### 📦 3. Outras Melhorias do Toolset
-- **Rastreio de Encomendas por UUID**: Atualização assíncrona do código de rastreio e fotos em segundo plano.
-- **Extração de Multas em Boletos com Modal de Confirmação**: Leitura dinâmica da composição do boleto com botão de confirmação e salvamento em `upsertMultaCobrada`.
+### 📷 2. Resumo da Estrutura de Mapeamento
+
+| Campo Extraído | Caminho no JSON da API VDS v8 |
+| :--- | :--- |
+| **Nome** | `item.pessoa.nome` |
+| **Foto** | `item.pessoa.foto` (ou `https://app.vidadesindico.com.br` + path) |
+| **Tipo** | `item.tipo.nome` (ex: Proprietário) |
+| **Inadimplência** | `item.unidade.inadimplente` (boolean) |

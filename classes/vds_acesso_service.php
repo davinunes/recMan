@@ -579,14 +579,20 @@ function vds_get_moradores_unidade($bloco, $unidade, $usuarioIdConselho = null) 
 
             if (is_array($regs)) {
                 foreach ($regs as $m) {
-                    $nome = $m['nome'] ?? ($m['pessoa']['nome'] ?? ($m['morador']['nome'] ?? 'Morador'));
+                    $nome = $m['pessoa']['nome'] ?? ($m['nome'] ?? ($m['morador']['nome'] ?? 'Morador'));
                     
-                    $fotoRel = $m['foto'] ?? ($m['fotoUrl'] ?? ($m['pessoa']['fotoUrl'] ?? null));
+                    $fotoRel = $m['pessoa']['foto'] ?? ($m['foto'] ?? ($m['fotoUrl'] ?? ($m['pessoa']['fotoUrl'] ?? null)));
                     $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
 
-                    $tipoStr = vds_extract_string_value($m['tipo'] ?? ($m['tipoDescricao'] ?? ($m['perfil'] ?? ($m['cargo'] ?? null))), 'Morador');
+                    $rawTipo = $m['tipo'] ?? ($m['tipoDescricao'] ?? ($m['perfil'] ?? ($m['cargo'] ?? null)));
+                    if (is_array($rawTipo)) {
+                        $tipoStr = $rawTipo['nome'] ?? ($rawTipo['grupo']['nome'] ?? 'Morador');
+                    } else {
+                        $tipoStr = vds_extract_string_value($rawTipo, 'Morador');
+                    }
 
-                    if (!empty($m['inadimplente']) || !empty($m['unidade']['inadimplente']) || !empty($m['inadimplencia']) || (isset($m['adimplente']) && $m['adimplente'] === false)) {
+                    $isUnidInad = !empty($m['unidade']['inadimplente']) || !empty($m['inadimplente']) || !empty($m['inadimplencia']) || (isset($m['adimplente']) && $m['adimplente'] === false);
+                    if ($isUnidInad) {
                         $inadimplente = true;
                     }
 
@@ -595,10 +601,11 @@ function vds_get_moradores_unidade($bloco, $unidade, $usuarioIdConselho = null) 
                         'nome' => $nome,
                         'foto' => $fotoUrl,
                         'tipo' => $tipoStr,
-                        'inadimplente' => !empty($m['inadimplente'])
+                        'inadimplente' => $isUnidInad
                     ];
                 }
             }
+
         }
     }
 

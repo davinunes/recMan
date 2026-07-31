@@ -1008,12 +1008,17 @@ if ($esseRecurso == null) {
                                 <?php foreach ($moradoresUnidade as $m): ?>
                                     <div class="col s12 m6 l3">
                                         <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:12px 8px; border:1px solid #e0e0e0; margin-bottom:10px;">
-                                            <img src="<?= htmlspecialchars($m['foto'] ?: 'https://via.placeholder.com/80?text=Foto') ?>" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">
+                                            <?php if (!empty($m['foto'])): ?>
+                                                <img src="<?= htmlspecialchars($m['foto']) ?>" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">
+                                            <?php else: ?>
+                                                <div style="width:54px; height:54px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 4px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.2rem;">account_circle</i></div>
+                                            <?php endif; ?>
                                             <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="<?= htmlspecialchars($m['nome']) ?>"><?= htmlspecialchars($m['nome']) ?></div>
                                             <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;"><?= htmlspecialchars($m['tipo']) ?></span>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
+
                             </div>
                         <?php endif; ?>
                     </div>

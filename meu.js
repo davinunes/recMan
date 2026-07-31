@@ -1700,13 +1700,16 @@ window.renderToolsetMoradores = function (list) {
 
     let cardsHtml = '<div class="row" style="margin-bottom:0;">';
     list.forEach(m => {
-        let fotoUrl = m.foto || 'https://via.placeholder.com/80?text=Foto';
+        let avatarEl = m.foto ? 
+            `<img src="${m.foto}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:6px;">` : 
+            `<div style="width:64px; height:64px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.5rem;">account_circle</i></div>`;
+
         cardsHtml += `
             <div class="col s12 m6 l3">
                 <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
-                    <img src="${fotoUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:6px;">
+                    ${avatarEl}
                     <div style="font-weight:bold; font-size:1rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
-                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem;">${m.tipo || 'Morador'}</span>
+                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo || 'Morador'}</span>
                 </div>
             </div>
         `;
@@ -1715,6 +1718,7 @@ window.renderToolsetMoradores = function (list) {
 
     $('#conteudoMoradores').html(cardsHtml);
 };
+
 
 
 window.focusToolsetSection = function (index) {
