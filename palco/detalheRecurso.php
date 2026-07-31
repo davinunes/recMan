@@ -1050,8 +1050,8 @@ if ($esseRecurso == null) {
                                                 <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; font-family:monospace; font-size:1rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
                                                     <i class="material-icons tiny"><?= $iconName ?></i> <?= htmlspecialchars($v['placa']) ?>
                                                 </span>
-                                                <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold"><?= htmlspecialchars($v['tipo']) ?></span>
                                             </div>
+
                                             <div style="font-weight:bold; font-size:0.95rem; color:#263238;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
                                             <?php if (!empty($v['portadorNecessidade'])): ?>
                                                 <span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.7rem; margin-top:4px; padding:2px 6px; border-radius:4px; display:inline-block;"><i class="material-icons tiny">accessible</i> Vaga PCD</span>

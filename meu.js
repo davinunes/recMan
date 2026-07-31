@@ -1750,8 +1750,8 @@ window.renderToolsetVeiculos = function (list) {
                         <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:4px 10px; border-radius:4px; font-family:monospace; font-size:1.05rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
                             <i class="material-icons tiny">${iconName}</i> ${v.placa}
                         </span>
-                        <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold">${v.tipo}</span>
                     </div>
+
                     <div style="font-weight:bold; font-size:1rem; color:#263238;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
                     ${pcdBadge}
                     ${propStr}
