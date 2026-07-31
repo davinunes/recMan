@@ -116,6 +116,24 @@ $mesAtualDefault = date('Y-m');
                     </div>
                 </li>
 
+                <!-- 0.1 Veículos da Unidade -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons blue-grey-text text-darken-2">directions_car</i>
+                            <b>Veículos da Unidade</b>
+                            <small class="grey-text text-darken-1">(Cadastro VDS)</small>
+                        </span>
+                        <span class="badge blue-grey darken-2 white-text font-weight-bold" id="badgeCountVeiculos">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoVeiculos">
+                            <!-- Cards dos Veículos -->
+                        </div>
+                    </div>
+                </li>
+
+
                 <!-- 1. Notificações & Recursos (Histórico Completo) -->
                 <li class="active">
                     <div class="collapsible-header flex-header-collapsible">

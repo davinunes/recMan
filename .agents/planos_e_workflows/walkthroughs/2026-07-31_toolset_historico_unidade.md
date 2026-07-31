@@ -1,17 +1,28 @@
-# Walkthrough - Restauração da Tela de Login (`forms/login.php`)
+# Walkthrough - Documentação do Endpoint de Veículos & Acelerador de Veículos da Unidade
 
-## Causa do Problema
+## Atualizações Entregues
 
-No `index.php`, quando o usuário não possui sessão ativa (`!isset($_SESSION['user_id'])`), a inclusão de `forms/login.php` ocorria antes dos blocos `<head>` que importavam o Materialize CSS, o `meu.css`, o jQuery e o `meu.js`. Como o `index.php` dava `exit()`, a tela de login era entregue ao navegador como um trecho de HTML puro sem os estilos e scripts.
+### 📄 1. Documentação Técnica da API VDS v8 (Skill & Postman)
+- **Endpoint Registrado**: `GET /veiculo?Unidade.Uuid={unidadeUuid}&order=asc`
+- **Inclusão na Documentação**: Adicionado na seção **E. Estrutura Física, Moradores, Veículos & Obras** da skill [`skills/vds_api_v8/SKILL.md`](file:///e:/DEV/recMan/skills/vds_api_v8/SKILL.md).
 
-## Solução Aplicada
+---
 
-- **Página Standalone em `forms/login.php`**: O arquivo [forms/login.php](file:///e:/DEV/recMan/forms/login.php) foi transformado em uma estrutura HTML completa e autocontida.
-- **Inclusão de Ativos**:
-  - CSS: `Material Icons`, `Materialize CSS 1.0.0` e `meu.css`.
-  - JS: `jQuery 3.6.0`, `Materialize JS` e `meu.js`.
-- **UI/UX Aprimorada**:
-  - Fundo responsivo em gradiente azul premium.
-  - Card centralizado com ícone, título do sistema e campos de email/senha estilizados.
-  - Checkbox "Lembrar este dispositivo" integrado.
-  - Evento de clique e submit no botão `#logon` totalmente funcional via AJAX enviando para `metodo.php?metodo=logon`.
+### 🚗 2. Backend & Integração de Veículos (`vds_get_veiculos_unidade`)
+- **Nova Função Backend**: Criada em [vds_acesso_service.php](file:///e:/DEV/recMan/classes/vds_acesso_service.php) para consultar a API v8 e extrair:
+  - `placa` (com estilo padrão de placa automotiva)
+  - `marca`, `modelo`, `cor`
+  - `tipo` (Automóvel, Motocicleta, etc.)
+  - `proprietario` (se vinculado)
+  - `observacao` (se informada)
+  - `foto` (com resolução de URL completa `https://app.vidadesindico.com.br`)
+
+---
+
+### 🚗 3. Acelerador de Veículos nas Telas
+1. **Toolset Operacional da Unidade (`index.php?pag=historico`)**:
+   - Card KPI na Dashboard da Unidade (*Veículos Cadastrados*).
+   - Seção colapsável dedicada `Veículos da Unidade` com badge dinâmico de contagem.
+   - Cards responsivos com destaque visual para a placa, ícones contextuais (carro `directions_car` vs moto `two_wheeler`) e foto.
+2. **Tela de Análise de Recurso (`detalheRecurso.php`)**:
+   - Nova aba `Veículos da Unidade (N)` adicionada ao painel de aceleradores de análise da defesa.

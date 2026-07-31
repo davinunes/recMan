@@ -831,7 +831,10 @@ switch ($_GET['metodo']) {
         $moradores = $resMoradores['moradores'] ?? [];
         $inadimplente = $resMoradores['inadimplente'] ?? false;
 
-        // 9. Cálculo da Dashboard Estatística (KPI)
+        // 9. Veículos Cadastrados na Unidade
+        $veiculos = vds_get_veiculos_unidade($torre, $unidade);
+
+        // 10. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
         $totalAdvertencias = 0;
@@ -877,6 +880,7 @@ switch ($_GET['metodo']) {
             'periodoExtenso' => date('m/Y', strtotime($dtInicio)),
             'inadimplente' => $inadimplente,
             'totalMoradores' => count($moradores),
+            'totalVeiculos' => count($veiculos),
             'totalNotificacoes' => $totalNotif,
             'totalMultas' => $totalMultas,
             'totalAdvertencias' => $totalAdvertencias,
@@ -899,6 +903,7 @@ switch ($_GET['metodo']) {
             'estatisticas' => $estatisticas,
             'inadimplente' => $inadimplente,
             'moradores' => $moradores,
+            'veiculos' => $veiculos,
             'notificacoes' => $notificacoes,
             'entregas' => $entregas,
             'autorizacoes' => $autorizacoes,
@@ -908,6 +913,7 @@ switch ($_GET['metodo']) {
             'boletos' => $boletos
         ], JSON_UNESCAPED_UNICODE);
         break;
+
 
 
     case "atualizaDataRetiradaNotificacao":

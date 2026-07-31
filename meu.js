@@ -1593,6 +1593,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
                 window.globalToolsetResponse = res;
                 window.renderToolsetDashboard(res.estatisticas);
                 window.renderToolsetMoradores(res.moradores || []);
+                window.renderToolsetVeiculos(res.veiculos || []);
                 window.renderToolsetNotificacoes(res.notificacoes || []);
                 window.renderToolsetEncomendas(res.entregas || []);
                 window.renderToolsetAutorizacoes(res.autorizacoes || []);
@@ -1638,37 +1639,37 @@ window.renderToolsetDashboard = function (stats) {
 
     let kpiHtml = seloInadimplencia + `
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(1);">
+            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(2);">
                 <div class="kpi-val">${stats.totalNotificacoes}</div>
                 <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(1);">
+            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(2);">
                 <div class="kpi-val">${stats.totalRecursos}</div>
                 <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(2);">
+            <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(1);">
+                <div class="kpi-val">${stats.totalVeiculos || 0}</div>
+                <div class="kpi-lbl">Veículos Cadastrados</div>
+            </div>
+        </div>
+        <div class="col s12 m4 l2" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(3);">
                 <div class="kpi-val">${stats.totalEntregas}</div>
                 <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(3);">
+            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(4);">
                 <div class="kpi-val">${stats.totalAutorizacoes}</div>
                 <div class="kpi-lbl">Acessos Autorizados</div>
             </div>
         </div>
-        <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset indigo darken-1" onclick="window.focusToolsetSection(4);">
-                <div class="kpi-val">${stats.totalReservas}</div>
-                <div class="kpi-lbl">Reservas no Mês</div>
-            </div>
-        </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(5);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset blue-grey darken-4" onclick="window.focusToolsetSection(6);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Ocorrências no Condomínio</div>
                     <div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria} | Citada/Tag: ${stats.totalChamadosTag}</div>
@@ -1677,7 +1678,7 @@ window.renderToolsetDashboard = function (stats) {
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(7);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(8);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Situação Financeira / Boletos</div>
                     <div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos} | Em Aberto: ${stats.boletosAbertos}</div>
@@ -1718,6 +1719,48 @@ window.renderToolsetMoradores = function (list) {
 
     $('#conteudoMoradores').html(cardsHtml);
 };
+
+// 0.1 Renderizar Veículos da Unidade
+window.renderToolsetVeiculos = function (list) {
+    $('#badgeCountVeiculos').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoVeiculos').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">directions_car</i> Nenhum veículo cadastrado para esta unidade.</div>');
+        return;
+    }
+
+    let cardsHtml = '<div class="row" style="margin-bottom:0;">';
+    list.forEach(v => {
+        let isMoto = (v.tipo || '').toLowerCase().includes('moto');
+        let iconName = isMoto ? 'two_wheeler' : 'directions_car';
+        let fotoHtml = v.foto ? 
+            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:6px; margin-bottom:10px; border:1px solid #ddd;">` : '';
+
+        let descVeiculo = [v.marca, v.modelo, v.cor].filter(Boolean).join(' ') || 'Veículo';
+        let propStr = v.proprietario ? `<div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny">person</i> ${v.proprietario}</div>` : '';
+        let obsStr = v.observacao ? `<div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="${v.observacao}"><i class="material-icons tiny">info</i> ${v.observacao}</div>` : '';
+
+        cardsHtml += `
+            <div class="col s12 m6 l3">
+                <div class="card-panel white z-depth-1 hoverable" style="border-radius:10px; padding:15px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    ${fotoHtml}
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:4px 10px; border-radius:4px; font-family:monospace; font-size:1.05rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="material-icons tiny">${iconName}</i> ${v.placa}
+                        </span>
+                        <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold">${v.tipo}</span>
+                    </div>
+                    <div style="font-weight:bold; font-size:1rem; color:#263238;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
+                    ${propStr}
+                    ${obsStr}
+                </div>
+            </div>
+        `;
+    });
+    cardsHtml += '</div>';
+
+    $('#conteudoVeiculos').html(cardsHtml);
+};
+
 
 
 

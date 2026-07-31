@@ -117,11 +117,13 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 - **Listar Entregas por Unidade:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc&Unidade.Uuid={unidadeUuid}`
 - **Detalhes da Entrega:** `GET /entrega/{uuid}`
 
-### E. Estrutura Física, Moradores & Obras
+### E. Estrutura Física, Moradores, Veículos & Obras
 - **Listar Blocos:** `GET /bloco?Combo=True&IsAdmin=false`
 - **Listar Unidades por Bloco:** `GET /unidade?Combo=True&bloco.uuid={blocoUuid}`
 - **Listar Moradores por Unidade:** `GET /morador?Unidade.Uuid={unidadeUuid}&Combo=true`
+- **Listar Veículos da Unidade:** `GET /veiculo?Unidade.Uuid={unidadeUuid}&order=asc`
 - **Listar Obras da Unidade/Bloco:** `GET /obra?Unidade.Uuid={unidadeUuid}&Bloco.Uuid={blocoUuid}`
+
 
 ### F. Financeiro & Boletos
 - **Listar Boletos por Unidade:** `GET /boleto?page=1&limit=20&sortBy=status&order=asc&Ano={Ano}&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`

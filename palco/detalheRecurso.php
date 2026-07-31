@@ -56,7 +56,9 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
     $resMoradores = vds_get_moradores_unidade($result['bloco'], $result['unidade']);
     $moradoresUnidade = $resMoradores['moradores'] ?? [];
     $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
+    $veiculosUnidade = vds_get_veiculos_unidade($result['bloco'], $result['unidade']);
 }
+
 
 
 // Busca a notificação para recuperar o artigo (em notação regimento, ex: "14.1")
@@ -1025,9 +1027,51 @@ if ($esseRecurso == null) {
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons blue-grey-text text-darken-2">directions_car</i>
+                        Veículos da Unidade (<?= count($veiculosUnidade) ?>)
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($veiculosUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhum veículo cadastrado encontrado para esta unidade.</p>
+                        <?php else: ?>
+                            <div class="row" style="margin-bottom:0;">
+                                <?php foreach ($veiculosUnidade as $v): ?>
+                                    <?php
+                                    $isMoto = strpos(strtolower($v['tipo'] ?? ''), 'moto') !== false;
+                                    $iconName = $isMoto ? 'two_wheeler' : 'directions_car';
+                                    $descV = implode(' ', array_filter([$v['marca'], $v['modelo'], $v['cor']])) ?: 'Veículo';
+                                    ?>
+                                    <div class="col s12 m6 l3">
+                                        <div class="card-panel white z-depth-1 hoverable" style="border-radius:10px; padding:12px; border:1px solid #e0e0e0; margin-bottom:10px;">
+                                            <?php if (!empty($v['foto'])): ?>
+                                                <img src="<?= htmlspecialchars($v['foto']) ?>" style="width:100%; height:100px; object-fit:cover; border-radius:6px; margin-bottom:8px; border:1px solid #ddd;">
+                                            <?php endif; ?>
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                                <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; font-family:monospace; font-size:1rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
+                                                    <i class="material-icons tiny"><?= $iconName ?></i> <?= htmlspecialchars($v['placa']) ?>
+                                                </span>
+                                                <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold"><?= htmlspecialchars($v['tipo']) ?></span>
+                                            </div>
+                                            <div style="font-weight:bold; font-size:0.95rem; color:#263238;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
+                                            <?php if (!empty($v['proprietario'])): ?>
+                                                <div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['proprietario']) ?>"><i class="material-icons tiny">person</i> <?= htmlspecialchars($v['proprietario']) ?></div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($v['observacao'])): ?>
+                                                <div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="<?= htmlspecialchars($v['observacao']) ?>"><i class="material-icons tiny">info</i> <?= htmlspecialchars($v['observacao']) ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons purple-text">fingerprint</i>
                         Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
                     </div>
+
 
                     <div class="collapsible-body" style="padding: 10px;">
                         <?php if (empty($acessosUnidade)): ?>

@@ -615,6 +615,74 @@ function vds_get_moradores_unidade($bloco, $unidade, $usuarioIdConselho = null) 
     ];
 }
 
+/**
+ * Consulta veículos cadastrados para a unidade na API v8 da VDS.
+ */
+function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+    $veiculos = [];
+
+    if ($token && $unidadeUuid) {
+        $url = VDS_BASE_URL . '/veiculo?Unidade.Uuid=' . urlencode($unidadeUuid) . '&order=asc';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+
+            if (is_array($regs)) {
+                foreach ($regs as $item) {
+                    $auto = $item['auto'] ?? $item;
+                    $placa = $auto['placa'] ?? 'N/A';
+                    $marca = is_array($auto['marca'] ?? null) ? ($auto['marca']['nome'] ?? '') : ($auto['marca'] ?? '');
+                    $modelo = is_array($auto['modelo'] ?? null) ? ($auto['modelo']['nome'] ?? '') : ($auto['modelo'] ?? '');
+                    $cor = is_array($auto['cor'] ?? null) ? ($auto['cor']['nome'] ?? '') : ($auto['cor'] ?? '');
+                    $tipo = is_array($auto['tipo'] ?? null) ? ($auto['tipo']['nome'] ?? 'Automóvel') : ($auto['tipo'] ?? 'Automóvel');
+                    
+                    $proprietario = is_array($auto['proprietario'] ?? null) ? ($auto['proprietario']['nome'] ?? null) : ($auto['proprietario'] ?? null);
+                    $observacao = $auto['observacao'] ?? '';
+
+                    $fotoRel = $auto['foto'] ?? null;
+                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+
+                    $rawDtHora = $item['dtHora'] ?? ($item['dthora'] ?? null);
+
+                    $veiculos[] = [
+                        'uuid' => $item['uuid'] ?? ($auto['uuid'] ?? null),
+                        'placa' => strtoupper($placa),
+                        'marca' => strtoupper($marca),
+                        'modelo' => $modelo,
+                        'cor' => $cor,
+                        'tipo' => $tipo,
+                        'proprietario' => $proprietario,
+                        'observacao' => $observacao,
+                        'foto' => $fotoUrl,
+                        'dtHora' => vds_format_datetime($rawDtHora, 'd/m/Y H:i', 'N/A')
+                    ];
+                }
+            }
+        }
+    }
+
+    return $veiculos;
+}
+
+
 
 
 /**
