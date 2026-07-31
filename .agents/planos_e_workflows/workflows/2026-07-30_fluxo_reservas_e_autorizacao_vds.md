@@ -1,7 +1,7 @@
 # Workflows da API v8 Vida de Síndico (VDS)
 
 - **Data**: 2026-07-30
-- **Tópico**: Fluxos operacionais de Reservas/Fila de Espera e Autorizações de Acesso / Convites
+- **Tópico**: Fluxos operacionais de Reservas/Fila de Espera, Autorizações de Acesso / Convites e Anexo de Arquivos em Ocorrências
 
 ---
 
@@ -58,4 +58,26 @@ sequenceDiagram
     Visitor->>Portaria: Apresenta QR Code na Entrada
     Portaria->>API: 5. PUT /autorizacao_acesso/{uuid}/confirmar_convite
     API-->>Portaria: Entrada Liberada e Registrada em evento_acesso
+```
+
+---
+
+## 3. Fluxo de Anexo de Arquivos em Ocorrências / Comentários (3 Etapas Sequenciais)
+
+Fluxo descoberto via inspeção detalhada de rede para upload e vinculação de imagens/documentos a mensagens ou ocorrências.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Usuário / Cliente
+    participant Upload as API Upload (/upload)
+    participant Ocorrencia as API Comentário (/ocorrencia/comentario)
+    participant Anexo as API Anexo (/anexo)
+
+    User->>Upload: 1. POST /upload {"base64String": "data:image/jpeg;base64,..."}
+    Upload-->>User: HTTP 200 {"url": "app\\dados\\tmp\\1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.jpeg"}
+    User->>Ocorrencia: 2. POST /ocorrencia/comentario {"uuid": "...", "mensagem": "...", "ocorrenciaPaiId": 51970481}
+    Ocorrencia-->>User: HTTP 200 {"ocorrenciaId": 52075990}
+    User->>Anexo: 3. POST /anexo {"anexoCaminho": "1d55b4af...jpeg*NomeOriginal.jpeg", "tipoId": "35", "destinoUuid": "52075990"}
+    Anexo-->>User: HTTP 200 {"message": "Anexos salvo com sucesso!"}
 ```

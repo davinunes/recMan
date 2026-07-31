@@ -664,6 +664,41 @@
             "description": "Envia um arquivo codificado em base64 para inclusão na resposta."
           },
           "response": []
+        },
+        {
+          "name": "2.9 Vinculação de Anexo em Ocorrência (POST /anexo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"anexoCaminho\": \"1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.jpeg*WhatsApp Image 2026-07-30 at 13.00.47.jpeg\",\n  \"tipoId\": \"35\",\n  \"destinoUuid\": \"52075990\",\n  \"cortarQuadrado\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/anexo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "anexo"
+              ]
+            },
+            "description": "### Passo 3 do Fluxo de Anexo em Ocorrências\n\nVincula o arquivo salvo temporariamente via `POST /upload` ao comentário ou ocorrência recém-criado (identificado por `destinoUuid` - ID numérico retornado no `POST /ocorrencia/comentario`).\n\n**Parâmetros do Body**:\n- `anexoCaminho`: Sintaxe `{nome_arquivo_temp}*{nome_original_arquivo}` (ex: `uuid.jpeg*NomeOriginal.jpeg`).\n- `tipoId`: ID do tipo de anexo (ex: `\"35\"`).\n- `destinoUuid`: ID numérico da ocorrência ou do evento de comentário (ex: `\"52075990\"`).\n- `cortarQuadrado`: Boolean (`true`/`false`)."
+          },
+          "response": []
         }
       ]
     },
