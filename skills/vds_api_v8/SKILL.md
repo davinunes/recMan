@@ -111,6 +111,10 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 - **Aprovar QR Code Pendente:** `POST /autorizacao_acesso_qrcode/aprovar`
 - **Notificar Detalhes por E-mail:** `POST /autorizacao_acesso/notifica_email` (Body Schema: `AutorizacaoAcessoNotificaEmailForm`)
 - **Saldo de Convites Sociais Disponíveis:** `GET /autorizacao_acesso_convite/quantidade`
+- **Listar Visitantes da Portaria por Destino (Unidade):** `GET /portaria/visitante?DestinoUuid={unidadeUuid}&DestinoTipo=UNIDADE`
+- **Obter Detalhes do Visitante por UUID:** `GET /portaria/visitante/{visitanteUuid}`
+- **Consultar Validade e Bloqueio do Visitante:** `GET /portaria/visitante/{visitanteUuid}/validade?tipo={tipoUuid}`
+
 
 ### D. Eventos de Acesso & Entregas
 - **Listar Acessos por Período e Unidade:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={dtInicio}&dtFim={dtFim}&unidade.uuid={unidadeUuid}`

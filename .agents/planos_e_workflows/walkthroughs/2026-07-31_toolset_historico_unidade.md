@@ -1,16 +1,17 @@
-# Walkthrough - Tratamento Visual de Veículos Inativos / Desvinculados
+# Walkthrough - Mapeamento dos Endpoints de Portaria e Visitantes (VDS v8)
 
 ## Alterações Realizadas
 
-### 🚫 Mapeamento & Estilização de Veículos Inativos
-1. **Regra de Verificação (`ativo`)**:
-   - Analisados os campos `item.ativo`, `auto.ativo`, `item.status` e datas de exclusão (`dtExclusao`, `dtFim`).
-   - Se `status !== 0` ou `ativo === false` ou se houver data de exclusão, o veículo é marcado como `'ativo' => false`.
-2. **Estilização no Frontend**:
-   - **Opacidade e Esmaecimento**: O card do veículo recebe `opacity: 0.65`, `filter: grayscale(30%)` e borda tracejada (`border: 1px dashed #b0bec5`).
-   - **Placa Neutra**: A placa do veículo inativo passa a ser renderizada em cor cinza (`grey darken-2`).
-   - **Badge de Inatividade**: Exibição da etiqueta `<i class="material-icons">block</i> INATIVO`.
-3. **Arquivos Atualizados**:
-   - [vds_acesso_service.php](file:///e:/DEV/recMan/classes/vds_acesso_service.php)
-   - [meu.js](file:///e:/DEV/recMan/meu.js)
-   - [palco/detalheRecurso.php](file:///e:/DEV/recMan/palco/detalheRecurso.php)
+### 🚪 Endpoints de Portaria e Visitantes Mapeados
+1. **Listar Visitantes por Destino (Unidade)**:
+   - `GET /portaria/visitante?DestinoUuid={unidadeUuid}&DestinoTipo=UNIDADE`
+   - Retorna lista de visitantes e prestadores vinculados à unidade (UUID, Foto, Nome, Documento CPF/RG/UF e Tipo).
+2. **Obter Detalhes do Visitante por UUID**:
+   - `GET /portaria/visitante/{visitanteUuid}`
+   - Retorna detalhes cadastrais completos (dados pessoais, empresa, veículo associado, telefone, e-mail, observações).
+3. **Consultar Validade e Status de Bloqueio do Visitante**:
+   - `GET /portaria/visitante/{visitanteUuid}/validade?tipo={tipoUuid}`
+   - Retorna a data/hora limite de validade e o booleano `bloqueado`.
+
+### Registro na Documentação Técnica (Skill)
+- Endpoints adicionados na especificação técnica [`skills/vds_api_v8/SKILL.md`](file:///e:/DEV/recMan/skills/vds_api_v8/SKILL.md) sob o grupo **C. Gestão Completa de Autorização de Acesso, Portaria, QR Codes & Convites Sociais**.
