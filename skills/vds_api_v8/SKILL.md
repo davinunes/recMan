@@ -1,185 +1,109 @@
 ---
 name: integração_api_vds_v8
-description: Especificação técnica completa de endpoints REST da API v8 do Vida de Síndico (vds.app.br / apiv8.vds.app.br) para autenticação, ocorrências (com busca por protocolo), comentários/respostas, marcação de leitura (PUT /ocorrencia/leitura), portaria, eventos de acesso, entregas e boletos.
+description: Especificação técnica completa de endpoints REST da API v8 do Vida de Síndico (vds.app.br / apiv8.vds.app.br) para autenticação, perfis, ocorrências, portaria, eventos de acesso, autorizações de acesso (CRUD, QR Codes, convites sociais, aprovação e relatórios), obras, entregas, boletos e reservas.
 ---
 
 # Skill: Integração com API v8 (Vida de Síndico / apiv8.vds.app.br)
 
-Esta skill fornece todas as diretrizes, endpoints, headers e payloads para comunicação direta backend-to-backend com a API v8 da plataforma Vida de Síndico.
+Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especificações da documentação OpenAPI v8 (Swagger oficial + inspeções de rede) para comunicação direta backend-to-backend com a plataforma Vida de Síndico.
 
 ## 1. Base URL e Autenticação
 
 - **Base URL:** `https://apiv8.vds.app.br`
+- **Swagger JSON:** `https://apiv8.vds.app.br/swagger/public/swagger.json`
 - **Origin Header:** `https://app1.vidadesindico.com.br`
 - **Padrão de Autenticação:** Bearer Token JWT/JWE no header `Authorization`.
 
 ### Estratégia de Tokens
-1. **Token do Usuário (Conselheiro):** Utilizado para a **Visão Prática** (consultar ocorrências não lidas com `Lida=0`) e marcação de leitura.
-2. **Token do Sistema (Condomínio):** Utilizado para **Sincronizações Globais/Automáticas** (consultar todas as ocorrências com `Lida=9`).
+1. **Token do Usuário (Conselheiro / Morador):** Utilizado para a **Visão Prática** (consultar ocorrências não lidas com `Lida=0`), marcação de leitura, criação de reservas e autorizações de acesso.
+2. **Token do Sistema (Condomínio):** Utilizado para **Sincronizaciones Globais/Automáticas** (consultar todas as ocorrências com `Lida=9`).
 
 ---
 
 ## 2. Endpoints Mapeados por Módulo
 
-### A. Ocorrências e Fale Com
+### A. Autenticação, Usuário & Perfil
+- **Obter Token Anônimo (Boot Captcha):** `POST /auth/anon` (Body Schema: `AnonTokenRequest` - `{ captchaToken, condominioUuid }`)
+- **Login de Usuário:** `POST /login` (Body Schema: `LoginForm` - `{ username, password, app, crypt }`)
+- **Renovar Token (Refresh):** `POST /login/refresh` (Body Schema: `LoginRefresh` - `{ token, refreshToken, condominioId, crypt }`)
+- **Dados do Perfil Autenticado:** `GET /perfil` (Retorna `usuario`, `condominio` e `papel`)
+- **Tipos de Documento de Identificação:** `GET /pessoa_documento_tipo?Condominio.Uuid={condominioUuid}`
+
+### B. Ocorrências e Fale Com
 - **Listar Não Lidos (Modo Prático - Token Usuário):** `GET /ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0`
 - **Listar Todas / Sincronização Global (Token Sistema):** `GET /ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9`
 - **Buscar por Número do Protocolo:** `GET /ocorrencia?page=1&limit=20&sortBy=dtExibicao&order=desc&Lida=9&Protocolo={numeroProtocolo}&Caixa=0`
 - **Detalhes da Ocorrência:** `GET /ocorrencia/{ocorrenciaUuid}`
-  - Retorna a estrutura com array `eventos[]` contendo histórico completo de mensagens, fotos, remetente, cargo e anexos.
 - **Publicar Resposta / Comentário em Ocorrência Existente:** `POST /ocorrencia/comentario`
+- **Alternar Estado de Leitura (Toggle Lido/Não Lido):** `PUT /ocorrencia/leitura/{ocorrenciaUuid}`
+- **Marcar Ocorrência como Visualizada:** `PUT /ocorrencia/visualizar/{ocorrenciaUuid}`
+- **Upload de Mídia / Anexos:** `POST /upload`
+
+### C. Gestão Completa de Autorização de Acesso, QR Codes & Convites Sociais
+- **Listar Autorizações (Paginado):** `GET /autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}&dtIni={YYYY-MM-DD}&dtFim={YYYY-MM-DD}`
+- **Criar Autorização de Acesso:** `POST /autorizacao_acesso` (Body Schema: `AutorizacaoAcessoForm`)
+- **Obter Detalhes da Autorização por UUID:** `GET /autorizacao_acesso/{uuid}`
+- **Atualizar Autorização de Acesso:** `PUT /autorizacao_acesso/{uuid}`
+- **Excluir Autorização de Acesso:** `DELETE /autorizacao_acesso/{uuid}`
+- **Obter Autorização por Chave de Convite:** `GET /autorizacao_acesso/convite/{chave}`
+- **Obter Autorização por UUID da Reserva:** `GET /autorizacao_acesso/reserva/{uuid}`
+- **Listar Tipos de Convite Social Disponíveis:** `GET /autorizacao_acesso_convite`
+- **Buscar Pessoa por Documento:** `GET /autorizacao_acesso/documento_pessoa`
+- **Listar Vagas Disponíveis para Reserva por Tipo:** `GET /autorizacao_acesso/reserva_vaga?Tipo={tipoInt}`
+- **Listar Status Possíveis de Autorização:** `GET /autorizacao_acesso/status`
+- **Remover Pessoa da Lista de Autorização:** `DELETE /autorizacao_acesso/lista/{uuid}`
+- **Validar Autorização de Acesso:** `GET /autorizacao_acesso/validade`
+- **Salvar Visitante Convidado (Criar/Atualizar):** `POST /autorizacao_acesso/convite` (Body Schema: `ConviteAutorizacaoAcessoForm`)
+- **Consultar Convite por Documento do Visitante:** `GET /autorizacao_acesso/convite/visitante`
+- **Confirmar Uso de Convite Social (Portaria):** `PUT /autorizacao_acesso/{uuid}/confirmar_convite`
+- **Gerar Relatório de Autorizações:** `GET /autorizacao_acesso/relatorio`
+- **Listar Tipos de Autorização:** `GET /autorizacao_acesso_tipo`
+- **Obter Período Limite por Tipo:** `GET /autorizacao_acesso_tipo/periodo_limite`
+- **Obter Mensagem Informativa de Período:** `GET /autorizacao_acesso_tipo/mensagem_periodo`
+- **Gerar QR Code de Convite:** `POST /autorizacao_acesso_qrcode/gerar`
+- **Gerar Convite Social:** `POST /autorizacao_acesso_convite/gerar`
+- **Revogar QR Code:** `POST /autorizacao_acesso_qrcode/revogar` (Body Schema: `QRCodeAutorizacaoAcessoForm`)
+- **Revogar Convite Social:** `POST /autorizacao_acesso_convite/revogar` (Body Schema: `QRCodeAutorizacaoAcessoForm`)
+- **Aprovar Convite Social Pendente:** `POST /autorizacao_acesso_convite/aprovar`
+- **Aprovar QR Code Pendente:** `POST /autorizacao_acesso_qrcode/aprovar`
+- **Notificar Detalhes por E-mail:** `POST /autorizacao_acesso/notifica_email` (Body Schema: `AutorizacaoAcessoNotificaEmailForm`)
+- **Saldo de Convites Sociais Disponíveis:** `GET /autorizacao_acesso_convite/quantidade`
+
+### D. Eventos de Acesso & Entregas
+- **Listar Acessos por Período e Unidade:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={dtInicio}&dtFim={dtFim}&unidade.uuid={unidadeUuid}`
+- **Listar Entregas por Unidade:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc&Unidade.Uuid={unidadeUuid}`
+- **Detalhes da Entrega:** `GET /entrega/{uuid}`
+
+### E. Estrutura Física, Moradores & Obras
+- **Listar Blocos:** `GET /bloco?Combo=True&IsAdmin=false`
+- **Listar Unidades por Bloco:** `GET /unidade?Combo=True&bloco.uuid={blocoUuid}`
+- **Listar Moradores por Unidade:** `GET /morador?Unidade.Uuid={unidadeUuid}&Combo=true`
+- **Listar Obras da Unidade/Bloco:** `GET /obra?Unidade.Uuid={unidadeUuid}&Bloco.Uuid={blocoUuid}`
+
+### F. Financeiro & Boletos
+- **Listar Boletos por Unidade:** `GET /boleto?page=1&limit=20&sortBy=status&order=asc&Ano={Ano}&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
+
+### G. Áreas Comuns, Reservas & Fila de Espera
+- **Listar Áreas Comuns (Recursos):** `GET /area_comum?Bloco.Uuid={blocoUuid}&Condominio.Uuid={condominioUuid}&Convite=False&Ativo=True&AgrupadorMenu=1`
+- **Consultar Calendário de Ocupação:** `GET /reserva_calendario?recursoUuid={recursoUuid}`
+- **Consultar Horários Disponíveis:** `GET /reserva_horario?Recurso.Uuid={recursoUuid}&tipoPeriodo=H&data={dtReserva}`
+- **Consultar Termo de Aceite:** `GET /reserva_termo?Morador.Uuid={moradorUuid}&Recurso.Uuid={recursoUuid}&DtReserva={dtReserva}`
+- **Consultar Opcionais da Área Comum:** `GET /area_comum_opcional?DtIni={dtReserva}&DtFim={dtReserva}&Recurso.Uuid={recursoUuid}`
+- **Listar Reservas (Filtros por Recurso, Data e Status):** `GET /reserva?Recurso.Uuid={recursoUuid}&DtIni={dtIni}&DtFim={dtFim}&Agendamento=false&ReservaCalendario=true`
+- **Consultar Histórico da Reserva:** `GET /reserva_historico/{uuid}`
+- **Realizar Reserva ou Entrar na Fila de Espera (POST Único):** `POST /reserva`
   - Body Payload:
     ```json
     {
-      "uuid": "{ocorrenciaUuid}",
-      "mensagem": "Texto da resposta do Conselho",
-      "ocorrenciaPaiId": 51970481
+      "morador": { "uuid": "{moradorUuid}" },
+      "unidade": { "uuid": "{unidadeUuid}", "bloco": { "uuid": "{blocoUuid}" } },
+      "recurso": { "uuid": "{recursoUuid}" },
+      "dtIni": "04/08/2026 18:00",
+      "dtFim": "04/08/2026 22:00",
+      "termoUso": true,
+      "permissao": false,
+      "isencaoTaxaReserva": false,
+      "taxaLimpeza": false
     }
     ```
-- **Alternar Estado de Leitura (Toggle Lido/Não Lido):** `PUT /ocorrencia/leitura/{ocorrenciaUuid}`
-  - Header: `Authorization: Bearer <token_usuario>`, `Content-Length: 0` (Corpo Vazio).
-- **Marcar Ocorrência como Visualizada:** `PUT /ocorrencia/visualizar/{ocorrenciaUuid}`
-  - Header: `Authorization: Bearer <token_usuario>`, `Content-Length: 0` (Corpo Vazio).
-- **Ordens de Serviço:** `GET /ocorrencia/{ocorrenciaUuid}/ordem-servico`
-- **Upload de Mídia / Anexos:** `POST /upload`
-  - Body: `{"base64String": "data:image/png;base64,..."}`
-
-### B. Eventos de Acesso, Portaria e Autorizações
-- **Listar Acessos (Entradas/Saídas) por Período:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={YYYY-MM-DDTHH:mm}&dtFim={YYYY-MM-DDTHH:mm}`
-- **Listar Acessos por Unidade:** `GET /evento_acesso?page=1&limit=21&sortBy=dthora&order=desc&dtInicio={dtInicio}&dtFim={dtFim}&unidade.bloco.uuid={blocoUuid}&unidade.uuid={unidadeUuid}`
-- **Obter Detalhes do Evento de Acesso por UUID:** `GET /evento_acesso/{uuid}`
-- **Tipos de Eventos de Acesso:** `GET /evento_tipo`
-- **Estrutura do Payload de Retorno de Eventos de Acesso (`GET /evento_acesso`):**
-  ```json
-  {
-    "totalRegs": 231,
-    "page": 1,
-    "limit": 21,
-    "regs": [
-      {
-        "uuid": "659990713",
-        "nome": "Acesso liberado",
-        "dispositivo": "Facial",
-        "moradorNome": "Fulano de Tal",
-        "moradorTipo": "Proprietário",
-        "foto": "https://app.vidadesindico.com.br/app/dados/cond/1441/foto/PESSOA/f-0000000.jpg",
-        "bloco": "Bloco B",
-        "unidade": "1302",
-        "modulo": "Catraca P1 Saida",
-        "receptor": "Facial",
-        "saida": "Saída",
-        "dthora": "2026-07-29T17:42:50",
-        "descricao": "",
-        "processado": false
-      }
-    ]
-  }
-  ```
-- **Listar Autorizações de Acesso / Convites da Unidade:** `GET /autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}&dtIni={YYYY-MM-DD}&dtFim={YYYY-MM-DD}`
-  - **Diferença:** `/evento_acesso` registra os logs de passagens reais na portaria/catraca (entradas e saídas). Já `/autorizacao_acesso` retorna os convites/autorizações prévias concedidas pelos moradores para visitantes e prestadores (com `dtInicio`, `dtFim`, `documento`, `autorizadoPor`, `chave` e status).
-  - **Estrutura do Payload de Retorno (`GET /autorizacao_acesso`):**
-    ```json
-    {
-      "totalRegs": 4,
-      "page": 1,
-      "limit": 20,
-      "regs": [
-        {
-          "uuid": "3189919",
-          "nome": "NOME DO VISITANTE / PRESTADOR",
-          "foto": "/app/dados/visitante/2026/6/f-9102677.jpg",
-          "documento": { "tipo": "rg", "documento": "00000000000", "estado": null },
-          "destino": "Bloco D - 902",
-          "destinoTipo": "Unidade",
-          "status": { "uuid": "1", "nome": "Env. pend." },
-          "dtInicio": "28/03/2026 00:00",
-          "dtFim": "10/11/2026 23:59",
-          "autorizadoPor": { "uuid": null, "nome": "Nome do Morador", "foto": null },
-          "registradoPor": { "uuid": null, "nome": "Nome do Operador", "foto": null },
-          "chave": "OA59FGHM",
-          "dtHora": "28/03/2026 14:18"
-        }
-      ]
-    }
-    ```
-
-### C. Entregas e Encomendas
-- **Listar Entregas:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc`
-- **Listar Entregas por Unidade:** `GET /entrega?page=1&limit=21&sortBy=dthora&order=desc&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
-- **Obter Detalhes da Entrega por UUID:** `GET /entrega/{uuid}`
-- **Marcar Ocorrência/Entrega como Visualizada:** `PUT /ocorrencia/visualizar/{uuid}`
-- **Estrutura do Payload de Retorno do Detalhe (`GET /entrega/{uuid}`):**
-  ```json
-  {
-    "uuid": "f362a58e-cfc7-446b-bc38-4b82d9d3d426",
-    "protocolo": "259972",
-    "identificador": "TBR403931961",
-    "descricao": "Prezado ..., encontra-se na sala da correspondência ...",
-    "foto": "/app/dados/cond/1441/ocorrencia/13f230c0-6004-4c17-8864-efbde0232bff.jpg",
-    "dthora": "29/07/2026 17:36:32",
-    "dtFim": "29/07/2026 18:21:47",
-    "status": true,
-    "tipo": { "uuid": "33", "nome": "Entrega", "nomeCompleto": "Entrega" },
-    "destinoNome": "Bloco A - 1306",
-    "unidade": { "uuid": "7b006c67-...", "nome": "1306", "bloco": { "uuid": "f0a6b46d-...", "nome": "Bloco A" } },
-    "registradoPor": { "uuid": "ae295eaf-...", "nome": "Nome do Funcionário", "foto": "/app/dados/cond/1441/foto/PESSOA/p-1144363.jpeg" },
-    "retiradoPor": { "uuid": "2f42d2a2-...", "nome": "Nome de Quem Retirou", "foto": "/app/dados/cond/1441/foto/PESSOA/f-1140167.jpg" },
-    "anexos": [
-      { "uuid": "15880747", "nome": "Foto_x.jpg", "arquivoNome": "13f230c0-...jpg", "url": "/app/dados/cond/1441/ocorrencia/...", "dthora": "29/07/2026 17:36:39" }
-    ],
-    "eventos": [
-      { "uuid": "30041966", "status": { "uuid": "5", "nome": "Recebido" }, "registradoPor": { ... } },
-      { "uuid": "30041993", "status": { "uuid": "3", "nome": "Encaminhado" }, "registradoPor": { ... } },
-      { "uuid": "30042062", "status": { "uuid": "7", "nome": "Not. morador" }, "registradoPor": { ... } },
-      { "uuid": "30045468", "status": { "uuid": "8", "nome": "Ent. morador" }, "registradoPor": { ... }, "retiradoPor": { ... } }
-    ]
-  }
-  ```
-
-### D. Estrutura Física
-- **Listar Blocos:** `GET /bloco?Combo=True&IsAdmin=false`
-- **Listar Unidades:** `GET /unidade?Combo=True&bloco.uuid={blocoUuid}`
-
-### E. Financeiro e Boletos
-- **Listar Boletos por Unidade:** `GET /boleto?page=1&limit=20&sortBy=status&order=asc&Ano={Ano}&Bloco.Uuid={blocoUuid}&Unidade.Uuid={unidadeUuid}`
-  - **Estrutura do Payload de Retorno:**
-    ```json
-    {
-      "totalRegs": 8,
-      "page": 1,
-      "limit": 0,
-      "regs": [
-        {
-          "uuid": "49096814",
-          "nomeSacado": "NOME DO MORADOR",
-          "dtVencimento": "2026-01-10",
-          "valor": 552.57,
-          "status": "Liquidado",
-          "descricao": "Taxa Condominial",
-          "msgReserva": null,
-          "urlSegundaVia": "https://solucoesdf.superlogica.net/clients/areadocondomino/publico/cobranca/c/49096814-6f020be4485ef84d6a7685ebd9aa4162128592de-200-FaturaHtml-flSegundaVia",
-          "tipo": "Unidade",
-          "dtReferencia": "2026-01-10",
-          "fonte": "SL"
-        }
-      ]
-    }
-    ```
-
-#### Pipeline de Auditoria e Detecção de Multa / Regimento Interno (RI) em Faturas:
-Para verificar se uma infração/multa ou penalidade do Regimento Interno foi efetivamente cobrada no boleto da unidade:
-
-1. **Nível 1 (Análise Primária no JSON):**
-   - Inspecionar os campos `descricao` e `msgReserva` no objeto do boleto.
-   - Caso contenha palavras-chave (`Multa`, `Infração`, `Regimento Interno`, `RI`, `Advertência`, `Penalidade`), sinalizar diretamente como cobrança disciplinar.
-
-2. **Nível 2 (Inspecionar Espelho HTML - Superlógica `FaturaHtml`):**
-   - O campo `urlSegundaVia` fornece o link público tokenizado do Superlógica (`-FaturaHtml-flSegundaVia`).
-   - Efetuar uma requisição `HTTP GET` pública na `urlSegundaVia` (sem necessity do header `Authorization` da VDS).
-   - Parsear a resposta HTML e analisar os itens discriminados da fatura (ex: tabela de composição do boleto).
-   - Regex de busca por termos disciplinares: `/(multa|infra[çc][ãa]o|regimento\s*interno|\bri\b|penalidade|artigo)/i`.
-
-3. **Nível 3 (Parsing de PDF - Fallback):**
-   - Se a `urlSegundaVia` redirecionar para um arquivo PDF ou se a requisição retornar `Content-Type: application/pdf`, capturar o stream binário.
-   - Processar a extração de texto do PDF via biblioteca de parser (`smalot/pdfparser` ou `pdftotext`).
-   - Aplicar a mesma busca por regex nos itens da fatura discriminada para extrair o valor e a justificativa da multa lançada.
+  - **Nota de Comportamento**: Se o recurso estiver livre $\rightarrow$ HTTP 200 com `"message": "Registrada com status: Reserva aprovada"` (`status.uuid: "2"`). Se já estiver ocupado $\rightarrow$ HTTP 200 com `"message": "Registrada com status: Fila de espera"` (`status.uuid: "5"`).

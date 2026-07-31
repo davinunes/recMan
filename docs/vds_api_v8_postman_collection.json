@@ -2,10 +2,8 @@
   "info": {
     "_postman_id": "0b3a0e26-a477-4932-a589-414755dcb2df",
     "name": "Vida de Síndico (VDS) - API v8 Back-to-Back Integration",
-    "description": "Coleção Postman contendo todos os endpoints RESTful da API v8 da plataforma Vida de Síndico para autenticação, ocorrências (com busca por protocolo, comentários, leitura/visualização PUT), portaria, entregas, boletos e mapeamento de blocos e unidades.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "27094489",
-    "_collection_link": "https://go.postman.co/collection/27094489-0b3a0e26-a477-4932-a589-414755dcb2df?source=collection_link"
+    "description": "Coleção Postman super-enriquecida contendo 100% dos endpoints RESTful da API v8 da plataforma Vida de Síndico (OpenAPI 3.0.1 + Mapeamento DevTools). Inclui Autenticação, Perfis, Ocorrências, Portaria, Entregas, Gestão Completa de Autorização de Acesso (Convites Sociais, QR Codes, Aprovações, Relatórios), Estrutura Física, Obras, Boletos e Reservas com Fila de Espera.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -263,7 +261,81 @@
       ]
     },
     {
-      "name": "2. Ocorrências e Fale Com",
+      "name": "2. Usuário, Perfil & Documentos",
+      "item": [
+        {
+          "name": "2.1 Obter Dados do Perfil Autenticado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "perfil"
+              ]
+            },
+            "description": "### Dados do usuário autenticado\n\nRetorna perfil completo do usuário autenticado, condomínio ativo e nível de permissão (papel)."
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Listar Tipos de Documentos de Identificação",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pessoa_documento_tipo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pessoa_documento_tipo"
+              ],
+              "query": [
+                {
+                  "key": "Condominio.Uuid",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "### Retorna lista não paginada de tipos de documentos\n\nRetorna os tipos de documentos cadastrados no condomínio (ex: CPF, RG, CNH)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Ocorrências e Fale Com",
       "item": [
         {
           "name": "2.1 Listar Ocorrências Não Lidas (Modo Prático)",
@@ -596,7 +668,7 @@
       ]
     },
     {
-      "name": "3. Portaria e Eventos de Acesso",
+      "name": "4. Portaria, Entregas & Eventos de Acesso",
       "item": [
         {
           "name": "3.1 Eventos de Acesso por Período e Unidade",
@@ -789,14 +861,1172 @@
                 }
               ]
             },
-            "description": "Retorna as autorizações de acesso e convites prévios (liberações de visitantes/prestadores) cadastrados pelos moradores da unidade."
+            "description": "Lista autorizações de acesso com paginação e ordenação"
           },
           "response": []
         }
       ]
     },
     {
-      "name": "4. Estrutura Física e UUIDs",
+      "name": "5. Autorizações de Acesso, Convites & QR Codes",
+      "item": [
+        {
+          "name": "3.4 Listar Autorizações de Acesso por Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso?page=1&limit=20&sortBy=nome&order=asc&Bloco.Uuid={{blocoUuid}}&Unidade.Uuid={{unidadeUuid}}&dtIni=2026-07-28&dtFim=2026-07-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "nome"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                },
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "{{blocoUuid}}"
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}"
+                },
+                {
+                  "key": "dtIni",
+                  "value": "2026-07-28"
+                },
+                {
+                  "key": "dtFim",
+                  "value": "2026-07-30"
+                }
+              ]
+            },
+            "description": "Lista autorizações de acesso com paginação e ordenação"
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Criar Nova Autorização de Acesso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso"
+              ]
+            },
+            "description": "### Cria uma nova autorização de acesso para visitantes\n\n**Tipo**: 0 = Unidade, 1 = AreaComum, 2 = Obra, 3 = Convite, 4 = ListaConvite, 5 = Condominio\r\n            \r\n**Pessoas[].Tipo**: objeto obrigatório com Uuid e Nome do tipo de visitante — obtido via rota `autorizacao_acesso_tipo`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": 1,\n  \"prestadorTipo\": {},\n  \"destino\": {\n    \"unidade\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"morador\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"recurso\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"reserva\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"obra\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"convite\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"conviteTexto\": \"exemplo_conviteTexto\",\n    \"interfonar\": true\n  },\n  \"pessoas\": [\n    {\n      \"nome\": \"exemplo_nome\",\n      \"email\": \"exemplo_email\",\n      \"telefone\": \"exemplo_telefone\",\n      \"tipo\": {},\n      \"documento\": {},\n      \"veiculo\": {},\n      \"reservarVaga\": true,\n      \"origemUuid\": \"00000000-0000-0000-0000-000000000000\",\n      \"origemTipo\": \"exemplo_origemTipo\",\n      \"fotoBase64\": \"exemplo_fotoBase64\"\n    }\n  ],\n  \"periodos\": [\n    {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\",\n      \"dtHoraIni\": \"2026-07-30\",\n      \"dtHoraFim\": \"2026-07-30\",\n      \"horaIni\": \"exemplo_horaIni\",\n      \"horaFim\": \"exemplo_horaFim\",\n      \"segunda\": true,\n      \"terca\": true,\n      \"quarta\": true,\n      \"quinta\": true,\n      \"sexta\": true,\n      \"sabado\": true,\n      \"domingo\": true\n    }\n  ],\n  \"listaConvidados\": true,\n  \"observacao\": \"exemplo_observacao\",\n  \"visitanteQR\": 1,\n  \"isAdmin\": true,\n  \"permissaoReserva\": true,\n  \"renovar\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Obter Detalhes da Autorização por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/{uuid}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "{{uuid}}"
+              ]
+            },
+            "description": "### Obtém detalhes de uma autorização de acesso específica\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Atualizar Autorização de Acesso",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/{uuid}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "{{uuid}}"
+              ]
+            },
+            "description": "### Atualiza uma autorização de acesso existente\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": 1,\n  \"prestadorTipo\": {},\n  \"destino\": {\n    \"unidade\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"morador\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"recurso\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"reserva\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"obra\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"convite\": {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\"\n    },\n    \"conviteTexto\": \"exemplo_conviteTexto\",\n    \"interfonar\": true\n  },\n  \"pessoas\": [\n    {\n      \"nome\": \"exemplo_nome\",\n      \"email\": \"exemplo_email\",\n      \"telefone\": \"exemplo_telefone\",\n      \"tipo\": {},\n      \"documento\": {},\n      \"veiculo\": {},\n      \"reservarVaga\": true,\n      \"origemUuid\": \"00000000-0000-0000-0000-000000000000\",\n      \"origemTipo\": \"exemplo_origemTipo\",\n      \"fotoBase64\": \"exemplo_fotoBase64\"\n    }\n  ],\n  \"periodos\": [\n    {\n      \"uuid\": \"00000000-0000-0000-0000-000000000000\",\n      \"dtHoraIni\": \"2026-07-30\",\n      \"dtHoraFim\": \"2026-07-30\",\n      \"horaIni\": \"exemplo_horaIni\",\n      \"horaFim\": \"exemplo_horaFim\",\n      \"segunda\": true,\n      \"terca\": true,\n      \"quarta\": true,\n      \"quinta\": true,\n      \"sexta\": true,\n      \"sabado\": true,\n      \"domingo\": true\n    }\n  ],\n  \"listaConvidados\": true,\n  \"observacao\": \"exemplo_observacao\",\n  \"visitanteQR\": 1,\n  \"isAdmin\": true,\n  \"permissaoReserva\": true,\n  \"renovar\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 Excluir Autorização de Acesso",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/{uuid}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "{{uuid}}"
+              ]
+            },
+            "description": "### Exclui uma autorização de acesso\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.6 Obter Autorização por Chave de Convite",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/convite/{chave}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "convite",
+                "{{chave}}"
+              ]
+            },
+            "description": "### Obtém autorização de acesso pela chave do convite\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.7 Obter Autorização por UUID da Reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/reserva/{uuid}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "reserva",
+                "{{uuid}}"
+              ]
+            },
+            "description": "### Obtém autorização de acesso pelo UUID da reserva\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.8 Listar Tipos de Convite Social Disponíveis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_convite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_convite"
+              ]
+            },
+            "description": "### Obtém os tipos de convite social disponíveis para autorização de acesso\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.9 Buscar Pessoa por Documento",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/documento_pessoa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "documento_pessoa"
+              ],
+              "query": [
+                {
+                  "key": "DocumentoTipo",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Documento",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Nome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Pai",
+                  "value": "",
+                  "description": "UUID da autorização pai (usado para verificar se a pessoa já existe em uma autorização relacionada)"
+                }
+              ]
+            },
+            "description": "### Busca dados de pessoa por documento em autorizações anteriores\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.10 Listar Vagas Disponíveis para Reserva por Tipo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/reserva_vaga",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "reserva_vaga"
+              ],
+              "query": [
+                {
+                  "key": "Tipo",
+                  "value": "",
+                  "description": "Tipo de visitante"
+                }
+              ]
+            },
+            "description": "### Lista vagas disponíveis para reserva por tipo de visitante\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.11 Listar Status Possíveis de Autorização",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "status"
+              ]
+            },
+            "description": "### Lista todos os status possíveis para autorizações de acesso\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.12 Remover Pessoa da Lista de Autorização",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/lista/{uuid}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "lista",
+                "{{uuid}}"
+              ]
+            },
+            "description": "### Remove uma pessoa da lista de uma autorização de acesso\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.13 Validar Autorização de Acesso no Momento",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/validade",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "validade"
+              ],
+              "query": [
+                {
+                  "key": "Autorizacao.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "FusoHorario",
+                  "value": "",
+                  "description": "Fuso horário para validação da autorização (ex: \"-03:00\")"
+                }
+              ]
+            },
+            "description": "### Valida se uma autorização de acesso está válida no momento\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.14 Salvar Visitante Convidado (Criar/Atualizar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/convite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "convite"
+              ]
+            },
+            "description": "### Salva os dados do visitante convidado, criando ou atualizando uma autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chave\": \"exemplo_chave\",\n  \"nome\": \"exemplo_nome\",\n  \"documentoTipo\": \"exemplo_documentoTipo\",\n  \"documento\": \"exemplo_documento\",\n  \"documentoEstado\": \"exemplo_documentoEstado\",\n  \"fotoBase64\": \"exemplo_fotoBase64\",\n  \"status\": 1,\n  \"veiculoMarcaModelo\": \"exemplo_veiculoMarcaModelo\",\n  \"veiculoCor\": \"exemplo_veiculoCor\",\n  \"veiculoPlaca\": \"exemplo_veiculoPlaca\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.15 Consultar Convite por Documento do Visitante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/convite/visitante",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "convite",
+                "visitante"
+              ],
+              "query": [
+                {
+                  "key": "Tipo",
+                  "value": "",
+                  "description": "Tipo de documento do visitante (cpf, rg, p)"
+                },
+                {
+                  "key": "Documento",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "PaiUuid",
+                  "value": "",
+                  "description": "UUID da autorização pai (autorizações relacionadas)"
+                }
+              ]
+            },
+            "description": "### Consulta convite de autorização de acesso para visitante pelo documento\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.16 Confirmar Uso de Convite Social",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/{uuid}/confirmar_convite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "{{uuid}}",
+                "confirmar_convite"
+              ]
+            },
+            "description": "### Confirma a utilização de um convite social\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.17 Gerar Relatório de Autorizações de Acesso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/relatorio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "relatorio"
+              ],
+              "query": [
+                {
+                  "key": "Nome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "DtIni",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "DtFim",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Nome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "TipoAutorizacao",
+                  "value": "",
+                  "description": "Tipo de autorização de acesso"
+                },
+                {
+                  "key": "Destino",
+                  "value": "",
+                  "description": "Tipo de destino da autorização (Ex: Unidade = \"U\", AreaComum = \"A\", Obra = \"O\", Convite = \"C\")"
+                },
+                {
+                  "key": "TemQRCode",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "AreaComum.Uuid",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "### Gera relatório de autorizações de acesso com filtros personalizados\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.18 Listar Tipos de Autorização de Acesso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_tipo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_tipo"
+              ]
+            },
+            "description": "### Lista os tipos de autorização de acesso disponíveis para o condomínio\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.19 Obter Período Limite por Tipo de Visitante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_tipo/periodo_limite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_tipo",
+                "periodo_limite"
+              ],
+              "query": [
+                {
+                  "key": "DtHoraIni",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Tipo",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Convite",
+                  "value": "False",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "### Obtém o período limite para uma autorização baseado na data inicial e tipo de visitante\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.20 Obter Mensagem Informativa de Período",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_tipo/mensagem_periodo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_tipo",
+                "mensagem_periodo"
+              ],
+              "query": [
+                {
+                  "key": "Uuid",
+                  "value": "",
+                  "description": "Uuid do tipo de visitante"
+                },
+                {
+                  "key": "Nome",
+                  "value": "",
+                  "description": "Nome do tipo de visitante"
+                }
+              ]
+            },
+            "description": "### Obtém mensagem de período para um tipo de autorização específico\n\n"
+          },
+          "response": []
+        },
+        {
+          "name": "5.21 Gerar QR Code de Convite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_qrcode/gerar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_qrcode",
+                "gerar"
+              ]
+            },
+            "description": "### Gera o QR Code para uma autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.22 Gerar Convite Social",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_convite/gerar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_convite",
+                "gerar"
+              ]
+            },
+            "description": "### Gera o convite para uma autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.23 Revogar QR Code de Autorização",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_qrcode/revogar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_qrcode",
+                "revogar"
+              ]
+            },
+            "description": "### Revoga o QR Code de uma autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.24 Revogar Convite Social",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_convite/revogar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_convite",
+                "revogar"
+              ]
+            },
+            "description": "### Revoga o convite de uma autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.25 Aprovar Convite Social Pendente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_convite/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_convite",
+                "aprovar"
+              ]
+            },
+            "description": "### Aprova o convite de uma autorização de acesso pendente\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.26 Aprovar QR Code Pendente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_qrcode/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_qrcode",
+                "aprovar"
+              ]
+            },
+            "description": "### Aprova o convite de uma autorização de acesso pendente\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitanteQR\": 1,\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.27 Notificar Detalhes por E-mail",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso/notifica_email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso",
+                "notifica_email"
+              ]
+            },
+            "description": "### Envia notificação por e-mail com detalhes da autorização de acesso\n\n",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"autorizacaoUuid\": \"{{autorizacaoUuid}}\",\n  \"fusoHorario\": \"exemplo_fusoHorario\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.28 Saldo/Quantidade Disponível de Convites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/autorizacao_acesso_convite/quantidade",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "autorizacao_acesso_convite",
+                "quantidade"
+              ],
+              "query": [
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Nome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "DtIni",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "DtFim",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Convite.Uuid",
+                  "value": "",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "### Retorna a quantidade disponível de convite social da unidade pelo período\n\n"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Estrutura Física, Obras & Unidades",
       "item": [
         {
           "name": "4.1 Listar Blocos do Condomínio",
@@ -1036,11 +2266,134 @@
             "description": "Generated from cURL: curl 'https://apiv8.vds.app.br/morador?Unidade.Uuid=ec283937-fb6b-4df0-b049-92918396f657&limit=1000&status=true&sortBy=Pessoa.Nome&order=asc&Combo=true&Entrega=false' \\\r\n  -H 'accept: application/json, text/plain, */*' \\\r\n  -H 'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7' \\\r\n  -H 'authorization: Bearer token' \\\r\n  -H 'origin: https://app1.vidadesindico.com.br' \\\r\n  -H 'priority: u=1, i' \\\r\n  -H 'referer: https://app1.vidadesindico.com.br/' \\\r\n  -H 'sec-ch-ua: \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Google Chrome\";v=\"150\"' \\\r\n  -H 'sec-ch-ua-mobile: ?0' \\\r\n  -H 'sec-ch-ua-platform: \"Windows\"' \\\r\n  -H 'sec-fetch-dest: empty' \\\r\n  -H 'sec-fetch-mode: cors' \\\r\n  -H 'sec-fetch-site: cross-site' \\\r\n  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit"
           },
           "response": []
+        },
+        {
+          "name": "6.4 Listar Obras da Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/obra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obra"
+              ],
+              "query": [
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Nome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade.Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Bloco.Uuid",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Status",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Dtini",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Dtfim1",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Vigente",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Obra",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "ObraNome",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Bloco1",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Unidade1",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "FiltroData",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "Combo",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": ""
+                },
+                {
+                  "key": "sortBy",
+                  "value": "nome",
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "### Retorna lista paginada de obras\n\n"
+          },
+          "response": []
         }
       ]
     },
     {
-      "name": "5. Financeiro e Boletos",
+      "name": "7. Financeiro, Reservas & Áreas Comuns",
       "item": [
         {
           "name": "5.1 Listar Boletos por Bloco e Unidade",
@@ -1098,12 +2451,7 @@
             "description": "Consulta os boletos e lançamentos financeiros de uma unidade filtrados por ano, bloco e unidade."
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "6. Áreas Comuns & Reservas",
-      "item": [
+        },
         {
           "name": "6.1 Listar Áreas Comuns (Recursos Reserváveis)",
           "request": {
