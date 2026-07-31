@@ -912,35 +912,6 @@ function vds_flush_pending_reads($usuarioIdConselho = null) {
     return $flushedCount;
 }
 
-    // Atualizar flag local em dados_json
-    if ($ocorrenciaId || $uuidRemoto) {
-        $link = DBConnect();
-        $stmtFind = mysqli_prepare($link, "SELECT id, dados_json FROM ocorrencias WHERE id = ? OR uuid_remoto = ? LIMIT 1");
-        $ocoInt = (int)$ocorrenciaId;
-        $uuidStr = (string)$uuidRemoto;
-        mysqli_stmt_bind_param($stmtFind, "is", $ocoInt, $uuidStr);
-        mysqli_stmt_execute($stmtFind);
-        $resFind = mysqli_stmt_get_result($stmtFind);
-        $rowFind = mysqli_fetch_assoc($resFind);
-        mysqli_stmt_close($stmtFind);
-
-        if ($rowFind) {
-            $dados = !empty($rowFind['dados_json']) ? json_decode($rowFind['dados_json'], true) : [];
-            $dados['lida'] = (bool)$novoStatusLido;
-            $dados['isLida'] = (bool)$novoStatusLido;
-            $jsonUp = json_encode($dados, JSON_UNESCAPED_UNICODE);
-
-            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET dados_json = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmtUp, "si", $jsonUp, $rowFind['id']);
-            mysqli_stmt_execute($stmtUp);
-            mysqli_stmt_close($stmtUp);
-        }
-        DBClose($link);
-    }
-
-    return ['success' => true, 'message' => $novoStatusLido ? 'Ocorrência marcada como LIDA na VDS!' : 'Ocorrência marcada como NÃO LIDA na VDS!'];
-}
-
 /**
  * Adiciona uma tag livre com auto-detecção de tipo (Unidade B1108 ou Notificação 123/2026).
  */
