@@ -38,6 +38,8 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Origin: ' . VDS_ORIGIN_HEADER
@@ -214,6 +216,8 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
             $chSearch = curl_init($urlSearch);
             curl_setopt_array($chSearch, [
                 CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 4,
                 CURLOPT_HTTPHEADER => [
                     'Authorization: Bearer ' . $token,
                     'Origin: ' . VDS_ORIGIN_HEADER
@@ -223,6 +227,10 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
             $codeSearch = curl_getinfo($chSearch, CURLINFO_HTTP_CODE);
             $curlErrStr = curl_error($chSearch);
             curl_close($chSearch);
+
+            if ($codeSearch === 401) {
+                vds_mark_token_expired($token);
+            }
 
             $debug['search_http_code'] = $codeSearch;
             $debug['search_raw_response'] = $respSearch;
@@ -389,6 +397,8 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         $ch = curl_init($urlDetail);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
                 'Origin: ' . VDS_ORIGIN_HEADER
@@ -398,6 +408,10 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $detailCurlErr = curl_error($ch);
         curl_close($ch);
+
+        if ($httpCode === 401) {
+            vds_mark_token_expired($token);
+        }
 
         $debug['detail_http_code'] = $httpCode;
         $debug['detail_raw_response'] = $response;
@@ -497,10 +511,11 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         ];
     }
 
-    $token = vds_get_token($usuarioIdConselho);
+    // Exigir Ultra-Login individual do conselheiro para postar comentário na VDS
+    $token = vds_get_token($usuarioIdConselho, false);
     if (!$token) {
         DBClose($link);
-        return ['success' => false, 'message' => 'Nenhum token ativo para publicar no remoto.'];
+        return ['success' => false, 'message' => 'Publicação no VDS bloqueada: É necessário ativá-lo via Ultra-Login em Configurações VDS. Somente Notas Internas do Conselho são permitidas sem Ultra-Login.'];
     }
 
     // Enviar mensagem/comentário para a API VDS (Endpoint: POST /ocorrencia/comentario)
@@ -517,6 +532,8 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -527,6 +544,10 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+    }
 
     if ($httpCode === 200 || $httpCode === 201) {
         $resJson = json_decode($response, true);
@@ -560,6 +581,8 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -570,6 +593,10 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+    }
 
     if ($httpCode === 200 && $response) {
         return ['success' => true, 'data' => json_decode($response, true)];
@@ -685,15 +712,18 @@ function vds_persist_item_local($item, $linkParam = null) {
  * Cada chamado retornado é persistido no banco local.
  */
 function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
-    $token = vds_get_token($usuarioIdConselho);
+    // Visão Prática exige o Ultra-Login individual do conselheiro
+    $token = vds_get_token($usuarioIdConselho, false);
     if (!$token) {
-        return ['success' => false, 'message' => 'Token VDS indisponível.', 'items' => []];
+        return ['success' => false, 'message' => 'Ultra-Login não ativado para o seu usuário. Acesse Configurações VDS para conectar.', 'items' => []];
     }
 
     $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=' . (int)$limit . '&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0';
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Origin: ' . VDS_ORIGIN_HEADER
@@ -704,8 +734,29 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        // Tentar re-obter token (disparando auto-refresh no vds_get_token)
+        $retryToken = vds_get_token($usuarioIdConselho);
+        if ($retryToken && $retryToken !== $token) {
+            $chRetry = curl_init($url);
+            curl_setopt_array($chRetry, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 4,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $retryToken,
+                    'Origin: ' . VDS_ORIGIN_HEADER
+                ]
+            ]);
+            $response = curl_exec($chRetry);
+            $httpCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
+            curl_close($chRetry);
+        }
+    }
+
     if ($httpCode !== 200 || !$response) {
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar chamados não lidos na VDS.', 'items' => []];
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar chamados não lidos na VDS (' . $httpCode . ').', 'items' => []];
     }
 
     $data = json_decode($response, true);
@@ -765,6 +816,8 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
                 'Content-Length: 0',
@@ -775,6 +828,10 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
+        if ($httpCode === 401) {
+            vds_mark_token_expired($token);
+        }
+
         // Se estamos marcando como lido, também dispara visualização
         if ($novoStatusLido) {
             $urlVisualizar = VDS_BASE_URL . '/ocorrencia/visualizar/' . urlencode($uuidRemoto);
@@ -782,6 +839,8 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
             curl_setopt_array($chVis, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_CUSTOMREQUEST => 'PUT',
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 4,
                 CURLOPT_HTTPHEADER => [
                     'Authorization: Bearer ' . $token,
                     'Content-Length: 0',

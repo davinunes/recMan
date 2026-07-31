@@ -10,6 +10,10 @@ require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 $usuarioIdConselho = $_SESSION['user_id'] ?? ($_SESSION['usuario_id'] ?? 1);
 $toastAlert = vds_get_toast_alerts($usuarioIdConselho);
 
+// Verificar se o conselheiro logado possui Ultra-Login ativo (sem fallback de condomínio)
+$tokenConselheiroAtual = vds_get_token($usuarioIdConselho, false);
+$hasUltraLogin = !empty($tokenConselheiroAtual);
+
 // Visão atual (Prático = padrão; Analítico = baseado no banco local)
 $visao = $_GET['visao'] ?? 'pratico';
 
@@ -117,17 +121,23 @@ $ocorrenciasAgrupadas = [];
 $ocorrencias = [];
 
 if ($visao === 'pratico') {
-    // Visão Prática: Chamados Não Lidos da VDS (Lida=0), persistindo no banco local
-    $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
-    if ($resPratico['success']) {
-        $ocorrencias = $resPratico['items'];
-        foreach ($ocorrencias as $row) {
-            $tKey = (int)($row['oco_tipo'] ?? 0);
-            $ocorrenciasAgrupadas[$tKey][] = $row;
-        }
-    } else {
-        $msg = $resPratico['message'] ?? "Falha ao consultar não lidos da VDS.";
+    // Na Visão Prática, se o conselheiro não tiver Ultra-Login pessoal, bloqueia e solicita ativação
+    if (!$hasUltraLogin) {
+        $msg = "Ultra-Login necessário: Para acessar a Visão Prática (chamados não lidos na VDS), você precisa conectar seu usuário pessoal nas Configurações VDS.";
         $msgType = "warning";
+        $ocorrencias = [];
+    } else {
+        $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
+        if ($resPratico['success']) {
+            $ocorrencias = $resPratico['items'];
+            foreach ($ocorrencias as $row) {
+                $tKey = (int)($row['oco_tipo'] ?? 0);
+                $ocorrenciasAgrupadas[$tKey][] = $row;
+            }
+        } else {
+            $msg = $resPratico['message'] ?? "Falha ao consultar não lidos da VDS.";
+            $msgType = "warning";
+        }
     }
 } else {
     // Visão Analítica: Ocorrências do banco local
@@ -455,8 +465,15 @@ $mapaCoresTipo = [
 
         <?php if (empty($ocorrencias)): ?>
             <div style="padding: 25px 15px; text-align: center; color: #888; font-size:0.9rem;">
-                <i class="material-icons medium" style="color:#ccc;">check_circle_outline</i><br>
-                <?= $visao === 'pratico' ? 'Nenhuma ocorrência não lida no momento na VDS!' : 'Nenhuma ocorrência encontrada para os filtros selecionados.' ?>
+                <?php if ($visao === 'pratico' && !$hasUltraLogin): ?>
+                    <i class="material-icons medium" style="color:#d84315;">vpn_key</i><br>
+                    <strong style="color:#d84315;">Ultra-Login Necessário</strong><br>
+                    <span style="font-size:0.82rem; color:#666; display:inline-block; margin-top:6px;">Conecte seu usuário pessoal nas Configurações VDS para acessar os chamados não lidos.</span><br><br>
+                    <a href="index.php?pag=configVds" class="btn-small purple waves-effect waves-light" style="border-radius:4px; text-transform:none;">Ativar Ultra-Login</a>
+                <?php else: ?>
+                    <i class="material-icons medium" style="color:#ccc;">check_circle_outline</i><br>
+                    <?= $visao === 'pratico' ? 'Nenhuma ocorrência não lida no momento na VDS!' : 'Nenhuma ocorrência encontrada para os filtros selecionados.' ?>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <!-- Lista Agrupada por Tipo/Categoria de Ocorrência -->
@@ -853,13 +870,19 @@ $mapaCoresTipo = [
                             <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
                             
                             <?php if ($isMinhaNota): ?>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="action" value="publicar_remoto">
-                                    <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
-                                    <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
-                                        Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
-                                    </button>
-                                </form>
+                                <?php if ($hasUltraLogin): ?>
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="action" value="publicar_remoto">
+                                        <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
+                                        <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
+                                            Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <a href="index.php?pag=configVds" class="btn-small grey lighten-1 black-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.72rem; border-radius:4px; text-transform:none;" title="Ative seu Ultra-Login para publicar diretamente na VDS">
+                                        <i class="material-icons left tiny" style="margin-right:2px;">vpn_key</i> Requer Ultra-Login p/ Publicar VDS
+                                    </a>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span style="font-size:0.72rem; color:#856404; font-style:italic; background:#fff3cd; padding:2px 8px; border-radius:4px; border:1px solid #ffeeba; display:inline-flex; align-items:center; gap:3px;">
                                     <i class="material-icons tiny" style="vertical-align:middle; font-size:0.85rem;">lock</i> Apenas Leitura (Somente o autor pode publicar)

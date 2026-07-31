@@ -38,10 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Consultar status dos tokens
-$tokenCond = vds_get_token(null);
+$tokenCond = vds_get_token(null, false);
 $statusCond = vds_check_token_status($tokenCond);
 
-$tokenConselheiro = vds_get_token($usuarioIdConselho);
+$tokenConselheiro = vds_get_token($usuarioIdConselho, false);
 $statusConselheiro = vds_check_token_status($tokenConselheiro);
 ?>
 

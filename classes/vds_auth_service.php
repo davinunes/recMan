@@ -14,6 +14,8 @@ function vds_get_anon_token() {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => '{}',
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
             'Origin: ' . VDS_ORIGIN_HEADER
@@ -57,6 +59,8 @@ function vds_authenticate($username, $password, $app = "976") {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $anonToken,
             'Content-Type: application/json',
@@ -217,6 +221,8 @@ function vds_refresh_token($tokenId) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
             'Origin: ' . VDS_ORIGIN_HEADER,
@@ -280,9 +286,9 @@ function vds_mark_token_expired($token) {
 /**
  * Recupera o Token ativo do banco de dados.
  * Se $usuarioIdConselho for fornecido, busca especificamente tipo='conselheiro'.
- * Se for null, busca especificamente tipo='condominio'.
+ * Se não encontrar ou for null, pode buscar tipo='condominio' caso $allowCondominioFallback seja true.
  */
-function vds_get_token($usuarioIdConselho = null) {
+function vds_get_token($usuarioIdConselho = null, $allowCondominioFallback = true) {
     $link = DBConnect();
     
     @mysqli_query($link, "CREATE TABLE IF NOT EXISTS vds_tokens (
@@ -301,7 +307,7 @@ function vds_get_token($usuarioIdConselho = null) {
 
     $targetRow = null;
 
-    // 1. Se fornecido ID de conselheiro, buscar token do conselheiro
+    // 1. Se fornecido ID de conselheiro, buscar token específico do conselheiro
     if ($usuarioIdConselho) {
         $stmt = mysqli_prepare($link, "SELECT * FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho = ? AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         if ($stmt) {
@@ -313,19 +319,11 @@ function vds_get_token($usuarioIdConselho = null) {
         }
     }
 
-    // 2. Se $usuarioIdConselho for null (sistema/sincronização global), buscar especificamente o token de condomínio
-    if (!$targetRow && !$usuarioIdConselho) {
+    // 2. Se $usuarioIdConselho for null OU se conselheiro não tiver token e fallback for permitido, buscar token geral de condomínio
+    if (!$targetRow && (!$usuarioIdConselho || $allowCondominioFallback)) {
         $resCond = mysqli_query($link, "SELECT * FROM vds_tokens WHERE tipo = 'condominio' AND bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
         if ($resCond) {
             $targetRow = mysqli_fetch_assoc($resCond);
-        }
-    }
-
-    // 3. Fallback genérico para qualquer Token cadastrado na vds_tokens
-    if (!$targetRow) {
-        $resAny = mysqli_query($link, "SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY id DESC LIMIT 1");
-        if ($resAny) {
-            $targetRow = mysqli_fetch_assoc($resAny);
         }
     }
 
@@ -342,6 +340,10 @@ function vds_get_token($usuarioIdConselho = null) {
             if ($refreshedToken) {
                 return $refreshedToken;
             }
+        }
+        // Se a renovação do conselheiro falhar mas o fallback para condomínio for permitido, tentar obter token do condomínio
+        if ($allowCondominioFallback && $targetRow['tipo'] !== 'condominio') {
+            return vds_get_token(null, false);
         }
         return null; // Expirado e refresh falhou → login manual necessário
     }
@@ -361,6 +363,9 @@ function vds_get_token($usuarioIdConselho = null) {
             if ($nowTs < $expiresTs) {
                 return $targetRow['bearer_token'];
             }
+            if ($allowCondominioFallback && $targetRow['tipo'] !== 'condominio') {
+                return vds_get_token(null, false);
+            }
             return null;
         }
     }
@@ -376,6 +381,8 @@ function vds_check_token_status($token) {
     $ch = curl_init(VDS_BASE_URL . '/usuario/status');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Origin: ' . VDS_ORIGIN_HEADER

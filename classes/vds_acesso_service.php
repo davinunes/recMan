@@ -62,6 +62,8 @@ function vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho = n
         $chB = curl_init(VDS_BASE_URL . '/bloco?Combo=True&IsAdmin=false');
         curl_setopt_array($chB, [
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
                 'Origin: ' . VDS_ORIGIN_HEADER
@@ -70,6 +72,10 @@ function vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho = n
         $respB = curl_exec($chB);
         $httpB = curl_getinfo($chB, CURLINFO_HTTP_CODE);
         curl_close($chB);
+
+        if ($httpB === 401) {
+            vds_mark_token_expired($token);
+        }
 
         if ($httpB === 200 && $respB) {
             $dataB = json_decode($respB, true);
@@ -97,6 +103,8 @@ function vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho = n
         $chU = curl_init(VDS_BASE_URL . '/unidade?Combo=True&bloco.uuid=' . urlencode($blocoUuid));
         curl_setopt_array($chU, [
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
                 'Origin: ' . VDS_ORIGIN_HEADER
@@ -105,6 +113,10 @@ function vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho = n
         $respU = curl_exec($chU);
         $httpU = curl_getinfo($chU, CURLINFO_HTTP_CODE);
         curl_close($chU);
+
+        if ($httpU === 401) {
+            vds_mark_token_expired($token);
+        }
 
         if ($httpU === 200 && $respU) {
             $dataU = json_decode($respU, true);
