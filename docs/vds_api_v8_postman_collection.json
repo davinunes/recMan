@@ -2326,6 +2326,81 @@
           "response": []
         },
         {
+          "name": "4.4 Listar Veículos da Unidade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/veiculo?Unidade.Uuid={{unidadeUuid}}&order=asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculo"
+              ],
+              "query": [
+                {
+                  "key": "Unidade.Uuid",
+                  "value": "{{unidadeUuid}}",
+                  "description": "UUID da unidade para filtrar veículos"
+                },
+                {
+                  "key": "order",
+                  "value": "asc",
+                  "description": "Ordenação por nome/placa"
+                }
+              ]
+            },
+            "description": "### Listar veículos da unidade\n\nRetorna a lista de veículos associados à unidade.\n\n**Observação dos Atributos Retornados:**\n- `uuid`: String (UUID único do veículo)\n- `placa`: String (Placa formatada do veículo)\n- `marca.nome`: String (Nome da marca/fabricante)\n- `modelo.nome`: String (Nome do modelo)\n- `cor.nome`: String (Cor do automóvel)\n- `tipo.nome`: String (Categoria: Carro, Moto, etc.)\n- `vaga`: String/Null (Identificação da vaga da unidade no condomínio)\n- `ativo`: Boolean (True para ativo, False para inativo)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Obter Detalhes do Veículo por UUID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/veiculo/{{veiculoUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "veiculo",
+                "{{veiculoUuid}}"
+              ]
+            },
+            "description": "### Obter detalhes completos do veículo por UUID\n\nRetorna dados do veículo específico.\n\n**Observação dos Atributos Retornados:**\n- `uuid`: String (UUID do veículo)\n- `placa`: String (Placa do veículo)\n- `marca`: Objeto (Dados da marca)\n- `modelo`: Objeto (Dados do modelo)\n- `cor`: Objeto (Dados da cor)\n- `tipo`: Objeto (Tipo de veículo)\n- `unidade`: Objeto (Unidade vinculada)\n- `vaga`: String (Vaga da unidade)\n- `ativo`: Boolean (Status de cadastro)"
+          },
+          "response": []
+        },
+        {
           "name": "6.4 Listar Obras da Unidade",
           "request": {
             "method": "GET",
@@ -3049,7 +3124,7 @@
       ]
     },
     {
-        "name": "6. Portaria – Visitantes & Prestadores",
+        "name": "8. Portaria – Visitantes & Prestadores",
         "item": [
             {
                 "name": "Listar Visitantes da Unidade",
@@ -3172,6 +3247,22 @@
     {
       "key": "dtIni",
       "value": "2026-07-30"
+    },
+    {
+      "key": "usuarioUuid",
+      "value": ""
+    },
+    {
+      "key": "veiculoUuid",
+      "value": ""
+    },
+    {
+      "key": "visitanteUuid",
+      "value": ""
+    },
+    {
+      "key": "tipoUuid",
+      "value": ""
     }
   ]
 }
