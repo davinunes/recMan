@@ -1754,11 +1754,14 @@ window.renderToolsetVeiculos = function (list, vagas) {
         let tipoLower = (v.tipo || '').toLowerCase();
         let isMoto = tipoLower.includes('moto');
         let isBici = tipoLower.includes('bici');
+        let isAtivo = (v.ativo !== false && v.ativo !== 0);
 
         let iconName = 'directions_car';
-        let badgeColorClass = 'blue-grey darken-3'; // Carro / Padrão
+        let badgeColorClass = isAtivo ? 'blue-grey darken-3' : 'grey darken-2'; // Carro / Padrão
 
-        if (isMoto) {
+        if (!isAtivo) {
+            badgeColorClass = 'grey darken-2';
+        } else if (isMoto) {
             iconName = 'two_wheeler';
             badgeColorClass = 'deep-orange darken-2'; // Moto
         } else if (isBici) {
@@ -1767,31 +1770,40 @@ window.renderToolsetVeiculos = function (list, vagas) {
         }
 
         let fotoHtml = v.foto ? 
-            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc;">` : '';
+            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : '';
 
         let descVeiculo = [v.marca, v.modelo, v.cor].filter(Boolean).join(' ') || 'Veículo';
         let propStr = v.proprietario ? `<div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny" style="vertical-align:middle;">person</i> ${v.proprietario}</div>` : '';
         let obsStr = v.observacao ? `<div style="font-size:0.78rem; color:#757575; font-style:italic; margin-top:4px;" class="truncate" title="${v.observacao}"><i class="material-icons tiny" style="vertical-align:middle;">info</i> ${v.observacao}</div>` : '';
 
         let pcdBadge = v.portadorNecessidade ? 
-            `<div style="margin-top:6px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>` : '';
+            `<div style="margin-top:4px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>` : '';
+
+        let inativoBadge = !isAtivo ? 
+            `<div style="margin-top:4px;"><span class="badge-mini grey darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">block</i> INATIVO</span></div>` : '';
+
+        let cardStyle = isAtivo ? 
+            'border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 
+            'border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
 
         cardsHtml += `
             <div class="col s12 m6 l3">
-                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="${cardStyle}">
                     ${fotoHtml}
                     <div style="margin-bottom:8px;">
                         <span class="badge ${badgeColorClass} white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                             <i class="material-icons tiny">${iconName}</i> ${v.placa}
                         </span>
                     </div>
-                    <div style="font-weight:bold; font-size:1.05rem; color:#1a237e; margin-bottom:2px;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
+                    <div style="font-weight:bold; font-size:1.05rem; color:${isAtivo ? '#1a237e' : '#546e7a'}; margin-bottom:2px;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
                     ${propStr}
                     ${pcdBadge}
+                    ${inativoBadge}
                     ${obsStr}
                 </div>
             </div>
         `;
+
     });
     cardsHtml += '</div>';
 

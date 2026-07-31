@@ -662,6 +662,25 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
 
                     $rawDtHora = $item['dtHora'] ?? ($item['dthora'] ?? null);
 
+                    // Verificação abrangente de ativo/inativo
+                    $ativo = true;
+                    if (array_key_exists('ativo', $item)) {
+                        $ativo = (bool)$item['ativo'];
+                    } elseif (array_key_exists('ativo', $auto)) {
+                        $ativo = (bool)$auto['ativo'];
+                    } elseif (isset($item['status'])) {
+                        if (is_numeric($item['status'])) {
+                            $ativo = ((int)$item['status'] === 0);
+                        } else {
+                            $stStr = strtolower((string)$item['status']);
+                            $ativo = ($stStr === 'ativo' || $stStr === '0' || $stStr === 'true');
+                        }
+                    }
+
+                    if (!empty($item['dtExclusao']) || !empty($auto['dtExclusao']) || !empty($item['dtFim'])) {
+                        $ativo = false;
+                    }
+
                     $veiculos[] = [
                         'uuid' => $item['uuid'] ?? ($auto['uuid'] ?? null),
                         'placa' => strtoupper($placa),
@@ -674,9 +693,11 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         'portadorNecessidade' => !empty($auto['portadorNecessidade']),
                         'integrado' => !empty($auto['integrado']),
                         'status' => $item['status'] ?? 0,
+                        'ativo' => $ativo,
                         'foto' => $fotoUrl,
                         'dtHora' => vds_format_datetime($rawDtHora, 'd/m/Y H:i', 'N/A')
                     ];
+
 
                 }
             }

@@ -1,7 +1,16 @@
-# Walkthrough - Remoção da Vaga no Cabeçalho de Análise de Recurso
+# Walkthrough - Tratamento Visual de Veículos Inativos / Desvinculados
 
 ## Alterações Realizadas
 
-- **Cabeçalho Premium de `detalheRecurso.php`**: Removido o chip de Vaga(s) do topo para evitar redundância com as informações já presentes na tela.
-- **Acelerador de Veículos**: A exibição da vaga de garagem permanece ativa no banner da seção de **Veículos da Unidade** (em `detalheRecurso.php` e no Toolset `index.php?pag=historico`).
-- **Arquivo Atualizado**: [palco/detalheRecurso.php](file:///e:/DEV/recMan/palco/detalheRecurso.php).
+### 🚫 Mapeamento & Estilização de Veículos Inativos
+1. **Regra de Verificação (`ativo`)**:
+   - Analisados os campos `item.ativo`, `auto.ativo`, `item.status` e datas de exclusão (`dtExclusao`, `dtFim`).
+   - Se `status !== 0` ou `ativo === false` ou se houver data de exclusão, o veículo é marcado como `'ativo' => false`.
+2. **Estilização no Frontend**:
+   - **Opacidade e Esmaecimento**: O card do veículo recebe `opacity: 0.65`, `filter: grayscale(30%)` e borda tracejada (`border: 1px dashed #b0bec5`).
+   - **Placa Neutra**: A placa do veículo inativo passa a ser renderizada em cor cinza (`grey darken-2`).
+   - **Badge de Inatividade**: Exibição da etiqueta `<i class="material-icons">block</i> INATIVO`.
+3. **Arquivos Atualizados**:
+   - [vds_acesso_service.php](file:///e:/DEV/recMan/classes/vds_acesso_service.php)
+   - [meu.js](file:///e:/DEV/recMan/meu.js)
+   - [palco/detalheRecurso.php](file:///e:/DEV/recMan/palco/detalheRecurso.php)
