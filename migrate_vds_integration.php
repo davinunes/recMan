@@ -86,6 +86,22 @@ $sqlTokens = "CREATE TABLE IF NOT EXISTS vds_tokens (
 mysqli_query($link, $sqlTokens);
 @mysqli_query($link, "ALTER TABLE vds_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT DEFAULT NULL;");
 
+// 3b. Tabela de Controle Relacional de Leitura por Conselheiro (ocorrencia_leitura_conselheiro)
+$sqlLeitura = "CREATE TABLE IF NOT EXISTS ocorrencia_leitura_conselheiro (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    conselheiro_id INT NOT NULL,
+    ocorrencia_id INT NOT NULL,
+    uuid_remoto VARCHAR(100) DEFAULT NULL,
+    lido TINYINT(1) DEFAULT 1,
+    sincronizado_remoto TINYINT(1) DEFAULT 0,
+    read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_conselheiro_ocorrencia (conselheiro_id, ocorrencia_id),
+    KEY idx_conselheiro_lido (conselheiro_id, lido),
+    KEY idx_sincronizado (sincronizado_remoto)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+mysqli_query($link, $sqlLeitura);
+
 // 4. Tabela de Notas Internas do Conselho (ocorrencia_notas_internas)
 $sqlNotas = "CREATE TABLE IF NOT EXISTS ocorrencia_notas_internas (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -85,7 +85,24 @@ echo "[{$timestamp}] Token para sincronização global pronto. Executando vds_sy
 // 2. Executar a sincronização global (Lida=9)
 $res = vds_sync_ocorrencias(null);
 
+// 3. Descarregar confirmações de leitura pendentes no VDS
+$flushedCount = vds_flush_pending_reads(null);
+if ($flushedCount > 0) {
+    echo "[{$timestamp}] Leitura VDS: {$flushedCount} confirmação(ões) de leitura reenviada(s) com sucesso aos conselheiros.{$lineBreak}";
+}
+
 if ($res['success']) {
+    // Gravar timestamp da última sincronização bem-sucedida
+    $link = DBConnect();
+    $stmtUp = mysqli_prepare($link, "INSERT INTO vds_uuid_mapping (entidade_tipo, chave_local, uuid_remoto, dados_extras_json) VALUES ('controle', 'ultima_sincronizacao_ocorrencias', ?, ?) ON DUPLICATE KEY UPDATE uuid_remoto = VALUES(uuid_remoto), dados_extras_json = VALUES(dados_extras_json)");
+    if ($stmtUp) {
+        $jsonInfo = json_encode(['last_sync' => $timestamp, 'by' => 'cron'], JSON_UNESCAPED_UNICODE);
+        mysqli_stmt_bind_param($stmtUp, "ss", $timestamp, $jsonInfo);
+        mysqli_stmt_execute($stmtUp);
+        mysqli_stmt_close($stmtUp);
+    }
+    DBClose($link);
+
     echo "[{$timestamp}] SUCESSO: Sincronização concluída! " . $res['count'] . " ocorrências atualizadas no banco local.{$lineBreak}";
     exit(0);
 } else {

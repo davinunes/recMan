@@ -1109,5 +1109,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $('#cnt-visivel-ocorrencias').text(visiveisTotais);
     });
+
+    // 4. Sincronização Assíncrona em Segundo Plano (AJAX Background Sync - Zero Wait)
+    function dispararVdsBackgroundSync() {
+        $.ajax({
+            url: 'vds_sync_async.php',
+            type: 'GET',
+            dataType: 'json',
+            timeout: 30000,
+            success: function(data) {
+                if (data.success && data.message) {
+                    if (data.message.indexOf('novo') !== -1 || data.flushedReads > 0) {
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({
+                                html: '<i class="material-icons left tiny">sync</i> ' + data.message,
+                                displayLength: 10000,
+                                classes: 'blue darken-2 white-text font-weight-bold'
+                            });
+                        }
+                    }
+                    if (data.count !== undefined && $('#cnt-visivel-ocorrencias').length) {
+                        $('#cnt-visivel-ocorrencias').text(data.count);
+                    }
+                }
+            },
+            error: function(xhr, status, err) {
+                console.warn('[VDS Background Sync] Servidor ocupado. Aguardando próximo ciclo de 60s...', status);
+            },
+            complete: function() {
+                // Loop de retry em segundo plano a cada 60 segundos
+                setTimeout(dispararVdsBackgroundSync, 60000);
+            }
+        });
+    }
+
+    // Iniciar primeira sincronização 1.5s após renderização da página
+    setTimeout(dispararVdsBackgroundSync, 1500);
 });
 </script>

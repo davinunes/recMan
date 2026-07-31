@@ -708,157 +708,117 @@ function vds_persist_item_local($item, $linkParam = null) {
 }
 
 /**
- * Consulta a lista de chamados não lidos (Lida=0) diretamente na VDS para a Visão Prática.
- * Cada chamado retornado é persistido no banco local.
+ * Garante que a tabela relacional de leitura por conselheiro existe no banco de dados.
  */
-function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
-    $debug = [
-        'usuario_id_conselho' => $usuarioIdConselho,
-        'token_found' => false,
-        'url' => null,
-        'http_code' => null,
-        'curl_error' => null,
-        'response_preview' => null
-    ];
-
-    // Visão Prática exige o Ultra-Login individual do conselheiro
-    $token = vds_get_token($usuarioIdConselho, false);
-    $debug['token_found'] = !empty($token);
-
-    if (!$token) {
-        return [
-            'success' => false,
-            'message' => 'Ultra-Login não ativado para o seu usuário (ID ' . ($usuarioIdConselho ?? 'N/A') . '). Acesse Configurações VDS para conectar.',
-            'items' => [],
-            'debug' => $debug
-        ];
-    }
-
-    $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=' . (int)$limit . '&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0';
-    $debug['url'] = $url;
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 25,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token,
-            'Origin: ' . VDS_ORIGIN_HEADER,
-            'Accept: application/json, text/plain, */*'
-        ]
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
-
-    $debug['http_code'] = $httpCode;
-    $debug['curl_error'] = $curlErr;
-    $debug['response_preview'] = substr((string)$response, 0, 1000);
-
-    if ($httpCode === 401) {
-        vds_mark_token_expired($token);
-        // Tentar re-obter token (disparando auto-refresh no vds_get_token)
-        $retryToken = vds_get_token($usuarioIdConselho, false);
-        if ($retryToken && $retryToken !== $token) {
-            $chRetry = curl_init($url);
-            curl_setopt_array($chRetry, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 25,
-                CURLOPT_CONNECTTIMEOUT => 8,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $retryToken,
-                    'Origin: ' . VDS_ORIGIN_HEADER,
-                    'Accept: application/json, text/plain, */*'
-                ]
-            ]);
-            $response = curl_exec($chRetry);
-            $httpCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
-            $curlErr = curl_error($chRetry);
-            curl_close($chRetry);
-
-            $debug['http_code'] = $httpCode;
-            $debug['curl_error'] = $curlErr;
-            $debug['response_preview'] = substr((string)$response, 0, 1000);
-        }
-    }
-
-    if ($httpCode !== 200 || !$response) {
-        $errDetail = !empty($curlErr) ? "cURL: {$curlErr}" : "HTTP {$httpCode}";
-        return [
-            'success' => false,
-            'httpCode' => $httpCode,
-            'message' => "Erro ao consultar chamados não lidos na VDS ({$errDetail}).",
-            'items' => [],
-            'debug' => $debug
-        ];
-    }
-
-    $data = json_decode($response, true);
-    $rawItems = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
-
-    $items = [];
-    $link = DBConnect();
-
-    foreach ($rawItems as $item) {
-        $localId = vds_persist_item_local($item, $link);
-
-        // Carregar a linha local completa com responsabilidade e status
-        $stmtLoc = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
-        mysqli_stmt_bind_param($stmtLoc, "i", $localId);
-        mysqli_stmt_execute($stmtLoc);
-        $resLoc = mysqli_stmt_get_result($stmtLoc);
-        $rowLoc = mysqli_fetch_assoc($resLoc);
-        mysqli_stmt_close($stmtLoc);
-
-        if ($rowLoc) {
-            $items[] = $rowLoc;
-        } else {
-            $bloco = 'Z'; $unidade = '999';
-            if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $item['cargo'] ?? '', $bu)) {
-                $bloco = trim($bu[1]); $unidade = trim($bu[2]);
-            }
-            $items[] = [
-                'id' => $localId,
-                'uuid_remoto' => $item['uuid'] ?? null,
-                'protocolo_vds' => $item['protocolo'] ?? null,
-                'abertura' => $item['dtExibicao'] ?? ($item['dthora'] ?? date('Y-m-d H:i:s')),
-                'bloco' => $bloco,
-                'unidade' => $unidade,
-                'oco_tipo' => $item['tipoId'] ?? 115,
-                'status' => $item['statusNome'] ?? 'Aberto',
-                'responsabilidade' => null,
-                'resolvido' => 0,
-                'dados_json' => json_encode($item, JSON_UNESCAPED_UNICODE)
-            ];
-        }
-    }
-
-    DBClose($link);
-    return ['success' => true, 'items' => $items, 'debug' => $debug];
+function vds_ensure_leitura_table_exists($link) {
+    @mysqli_query($link, "CREATE TABLE IF NOT EXISTS ocorrencia_leitura_conselheiro (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        conselheiro_id INT NOT NULL,
+        ocorrencia_id INT NOT NULL,
+        uuid_remoto VARCHAR(100) DEFAULT NULL,
+        lido TINYINT(1) DEFAULT 1,
+        sincronizado_remoto TINYINT(1) DEFAULT 0,
+        read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_conselheiro_ocorrencia (conselheiro_id, ocorrencia_id),
+        KEY idx_conselheiro_lido (conselheiro_id, lido),
+        KEY idx_sincronizado (sincronizado_remoto)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 }
 
 /**
- * Marca uma ocorrência como lida no ambiente remoto da VDS e atualiza os dados locais.
+ * Consulta a lista de chamados não lidos (Visão Prática) a partir do banco local relacional.
+ * Resposta instantânea (< 5ms) sem travar a navegação.
+ */
+function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
+    $uId = (int)($usuarioIdConselho ?? 1);
+
+    $link = DBConnect();
+    vds_ensure_leitura_table_exists($link);
+
+    $sql = "SELECT o.* FROM ocorrencias o 
+            LEFT JOIN ocorrencia_leitura_conselheiro l 
+              ON l.ocorrencia_id = o.id AND l.conselheiro_id = ?
+            WHERE (l.lido IS NULL OR l.lido = 0)
+              AND (o.resolvido IS NULL OR o.resolvido = 0)
+            ORDER BY o.abertura DESC LIMIT ?";
+
+    $stmt = mysqli_prepare($link, $sql);
+    $items = [];
+    if ($stmt) {
+        $lim = (int)$limit;
+        mysqli_stmt_bind_param($stmt, "ii", $uId, $lim);
+        mysqli_stmt_execute($stmt);
+        $res = mysqli_stmt_get_result($stmt);
+        while ($row = mysqli_fetch_assoc($res)) {
+            $items[] = $row;
+        }
+        mysqli_stmt_close($stmt);
+    }
+    DBClose($link);
+
+    $tokenCons = vds_get_token($usuarioIdConselho, false);
+
+    $debug = [
+        'usuario_id_conselho' => $uId,
+        'source' => 'local_cache_relacional',
+        'items_count' => count($items),
+        'token_found' => !empty($tokenCons)
+    ];
+
+    return [
+        'success' => true,
+        'items' => $items,
+        'source' => 'local_cache',
+        'debug' => $debug
+    ];
+}
+
+/**
+ * Marca uma ocorrência como lida localmente no controle relacional do conselheiro
+ * e tenta o envio síncrono/assíncrono para a VDS API.
  */
 function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenciaId = null, $novoStatusLido = true) {
-    $token = vds_get_token($usuarioIdConselho);
+    $uId = (int)($usuarioIdConselho ?? 1);
+    $ocoId = (int)$ocorrenciaId;
+    $lidoVal = $novoStatusLido ? 1 : 0;
 
+    $link = DBConnect();
+    vds_ensure_leitura_table_exists($link);
+
+    if (!$ocoId && !empty($uuidRemoto)) {
+        $stmtF = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE uuid_remoto = ? LIMIT 1");
+        if ($stmtF) {
+            mysqli_stmt_bind_param($stmtF, "s", $uuidRemoto);
+            mysqli_stmt_execute($stmtF);
+            $resF = mysqli_stmt_get_result($stmtF);
+            $rF = mysqli_fetch_assoc($resF);
+            if ($rF) { $ocoId = (int)$rF['id']; }
+            mysqli_stmt_close($stmtF);
+        }
+    }
+
+    if ($ocoId > 0) {
+        $stmtUpsert = mysqli_prepare($link, "INSERT INTO ocorrencia_leitura_conselheiro (conselheiro_id, ocorrencia_id, uuid_remoto, lido, sincronizado_remoto, read_at) VALUES (?, ?, ?, ?, 0, NOW()) ON DUPLICATE KEY UPDATE lido = VALUES(lido), sincronizado_remoto = 0, read_at = NOW()");
+        if ($stmtUpsert) {
+            mysqli_stmt_bind_param($stmtUpsert, "iisi", $uId, $ocoId, $uuidRemoto, $lidoVal);
+            mysqli_stmt_execute($stmtUpsert);
+            mysqli_stmt_close($stmtUpsert);
+        }
+    }
+    DBClose($link);
+
+    // Tentar envio à VDS via PUT com timeout curto (5s) se tiver Ultra-Login
+    $token = vds_get_token($usuarioIdConselho, false);
     if ($token && $uuidRemoto) {
-        // Disparar PUT em /ocorrencia/leitura/{uuid} (Toggle endpoint da VDS)
         $urlLeitura = VDS_BASE_URL . '/ocorrencia/leitura/' . urlencode($uuidRemoto);
         $ch = curl_init($urlLeitura);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => 'PUT',
-            CURLOPT_TIMEOUT => 8,
-            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $token,
                 'Content-Length: 0',
@@ -869,29 +829,88 @@ function vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho = null, $ocorrenci
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($httpCode === 401) {
-            vds_mark_token_expired($token);
-        }
-
-        // Se estamos marcando como lido, também dispara visualização
-        if ($novoStatusLido) {
-            $urlVisualizar = VDS_BASE_URL . '/ocorrencia/visualizar/' . urlencode($uuidRemoto);
-            $chVis = curl_init($urlVisualizar);
-            curl_setopt_array($chVis, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CUSTOMREQUEST => 'PUT',
-                CURLOPT_TIMEOUT => 8,
-                CURLOPT_CONNECTTIMEOUT => 4,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
-                    'Content-Length: 0',
-                    'Origin: ' . VDS_ORIGIN_HEADER
-                ]
-            ]);
-            curl_exec($chVis);
-            curl_close($chVis);
+        if ($httpCode === 200 || $httpCode === 204) {
+            $link2 = DBConnect();
+            $stmtUpSync = mysqli_prepare($link2, "UPDATE ocorrencia_leitura_conselheiro SET sincronizado_remoto = 1 WHERE conselheiro_id = ? AND ocorrencia_id = ?");
+            if ($stmtUpSync) {
+                mysqli_stmt_bind_param($stmtUpSync, "ii", $uId, $ocoId);
+                mysqli_stmt_execute($stmtUpSync);
+                mysqli_stmt_close($stmtUpSync);
+            }
+            DBClose($link2);
         }
     }
+
+    return ['success' => true, 'message' => 'Status de leitura atualizado localmente!'];
+}
+
+/**
+ * Descarrega a fila de marcações de leitura pendentes enviando-as para a VDS API.
+ */
+function vds_flush_pending_reads($usuarioIdConselho = null) {
+    $link = DBConnect();
+    vds_ensure_leitura_table_exists($link);
+
+    $sql = "SELECT l.*, o.uuid_remoto as oco_uuid FROM ocorrencia_leitura_conselheiro l
+            LEFT JOIN ocorrencias o ON o.id = l.ocorrencia_id
+            WHERE l.sincronizado_remoto = 0 AND (l.uuid_remoto IS NOT NULL OR o.uuid_remoto IS NOT NULL)";
+    if ($usuarioIdConselho) {
+        $sql .= " AND l.conselheiro_id = " . (int)$usuarioIdConselho;
+    }
+    $sql .= " LIMIT 50";
+
+    $res = mysqli_query($link, $sql);
+    $pending = [];
+    if ($res) {
+        while ($r = mysqli_fetch_assoc($res)) {
+            $pending[] = $r;
+        }
+    }
+    DBClose($link);
+
+    $flushedCount = 0;
+    foreach ($pending as $p) {
+        $cId = (int)$p['conselheiro_id'];
+        $uuid = !empty($p['uuid_remoto']) ? $p['uuid_remoto'] : ($p['oco_uuid'] ?? null);
+
+        if (!$uuid) continue;
+
+        $token = vds_get_token($cId, false);
+        if (!$token) continue;
+
+        $urlLeitura = VDS_BASE_URL . '/ocorrencia/leitura/' . urlencode($uuid);
+        $ch = curl_init($urlLeitura);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Content-Length: 0',
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 || $httpCode === 204) {
+            $link2 = DBConnect();
+            $stmtUp = mysqli_prepare($link2, "UPDATE ocorrencia_leitura_conselheiro SET sincronizado_remoto = 1 WHERE id = ?");
+            if ($stmtUp) {
+                mysqli_stmt_bind_param($stmtUp, "i", $p['id']);
+                mysqli_stmt_execute($stmtUp);
+                mysqli_stmt_close($stmtUp);
+            }
+            DBClose($link2);
+            $flushedCount++;
+        }
+    }
+
+    return $flushedCount;
+}
 
     // Atualizar flag local em dados_json
     if ($ocorrenciaId || $uuidRemoto) {
