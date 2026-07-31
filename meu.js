@@ -1720,7 +1720,7 @@ window.renderToolsetMoradores = function (list) {
     $('#conteudoMoradores').html(cardsHtml);
 };
 
-// 0.1 Renderizar Veículos da Unidade
+// 0.1 Renderizar Veículos da Unidade (Design Centralizado com Cores por Tipo)
 window.renderToolsetVeiculos = function (list) {
     $('#badgeCountVeiculos').text(list.length);
     if (!list || list.length === 0) {
@@ -1730,41 +1730,53 @@ window.renderToolsetVeiculos = function (list) {
 
     let cardsHtml = '<div class="row" style="margin-bottom:0;">';
     list.forEach(v => {
-        let isMoto = (v.tipo || '').toLowerCase().includes('moto');
-        let iconName = isMoto ? 'two_wheeler' : 'directions_car';
+        let tipoLower = (v.tipo || '').toLowerCase();
+        let isMoto = tipoLower.includes('moto');
+        let isBici = tipoLower.includes('bici');
+
+        let iconName = 'directions_car';
+        let badgeColorClass = 'blue-grey darken-3'; // Carro / Padrão
+
+        if (isMoto) {
+            iconName = 'two_wheeler';
+            badgeColorClass = 'deep-orange darken-2'; // Moto
+        } else if (isBici) {
+            iconName = 'pedal_bike';
+            badgeColorClass = 'green darken-2'; // Bicicleta
+        }
+
         let fotoHtml = v.foto ? 
-            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:6px; margin-bottom:10px; border:1px solid #ddd;">` : '';
+            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc;">` : '';
 
         let descVeiculo = [v.marca, v.modelo, v.cor].filter(Boolean).join(' ') || 'Veículo';
-        let propStr = v.proprietario ? `<div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny">person</i> ${v.proprietario}</div>` : '';
-        let obsStr = v.observacao ? `<div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="${v.observacao}"><i class="material-icons tiny">info</i> ${v.observacao}</div>` : '';
+        let propStr = v.proprietario ? `<div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny" style="vertical-align:middle;">person</i> ${v.proprietario}</div>` : '';
+        let obsStr = v.observacao ? `<div style="font-size:0.78rem; color:#757575; font-style:italic; margin-top:4px;" class="truncate" title="${v.observacao}"><i class="material-icons tiny" style="vertical-align:middle;">info</i> ${v.observacao}</div>` : '';
 
         let pcdBadge = v.portadorNecessidade ? 
-            `<span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.7rem; margin-top:4px; display:inline-block;"><i class="material-icons tiny">accessible</i> Vaga PCD</span>` : '';
+            `<div style="margin-top:6px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>` : '';
 
         cardsHtml += `
             <div class="col s12 m6 l3">
-                <div class="card-panel white z-depth-1 hoverable" style="border-radius:10px; padding:15px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;">
                     ${fotoHtml}
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:4px 10px; border-radius:4px; font-family:monospace; font-size:1.05rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
+                    <div style="margin-bottom:8px;">
+                        <span class="badge ${badgeColorClass} white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                             <i class="material-icons tiny">${iconName}</i> ${v.placa}
                         </span>
                     </div>
-
-                    <div style="font-weight:bold; font-size:1rem; color:#263238;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
-                    ${pcdBadge}
+                    <div style="font-weight:bold; font-size:1.05rem; color:#1a237e; margin-bottom:2px;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
                     ${propStr}
+                    ${pcdBadge}
                     ${obsStr}
                 </div>
             </div>
         `;
-
     });
     cardsHtml += '</div>';
 
     $('#conteudoVeiculos').html(cardsHtml);
 };
+
 
 
 

@@ -1037,36 +1037,48 @@ if ($esseRecurso == null) {
                             <div class="row" style="margin-bottom:0;">
                                 <?php foreach ($veiculosUnidade as $v): ?>
                                     <?php
-                                    $isMoto = strpos(strtolower($v['tipo'] ?? ''), 'moto') !== false;
-                                    $iconName = $isMoto ? 'two_wheeler' : 'directions_car';
+                                    $tipoLower = strtolower($v['tipo'] ?? '');
+                                    $isMoto = strpos($tipoLower, 'moto') !== false;
+                                    $isBici = strpos($tipoLower, 'bici') !== false;
+
+                                    $iconName = 'directions_car';
+                                    $badgeColorClass = 'blue-grey darken-3';
+
+                                    if ($isMoto) {
+                                        $iconName = 'two_wheeler';
+                                        $badgeColorClass = 'deep-orange darken-2';
+                                    } elseif ($isBici) {
+                                        $iconName = 'pedal_bike';
+                                        $badgeColorClass = 'green darken-2';
+                                    }
+
                                     $descV = implode(' ', array_filter([$v['marca'], $v['modelo'], $v['cor']])) ?: 'Veículo';
                                     ?>
                                     <div class="col s12 m6 l3">
-                                        <div class="card-panel white z-depth-1 hoverable" style="border-radius:10px; padding:12px; border:1px solid #e0e0e0; margin-bottom:10px;">
+                                        <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;">
                                             <?php if (!empty($v['foto'])): ?>
-                                                <img src="<?= htmlspecialchars($v['foto']) ?>" style="width:100%; height:100px; object-fit:cover; border-radius:6px; margin-bottom:8px; border:1px solid #ddd;">
+                                                <img src="<?= htmlspecialchars($v['foto']) ?>" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc;">
                                             <?php endif; ?>
-                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                                <span class="badge blue-grey darken-3 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; font-family:monospace; font-size:1rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:4px;">
+                                            <div style="margin-bottom:8px;">
+                                                <span class="badge <?= $badgeColorClass ?> white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                                                     <i class="material-icons tiny"><?= $iconName ?></i> <?= htmlspecialchars($v['placa']) ?>
                                                 </span>
                                             </div>
-
-                                            <div style="font-weight:bold; font-size:0.95rem; color:#263238;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
-                                            <?php if (!empty($v['portadorNecessidade'])): ?>
-                                                <span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.7rem; margin-top:4px; padding:2px 6px; border-radius:4px; display:inline-block;"><i class="material-icons tiny">accessible</i> Vaga PCD</span>
-                                            <?php endif; ?>
+                                            <div style="font-weight:bold; font-size:1.05rem; color:#1a237e; margin-bottom:2px;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
                                             <?php if (!empty($v['proprietario'])): ?>
-                                                <div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['proprietario']) ?>"><i class="material-icons tiny">person</i> <?= htmlspecialchars($v['proprietario']) ?></div>
+                                                <div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['proprietario']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">person</i> <?= htmlspecialchars($v['proprietario']) ?></div>
                                             <?php endif; ?>
-
+                                            <?php if (!empty($v['portadorNecessidade'])): ?>
+                                                <div style="margin-top:6px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>
+                                            <?php endif; ?>
                                             <?php if (!empty($v['observacao'])): ?>
-                                                <div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="<?= htmlspecialchars($v['observacao']) ?>"><i class="material-icons tiny">info</i> <?= htmlspecialchars($v['observacao']) ?></div>
+                                                <div style="font-size:0.78rem; color:#757575; font-style:italic; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['observacao']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">info</i> <?= htmlspecialchars($v['observacao']) ?></div>
                                             <?php endif; ?>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
+
                         <?php endif; ?>
                     </div>
                 </li>
