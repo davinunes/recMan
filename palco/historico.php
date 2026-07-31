@@ -287,6 +287,35 @@ $mesAtualDefault = date('Y-m');
     </div>
 </div>
 
+<!-- Modal 4: Extrair Multas / Sugestões do Boleto com Confirmação -->
+<div id="modalSugestoesMultaBoleto" class="modal modal-fixed-footer" style="max-width: 850px; max-height: 85%;">
+    <div class="modal-content">
+        <h4 style="display:flex; align-items:center; gap:8px;">
+            <i class="material-icons blue-text text-darken-2">find_in_page</i> Extração e Confirmação de Multas no Boleto
+        </h4>
+        <p class="grey-text" style="margin-bottom: 20px;">Análise da composição de cobrança da fatura Superlógica buscando ocorrências de penalidade disciplinar/regimento interno.</p>
+        
+        <div id="loadingSugestoesBoleto" class="center-align" style="padding: 40px 0;">
+            <div class="preloader-wrapper active">
+                <div class="spinner-layer spinner-blue-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <p class="grey-text" style="margin-top: 15px; font-weight: 500;">Analisando composição de cobrança da fatura...</p>
+        </div>
+
+        <div id="containerSugestoesBoleto" class="hide">
+            <!-- Sugestões extraídas renderizadas aqui -->
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="modal-close btn-flat waves-effect">Fechar</button>
+    </div>
+</div>
+
+
 <style>
     .flex-header-collapsible {
         display: flex !important;

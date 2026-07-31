@@ -1782,10 +1782,14 @@ window.renderToolsetEncomendas = function (list) {
             `<span class="badge-mini green white-text">${e.status}</span>` : 
             `<span class="badge-mini amber darken-2 white-text">${e.status || 'Pendente'}</span>`;
 
+        let colIdHtml = e.identificador ? 
+            `<span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">qr_code</i> ${e.identificador}</span>` : 
+            `<span class="grey-text text-lighten-1" style="font-size:0.85rem;"><i class="material-icons tiny">hourglass_empty</i> Carregando...</span>`;
+
         tableHtml += `
-            <tr>
-                <td class="center-align">${fotoImg}</td>
-                <td><b>${e.identificador || 'N/A'}</b></td>
+            <tr class="linha-entrega-toolset" data-uuid="${e.uuid}">
+                <td class="center-align col-foto">${fotoImg}</td>
+                <td class="col-identificador">${colIdHtml}</td>
                 <td>${e.descricao || 'Pacote'}</td>
                 <td>${e.destinatario || 'Morador'}</td>
                 <td><i class="material-icons tiny grey-text">access_time</i> ${e.dthoraChegada || 'N/A'}</td>
@@ -1801,7 +1805,48 @@ window.renderToolsetEncomendas = function (list) {
 
     tableHtml += `</tbody></table>`;
     $('#conteudoEncomendas').html(tableHtml);
+
+    // Buscar em segundo plano identificador e foto de cada entrega por UUID (mesmo método da tela de detalheRecurso)
+    const rows = document.querySelectorAll('.linha-entrega-toolset[data-uuid]');
+    rows.forEach(function (row) {
+        const uuid = row.getAttribute('data-uuid');
+        if (!uuid) return;
+
+        fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.success && resData.data) {
+                    const d = resData.data;
+
+                    if (d.identificador) {
+                        const colId = row.querySelector('.col-identificador');
+                        if (colId) {
+                            colId.innerHTML = `
+                                <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                    <i class="material-icons tiny">qr_code</i> ${d.identificador}
+                                </span>
+                            `;
+                        }
+                    } else {
+                        const colId = row.querySelector('.col-identificador');
+                        if (colId && colId.innerHTML.includes('Carregando...')) {
+                            colId.innerHTML = '<span class="grey-text">N/A</span>';
+                        }
+                    }
+
+                    const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
+                    if (fotoUrl) {
+                        const colFoto = row.querySelector('.col-foto');
+                        if (colFoto) {
+                            colFoto.innerHTML = `<img src="${fotoUrl}" style="width:36px; height:36px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" class="img-preview-entrega" data-uuid="${uuid}">`;
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
+    });
 };
+
 
 // 3. Renderizar Autorizações de Acesso
 window.renderToolsetAutorizacoes = function (list) {
@@ -2133,32 +2178,129 @@ $(document).on('click', '.btn-inspect-entrega, .img-preview-entrega', function (
     }, 'json');
 });
 
-// Handler para extrair sugestões de multa de boletos
+// Handler para extrair sugestões de multa de boletos com apresentação em modal para confirmação
 $(document).on('click', '.btn-extrair-multas-boleto', function () {
     let $btn = $(this);
     let url = decodeURIComponent($btn.data('url'));
     let status = $btn.data('status');
     let vencimento = $btn.data('vencimento');
 
-    $btn.prop('disabled', true).html('<i class="material-icons tiny left spin">refresh</i> Analisando...');
+    let modalEl = $('#modalSugestoesMultaBoleto');
+    let modal = M.Modal.getInstance(modalEl);
+    
+    $('#loadingSugestoesBoleto').removeClass('hide');
+    $('#containerSugestoesBoleto').addClass('hide').html('');
+    modal.open();
 
-    $.get(`metodo.php?metodo=extrairSugestoesBoleto&url=${encodeURIComponent(url)}&status=${encodeURIComponent(status)}&dtVencimento=${encodeURIComponent(vencimento)}`, function (res) {
-        $btn.prop('disabled', false).html('<i class="material-icons tiny left">search</i> Extrair Multas');
+    let sugestoesMap = {};
 
-        if (res && res.success && res.sugestoes && res.sugestoes.length > 0) {
-            let count = res.sugestoes.length;
-            M.toast({ html: `Encontrada(s) ${count} sugestão(ões) de multa no boleto!`, classes: 'green rounded' });
-            
-            // Focar na aba de Notificações
-            window.focusToolsetSection(0);
-        } else {
-            M.toast({ html: 'Nenhuma multa por notificação detectada neste boleto.', classes: 'amber darken-2 rounded' });
+    function addSugestao(s) {
+        if (!s || !s.numero_ano) return;
+        if (!sugestoesMap[s.numero_ano]) {
+            sugestoesMap[s.numero_ano] = s;
+            renderSugestoesModal();
         }
-    }, 'json').fail(function() {
-        $btn.prop('disabled', false).html('<i class="material-icons tiny left">search</i> Extrair Multas');
-        M.toast({ html: 'Erro ao analisar fatura do boleto.', classes: 'red rounded' });
-    });
+    }
+
+    function renderSugestoesModal() {
+        let items = Object.values(sugestoesMap);
+        $('#loadingSugestoesBoleto').addClass('hide');
+        $('#containerSugestoesBoleto').removeClass('hide');
+
+        if (items.length === 0) {
+            $('#containerSugestoesBoleto').html('<div class="center-align grey-text" style="padding:40px;"><i class="material-icons" style="font-size:4rem; opacity:0.3;">search_off</i><p>Nenhuma ocorrência de multa por notificação detectada na composição desta fatura.</p></div>');
+            return;
+        }
+
+        let cardsHtml = '';
+        items.forEach(s => {
+            let btnAcao = s.ja_lancado ?
+                `<span class="badge green white-text font-weight-bold" style="float:none; padding:6px 12px; border-radius:4px;">✓ Lançamento Confirmado</span>` :
+                `<button type="button" class="btn waves-effect waves-light green darken-2 btn-confirmar-sugestao-multa" data-id="${s.numero_ano}" data-valor="${s.valor}" data-vencimento="${s.data_vencimento}" data-pagamento="${s.data_pagamento_sugerida || ''}">
+                    <i class="material-icons left tiny">check_circle</i> Confirmar Lançamento
+                </button>`;
+
+            cardsHtml += `
+                <div class="card-panel white z-depth-1" style="border-left: 5px solid #2e7d32; border-radius:8px; padding:16px; margin-bottom:15px;" data-id="${s.numero_ano}">
+                    <div class="row valign-wrapper flex-responsive" style="margin-bottom:0;">
+                        <div class="col s12 m8">
+                            <span class="badge-mini red white-text" style="margin-bottom:4px;">MULTA DETECTADA</span>
+                            <h6 style="font-weight:bold; margin:4px 0;" class="green-text text-darken-4">Notificação #${s.numero_ano}</h6>
+                            <p style="margin:4px 0; font-size:0.9rem;" class="grey-text text-darken-3">${s.item_descricao || ('Multa Notificação #' + s.numero_ano)}</p>
+                            <div style="font-size:0.85rem;" class="grey-text">
+                                <span><b>Valor Extrato:</b> <b class="green-text text-darken-3">${s.valor_formatado || ('R$ ' + s.valor)}</b></span> | 
+                                <span><b>Vencimento:</b> ${s.data_vencimento}</span>
+                            </div>
+                        </div>
+                        <div class="col s12 m4 right-align">
+                            ${btnAcao}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#containerSugestoesBoleto').html(cardsHtml);
+    }
+
+    // A. Busca via API backend
+    $.get(`metodo.php?metodo=extrairSugestoesBoleto&url=${encodeURIComponent(url)}&status=${encodeURIComponent(status)}&dtVencimento=${encodeURIComponent(vencimento)}`, function (res) {
+        if (res && res.success && Array.isArray(res.sugestoes)) {
+            res.sugestoes.forEach(addSugestao);
+        }
+        if (Object.keys(sugestoesMap).length === 0) {
+            renderSugestoesModal();
+        }
+    }, 'json');
+
+    // B. Parser dinâmico client-side no DOM via proxy fatura HTML
+    fetch(`metodo.php?metodo=proxyFaturaHtml&url=${encodeURIComponent(url)}`)
+        .then(response => response.text())
+        .then(htmlText => {
+            if (!htmlText || htmlText.length < 50) return;
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+
+            const corpo = doc.querySelector('#corpoComposicao') || doc.body;
+            const elements = corpo.querySelectorAll('tr, div, p, li');
+
+            elements.forEach(el => {
+                const text = el.textContent || '';
+                const isMulta = /multa|infra[çc]|notifica[çc][ãa]o|not\b|penalidade|regimento|ri\b/i.test(text);
+                const matchNum = text.match(/(\d+)\/(\d{2,4})/);
+                const matchVal = text.match(/R\$\s*([\d\.,]+)/i);
+
+                if (isMulta && matchNum && matchVal) {
+                    const numero = matchNum[1];
+                    const rawAno = matchNum[2];
+                    const ano = rawAno.length === 2 ? '20' + rawAno : rawAno;
+                    const valorCleanStr = matchVal[1].replace(/\./g, '').replace(',', '.');
+                    const valorNum = parseFloat(valorCleanStr);
+
+                    if (!isNaN(valorNum) && valorNum > 0) {
+                        addSugestao({
+                            numero: numero,
+                            ano: ano,
+                            numero_ano: `${numero}/${ano}`,
+                            item_descricao: text.trim().replace(/\s+/g, ' '),
+                            valor: valorNum,
+                            valor_formatado: 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                            boleto_status: status || 'Em Aberto',
+                            data_vencimento: vencimento || new Date().toISOString().slice(0, 10),
+                            data_pagamento_sugerida: vencimento || new Date().toISOString().slice(0, 10),
+                            ja_lancado: false
+                        });
+                    }
+                }
+            });
+            renderSugestoesModal();
+        })
+        .catch(err => {
+            console.error('Erro na extração client-side:', err);
+            renderSugestoesModal();
+        });
 });
+
 
 
 window.renderHistoryPagination = function (currentPage, totalPages) {
@@ -2823,6 +2965,11 @@ $(document).on('click', '.btn-confirmar-sugestao-multa', function (e) {
                 const $row = $(`tr[data-id="${id}"]`);
                 if ($row.length > 0) {
                     $row.addClass('tr-multa-cobrada');
+                }
+
+                // Recarregar os dados do Toolset da Unidade se o formulário estiver ativo
+                if ($('#unidade').val() && $('#bloco').val()) {
+                    $('#buscaHistoricoUnidade').click();
                 }
             } else {
                 $btn.prop('disabled', false).removeClass('disabled').html('<i class="material-icons left">check_circle</i> Confirmar Lançamento');
