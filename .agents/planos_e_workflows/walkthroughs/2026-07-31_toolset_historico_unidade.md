@@ -1,19 +1,17 @@
-# Walkthrough - Acelerador de Moradores & Foto do Objeto Pessoa
+# Walkthrough - Restauração da Tela de Login (`forms/login.php`)
 
-## Atualizações Realizadas
+## Causa do Problema
 
-### 📷 1. Extração da Foto do Objeto `pessoa` e Fallback por Ícone
-- **Estrutura da API VDS v8**: Ajustado o extrator backend em `classes/vds_acesso_service.php` para recuperar a foto exatamente de `$m['pessoa']['foto']` (e nome de `$m['pessoa']['nome']`, tipo de `$m['tipo']['nome']` e inadimplência de `$m['unidade']['inadimplente']`).
-- **URL Completa da Imagem**: Se o campo `foto` contiver um caminho relativo (ex: `/app/dados/cond/...`), é prefixado automaticamente por `https://app.vidadesindico.com.br`.
-- **Fallback por Ícone**: Caso a foto esteja `null` ou não cadastrada, é renderizado um avatar redondo estilizado com o ícone `<i class="material-icons cyan-text">account_circle</i>` em vez de imagens externas broken/placeholder.
+No `index.php`, quando o usuário não possui sessão ativa (`!isset($_SESSION['user_id'])`), a inclusão de `forms/login.php` ocorria antes dos blocos `<head>` que importavam o Materialize CSS, o `meu.css`, o jQuery e o `meu.js`. Como o `index.php` dava `exit()`, a tela de login era entregue ao navegador como um trecho de HTML puro sem os estilos e scripts.
 
----
+## Solução Aplicada
 
-### 📷 2. Resumo da Estrutura de Mapeamento
-
-| Campo Extraído | Caminho no JSON da API VDS v8 |
-| :--- | :--- |
-| **Nome** | `item.pessoa.nome` |
-| **Foto** | `item.pessoa.foto` (ou `https://app.vidadesindico.com.br` + path) |
-| **Tipo** | `item.tipo.nome` (ex: Proprietário) |
-| **Inadimplência** | `item.unidade.inadimplente` (boolean) |
+- **Página Standalone em `forms/login.php`**: O arquivo [forms/login.php](file:///e:/DEV/recMan/forms/login.php) foi transformado em uma estrutura HTML completa e autocontida.
+- **Inclusão de Ativos**:
+  - CSS: `Material Icons`, `Materialize CSS 1.0.0` e `meu.css`.
+  - JS: `jQuery 3.6.0`, `Materialize JS` e `meu.js`.
+- **UI/UX Aprimorada**:
+  - Fundo responsivo em gradiente azul premium.
+  - Card centralizado com ícone, título do sistema e campos de email/senha estilizados.
+  - Checkbox "Lembrar este dispositivo" integrado.
+  - Evento de clique e submit no botão `#logon` totalmente funcional via AJAX enviando para `metodo.php?metodo=logon`.
