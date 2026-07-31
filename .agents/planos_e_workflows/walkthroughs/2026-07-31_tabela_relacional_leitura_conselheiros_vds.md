@@ -1,4 +1,4 @@
-# Walkthrough / Resumo de Entrega: Cache Relacional de Leitura por Conselheiro & Sincronização Assíncrona VDS
+# Walkthrough / Resumo de Entrega: Cache Relacional de Leitura por Conselheiro & Auto-Marcação ao Abrir Ocorrência
 
 - **Data**: 2026-07-31
 - **Status**: Concluído & Verificado
@@ -6,17 +6,15 @@
 ## Resumo das Modificações Realizadas
 
 ### 1. Tabela Relacional Local (`ocorrencia_leitura_conselheiro`)
-- **Objetivo**: Controlar o status de leitura por conselheiro individualmente no recMan sem depender do endpoint instável da VDS (`GET /ocorrencia?Lida=0`), o qual apresentava estouro de tempo limite (SQL Command Timeout) no backend remoto.
+- **Objetivo**: Controlar o status de leitura por conselheiro individualmente no recMan sem depender do endpoint instável da VDS (`GET /ocorrencia?Lida=0`), que apresentava estouro de tempo limite (SQL Command Timeout) no backend remoto.
 - **Estrutura**:
   - `conselheiro_id`, `ocorrencia_id`, `uuid_remoto`, `lido`, `sincronizado_remoto`, `read_at`.
   - Chave Única: `uk_conselheiro_ocorrencia (conselheiro_id, ocorrencia_id)`.
-- **Arquivos**:
-  - `file:///e:/DEV/recMan/migrate_vds_integration.php`
-  - `file:///e:/DEV/recMan/classes/vds_ocorrencia_service.php`
 
-### 2. Carregamento Instantâneo da Visão Prática (< 5ms)
-- `vds_get_ocorrencias_pratico($usuarioIdConselho, $limit)` agora executa a consulta diretamente nas tabelas locais `ocorrencias` unidas com `ocorrencia_leitura_conselheiro`.
-- O tempo de resposta da página caiu de mais de 25 segundos para **menos de 0,01 segundos** (Zero-Wait no frontend).
+### 2. Auto-Marcação de Leitura ao Abrir Ocorrência Individual
+- **Comportamento**: Ao clicar ou abrir uma ocorrência individual na interface (`?id=` ou `?protocolo=`), o sistema chama automaticamente `vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $id, true)`.
+- Isso grava a leitura `lido = 1` no banco relacional local e atualiza o estado do botão para `"Marcar NÃO Lido (VDS)"`.
+- Se o conselheiro clicar no botão para alternar para "Não Lido", o sistema atualiza `lido = 0`, recolocando a ocorrência na lista de pendentes da Visão Prática.
 
 ### 3. Sincronização Assíncrona por AJAX em Segundo Plano (`vds_sync_async.php`)
 - Criado o endpoint leve [vds_sync_async.php](file:///e:/DEV/recMan/vds_sync_async.php).

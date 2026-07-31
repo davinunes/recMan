@@ -216,6 +216,13 @@ if (!$detalheSel && $selId) {
     $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
 }
 
+// Ao abrir/carregar uma ocorrência individual (por clique ou parâmetro ?id= / ?protocolo=),
+// registrar a leitura no banco relacional local do conselheiro de forma transparente
+if ($detalheSel && !empty($detalheSel['local']['id']) && (!empty($_GET['id']) || !empty($_GET['protocolo']))) {
+    $uuidRemotoSel = $detalheSel['local']['uuid_remoto'] ?? null;
+    vds_marcar_como_lido($uuidRemotoSel, $usuarioIdConselho, $detalheSel['local']['id'], true);
+}
+
 // Mapa de cores para ocoTipo
 $mapaCoresTipo = [
     115 => ['nome' => 'Fale com o Conselho', 'bg' => '#6f42c1', 'color' => '#ffffff'],
@@ -607,7 +614,28 @@ $mapaCoresTipo = [
             $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
 
             $dadosJsonLoc = !empty($local['dados_json']) ? json_decode($local['dados_json'], true) : [];
-            $isLidaVds = !empty($dadosJsonLoc['lida']) || !empty($dadosJsonLoc['isLida']) || !empty($remote['lida']) || !empty($remote['isLida']);
+            
+            // Verificar status de leitura relacional específico para este conselheiro
+            $linkL = DBConnect();
+            vds_ensure_leitura_table_exists($linkL);
+            $stmtCheckL = mysqli_prepare($linkL, "SELECT lido FROM ocorrencia_leitura_conselheiro WHERE conselheiro_id = ? AND ocorrencia_id = ? LIMIT 1");
+            $isLidaConselheiro = false;
+            if ($stmtCheckL) {
+                $locId = (int)$local['id'];
+                mysqli_stmt_bind_param($stmtCheckL, "ii", $usuarioIdConselho, $locId);
+                mysqli_stmt_execute($stmtCheckL);
+                $resCheckL = mysqli_stmt_get_result($stmtCheckL);
+                $rowCheckL = mysqli_fetch_assoc($resCheckL);
+                if ($rowCheckL) {
+                    $isLidaConselheiro = ((int)$rowCheckL['lido'] === 1);
+                } else {
+                    $isLidaConselheiro = !empty($dadosJsonLoc['lida']) || !empty($dadosJsonLoc['isLida']);
+                }
+                mysqli_stmt_close($stmtCheckL);
+            }
+            DBClose($linkL);
+
+            $isLidaVds = $isLidaConselheiro;
             ?>
 
             <!-- Header do Chat -->
