@@ -50,10 +50,14 @@ $parecer = getParecer($result['numero']);
 if (isset($result['unidade']) && isset($result['bloco'])) {
     $historico = getNotificacoes($result['unidade'], $result['bloco']);
 
-    // Silenciosamente verificar e resolver UUIDs do bloco e unidade na VDS (persistindo no vds_uuid_mapping)
+    // Silenciosamente verificar e resolver UUIDs do bloco e unidade na VDS e buscar moradores/inadimplência
     require_once __DIR__ . "/../classes/vds_acesso_service.php";
     $uuidsResolvidos = vds_resolve_bloco_unidade_uuid($result['bloco'], $result['unidade']);
+    $resMoradores = vds_get_moradores_unidade($result['bloco'], $result['unidade']);
+    $moradoresUnidade = $resMoradores['moradores'] ?? [];
+    $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
 }
+
 
 // Busca a notificação para recuperar o artigo (em notação regimento, ex: "14.1")
 $parts = explode('/', $result['numero']);
@@ -164,7 +168,11 @@ if ($esseRecurso == null) {
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">home</i>
                 Unidade: <span id="unidadeRecurso">' . $result['unidade'] . $result['bloco'] . '</span>
-            </div>
+            </div>' . ($unidadeInadimplente ? '
+            <div class="chip red white-text font-weight-bold" style="background: #d32f2f; margin: 0; border: 1px solid rgba(255,255,255,0.4); height: 32px; line-height: 32px;">
+                <i class="material-icons left" style="color: #fff; margin-top: 4px;">warning</i>
+                UNIDADE INADIMPLENTE
+            </div>' : '') . '
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">history</i>
                 Histórico: <span id="historico">' . sizeof($historico) . '</span> Notif.
@@ -575,11 +583,16 @@ if ($esseRecurso == null) {
     $dtIniJanela = date('Y-m-d', strtotime($dataOcorrencia . ' -1 day'));
     $dtFimJanela = date('Y-m-d', strtotime($dataOcorrencia . ' +1 day'));
 
+    $resMoradores = vds_get_moradores_unidade($result['bloco'], $result['unidade']);
+    $moradoresUnidade = $resMoradores['moradores'] ?? [];
+    $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
+
     $acessosUnidade = vds_get_eventos_acesso($result['bloco'], $result['unidade'], $dtInicio, $dtFim);
     $autorizacoesUnidade = vds_get_autorizacoes_acesso($result['bloco'], $result['unidade'], $dtIniJanela, $dtFimJanela);
     $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
     $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
     ?>
+
 
     <!-- Modal de Inspeção Detalhada dos Aceleradores -->
     <div id="modalInspecionarAcelerador" class="modal" style="border-radius:8px; max-width:550px;">
@@ -981,9 +994,36 @@ if ($esseRecurso == null) {
             <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons cyan-text text-darken-2">people</i>
+                        Moradores da Unidade (<?= count($moradoresUnidade) ?>)
+                        <?php if ($unidadeInadimplente): ?>
+                            <span class="new badge red pulse" data-badge-caption="INADIMPLENTE" style="margin-left: 10px;"></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="collapsible-body" style="padding: 10px;">
+                        <?php if (empty($moradoresUnidade)): ?>
+                            <p class="grey-text" style="margin:0;">Nenhum morador cadastrado encontrado para esta unidade.</p>
+                        <?php else: ?>
+                            <div class="row" style="margin-bottom:0;">
+                                <?php foreach ($moradoresUnidade as $m): ?>
+                                    <div class="col s12 m6 l3">
+                                        <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:12px 8px; border:1px solid #e0e0e0; margin-bottom:10px;">
+                                            <img src="<?= htmlspecialchars($m['foto'] ?: 'https://via.placeholder.com/80?text=Foto') ?>" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">
+                                            <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="<?= htmlspecialchars($m['nome']) ?>"><?= htmlspecialchars($m['nome']) ?></div>
+                                            <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;"><?= htmlspecialchars($m['tipo']) ?></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons purple-text">fingerprint</i>
                         Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
                     </div>
+
                     <div class="collapsible-body" style="padding: 10px;">
                         <?php if (empty($acessosUnidade)): ?>
                             <p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>

@@ -545,6 +545,70 @@ function vds_get_reservas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null
     return [];
 }
 
+/**
+ * Consulta moradores da unidade na API v8 da VDS e verifica o status de inadimplência.
+ */
+function vds_get_moradores_unidade($bloco, $unidade, $usuarioIdConselho = null) {
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+    $blocoUuid = $uuids['blocoUuid'];
+
+    $token = vds_get_token($usuarioIdConselho);
+    $moradores = [];
+    $inadimplente = false;
+
+    if ($token && $unidadeUuid) {
+        $url = VDS_BASE_URL . '/morador?Unidade.Uuid=' . urlencode($unidadeUuid) . '&Combo=true&status=true&sortBy=Pessoa.Nome&order=asc';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+
+            if (is_array($regs)) {
+                foreach ($regs as $m) {
+                    $nome = $m['nome'] ?? ($m['pessoa']['nome'] ?? ($m['morador']['nome'] ?? 'Morador'));
+                    
+                    $fotoRel = $m['foto'] ?? ($m['fotoUrl'] ?? ($m['pessoa']['fotoUrl'] ?? null));
+                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+
+                    $tipoStr = vds_extract_string_value($m['tipo'] ?? ($m['tipoDescricao'] ?? ($m['perfil'] ?? ($m['cargo'] ?? null))), 'Morador');
+
+                    if (!empty($m['inadimplente']) || !empty($m['unidade']['inadimplente']) || !empty($m['inadimplencia']) || (isset($m['adimplente']) && $m['adimplente'] === false)) {
+                        $inadimplente = true;
+                    }
+
+                    $moradores[] = [
+                        'uuid' => $m['uuid'] ?? ($m['id'] ?? null),
+                        'nome' => $nome,
+                        'foto' => $fotoUrl,
+                        'tipo' => $tipoStr,
+                        'inadimplente' => !empty($m['inadimplente'])
+                    ];
+                }
+            }
+        }
+    }
+
+    return [
+        'moradores' => $moradores,
+        'inadimplente' => $inadimplente
+    ];
+}
+
+
 
 /**
  * Busca todos os chamados/ocorrências onde a unidade é autora, reclamada, citada ou possui tag vinculada.

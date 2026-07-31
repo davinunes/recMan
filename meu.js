@@ -1592,6 +1592,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
             if (res && res.success) {
                 window.globalToolsetResponse = res;
                 window.renderToolsetDashboard(res.estatisticas);
+                window.renderToolsetMoradores(res.moradores || []);
                 window.renderToolsetNotificacoes(res.notificacoes || []);
                 window.renderToolsetEncomendas(res.entregas || []);
                 window.renderToolsetAutorizacoes(res.autorizacoes || []);
@@ -1623,39 +1624,51 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
 window.renderToolsetDashboard = function (stats) {
     if (!stats) return;
 
-    let kpiHtml = `
+    let seloInadimplencia = stats.inadimplente ? `
+        <div class="col s12" style="margin-bottom:12px;">
+            <div class="card-panel red darken-2 white-text flex-responsive" style="padding:12px 18px; border-radius:8px; display:flex; align-items:center; gap:12px; box-shadow: 0 4px 12px rgba(211,47,47,0.35);">
+                <i class="material-icons" style="font-size:2.2rem;">warning</i>
+                <div>
+                    <div style="font-weight:bold; font-size:1.1rem; text-transform:uppercase; letter-spacing:0.5px;">⚠️ UNIDADE INADIMPLENTE</div>
+                    <div style="font-size:0.85rem; opacity:0.95;">Esta unidade possui débitos ou pendências financeiras registradas na administração do condomínio.</div>
+                </div>
+            </div>
+        </div>
+    ` : '';
+
+    let kpiHtml = seloInadimplencia + `
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(0);">
+            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(1);">
                 <div class="kpi-val">${stats.totalNotificacoes}</div>
                 <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(0);">
+            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(1);">
                 <div class="kpi-val">${stats.totalRecursos}</div>
                 <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(1);">
+            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(2);">
                 <div class="kpi-val">${stats.totalEntregas}</div>
                 <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(2);">
+            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(3);">
                 <div class="kpi-val">${stats.totalAutorizacoes}</div>
                 <div class="kpi-lbl">Acessos Autorizados</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset indigo darken-1" onclick="window.focusToolsetSection(3);">
+            <div class="kpi-card-toolset indigo darken-1" onclick="window.focusToolsetSection(4);">
                 <div class="kpi-val">${stats.totalReservas}</div>
                 <div class="kpi-lbl">Reservas no Mês</div>
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(4);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(5);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Ocorrências no Condomínio</div>
                     <div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria} | Citada/Tag: ${stats.totalChamadosTag}</div>
@@ -1664,7 +1677,7 @@ window.renderToolsetDashboard = function (stats) {
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
-            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(6);" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(7);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Situação Financeira / Boletos</div>
                     <div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos} | Em Aberto: ${stats.boletosAbertos}</div>
@@ -1676,6 +1689,33 @@ window.renderToolsetDashboard = function (stats) {
 
     $('#unitBrief').html(kpiHtml);
 };
+
+// 0. Renderizar Moradores da Unidade (Cards com foto, nome e tipo)
+window.renderToolsetMoradores = function (list) {
+    $('#badgeCountMoradores').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoMoradores').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">people_outline</i> Nenhum morador cadastrado para esta unidade.</div>');
+        return;
+    }
+
+    let cardsHtml = '<div class="row" style="margin-bottom:0;">';
+    list.forEach(m => {
+        let fotoUrl = m.foto || 'https://via.placeholder.com/80?text=Foto';
+        cardsHtml += `
+            <div class="col s12 m6 l3">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    <img src="${fotoUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:6px;">
+                    <div style="font-weight:bold; font-size:1rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
+                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem;">${m.tipo || 'Morador'}</span>
+                </div>
+            </div>
+        `;
+    });
+    cardsHtml += '</div>';
+
+    $('#conteudoMoradores').html(cardsHtml);
+};
+
 
 window.focusToolsetSection = function (index) {
     let collapsible = M.Collapsible.getInstance($('#toolsetCollapsible'));

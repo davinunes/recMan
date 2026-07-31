@@ -826,7 +826,12 @@ switch ($_GET['metodo']) {
         // 7. Lista de Boletos do Ano
         $boletos = vds_get_boletos_unidade($torre, $unidade, $ano);
 
-        // 8. Cálculo da Dashboard Estatística (KPI)
+        // 8. Moradores da Unidade e Verificação de Inadimplência
+        $resMoradores = vds_get_moradores_unidade($torre, $unidade);
+        $moradores = $resMoradores['moradores'] ?? [];
+        $inadimplente = $resMoradores['inadimplente'] ?? false;
+
+        // 9. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
         $totalAdvertencias = 0;
@@ -870,6 +875,8 @@ switch ($_GET['metodo']) {
             'bloco' => $torreClean,
             'mesAno' => $mesAno,
             'periodoExtenso' => date('m/Y', strtotime($dtInicio)),
+            'inadimplente' => $inadimplente,
+            'totalMoradores' => count($moradores),
             'totalNotificacoes' => $totalNotif,
             'totalMultas' => $totalMultas,
             'totalAdvertencias' => $totalAdvertencias,
@@ -890,6 +897,8 @@ switch ($_GET['metodo']) {
         echo json_encode([
             'success' => true,
             'estatisticas' => $estatisticas,
+            'inadimplente' => $inadimplente,
+            'moradores' => $moradores,
             'notificacoes' => $notificacoes,
             'entregas' => $entregas,
             'autorizacoes' => $autorizacoes,
@@ -899,6 +908,7 @@ switch ($_GET['metodo']) {
             'boletos' => $boletos
         ], JSON_UNESCAPED_UNICODE);
         break;
+
 
     case "atualizaDataRetiradaNotificacao":
         session_start();

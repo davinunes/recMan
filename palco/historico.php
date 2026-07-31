@@ -99,6 +99,23 @@ $mesAtualDefault = date('Y-m');
         <div class="col s12">
             <ul class="collapsible popout z-depth-1" id="toolsetCollapsible" style="border: none;">
                 
+                <!-- 0. Moradores da Unidade -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons cyan-text text-darken-2">people</i>
+                            <b>Moradores da Unidade</b>
+                            <small class="grey-text text-darken-1">(Cadastro VDS)</small>
+                        </span>
+                        <span class="badge cyan darken-2 white-text font-weight-bold" id="badgeCountMoradores">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoMoradores">
+                            <!-- Cards dos Moradores -->
+                        </div>
+                    </div>
+                </li>
+
                 <!-- 1. Notificações & Recursos (Histórico Completo) -->
                 <li class="active">
                     <div class="collapsible-header flex-header-collapsible">
@@ -115,6 +132,7 @@ $mesAtualDefault = date('Y-m');
                         </div>
                     </div>
                 </li>
+
 
                 <!-- 2. Encomendas / Correspondências -->
                 <li>
