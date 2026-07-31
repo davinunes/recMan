@@ -752,49 +752,161 @@ function vds_ensure_leitura_table_exists($link) {
 }
 
 /**
- * Consulta a lista de chamados não lidos (Visão Prática) a partir do banco local relacional.
- * Resposta instantânea (< 5ms) sem travar a navegação.
+ * Consulta a lista de chamados não lidos (Lida=0) diretamente na VDS API para a Visão Prática.
+ * Com limit=10 por página, a API responde em < 1s de forma ultra-rápida.
  */
-function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
+function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 10, $page = 1) {
     $uId = (int)($usuarioIdConselho ?? 1);
-
-    $link = DBConnect();
-    vds_ensure_leitura_table_exists($link);
-
-    $sql = "SELECT o.* FROM ocorrencias o 
-            LEFT JOIN ocorrencia_leitura_conselheiro l 
-              ON l.ocorrencia_id = o.id AND l.conselheiro_id = ?
-            WHERE (l.lido IS NULL OR l.lido = 0)
-              AND (o.resolvido IS NULL OR o.resolvido = 0)
-            ORDER BY o.abertura DESC LIMIT ?";
-
-    $stmt = mysqli_prepare($link, $sql);
-    $items = [];
-    if ($stmt) {
-        $lim = (int)$limit;
-        mysqli_stmt_bind_param($stmt, "ii", $uId, $lim);
-        mysqli_stmt_execute($stmt);
-        $res = mysqli_stmt_get_result($stmt);
-        while ($row = mysqli_fetch_assoc($res)) {
-            $items[] = $row;
-        }
-        mysqli_stmt_close($stmt);
-    }
-    DBClose($link);
-
-    $tokenCons = vds_get_token($usuarioIdConselho, false);
+    $page = max(1, (int)$page);
+    $limit = max(1, (int)$limit);
 
     $debug = [
         'usuario_id_conselho' => $uId,
-        'source' => 'local_cache_relacional',
-        'items_count' => count($items),
-        'token_found' => !empty($tokenCons)
+        'page' => $page,
+        'limit' => $limit,
+        'token_found' => false,
+        'url' => null,
+        'http_code' => null,
+        'curl_error' => null,
+        'response_preview' => null
     ];
+
+    // Visão Prática exige o Ultra-Login individual do conselheiro
+    $token = vds_get_token($usuarioIdConselho, false);
+    $debug['token_found'] = !empty($token);
+
+    if (!$token) {
+        return [
+            'success' => false,
+            'message' => 'Ultra-Login não ativado para o seu usuário (ID ' . $uId . '). Acesse Configurações VDS para conectar.',
+            'items' => [],
+            'page' => $page,
+            'limit' => $limit,
+            'totalRegs' => 0,
+            'hasMore' => false,
+            'debug' => $debug
+        ];
+    }
+
+    $url = VDS_BASE_URL . '/ocorrencia?page=' . $page . '&limit=' . $limit . '&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0';
+    $debug['url'] = $url;
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER,
+            'Accept: application/json, text/plain, */*'
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    $debug['http_code'] = $httpCode;
+    $debug['curl_error'] = $curlErr;
+    $debug['response_preview'] = substr((string)$response, 0, 1000);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        $retryToken = vds_get_token($usuarioIdConselho, false);
+        if ($retryToken && $retryToken !== $token) {
+            $chRetry = curl_init($url);
+            curl_setopt_array($chRetry, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $retryToken,
+                    'Origin: ' . VDS_ORIGIN_HEADER,
+                    'Accept: application/json, text/plain, */*'
+                ]
+            ]);
+            $response = curl_exec($chRetry);
+            $httpCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($chRetry);
+            curl_close($chRetry);
+
+            $debug['http_code'] = $httpCode;
+            $debug['curl_error'] = $curlErr;
+            $debug['response_preview'] = substr((string)$response, 0, 1000);
+        }
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        $errDetail = !empty($curlErr) ? "cURL: {$curlErr}" : "HTTP {$httpCode}";
+        return [
+            'success' => false,
+            'httpCode' => $httpCode,
+            'message' => "Erro ao consultar chamados não lidos na VDS ({$errDetail}).",
+            'items' => [],
+            'page' => $page,
+            'limit' => $limit,
+            'totalRegs' => 0,
+            'hasMore' => false,
+            'debug' => $debug
+        ];
+    }
+
+    $data = json_decode($response, true);
+    $rawItems = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
+    $totalRegs = (int)($data['totalRegs'] ?? ($data['total'] ?? count($rawItems)));
+    $hasMore = ($page * $limit) < $totalRegs;
+
+    $items = [];
+    $link = DBConnect();
+
+    foreach ($rawItems as $item) {
+        $localId = vds_persist_item_local($item, $link);
+
+        $stmtLoc = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
+        mysqli_stmt_bind_param($stmtLoc, "i", $localId);
+        mysqli_stmt_execute($stmtLoc);
+        $resLoc = mysqli_stmt_get_result($stmtLoc);
+        $rowLoc = mysqli_fetch_assoc($resLoc);
+        mysqli_stmt_close($stmtLoc);
+
+        if ($rowLoc) {
+            $items[] = $rowLoc;
+        } else {
+            $bloco = 'Z'; $unidade = '999';
+            if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $item['cargo'] ?? '', $bu)) {
+                $bloco = trim($bu[1]); $unidade = trim($bu[2]);
+            }
+            $items[] = [
+                'id' => $localId,
+                'uuid_remoto' => $item['uuid'] ?? null,
+                'protocolo_vds' => $item['protocolo'] ?? null,
+                'abertura' => $item['dtExibicao'] ?? ($item['dthora'] ?? date('Y-m-d H:i:s')),
+                'bloco' => $bloco,
+                'unidade' => $unidade,
+                'oco_tipo' => $item['tipoId'] ?? 115,
+                'status' => $item['statusNome'] ?? 'Aberto',
+                'responsabilidade' => null,
+                'resolvido' => 0,
+                'dados_json' => json_encode($item, JSON_UNESCAPED_UNICODE)
+            ];
+        }
+    }
+
+    DBClose($link);
 
     return [
         'success' => true,
         'items' => $items,
-        'source' => 'local_cache',
+        'page' => $page,
+        'limit' => $limit,
+        'totalRegs' => $totalRegs,
+        'hasMore' => $hasMore,
         'debug' => $debug
     ];
 }

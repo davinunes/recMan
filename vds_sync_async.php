@@ -10,47 +10,39 @@ require_once __DIR__ . "/classes/vds_auth_service.php";
 require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 
 $usuarioIdConselho = $_SESSION['user_id'] ?? ($_SESSION['usuario_id'] ?? 1);
+$page = (int)($_GET['page'] ?? 1);
+$limit = (int)($_GET['limit'] ?? 10);
 
-// 1. Executar sincronização de fundo com a VDS (limit=10 por página, super rápido!)
-$resSync = vds_sync_ocorrencias(null, $usuarioIdConselho, 2, 10);
-$newItemsCount = (int)($resSync['inserted'] ?? 0);
-
-// 2. Descarregar confirmações de leitura pendentes do conselheiro
+// 1. Descarregar confirmações de leitura pendentes do conselheiro em segundo plano
 $flushedReads = vds_flush_pending_reads($usuarioIdConselho);
+
+// 2. Consultar a página especificada de não lidos (Lida=0) diretamente na VDS API
+$resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, $limit, $page);
+$items = $resPratico['items'] ?? [];
+$totalRegs = (int)($resPratico['totalRegs'] ?? 0);
+$hasMore = !empty($resPratico['hasMore']);
 
 // 3. Registrar a data da última sincronização bem-sucedida
 $now = date('Y-m-d H:i:s');
 $link = DBConnect();
-// Limpar registros de leitura que foram marcados automaticamente pelo script anterior
-@mysqli_query($link, "DELETE FROM ocorrencia_leitura_conselheiro WHERE sincronizado_remoto = 1 AND (read_at IS NULL OR read_at = updated_at)");
-
 $stmtUp = mysqli_prepare($link, "INSERT INTO vds_uuid_mapping (entidade_tipo, chave_local, uuid_remoto, dados_extras_json) VALUES ('controle', 'ultima_sincronizacao_ocorrencias', ?, ?) ON DUPLICATE KEY UPDATE uuid_remoto = VALUES(uuid_remoto), dados_extras_json = VALUES(dados_extras_json)");
 if ($stmtUp) {
-    $jsonInfo = json_encode(['last_sync' => $now, 'by_user' => $usuarioIdConselho, 'total_regs' => $resSync['totalRegs'] ?? 0], JSON_UNESCAPED_UNICODE);
+    $jsonInfo = json_encode(['last_sync' => $now, 'by_user' => $usuarioIdConselho, 'total_regs' => $totalRegs, 'page' => $page], JSON_UNESCAPED_UNICODE);
     mysqli_stmt_bind_param($stmtUp, "ss", $now, $jsonInfo);
     mysqli_stmt_execute($stmtUp);
     mysqli_stmt_close($stmtUp);
 }
 DBClose($link);
 
-// 4. Obter a lista atualizada de chamados não lidos para o conselheiro localmente
-$resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
-$items = $resPratico['items'] ?? [];
-
-$message = null;
-if ($newItemsCount > 0) {
-    $message = "{$newItemsCount} novo(s) chamado(s) sincronizado(s) da VDS!";
-} elseif ($flushedReads > 0) {
-    $message = "{$flushedReads} confirmação(ões) de leitura enviada(s) à VDS.";
-}
-
 echo json_encode([
-    'success' => $resSync['success'] ?? true,
+    'success' => $resPratico['success'] ?? true,
     'count' => count($items),
-    'newCount' => $newItemsCount,
-    'totalRegs' => $resSync['totalRegs'] ?? 0,
+    'page' => $page,
+    'limit' => $limit,
+    'totalRegs' => $totalRegs,
+    'hasMore' => $hasMore,
     'lastSync' => $now,
     'flushedReads' => $flushedReads,
-    'message' => $message,
-    'items' => $items
+    'items' => $items,
+    'debug' => $resPratico['debug'] ?? []
 ], JSON_UNESCAPED_UNICODE);

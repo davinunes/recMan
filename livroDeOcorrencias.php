@@ -126,9 +126,11 @@ if ($visao === 'pratico') {
         $msg = "Ultra-Login necessário: Para acessar a Visão Prática (chamados não lidos na VDS), você precisa conectar seu usuário pessoal nas Configurações VDS.";
         $msgType = "warning";
         $ocorrencias = [];
-    } else {
-        $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
+        $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 10, 1);
         $debugPratico = $resPratico['debug'] ?? [];
+        $totalRegsPratico = (int)($resPratico['totalRegs'] ?? 0);
+        $hasMorePratico = !empty($resPratico['hasMore']);
+
         if ($resPratico['success']) {
             $ocorrencias = $resPratico['items'];
             foreach ($ocorrencias as $row) {
@@ -512,7 +514,7 @@ $mapaCoresTipo = [
                             $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
                             $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
                             ?>
-                            <div class="item-oco <?= $isSel ? 'active' : '' ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>&bloco=<?= urlencode($blocoFiltro) ?>&unidade=<?= urlencode($unidadeFiltro) ?>&status=<?= urlencode($statusFiltro) ?>&oco_tipo=<?= urlencode($tipoFiltro) ?>&responsabilidade=<?= urlencode($respFiltro) ?>'">
+                            <div class="item-oco <?= $isSel ? 'active' : '' ?>" id="item-oco-<?= $oco['id'] ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>&bloco=<?= urlencode($blocoFiltro) ?>&unidade=<?= urlencode($unidadeFiltro) ?>&status=<?= urlencode($statusFiltro) ?>&oco_tipo=<?= urlencode($tipoFiltro) ?>&responsabilidade=<?= urlencode($respFiltro) ?>'">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
                                         <?= htmlspecialchars($infoTipo['nome']) ?>
@@ -1138,40 +1140,119 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#cnt-visivel-ocorrencias').text(visiveisTotais);
     });
 
-    // 4. Sincronização Assíncrona em Segundo Plano (AJAX Background Sync - Zero Wait)
-    function dispararVdsBackgroundSync() {
+    // 4. Carregamento Progressivo via AJAX da API VDS (Página 2, 3, etc. injetadas dinamicamente)
+    const mapaCoresTipoJS = <?= json_encode($mapaCoresTipo, JSON_UNESCAPED_UNICODE) ?>;
+    const visaoJS = <?= json_encode($visao) ?>;
+    let vdsCurrentPage = 1;
+    let vdsHasMore = <?= !empty($hasMorePratico) ? 'true' : 'false' ?>;
+    let vdsIsLoadingPage = false;
+    const isVisaoPratico = <?= ($visao === 'pratico') ? 'true' : 'false' ?>;
+
+    function injetarNovosItensDOM(items) {
+        if (!items || !items.length) return;
+
+        items.forEach(function(oco) {
+            if ($('#item-oco-' + oco.id).length > 0) return;
+
+            const tId = parseInt(oco.oco_tipo || 115);
+            const infoTipo = mapaCoresTipoJS[tId] || { nome: 'Outros / Diversos', bg: '#6c757d', color: '#ffffff' };
+            const groupId = "grupo-tipo-" + tId;
+
+            let $groupWrapper = $('.grupo-oco-wrapper[data-tipo-id="' + tId + '"]');
+            if ($groupWrapper.length === 0) {
+                const groupHtml = `
+                    <div class="grupo-oco-wrapper" data-tipo-id="${tId}" style="margin-bottom: 2px;">
+                        <div class="grupo-oco-header" data-target="${groupId}" style="padding: 8px 12px; background: #e9ecef; border-bottom: 1px solid #dee2e6; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <i class="material-icons tiny grupo-icon-toggle" style="color:#495057; font-size: 1.1rem;">expand_less</i>
+                                <span class="badge-tipo" style="background-color: ${infoTipo.bg}; color: ${infoTipo.color}; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;">
+                                    ${infoTipo.nome}
+                                </span>
+                            </div>
+                            <span class="badge grey lighten-1 black-text cnt-grupo-badge" style="border-radius: 10px; font-weight: bold; font-size:0.75rem; padding: 1px 7px; float:none; margin:0;">
+                                0
+                            </span>
+                        </div>
+                        <div class="grupo-oco-body" id="${groupId}"></div>
+                    </div>
+                `;
+                $('.sidebar-feed').append(groupHtml);
+                $groupWrapper = $('.grupo-oco-wrapper[data-tipo-id="' + tId + '"]');
+            }
+
+            const respText = oco.responsabilidade ? oco.responsabilidade.toUpperCase() : 'PENDENTE';
+            const resolvidoText = oco.resolvido ? '✓ Resolvido' : '• Aberto';
+            const resolvidoColor = oco.resolvido ? '#28a745' : '#dc3545';
+            const protText = oco.protocolo_vds || oco.id;
+
+            const itemHtml = `
+                <div class="item-oco" id="item-oco-${oco.id}" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=${visaoJS}&id=${oco.id}'">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span class="badge-tipo" style="background-color: ${infoTipo.bg}; color: ${infoTipo.color};">
+                            ${infoTipo.nome}
+                        </span>
+                        <span style="font-size: 0.75rem; color: #888;">
+                            Prot: ${protText}
+                        </span>
+                    </div>
+
+                    <div style="font-weight: 600; font-size: 0.95rem; color: #333;">
+                        Bloco ${oco.bloco} - Apt ${oco.unidade}
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
+                        <span>Resp: <strong>${respText}</strong></span>
+                        <span style="color: ${resolvidoColor};">
+                            ${resolvidoText}
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            $groupWrapper.find('.grupo-oco-body').append(itemHtml);
+
+            const currentCnt = parseInt($groupWrapper.find('.cnt-grupo-badge').text()) || 0;
+            $groupWrapper.find('.cnt-grupo-badge').text(currentCnt + 1);
+        });
+
+        const totalCount = $('.item-oco').length;
+        $('#cnt-visivel-ocorrencias').text(totalCount);
+    }
+
+    function carregarProximaPaginaPratico() {
+        if (!isVisaoPratico || !vdsHasMore || vdsIsLoadingPage) return;
+        vdsIsLoadingPage = true;
+        const nextPage = vdsCurrentPage + 1;
+
         $.ajax({
             url: 'vds_sync_async.php',
             type: 'GET',
+            data: { page: nextPage, limit: 10 },
             dataType: 'json',
-            timeout: 30000,
+            timeout: 20000,
             success: function(data) {
-                if (data.success && data.message) {
-                    if (data.message.indexOf('novo') !== -1 || data.flushedReads > 0) {
-                        if (typeof M !== 'undefined' && M.toast) {
-                            M.toast({
-                                html: '<i class="material-icons left tiny">sync</i> ' + data.message,
-                                displayLength: 10000,
-                                classes: 'blue darken-2 white-text font-weight-bold'
-                            });
-                        }
-                    }
-                    if (data.count !== undefined && $('#cnt-visivel-ocorrencias').length) {
-                        $('#cnt-visivel-ocorrencias').text(data.count);
-                    }
+                if (data.success && data.items && data.items.length > 0) {
+                    vdsCurrentPage = data.page || nextPage;
+                    vdsHasMore = !!data.hasMore;
+                    injetarNovosItensDOM(data.items);
+                } else {
+                    vdsHasMore = false;
                 }
             },
             error: function(xhr, status, err) {
-                console.warn('[VDS Background Sync] Servidor ocupado. Aguardando próximo ciclo de 60s...', status);
+                console.warn('[VDS Progressive Sync] Erro ao buscar página ' + nextPage, status);
             },
             complete: function() {
-                // Loop de retry em segundo plano a cada 60 segundos
-                setTimeout(dispararVdsBackgroundSync, 60000);
+                vdsIsLoadingPage = false;
+                if (vdsHasMore) {
+                    setTimeout(carregarProximaPaginaPratico, 1500);
+                }
             }
         });
     }
 
-    // Iniciar primeira sincronização 1.5s após renderização da página
-    setTimeout(dispararVdsBackgroundSync, 1500);
+    if (isVisaoPratico && vdsHasMore) {
+        setTimeout(carregarProximaPaginaPratico, 1500);
+    }
 });
 </script>
