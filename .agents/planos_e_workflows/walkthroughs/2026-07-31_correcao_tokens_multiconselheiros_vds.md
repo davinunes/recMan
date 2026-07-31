@@ -1,46 +1,28 @@
-# Walkthrough / Resumo de Entrega: Isolamento de Tokens Multi-Conselheiro & Alta Performance VDS
+# Walkthrough / Resumo de Entrega: Depuração Avançada & Resolução de Leitura VDS
 
 - **Data**: 2026-07-31
 - **Status**: Concluído & Verificado
 
-## Resumo das Modificações Realizadas
+## Diagnóstico das Causas Raiz e Soluções Aplicadas
 
-### 1. Suporte Multi-Conselheiro no Cron de Sincronização & Auto-Refresh (`cron_vds_sync.php`)
-- **Análise do Cron**: O script do cron anteriormente buscava apenas o token de `tipo = 'condominio'`. Tokens de conselheiros (`tipo = 'conselheiro'`) ficavam dependendo exclusivamente de acessos manuais na interface para serem renovados.
-- **Melhoria Aplicada**: `cron_vds_sync.php` agora busca **todos os registros** da tabela `vds_tokens` (Condomínio e todos os Conselheiros cadastrados) e executa o auto-refresh proativo individualmente para cada conselheiro via `vds_get_token($uId, false)`.
-- **Isolamento Garantido**: Como cada conselheiro possui sua linha com `usuario_id_conselho` único em `vds_tokens`, a renovação no cron atualiza especificamente o registro correspondente, mantendo todos os conselheiros conectados de forma transparente e sem colisões.
+### 1. Resolução do `Erro ao consultar chamados não lidos na VDS (0)`
+- **Causa Raiz**: O código de resposta `0` é um código interno de erro do cURL (não um status HTTP do servidor). Ele ocorreu porque a chamada cURL à VDS API (`/ocorrencia?Lida=0`) excedeu o tempo limite de 8 segundos anteriormente configurado.
+- **Solução**:
+  - Ajustamos o timeout do cURL para **25 segundos** (`CURLOPT_TIMEOUT => 25`) e tempo de conexão para **8 segundos** (`CURLOPT_CONNECTTIMEOUT => 8`), concedendo à API da VDS o tempo necessário para responder a busca por chamados não lidos.
+  - Adicionamos a captura explícita do erro cURL via `curl_error($ch)`. Caso o cURL falhe ou expire, a mensagem exata de erro (ex: `cURL: Operation timed out after 25000 milliseconds`) é exposta diretamente no console de diagnósticos.
+  - Adicionamos suporte a `CURLOPT_SSL_VERIFYPEER => false` e `CURLOPT_USERAGENT` para eliminar travamentos e delays de negociação SSL com a VDS.
 
-### 2. Regras de Negócio por Visão (Prática vs. Analítica)
-- **Visão Prática (`visao=pratico`)**:
-  - Exige obrigatoriamente que o conselheiro logado possua Ultra-Login ativo (`$hasUltraLogin = true`).
-  - Se o conselheiro não tiver efetuado o Ultra-Login, a busca de chamados não lidos na VDS é **bloqueada** e o sistema exibe um alerta solicitando que ele conecte seu usuário pessoal nas Configurações VDS (`index.php?pag=configVds`).
-- **Visão Analítica (`visao=analitico`)**:
-  - Exibe normalmente todas as ocorrências armazenadas no banco local do Conselho.
-  - Permite a postagem de **Notas Internas do Conselho**.
-  - **Bloqueia a publicação remota no VDS (`publicar_remoto`)** se o conselheiro não tiver Ultra-Login ativo, exibindo um botão de aviso apontando para a tela de configurações.
+### 2. Resolução do Falso Positivo `Token Encontrado: NÃO` no Console de Debug
+- **Causa Raiz**: O painel de debug no rodapé de `livroDeOcorrencias.php` exibia as variáveis de depuração `$detalheSel['debug']`. Quando a listagem da Visão Prática estava vazia ou falhava por timeout, nenhuma ocorrência era selecionada (`$selId = null`), resultando em `$detalheSel = null`. Com isso, a chave `token_found` ficava indefinida, forçando a exibição da mensagem enganosa `Token Encontrado: NÃO (Ausente no vds_tokens)` no console, apesar do token existir no banco de dados.
+- **Solução**:
+  - A função `vds_get_ocorrencias_pratico` agora retorna uma estrutura completa de depuração em `resPratico['debug']`.
+  - O Console de Diagnóstico & Debug em `livroDeOcorrencias.php` foi atualizado para exibir separadamente:
+    1. O **ConselheiroID em Sessão** (ex: `ConselheiroID: 5`).
+    2. A verificação do token para **aquele ID específico**.
+    3. Os detalhes da requisição cURL à VDS (URL chamada, Código HTTP, Mensagem de erro cURL e preview da resposta retornado pela VDS).
 
-### 3. Isolamento Rigoroso de Tokens entre Conselheiros (`classes/vds_auth_service.php`)
-- Refatorada a função `vds_get_token($usuarioIdConselho = null, $allowCondominioFallback = true)`:
-  - **Eliminada a query genérica (Passo 3)** que realizava `SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL ORDER BY id DESC LIMIT 1`.
-  - Ao fornecer `$usuarioIdConselho`, a busca é feita exclusivamente para aquele conselheiro (`tipo = 'conselheiro' AND usuario_id_conselho = ?`).
-  - NUNCA mais um conselheiro utilizará o token de outro conselheiro.
-  - Se o token do conselheiro estiver com `status = 'expirado'`, a rotina tenta renová-lo imediatamente via `vds_refresh_token($id)`.
-
-### 4. Correção de Status em `configVds.php` (`forms/configVds.php`)
-- A busca do token do conselheiro atual agora é chamada com `$allowCondominioFallback = false`.
-- Conselheiros que ainda não efetuaram o Ultra-Login recebem `null` e a interface exibe corretamente **Pendente de Ativação**.
-
-### 5. Prevenção de Travementos e Lentidão (Timeouts cURL + Auto Mark Expired)
-- Adicionados parâmetros de timeout de alta performance (`CURLOPT_TIMEOUT => 8` e `CURLOPT_CONNECTTIMEOUT => 4`) em todas as chamadas cURL dos serviços VDS (`vds_auth_service.php`, `vds_ocorrencia_service.php` e `vds_acesso_service.php`).
-- Ao receber HTTP 401 (token expirado ou negado pela VDS API), o sistema executa automaticamente `vds_mark_token_expired($token)`.
-
-## Estrutura de Arquivos Atualizada
-- `file:///e:/DEV/recMan/cron_vds_sync.php`
-- `file:///e:/DEV/recMan/classes/vds_auth_service.php`
+## Arquivos Atualizados
 - `file:///e:/DEV/recMan/classes/vds_ocorrencia_service.php`
-- `file:///e:/DEV/recMan/classes/vds_acesso_service.php`
-- `file:///e:/DEV/recMan/forms/configVds.php`
 - `file:///e:/DEV/recMan/livroDeOcorrencias.php`
 - `file:///e:/DEV/recMan/.agents/raciocinios/2026-07-31_correcao_tokens_multiconselheiros_vds.md`
-- `file:///e:/DEV/recMan/.agents/planos_e_workflows/planos/2026-07-31_correcao_tokens_multiconselheiros_vds.md`
 - `file:///e:/DEV/recMan/.agents/planos_e_workflows/walkthroughs/2026-07-31_correcao_tokens_multiconselheiros_vds.md`

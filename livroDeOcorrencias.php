@@ -128,6 +128,7 @@ if ($visao === 'pratico') {
         $ocorrencias = [];
     } else {
         $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 50);
+        $debugPratico = $resPratico['debug'] ?? [];
         if ($resPratico['success']) {
             $ocorrencias = $resPratico['items'];
             foreach ($ocorrencias as $row) {
@@ -911,16 +912,32 @@ $mapaCoresTipo = [
 </div>
 
 <!-- Console de Diagnóstico & Debug VDS (Visível com debug=1 ou se não carregou ocorrência/eventos) -->
-<?php if (!empty($_GET['debug']) || !$detalheSel || empty($eventosRemotos)): ?>
+<?php if (!empty($_GET['debug']) || !$detalheSel || empty($eventosRemotos) || !empty($debugPratico)): ?>
     <div style="background:#1e1e1e; color:#00ff66; padding:15px; border-radius:6px; font-family:monospace; font-size:0.8rem; margin:15px; overflow-x:auto;">
         <strong style="color:#fff; font-size:0.9rem;"><i class="material-icons tiny">bug_report</i> Console de Diagnóstico & Debug VDS (Visão: <?= strtoupper($visao) ?>)</strong>
         <hr style="border-color:#444; margin:8px 0;">
         
-        <?php $dbg = $detalheSel['debug'] ?? []; ?>
+        <?php 
+        $dbg = !empty($debugPratico) ? $debugPratico : ($detalheSel['debug'] ?? []);
+        $tokenFoundPratico = !empty($debugPratico['token_found']) || ($dbg['token_found'] ?? false) || $hasUltraLogin;
+        ?>
+        <div><strong>ConselheiroID em Sessão:</strong> <?= htmlspecialchars($usuarioIdConselho) ?></div>
         <div><strong>Input Pesquisado:</strong> <?= htmlspecialchars($protoFiltro ?: ($selId ?: 'Nenhum')) ?></div>
-        <div><strong>Token Encontrado:</strong> <?= ($dbg['token_found'] ?? false) ? 'SIM (Ativo)' : '<span style="color:#ff4444;">NÃO (Ausente no vds_tokens)</span>' ?></div>
+        <div><strong>Token Encontrado (Conselheiro <?= htmlspecialchars($usuarioIdConselho) ?>):</strong> <?= $tokenFoundPratico ? 'SIM (Ativo)' : '<span style="color:#ff4444;">NÃO (Ausente no vds_tokens para ConselheiroID ' . htmlspecialchars($usuarioIdConselho) . ')</span>' ?></div>
         <div><strong>Registro Local Encontrado:</strong> <?= ($dbg['local_found'] ?? false) ? 'SIM (ID: ' . ($dbg['local_record']['id'] ?? '') . ', UUID: ' . ($dbg['local_record']['uuid_remoto'] ?? 'Vazio') . ', Prot: ' . ($dbg['local_record']['protocolo_vds'] ?? 'Vazio') . ')' : 'NÃO (Registro Inexistente)' ?></div>
         
+        <?php if (!empty($debugPratico['url'])): ?>
+            <div style="margin-top:8px;">
+                <strong>Consulta Não Lidos VDS (/ocorrencia?Lida=0):</strong> Executada<br>
+                URL: <code><?= htmlspecialchars($debugPratico['url']) ?></code> | HTTP Code: <strong><?= htmlspecialchars($debugPratico['http_code'] ?? 'N/A') ?></strong>
+                <?php if (!empty($debugPratico['curl_error'])): ?>
+                    | <span style="color:#ff4444;"><strong>Erro cURL:</strong> <?= htmlspecialchars($debugPratico['curl_error']) ?></span>
+                <?php endif; ?>
+                <br>
+                Response Preview: <pre style="background:#2d2d2d; color:#ce9178; padding:5px; margin:4px 0; max-height:140px; overflow-y:auto; font-size:0.75rem;"><?= htmlspecialchars(substr($debugPratico['response_preview'] ?? 'Sem Resposta', 0, 1000)) ?></pre>
+            </div>
+        <?php endif; ?>
+
         <div style="margin-top:8px;">
             <strong>Busca por Protocolo na VDS:</strong> <?= ($dbg['search_api_called'] ?? false) ? 'SIM' : 'NÃO Executada' ?><br>
             <?php if (!empty($dbg['search_url'])): ?>

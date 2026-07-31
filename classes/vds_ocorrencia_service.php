@@ -712,51 +712,92 @@ function vds_persist_item_local($item, $linkParam = null) {
  * Cada chamado retornado é persistido no banco local.
  */
 function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
+    $debug = [
+        'usuario_id_conselho' => $usuarioIdConselho,
+        'token_found' => false,
+        'url' => null,
+        'http_code' => null,
+        'curl_error' => null,
+        'response_preview' => null
+    ];
+
     // Visão Prática exige o Ultra-Login individual do conselheiro
     $token = vds_get_token($usuarioIdConselho, false);
+    $debug['token_found'] = !empty($token);
+
     if (!$token) {
-        return ['success' => false, 'message' => 'Ultra-Login não ativado para o seu usuário. Acesse Configurações VDS para conectar.', 'items' => []];
+        return [
+            'success' => false,
+            'message' => 'Ultra-Login não ativado para o seu usuário (ID ' . ($usuarioIdConselho ?? 'N/A') . '). Acesse Configurações VDS para conectar.',
+            'items' => [],
+            'debug' => $debug
+        ];
     }
 
     $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=' . (int)$limit . '&sortBy=dtExibicao&order=asc&Lida=0&Caixa=0';
+    $debug['url'] = $url;
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
-            'Origin: ' . VDS_ORIGIN_HEADER
+            'Origin: ' . VDS_ORIGIN_HEADER,
+            'Accept: application/json, text/plain, */*'
         ]
     ]);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
+
+    $debug['http_code'] = $httpCode;
+    $debug['curl_error'] = $curlErr;
+    $debug['response_preview'] = substr((string)$response, 0, 1000);
 
     if ($httpCode === 401) {
         vds_mark_token_expired($token);
         // Tentar re-obter token (disparando auto-refresh no vds_get_token)
-        $retryToken = vds_get_token($usuarioIdConselho);
+        $retryToken = vds_get_token($usuarioIdConselho, false);
         if ($retryToken && $retryToken !== $token) {
             $chRetry = curl_init($url);
             curl_setopt_array($chRetry, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 8,
-                CURLOPT_CONNECTTIMEOUT => 4,
+                CURLOPT_TIMEOUT => 25,
+                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
                 CURLOPT_HTTPHEADER => [
                     'Authorization: Bearer ' . $retryToken,
-                    'Origin: ' . VDS_ORIGIN_HEADER
+                    'Origin: ' . VDS_ORIGIN_HEADER,
+                    'Accept: application/json, text/plain, */*'
                 ]
             ]);
             $response = curl_exec($chRetry);
             $httpCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($chRetry);
             curl_close($chRetry);
+
+            $debug['http_code'] = $httpCode;
+            $debug['curl_error'] = $curlErr;
+            $debug['response_preview'] = substr((string)$response, 0, 1000);
         }
     }
 
     if ($httpCode !== 200 || !$response) {
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar chamados não lidos na VDS (' . $httpCode . ').', 'items' => []];
+        $errDetail = !empty($curlErr) ? "cURL: {$curlErr}" : "HTTP {$httpCode}";
+        return [
+            'success' => false,
+            'httpCode' => $httpCode,
+            'message' => "Erro ao consultar chamados não lidos na VDS ({$errDetail}).",
+            'items' => [],
+            'debug' => $debug
+        ];
     }
 
     $data = json_decode($response, true);
@@ -800,7 +841,7 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 50) {
     }
 
     DBClose($link);
-    return ['success' => true, 'items' => $items];
+    return ['success' => true, 'items' => $items, 'debug' => $debug];
 }
 
 /**
