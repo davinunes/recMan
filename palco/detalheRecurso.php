@@ -1053,9 +1053,13 @@ if ($esseRecurso == null) {
                                                 <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold"><?= htmlspecialchars($v['tipo']) ?></span>
                                             </div>
                                             <div style="font-weight:bold; font-size:0.95rem; color:#263238;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
+                                            <?php if (!empty($v['portadorNecessidade'])): ?>
+                                                <span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.7rem; margin-top:4px; padding:2px 6px; border-radius:4px; display:inline-block;"><i class="material-icons tiny">accessible</i> Vaga PCD</span>
+                                            <?php endif; ?>
                                             <?php if (!empty($v['proprietario'])): ?>
                                                 <div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['proprietario']) ?>"><i class="material-icons tiny">person</i> <?= htmlspecialchars($v['proprietario']) ?></div>
                                             <?php endif; ?>
+
                                             <?php if (!empty($v['observacao'])): ?>
                                                 <div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="<?= htmlspecialchars($v['observacao']) ?>"><i class="material-icons tiny">info</i> <?= htmlspecialchars($v['observacao']) ?></div>
                                             <?php endif; ?>

@@ -1739,6 +1739,9 @@ window.renderToolsetVeiculos = function (list) {
         let propStr = v.proprietario ? `<div style="font-size:0.8rem; color:#555; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny">person</i> ${v.proprietario}</div>` : '';
         let obsStr = v.observacao ? `<div style="font-size:0.78rem; color:#757575; margin-top:4px; font-style:italic;" class="truncate" title="${v.observacao}"><i class="material-icons tiny">info</i> ${v.observacao}</div>` : '';
 
+        let pcdBadge = v.portadorNecessidade ? 
+            `<span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.7rem; margin-top:4px; display:inline-block;"><i class="material-icons tiny">accessible</i> Vaga PCD</span>` : '';
+
         cardsHtml += `
             <div class="col s12 m6 l3">
                 <div class="card-panel white z-depth-1 hoverable" style="border-radius:10px; padding:15px; border:1px solid #e0e0e0; margin-bottom:12px;">
@@ -1750,11 +1753,13 @@ window.renderToolsetVeiculos = function (list) {
                         <span class="badge-mini blue-grey lighten-4 blue-grey-text text-darken-4 font-weight-bold">${v.tipo}</span>
                     </div>
                     <div style="font-weight:bold; font-size:1rem; color:#263238;" class="truncate" title="${descVeiculo}">${descVeiculo}</div>
+                    ${pcdBadge}
                     ${propStr}
                     ${obsStr}
                 </div>
             </div>
         `;
+
     });
     cardsHtml += '</div>';
 

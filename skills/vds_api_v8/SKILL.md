@@ -122,7 +122,9 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 - **Listar Unidades por Bloco:** `GET /unidade?Combo=True&bloco.uuid={blocoUuid}`
 - **Listar Moradores por Unidade:** `GET /morador?Unidade.Uuid={unidadeUuid}&Combo=true`
 - **Listar Veículos da Unidade:** `GET /veiculo?Unidade.Uuid={unidadeUuid}&order=asc`
+- **Obter Detalhes do Veículo por UUID:** `GET /veiculo/{uuid}`
 - **Listar Obras da Unidade/Bloco:** `GET /obra?Unidade.Uuid={unidadeUuid}&Bloco.Uuid={blocoUuid}`
+
 
 
 ### F. Financeiro & Boletos

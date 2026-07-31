@@ -671,9 +671,13 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         'tipo' => $tipo,
                         'proprietario' => $proprietario,
                         'observacao' => $observacao,
+                        'portadorNecessidade' => !empty($auto['portadorNecessidade']),
+                        'integrado' => !empty($auto['integrado']),
+                        'status' => $item['status'] ?? 0,
                         'foto' => $fotoUrl,
                         'dtHora' => vds_format_datetime($rawDtHora, 'd/m/Y H:i', 'N/A')
                     ];
+
                 }
             }
         }
