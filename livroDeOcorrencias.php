@@ -219,12 +219,7 @@ if (!$detalheSel && $selId) {
     $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
 }
 
-// Ao abrir/carregar uma ocorrência individual (por clique ou parâmetro ?id= / ?protocolo=),
-// registrar a leitura no banco relacional local do conselheiro de forma transparente
-if ($detalheSel && !empty($detalheSel['local']['id']) && (!empty($_GET['id']) || !empty($_GET['protocolo']))) {
-    $uuidRemotoSel = $detalheSel['local']['uuid_remoto'] ?? null;
-    vds_marcar_como_lido($uuidRemotoSel, $usuarioIdConselho, $detalheSel['local']['id'], true);
-}
+
 
 // Mapa de cores para ocoTipo
 $mapaCoresTipo = [

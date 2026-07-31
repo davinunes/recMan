@@ -868,6 +868,15 @@ function vds_get_ocorrencias_pratico($usuarioIdConselho = null, $limit = 10, $pa
     foreach ($rawItems as $item) {
         $localId = vds_persist_item_local($item, $link);
 
+        // Como estes itens vieram da VDS via consulta de não lidos (Lida=0),
+        // garantir no banco relacional que o status deste conselheiro seja lido = 0 (Não Lido)
+        if ($localId > 0) {
+            vds_ensure_leitura_table_exists($link);
+            $uuidVal = $item['uuid'] ?? ($item['uuid_remoto'] ?? null);
+            $uuidEsc = mysqli_real_escape_string($link, (string)$uuidVal);
+            @mysqli_query($link, "INSERT INTO ocorrencia_leitura_conselheiro (conselheiro_id, ocorrencia_id, uuid_remoto, lido, sincronizado_remoto) VALUES ({$uId}, {$localId}, '{$uuidEsc}', 0, 1) ON DUPLICATE KEY UPDATE lido = 0, sincronizado_remoto = 1");
+        }
+
         $stmtLoc = mysqli_prepare($link, "SELECT * FROM ocorrencias WHERE id = ? LIMIT 1");
         mysqli_stmt_bind_param($stmtLoc, "i", $localId);
         mysqli_stmt_execute($stmtLoc);
