@@ -1939,6 +1939,16 @@ window.renderToolsetOcorrenciasTag = function (list) {
     $('#conteudoOcorrenciasTag').html(html);
 };
 
+// Helper para extrair valor texto de campos que podem vir como string ou objeto da API
+window.vdsExtractStringValue = function (val, defaultVal) {
+    if (!val) return defaultVal || 'N/A';
+    if (typeof val === 'string' || typeof val === 'number') return String(val);
+    if (typeof val === 'object') {
+        return val.descricao || val.nome || val.situacao || val.status || val.tipo || val.detalhe || defaultVal || 'N/A';
+    }
+    return defaultVal || 'N/A';
+};
+
 // 7. Renderizar Lista de Boletos
 window.renderToolsetBoletos = function (list) {
     $('#badgeCountBoletos').text(list.length);
@@ -1962,9 +1972,10 @@ window.renderToolsetBoletos = function (list) {
     `;
 
     list.forEach(b => {
-        let statusStr = vds_extract_string_value(b.status || b.situacao, 'Em Aberto');
+        let statusStr = window.vdsExtractStringValue(b.status || b.situacao, 'Em Aberto');
         let isPago = statusStr.toLowerCase().includes('liquidado') || statusStr.toLowerCase().includes('pago');
         let statusBadge = isPago ? `<span class="badge-mini green white-text">${statusStr}</span>` : `<span class="badge-mini orange darken-2 white-text">${statusStr}</span>`;
+
 
         let valorFmt = b.valorTotal ? ('R$ ' + parseFloat(b.valorTotal).toFixed(2).replace('.', ',')) : (b.valor ? ('R$ ' + parseFloat(b.valor).toFixed(2).replace('.', ',')) : 'R$ 0,00');
 
