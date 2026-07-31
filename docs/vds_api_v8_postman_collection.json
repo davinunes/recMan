@@ -3024,6 +3024,69 @@
           ]
         }
       ]
+    },
+    {
+        "name": "6. Portaria – Visitantes & Prestadores",
+        "item": [
+            {
+                "name": "Listar Visitantes da Unidade",
+                "request": {
+                    "method": "GET",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/visitante?DestinoUuid={{unidadeUuid}}&DestinoTipo=UNIDADE",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "visitante"],
+                        "query": [
+                            {"key": "DestinoUuid", "value": "{{unidadeUuid}}"},
+                            {"key": "DestinoTipo", "value": "UNIDADE"}
+                        ]
+                    },
+                    "description": "Lista visitantes e prestadores associados à unidade."
+                },
+                "response": []
+            },
+            {
+                "name": "Detalhes do Visitante (by UUID)",
+                "request": {
+                    "method": "GET",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/visitante/{{visitanteUuid}}",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "visitante", "{{visitanteUuid}}"]
+                    },
+                    "description": "Obtém detalhes de um visitante ou prestador."
+                },
+                "response": []
+            },
+            {
+                "name": "Validade do Visitante",
+                "request": {
+                    "method": "GET",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/visitante/{{visitanteUuid}}/validade?tipo={{tipoUuid}}",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "visitante", "{{visitanteUuid}}", "validade"],
+                        "query": [
+                            {"key": "tipo", "value": "{{tipoUuid}}"}
+                        ]
+                    },
+                    "description": "Consulta a validade ou bloqueio de um visitante."
+                },
+                "response": []
+            }
+        ]
     }
   ],
   "variable": [
