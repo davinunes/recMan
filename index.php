@@ -1,3 +1,44 @@
+<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
+
+// Se for requisição AJAX (ex: is_ajax=1), processa o handler diretamente sem emitir o layout HTML
+if (!empty($_REQUEST['is_ajax'])) {
+	if (!isset($_SESSION['user_id'])) {
+		header('Content-Type: application/json; charset=utf-8', true, 401);
+		echo json_encode(['success' => false, 'message' => 'Sessão expirada. Faça login novamente.'], JSON_UNESCAPED_UNICODE);
+		exit();
+	}
+
+	$pag = isset($_GET['pag']) ? $_GET['pag'] : '';
+	switch ($pag) {
+		case "livroDeOcorrencias":
+			include "livroDeOcorrencias.php";
+			break;
+		default:
+			header('Content-Type: application/json; charset=utf-8', true, 400);
+			echo json_encode(['success' => false, 'message' => 'Página AJAX não encontrada.'], JSON_UNESCAPED_UNICODE);
+			break;
+	}
+	exit();
+}
+
+// Verificar se o usuário está logado
+if (!isset($_SESSION['user_id'])) {
+	include('forms/login.php'); // Inclui a página de login
+	exit(); // Encerra a execução do script após incluir o login.php
+}
+
+$esseUsuario = $_SESSION["user_id"];
+$meuAvatar = $_SESSION["avatar"];
+header("Content-Type: text/html; charset=UTF-8");
+?>
+<!DOCTYPE html>
+<html>
 <head>
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,20 +61,7 @@
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 
 </head>
-
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-header("Content-Type: text/html; charset=UTF-8");
-session_start();
-// Verificar se o usuário está logado
-if (!isset($_SESSION['user_id'])) {
-	include('forms/login.php'); // Inclui a página de login
-	exit(); // Encerra a execução do script após incluir o login.php
-}
-// var_dump($_SESSION);
-$esseUsuario = $_SESSION["user_id"];
-$meuAvatar = $_SESSION["avatar"];
 include "palco/usuarioLogado.php";
 echo '<script src="push_client.js?' . time() . '"></script>';
 

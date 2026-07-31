@@ -68,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         DBClose($link);
 
         if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
@@ -93,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         DBClose($link);
 
         if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
@@ -114,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $resLido = vds_marcar_como_lido($uuidRemoto, $usuarioIdConselho, $ocorrenciaId, $novoStatusLido);
 
         if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => $resLido['success'] ?? true,
