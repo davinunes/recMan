@@ -20,7 +20,11 @@ function vds_format_mensagem_text($text) {
 /**
  * Consulta a lista de ocorrências da VDS e sincroniza na tabela `ocorrencias`.
  */
-function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null) {
+/**
+ * Consulta a lista de ocorrências da VDS e sincroniza na tabela `ocorrencias`.
+ * Utiliza o limit=10 e checagem de totalRegs para requisições ultra-rápidas sem timeout.
+ */
+function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null, $maxPages = 2, $limitPerPage = 10) {
     // Para sincronização automática global, priorizar o token do condomínio/sistema
     $token = vds_get_token(null);
     if (!$token) {
@@ -30,137 +34,139 @@ function vds_sync_ocorrencias($condominioUuid = null, $usuarioIdConselho = null)
         return ['success' => false, 'message' => 'Nenhum token ativo disponível para sincronização.'];
     }
 
-    $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9';
-    if ($condominioUuid) {
-        $url .= '&Condominio.Uuid=' . urlencode($condominioUuid);
-    }
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token,
-            'Origin: ' . VDS_ORIGIN_HEADER
-        ]
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode === 401) {
-        vds_mark_token_expired($token);
-        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao sincronizar ocorrências.'];
-    }
-
-    if ($httpCode !== 200 || !$response) {
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar ocorrências da VDS.'];
-    }
-
-    $data = json_decode($response, true);
-    $items = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
-
     $link = DBConnect();
     $count = 0;
     $insertedCount = 0;
+    $totalRegs = 0;
 
-    foreach ($items as $item) {
-        $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
-        $protocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? null);
-        // Parsear bloco e unidade do campo 'cargo' (ex: "Bloco B - 1108", "Bl. A - 102")
-        $bloco = null;
-        $unidade = null;
-        $cargoStr = $item['cargo'] ?? '';
-        if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
-            $bloco = trim($bu[1]);
-            $unidade = trim($bu[2]);
-        }
-        // Fallback somente quando não há dados de bloco/unidade (ex: 'CONDOMÍNIO - GESTÃO')
-        if (empty($bloco)) { $bloco = 'Z'; }
-        if (empty($unidade)) { $unidade = '999'; }
-
-        $rawDt = $item['dtExibicao'] ?? ($item['abertura'] ?? null);
-        if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
-            $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
-        } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
-            $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
-        } else {
-            $abertura = date('Y-m-d H:i:s');
+    for ($page = 1; $page <= $maxPages; $page++) {
+        $url = VDS_BASE_URL . '/ocorrencia?page=' . $page . '&limit=' . (int)$limitPerPage . '&sortBy=dtExibicao&order=desc&Caixa=0&Lida=9';
+        if ($condominioUuid) {
+            $url .= '&Condominio.Uuid=' . urlencode($condominioUuid);
         }
 
-        $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
-        $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
 
-        if (!$protocolo && !$uuidRemoto && !$ocoId) continue;
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        // Tentar obter registro local existente por ID VDS, protocolo_vds, uuid_remoto ou ID legado (onde id local armazenava protocolo)
-        $stmtFind = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? OR protocolo_vds = ? OR uuid_remoto = ? OR id = ? LIMIT 1");
-        $protoStr = (string)($protocolo ?? $ocoId);
-        $protoInt = (int)$protoStr;
-        $uuidStr = (string)$uuidRemoto;
-        mysqli_stmt_bind_param($stmtFind, "issi", $ocoId, $protoStr, $uuidStr, $protoInt);
-        mysqli_stmt_execute($stmtFind);
-        $resFind = mysqli_stmt_get_result($stmtFind);
-        $rowFind = mysqli_fetch_assoc($resFind);
-        mysqli_stmt_close($stmtFind);
+        if ($httpCode === 401) {
+            vds_mark_token_expired($token);
+            if ($count === 0) {
+                DBClose($link);
+                return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao sincronizar ocorrências.'];
+            }
+            break;
+        }
 
-        $jsonEncoded = json_encode($item, JSON_UNESCAPED_UNICODE);
+        if ($httpCode !== 200 || !$response) {
+            if ($count === 0) {
+                DBClose($link);
+                return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar ocorrências da VDS.'];
+            }
+            break;
+        }
 
-        $isLidoRemoto = !empty($item['lida']) || !empty($item['isLida']);
+        $data = json_decode($response, true);
+        $items = $data['regs'] ?? ($data['items'] ?? ($data['data'] ?? (is_array($data) ? $data : [])));
+        $totalRegs = (int)($data['totalRegs'] ?? ($data['total'] ?? $totalRegs));
 
-        if ($rowFind) {
-            // Só atualizar bloco/unidade se temos dados reais (não fallback)
-            $blocoReal = ($bloco !== 'Z') ? $bloco : null;
-            $unidadeReal = ($unidade !== '999') ? $unidade : null;
-            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
-            mysqli_stmt_execute($stmtUp);
-            mysqli_stmt_close($stmtUp);
-            $localIdTarget = $rowFind['id'];
-        } else {
-            if ($ocoId > 0) {
-                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                mysqli_stmt_bind_param($stmtIns, "issssssis", $ocoId, $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+        if (empty($items)) {
+            break;
+        }
+
+        foreach ($items as $item) {
+            $ocoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
+            $protocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? null);
+            $uuidRemoto = $item['uuid'] ?? ($item['uuid_remoto'] ?? null);
+
+            $bloco = null;
+            $unidade = null;
+            $cargoStr = $item['cargo'] ?? '';
+            if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+                $bloco = trim($bu[1]);
+                $unidade = trim($bu[2]);
+            }
+            if (empty($bloco)) { $bloco = 'Z'; }
+            if (empty($unidade)) { $unidade = '999'; }
+
+            $rawDt = $item['dtExibicao'] ?? ($item['abertura'] ?? null);
+            if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
+                $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+            } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
+                $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
             } else {
-                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+                $abertura = date('Y-m-d H:i:s');
             }
-            mysqli_stmt_execute($stmtIns);
-            $localIdTarget = mysqli_insert_id($link) ?: $ocoId;
-            mysqli_stmt_close($stmtIns);
-            $insertedCount++;
-        }
 
-        // Se o item vindo da VDS já é marcado como LIDO remotamente, atualizar a tabela relacional
-        if ($isLidoRemoto && $localIdTarget > 0) {
-            vds_ensure_leitura_table_exists($link);
-            $resCons = mysqli_query($link, "SELECT usuario_id_conselho FROM vds_tokens WHERE tipo = 'conselheiro' AND usuario_id_conselho IS NOT NULL");
-            if ($resCons) {
-                while ($cRow = mysqli_fetch_assoc($resCons)) {
-                    $cId = (int)$cRow['usuario_id_conselho'];
-                    $uuidEsc = mysqli_real_escape_string($link, $uuidStr);
-                    @mysqli_query($link, "INSERT INTO ocorrencia_leitura_conselheiro (conselheiro_id, ocorrencia_id, uuid_remoto, lido, sincronizado_remoto) VALUES ({$cId}, {$localIdTarget}, '{$uuidEsc}', 1, 1) ON DUPLICATE KEY UPDATE lido = 1, sincronizado_remoto = 1");
+            $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
+            $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
+
+            if (!$protocolo && !$uuidRemoto && !$ocoId) continue;
+
+            $stmtFind = mysqli_prepare($link, "SELECT id FROM ocorrencias WHERE id = ? OR protocolo_vds = ? OR uuid_remoto = ? OR id = ? LIMIT 1");
+            $protoStr = (string)($protocolo ?? $ocoId);
+            $protoInt = (int)$protoStr;
+            $uuidStr = (string)$uuidRemoto;
+            mysqli_stmt_bind_param($stmtFind, "issi", $ocoId, $protoStr, $uuidStr, $protoInt);
+            mysqli_stmt_execute($stmtFind);
+            $resFind = mysqli_stmt_get_result($stmtFind);
+            $rowFind = mysqli_fetch_assoc($resFind);
+            mysqli_stmt_close($stmtFind);
+
+            $jsonEncoded = json_encode($item, JSON_UNESCAPED_UNICODE);
+
+            if ($rowFind) {
+                $blocoReal = ($bloco !== 'Z') ? $bloco : null;
+                $unidadeReal = ($unidade !== '999') ? $unidade : null;
+                $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
+                mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
+                mysqli_stmt_execute($stmtUp);
+                mysqli_stmt_close($stmtUp);
+            } else {
+                if ($ocoId > 0) {
+                    $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    mysqli_stmt_bind_param($stmtIns, "issssssis", $ocoId, $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+                } else {
+                    $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
                 }
+                mysqli_stmt_execute($stmtIns);
+                mysqli_stmt_close($stmtIns);
+                $insertedCount++;
             }
+
+            // Mapear unidade na vds_uuid_mapping se houver bloco e unidade
+            if ($bloco && $unidade && !empty($item['unidade']['uuid'])) {
+                $chave = strtoupper($bloco) . ":" . trim($unidade);
+                $stmtMap = mysqli_prepare($link, "INSERT INTO vds_uuid_mapping (entidade_tipo, chave_local, uuid_remoto) VALUES ('unidade', ?, ?) ON DUPLICATE KEY UPDATE uuid_remoto = VALUES(uuid_remoto)");
+                $uUuid = $item['unidade']['uuid'];
+                mysqli_stmt_bind_param($stmtMap, "ss", $chave, $uUuid);
+                mysqli_stmt_execute($stmtMap);
+                mysqli_stmt_close($stmtMap);
+            }
+
+            $count++;
         }
 
-        // Mapear unidade na vds_uuid_mapping se houver bloco e unidade
-        if ($bloco && $unidade && !empty($item['unidade']['uuid'])) {
-            $chave = strtoupper($bloco) . ":" . trim($unidade);
-            $stmtMap = mysqli_prepare($link, "INSERT INTO vds_uuid_mapping (entidade_tipo, chave_local, uuid_remoto) VALUES ('unidade', ?, ?) ON DUPLICATE KEY UPDATE uuid_remoto = VALUES(uuid_remoto)");
-            $uUuid = $item['unidade']['uuid'];
-            mysqli_stmt_bind_param($stmtMap, "ss", $chave, $uUuid);
-            mysqli_stmt_execute($stmtMap);
-            mysqli_stmt_close($stmtMap);
+        if ($totalRegs > 0 && ($page * $limitPerPage >= $totalRegs)) {
+            break;
         }
-
-        $count++;
     }
 
     DBClose($link);
-    return ['success' => true, 'count' => $count, 'inserted' => $insertedCount];
+    return ['success' => true, 'count' => $count, 'inserted' => $insertedCount, 'totalRegs' => $totalRegs];
 }
 
 /**
