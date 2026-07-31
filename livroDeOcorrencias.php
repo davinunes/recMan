@@ -126,6 +126,7 @@ if ($visao === 'pratico') {
         $msg = "Ultra-Login necessário: Para acessar a Visão Prática (chamados não lidos na VDS), você precisa conectar seu usuário pessoal nas Configurações VDS.";
         $msgType = "warning";
         $ocorrencias = [];
+    } else {
         $resPratico = vds_get_ocorrencias_pratico($usuarioIdConselho, 10, 1);
         $debugPratico = $resPratico['debug'] ?? [];
         $totalRegsPratico = (int)($resPratico['totalRegs'] ?? 0);
@@ -451,6 +452,30 @@ $mapaCoresTipo = [
     <?php if ($msg): ?>
         <div style="margin-top: 10px; padding: 10px 15px; background-color: <?= $msgType === 'success' ? '#d4edda' : ($msgType === 'warning' ? '#fff3cd' : '#f8d7da') ?>; color: <?= $msgType === 'success' ? '#155724' : ($msgType === 'warning' ? '#856404' : '#721c24') ?>; border-radius: 4px;">
             <?= htmlspecialchars($msg) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($visao === 'pratico' && !empty($debugPratico)): ?>
+        <!-- Painel de Diagnóstico & Debug VDS (Visão Prática) -->
+        <div style="margin-top: 10px; background: #212529; color: #f8f9fa; border-radius: 6px; padding: 10px 14px; font-family: monospace; font-size: 0.8rem; border-left: 4px solid #0d6efd;">
+            <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="$('#vds-debug-details').slideToggle(150);">
+                <span>
+                    <strong><i class="material-icons tiny" style="vertical-align:middle; color:#0d6efd;">bug_report</i> DIAGNÓSTICO VDS (PRÁTICO):</strong>
+                    HTTP <?= htmlspecialchars($debugPratico['http_code'] ?? 'N/A') ?> |
+                    Total Regs: <?= (int)($totalRegsPratico ?? 0) ?> |
+                    Carregados (Pág 1): <?= count($ocorrencias) ?> |
+                    Ultra-Login: <?= !empty($debugPratico['token_found']) ? 'SIM (Ativo)' : 'NÃO (Ausente)' ?>
+                </span>
+                <i class="material-icons tiny">expand_more</i>
+            </div>
+            <div id="vds-debug-details" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #343a40; word-break:break-all;">
+                <div><strong>Conselheiro ID:</strong> <?= (int)($debugPratico['usuario_id_conselho'] ?? 0) ?></div>
+                <div><strong>URL VDS Chamada:</strong> <?= htmlspecialchars($debugPratico['url'] ?? 'N/A') ?></div>
+                <div><strong>Erro cURL:</strong> <?= htmlspecialchars($debugPratico['curl_error'] ?? 'Nenhum') ?></div>
+                <div><strong>Has More Pages:</strong> <?= !empty($hasMorePratico) ? 'SIM' : 'NÃO' ?></div>
+                <div style="margin-top:4px;"><strong>Response Preview:</strong></div>
+                <pre style="background:#111; color:#00ff66; padding:6px; border-radius:4px; max-height:120px; overflow:auto; margin:4px 0 0 0; font-size:0.75rem;"><?= htmlspecialchars($debugPratico['response_preview'] ?? 'N/A') ?></pre>
+            </div>
         </div>
     <?php endif; ?>
 </div>
