@@ -265,6 +265,29 @@
       "item": [
         {
           "name": "2.1 Obter Dados do Perfil Autenticado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(jsonData.usuario.uuid).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "if (jsonData.usuario && jsonData.usuario.uuid) {",
+                  "    pm.collectionVariables.set(\"usuarioUuid\", jsonData.usuario.uuid);",
+                  "    pm.collectionVariables.set(\"moradorUuid\", jsonData.usuario.moradorUuid);",
+                  "    pm.collectionVariables.set(\"blocoUuid\", jsonData.usuario.blocos[0]);",
+                  "    pm.collectionVariables.set(\"unidadeUuid\", jsonData.usuario.unidades[0]);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -290,7 +313,7 @@
                 "perfil"
               ]
             },
-            "description": "### Dados do usuário autenticado\n\nRetorna perfil completo do usuário autenticado, condomínio ativo e nível de permissão (papel)."
+            "description": "### Dados do usuário autenticado\n\nRetorna perfil completo do usuário autenticado, condomínio ativo e nível de permissão (papel).\n\n**Script Tests** grava automaticamente nas variáveis de coleção: `usuarioUuid`, `moradorUuid`, `blocoUuid` e `unidadeUuid`."
           },
           "response": []
         },
