@@ -1,0 +1,195 @@
+{
+  "name": "AgendarZenDavi",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "1 0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "38bad423-b0ff-495e-80f8-33f46dbd9bb7",
+      "name": "Schedule Trigger (Cron Diário Meia-Noite)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Yh5cmT0CNnTZNGAO",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/Yh5cmT0CNnTZNGAO"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "usuario": "usuario",
+            "senha": "senha",
+            "whatsapp": "whatsapp",
+            "bloco": "bloco",
+            "unidade": "unidade",
+            "morador": "morador",
+            "areacomum": "80bc8657-5300-490f-8e48-541c054a55b3"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "usuario",
+              "displayName": "usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "senha",
+              "displayName": "senha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "whatsapp",
+              "displayName": "whatsapp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bloco",
+              "displayName": "bloco",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "unidade",
+              "displayName": "unidade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "morador",
+              "displayName": "morador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "areacomum",
+              "displayName": "areacomum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -16
+      ],
+      "id": "84382d1b-69b9-41e2-8b5c-bc9a1fa9444d",
+      "name": "Call '(VDS) - Automação de Reserva Competitiva'"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { \"nome\": \"Bloco A\", \"uuid\": \"f0a6b46d-e9da-4c1f-b1cb-755409f96781\" } },\n  { json: { \"nome\": \"Bloco B\", \"uuid\": \"0746a6d2-c3c7-4db2-b18c-feaf3783663c\" } },\n  { json: { \"nome\": \"Bloco C\", \"uuid\": \"170f5d61-e6b8-4605-ac97-4aa606e4635b\" } },\n  { json: { \"nome\": \"Bloco D\", \"uuid\": \"95ba2746-09c3-495e-a1a8-32b3511b9296\" } },\n  { json: { \"nome\": \"Bloco E\", \"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\" } },\n  { json: { \"nome\": \"Bloco F\", \"uuid\": \"1aadaf5e-8983-44ee-a4d7-213836560d3f\" } },\n  { json: { \"nome\": \"CONDOMÍNIO\", \"uuid\": \"1B27199B-CE44-4C11-958C-B024BCF1C7FD\" } }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -240
+      ],
+      "id": "e3f329d3-4647-4d4c-bda0-6a0e0036fdd6",
+      "name": "ListaDeBlocos"
+    },
+    {
+      "parameters": {
+        "jsCode": "[\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"ca8421f8-05ad-429c-bfc4-a5ae79366da3\",\n        \"nome\": \"Churrasqueira 01 | 20 Pessoas | Virado Para a T B\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \n        \"uuid\": \"9ba41bb2-fa59-4d7d-9930-202848e35b44\",\n        \"nome\": \"Churrasqueira 02 I 20 Pessoas |virado Para Piscina\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"34df1c87-199c-4bc9-a2f7-fd9a1db70815\",\n        \"nome\": \"Espaço Gourmet I 30 Pessoas\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"11:00|15:00\",\n        \"uuid\": \"08cb4c96-1a50-4bf4-8b3b-638ece850df9\",\n        \"nome\": \"ESPAÇO ZEN - 11H ÀS 15H\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"18:00|22:00\",\n        \"uuid\": \"80bc8657-5300-490f-8e48-541c054a55b3\",\n        \"nome\": \"ESPAÇO ZEN - 18H ÀS 22H\"\n    },\n    {\n        \"periodo\": \"H\",\n        \"horarioFuncionamento\": \"08:00|22:00\",\n        \"uuid\": \"800f89be-3ddd-44c3-89c5-bf8b624fce04\",\n        \"nome\": \"Home Cinema\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"00:00|23:30\",\n        \"uuid\": \"e64c2e40-3f78-4fd1-ad38-ffab5ee611c7\",\n        \"nome\": \"Parquinho de Criança\"\n    },\n    {\n        \"periodo\": \"H\",\n        \"horarioFuncionamento\": \"00:00|23:30\",\n        \"uuid\": \"bbf45334-c952-4e62-b798-cfdc3b4b604d\",\n        \"nome\": \"Quadra\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"1cfa90b7-3547-49d6-81b8-cfeaaacaf1b6\",\n        \"nome\": \"Salão de Festa Infantil I 50 Pessoas\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"6b018cb8-7ae0-44e0-816d-860e874eabc6\",\n        \"nome\": \"Salão de Festas Adulto I 60 Pessoas\"\n    }\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -240
+      ],
+      "id": "1463953b-e3e7-42aa-94c8-c63b33c8a4d9",
+      "name": "ListaDeAreaComum"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger (Cron Diário Meia-Noite)": {
+      "main": [
+        [
+          {
+            "node": "Call '(VDS) - Automação de Reserva Competitiva'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ListaDeBlocos": {
+      "main": [
+        [
+          {
+            "node": "ListaDeAreaComum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ef280018-e568-418a-bfa4-b020cffc455c",
+  "meta": {
+    "instanceId": "3f99ecfe99a13518508c83d841a94bd09a99a44e4e27407777f360bae2015f8a"
+  },
+  "nodeGroups": [],
+  "id": "TuHw6WqblWKgZ1tp",
+  "tags": []
+}

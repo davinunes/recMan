@@ -1,25 +1,6 @@
 {
+  "name": "(VDS) - Automação de Reserva Competitiva",
   "nodes": [
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "1 0 0 * * *"
-            }
-          ]
-        }
-      },
-      "id": "45763248-ab21-490a-bf3a-2b4925def457",
-      "name": "Schedule Trigger (Cron Diário Meia-Noite)",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        624,
-        64
-      ]
-    },
     {
       "parameters": {
         "rules": {
@@ -83,7 +64,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        1936,
+        2144,
         48
       ]
     },
@@ -97,7 +78,7 @@
             },
             {
               "name": "mensagem",
-              "stringValue": "🎉 *Reserva Realizada com Sucesso!*"
+              "stringValue": "=🎉 *Reserva Realizada com Sucesso!*\n\nData da reserva: {{ $('CalcularDataAlvo').item.json.dataAlvoFormatada }}\n{{ $('CalcularDataAlvo').item.json.diaSemanaTexto }}"
             }
           ]
         },
@@ -108,7 +89,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        2192,
+        2400,
         -176
       ]
     },
@@ -122,7 +103,7 @@
             },
             {
               "name": "mensagem",
-              "stringValue": "⏳ Entrou na fila de espera!"
+              "stringValue": "=⏳ Entrou na fila de espera!\n\nData da reserva: {{ $('CalcularDataAlvo').item.json.dataAlvoFormatada }}\n{{ $('CalcularDataAlvo').item.json.diaSemanaTexto }}"
             }
           ]
         },
@@ -133,7 +114,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        2192,
+        2400,
         64
       ]
     },
@@ -142,8 +123,8 @@
         "resource": "Chatting",
         "operation": "Send Text",
         "session": "Dinovatech",
-        "chatId": "556196757676@s.whatsapp.net",
-        "text": "=🤖 *Automação de Reserva VDS*\n\n{{ $json.mensagem }}",
+        "chatId": "={{ $('Config').item.json.whatsapp }}",
+        "text": "=🤖 *Automação de Reserva VDS*\n\n{{ $json.mensagem }}\n\n{{ $now }}",
         "requestOptions": {}
       },
       "id": "34b23e98-ce20-41f1-99cf-b913e7277363",
@@ -151,7 +132,7 @@
       "type": "@devlikeapro/n8n-nodes-waha.WAHA",
       "typeVersion": 202502,
       "position": [
-        2464,
+        2672,
         64
       ],
       "credentials": {
@@ -175,11 +156,11 @@
             },
             {
               "name": "username",
-              "stringValue": "davinunes"
+              "stringValue": "={{ $json.usuario }}"
             },
             {
               "name": "password",
-              "stringValue": "378552"
+              "stringValue": "={{ $json.senha }}"
             },
             {
               "name": "appId",
@@ -187,19 +168,19 @@
             },
             {
               "name": "blocoUuid",
-              "stringValue": "d7835e76-18c9-4834-964f-d2463b2e03c4"
+              "stringValue": "={{ $json.blocoUuidResolvido }}"
             },
             {
               "name": "unidadeUuid",
-              "stringValue": "ec283937-fb6b-4df0-b049-92918396f657"
+              "stringValue": "={{ $json.unidade }}"
             },
             {
               "name": "moradorUuid",
-              "stringValue": "617e909e-ed19-42cc-9e8a-55c395df305c"
+              "stringValue": "={{ $json.morador }}"
             },
             {
               "name": "recursoUuid",
-              "stringValue": "80bc8657-5300-490f-8e48-541c054a55b3"
+              "stringValue": "={{ $json.areacomum }}"
             },
             {
               "name": "diasAntecedencia",
@@ -216,6 +197,10 @@
             {
               "name": "horarioFim",
               "stringValue": "22:00"
+            },
+            {
+              "name": "whatsapp",
+              "stringValue": "={{ $json.whatsapp }}@s.whatsapp.net"
             }
           ]
         },
@@ -226,20 +211,20 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.2,
       "position": [
-        832,
+        960,
         64
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Node para calcular dinamicamente a data alvo (ex: HOJE + 30 dias)\nconst item = $input.first().json;\nconst dias = parseInt(item.diasAntecedencia || 30, 10);\n\nconst targetDate = new Date();\ntargetDate.setDate(targetDate.getDate() + dias);\n\nconst day = String(targetDate.getDate()).padStart(2, '0');\nconst month = String(targetDate.getMonth() + 1).padStart(2, '0');\nconst year = targetDate.getFullYear();\n\nconst dtFormatted = `${day}/${month}/${year}`;\nlet dtIniStr = dtFormatted;\nlet dtFimStr = dtFormatted;\n\nif (item.tipoPeriodo === 'H' && item.horarioIni && item.horarioFim) {\n  dtIniStr = `${dtFormatted} ${item.horarioIni}`;\n  dtFimStr = `${dtFormatted} ${item.horarioFim}`;\n}\n\nreturn [{\n  json: {\n    ...item,\n    dataAlvoFormatada: dtFormatted,\n    dtIniPayload: dtIniStr,\n    dtFimPayload: dtFimStr\n  }\n}];"
+        "jsCode": "// Node para calcular dinamicamente a data alvo (ex: HOJE + 30 dias)\nconst item = $input.first().json;\nconst dias = parseInt(item.diasAntecedencia || 30, 10);\n\nconst targetDate = new Date();\ntargetDate.setDate(targetDate.getDate() + dias);\n\n// Formatação da data\nconst day = String(targetDate.getDate()).padStart(2, '0');\nconst month = String(targetDate.getMonth() + 1).padStart(2, '0');\nconst year = targetDate.getFullYear();\n\nconst dtFormatted = `${day}/${month}/${year}`;\nlet dtIniStr = dtFormatted;\nlet dtFimStr = dtFormatted;\n\nif (item.tipoPeriodo === 'H' && item.horarioIni && item.horarioFim) {\n  dtIniStr = `${dtFormatted} ${item.horarioIni}`;\n  dtFimStr = `${dtFormatted} ${item.horarioFim}`;\n}\n\n// Opcional: Array para traduzir o nome do dia para português\nconst diasSemanaExtenso = [\n  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', \n  'Quinta-feira', 'Sexta-feira', 'Sábado'\n];\n\n// Captura o número (0-6) e o texto por extenso\nconst diaSemanaNumero = targetDate.getDay();\nconst diaSemanaTexto = diasSemanaExtenso[diaSemanaNumero];\n\nreturn [{\n  json: {\n    ...item,\n    dataAlvoFormatada: dtFormatted,\n    dtIniPayload: dtIniStr,\n    dtFimPayload: dtFimStr,\n    diaSemanaNumero: diaSemanaNumero, // Ex: 1\n    diaSemanaTexto: diaSemanaTexto   // Ex: 'Segunda-feira'\n  }\n}];\n"
       },
       "id": "6e224be5-e4ae-4fba-bee6-35058d570b48",
       "name": "CalcularDataAlvo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
+        1168,
         64
       ],
       "notesInFlow": true,
@@ -272,7 +257,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1248,
+        1456,
         64
       ],
       "notesInFlow": true,
@@ -309,7 +294,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1456,
+        1664,
         64
       ],
       "notesInFlow": true,
@@ -346,7 +331,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1664,
+        1872,
         64
       ],
       "notesInFlow": true,
@@ -355,30 +340,83 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Pega a mensagem de erro bruta que vem do nó anterior\nconst erroBruto = $input.item.json?.error?.message || \"\";\n\n// 2. Tenta encontrar o JSON interno escondido no texto (ex: 400 - \"{...}\")\nconst jsonMatch = erroBruto.match(/400 - \"(.*)\"/);\n\nlet mensagemInterna = \"\";\n\nif (jsonMatch && jsonMatch[1]) {\n  // Remove as barras de escape (\\\") para deixar o JSON limpo\n  const jsonLimpo = jsonMatch[1].replace(/\\\\\"/g, '\"');\n  try {\n    // Converte o texto limpo em um objeto JSON de verdade\n    const objInterno = JSON.parse(jsonLimpo);\n    // Extrai a mensagem amigável lá de dentro\n    mensagemInterna = objInterno.message;\n  } catch (e) {\n    mensagemInterna = \"\";\n  }\n}\n\n// 3. Se não conseguiu extrair a mensagem interna, usa o erro bruto modificado\nif (!mensagemInterna) {\n  mensagemInterna = erroBruto.replace(/\\\\\"/g, '\"');\n}\n\n// 4. Monta a mensagem final perfeitamente formatada\nconst mensagemFinal = `⚠️ *Falha na Tentativa de Reserva*\\n\\n*Detalhes*:\\n${mensagemInterna}`;\n\nreturn {\n  resultado: \"FALHA\",\n  mensagem: mensagemFinal\n};"
+        "jsCode": "// 1. Pega a mensagem de erro bruta que vem do nó anterior\nconst erroBruto = $input.item.json?.error?.message || \"\";\n\n// 2. Tenta encontrar o JSON interno escondido no texto (ex: 400 - \"{...}\")\nconst jsonMatch = erroBruto.match(/400 - \"(.*)\"/);\n\n\nlet mensagemInterna = \"\";\n\nif (jsonMatch && jsonMatch[1]) {\n  // Remove as barras de escape (\\\") para deixar o JSON limpo\n  const jsonLimpo = jsonMatch[1].replace(/\\\\\"/g, '\"');\n  try {\n    // Converte o texto limpo em um objeto JSON de verdade\n    const objInterno = JSON.parse(jsonLimpo);\n    // Extrai a mensagem amigável lá de dentro\n    mensagemInterna = objInterno.message;\n  } catch (e) {\n    mensagemInterna = \"\";\n  }\n}\n\n// 3. Se não conseguiu extrair a mensagem interna, usa o erro bruto modificado\nif (!mensagemInterna) {\n  mensagemInterna = erroBruto.replace(/\\\\\"/g, '\"');\n}\n\n// 4. Monta a mensagem final perfeitamente formatada\nconst mensagemFinal = `⚠️ *Falha na Tentativa de Reserva*\\n\\n*Detalhes*:\\n${mensagemInterna}`;\n\nreturn {\n  resultado: \"FALHA\",\n  mensagem: mensagemFinal\n};"
       },
       "id": "8661f54a-6223-4f2d-a704-472ee9a2998b",
       "name": "Resultado: Erro / Falha (Formatado)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
       "position": [
-        2192,
+        2400,
         272
       ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "usuario"
+            },
+            {
+              "name": "senha"
+            },
+            {
+              "name": "whatsapp"
+            },
+            {
+              "name": "bloco"
+            },
+            {
+              "name": "unidade"
+            },
+            {
+              "name": "morador"
+            },
+            {
+              "name": "areacomum"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        64
+      ],
+      "id": "4bc8d2ee-a2b2-45bf-9c18-a53ef31f3eb5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { \"nome\": \"Bloco A\", \"uuid\": \"f0a6b46d-e9da-4c1f-b1cb-755409f96781\" } },\n  { json: { \"nome\": \"Bloco B\", \"uuid\": \"0746a6d2-c3c7-4db2-b18c-feaf3783663c\" } },\n  { json: { \"nome\": \"Bloco C\", \"uuid\": \"170f5d61-e6b8-4605-ac97-4aa606e4635b\" } },\n  { json: { \"nome\": \"Bloco D\", \"uuid\": \"95ba2746-09c3-495e-a1a8-32b3511b9296\" } },\n  { json: { \"nome\": \"Bloco E\", \"uuid\": \"d7835e76-18c9-4834-964f-d2463b2e03c4\" } },\n  { json: { \"nome\": \"Bloco F\", \"uuid\": \"1aadaf5e-8983-44ee-a4d7-213836560d3f\" } },\n  { json: { \"nome\": \"CONDOMÍNIO\", \"uuid\": \"1B27199B-CE44-4C11-958C-B024BCF1C7FD\" } }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -288
+      ],
+      "id": "b1108585-3238-4a81-a973-47b8507f8f5b",
+      "name": "ListaDeBlocos"
+    },
+    {
+      "parameters": {
+        "jsCode": "[\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"ca8421f8-05ad-429c-bfc4-a5ae79366da3\",\n        \"nome\": \"Churrasqueira 01 | 20 Pessoas | Virado Para a T B\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \n        \"uuid\": \"9ba41bb2-fa59-4d7d-9930-202848e35b44\",\n        \"nome\": \"Churrasqueira 02 I 20 Pessoas |virado Para Piscina\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"34df1c87-199c-4bc9-a2f7-fd9a1db70815\",\n        \"nome\": \"Espaço Gourmet I 30 Pessoas\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"11:00|15:00\",\n        \"uuid\": \"08cb4c96-1a50-4bf4-8b3b-638ece850df9\",\n        \"nome\": \"ESPAÇO ZEN - 11H ÀS 15H\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"18:00|22:00\",\n        \"uuid\": \"80bc8657-5300-490f-8e48-541c054a55b3\",\n        \"nome\": \"ESPAÇO ZEN - 18H ÀS 22H\"\n    },\n    {\n        \"periodo\": \"H\",\n        \"horarioFuncionamento\": \"08:00|22:00\",\n        \"uuid\": \"800f89be-3ddd-44c3-89c5-bf8b624fce04\",\n        \"nome\": \"Home Cinema\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"00:00|23:30\",\n        \"uuid\": \"e64c2e40-3f78-4fd1-ad38-ffab5ee611c7\",\n        \"nome\": \"Parquinho de Criança\"\n    },\n    {\n        \"periodo\": \"H\",\n        \"horarioFuncionamento\": \"00:00|23:30\",\n        \"uuid\": \"bbf45334-c952-4e62-b798-cfdc3b4b604d\",\n        \"nome\": \"Quadra\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"1cfa90b7-3547-49d6-81b8-cfeaaacaf1b6\",\n        \"nome\": \"Salão de Festa Infantil I 50 Pessoas\"\n    },\n    {\n        \"periodo\": \"D\",\n        \"horarioFuncionamento\": \"10:00|22:00\",\n        \"uuid\": \"6b018cb8-7ae0-44e0-816d-860e874eabc6\",\n        \"nome\": \"Salão de Festas Adulto I 60 Pessoas\"\n    }\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -288
+      ],
+      "id": "efe96132-a5f8-479d-a6c9-7bafad144b55",
+      "name": "ListaDeAreaComum"
     }
   ],
+  "pinData": {},
   "connections": {
-    "Schedule Trigger (Cron Diário Meia-Noite)": {
-      "main": [
-        [
-          {
-            "node": "Config",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Avaliar Resultado da Reserva": {
       "main": [
         [
@@ -491,11 +529,39 @@
           }
         ]
       ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ListaDeBlocos": {
+      "main": [
+        []
+      ]
     }
   },
-  "pinData": {},
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Sao_Paulo",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "7eedb52d-d235-4241-a490-7e8d0931246d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "3f99ecfe99a13518508c83d841a94bd09a99a44e4e27407777f360bae2015f8a"
-  }
+  },
+  "nodeGroups": [],
+  "id": "Yh5cmT0CNnTZNGAO",
+  "tags": []
 }
