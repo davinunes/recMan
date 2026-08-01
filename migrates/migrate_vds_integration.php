@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/classes/repositorio.php";
+require_once __DIR__ . "/../classes/repositorio.php";
 
 echo "Iniciando migração de banco de dados para integração VDS (API v8)...\n";
 
