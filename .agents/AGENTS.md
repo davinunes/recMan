@@ -109,6 +109,7 @@ As skills abaixo estão em `.agents/skills/` e devem ser **invocadas PROATIVAMEN
 | Implementando/modificando o componente de chat estilo WhatsApp           | `vds_chat_component`                             | [`.agents/skills/vds_chat_component/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/vds_chat_component/SKILL.md) |
 | Resolvendo UUIDs VDS ↔ IDs locais, cache de categorias                   | `vds_uuid_mapper`                                | [`.agents/skills/vds_uuid_mapper/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/vds_uuid_mapper/SKILL.md) |
 | Criando ou editando uma skill nova                                       | `skill_creation_guidelines`                      | [`.agents/skills/skill_creation_guidelines/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/skill_creation_guidelines/SKILL.md) |
+| Iniciando em projeto novo ou sem `.agents/` (instalar regras + skills globais) | `inicializar_estrutura_agents`              | [`.agents/skills/inicializar_estrutura_agents/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/inicializar_estrutura_agents/SKILL.md) |
 
 ---
 
