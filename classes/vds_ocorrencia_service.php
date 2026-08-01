@@ -4,7 +4,7 @@ require_once __DIR__ . "/database.php";
 require_once __DIR__ . "/vds_auth_service.php";
 
 define('VDS_TEST_PROTOCOL', '259564');
-define('VDS_TEST_MODE', true);
+define('VDS_TEST_MODE', false);
 
 /**
  * Limpa e formata texto de mensagem evitando exibição de tags HTML brutas como <br/>.
