@@ -1121,9 +1121,9 @@ function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
         return vds_vincular_tag_recurso($ocorrenciaId, "{$num}/{$ano}");
     }
 
-    // 2. Unidade (ex: B1108, Bloco B - 1108, Bl. A 102, 1108, B-102)
-    if (preg_match('/(?:Bl(?:oco|\.)?\s*)?([A-Za-z]?)\s*[-:]?\s*(\d{2,4})/i', $tagInput, $m)) {
-        $bloco = !empty($m[1]) ? strtoupper($m[1]) : 'Z';
+    // 2. Unidade (ex: B1108, 1108, B-102, a1010, 1010a, a 1010, 1010 a)
+    if (preg_match('/(?:Bl(?:oco|\.)?\s*)?\s*([A-Za-z]?)\s*[-:]?\s*(\d{2,4})\s*[-:]?\s*([A-Za-z]?)/i', $tagInput, $m)) {
+        $bloco = !empty($m[1]) ? strtoupper($m[1]) : (!empty($m[3]) ? strtoupper($m[3]) : 'Z');
         $unidade = $m[2];
         return vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, 'unidade');
     }
@@ -1186,12 +1186,23 @@ function vds_vincular_tag_recurso($ocorrenciaId, $numeroRecurso) {
         }
     }
 
-    // 3) Tabela de vínculo com número do recurso
-    $stmtLink = mysqli_prepare($link, "INSERT INTO ocorrencia_recurso_link (ocorrencia_id, protocolo_vds, numero_recurso) VALUES (?, ?, ?)");
-    if ($stmtLink) {
-        mysqli_stmt_bind_param($stmtLink, "iss", $ocorrenciaId, $protocolo, $numeroRecurso);
-        mysqli_stmt_execute($stmtLink);
-        mysqli_stmt_close($stmtLink);
+    // 3) Tabela de vínculo com número do recurso (evita duplicar quando a tag já existia)
+    $stmtLinkCheck = mysqli_prepare($link, "SELECT id FROM ocorrencia_recurso_link WHERE ocorrencia_id = ? AND numero_recurso = ? LIMIT 1");
+    $linkJaExiste = false;
+    if ($stmtLinkCheck) {
+        mysqli_stmt_bind_param($stmtLinkCheck, "is", $ocorrenciaId, $numeroRecurso);
+        mysqli_stmt_execute($stmtLinkCheck);
+        $resLinkCheck = mysqli_stmt_get_result($stmtLinkCheck);
+        $linkJaExiste = (bool)mysqli_fetch_assoc($resLinkCheck);
+        mysqli_stmt_close($stmtLinkCheck);
+    }
+    if (!$linkJaExiste) {
+        $stmtLink = mysqli_prepare($link, "INSERT INTO ocorrencia_recurso_link (ocorrencia_id, protocolo_vds, numero_recurso) VALUES (?, ?, ?)");
+        if ($stmtLink) {
+            mysqli_stmt_bind_param($stmtLink, "iss", $ocorrenciaId, $protocolo, $numeroRecurso);
+            mysqli_stmt_execute($stmtLink);
+            mysqli_stmt_close($stmtLink);
+        }
     }
 
     DBClose($link);

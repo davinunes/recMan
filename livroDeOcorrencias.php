@@ -814,7 +814,7 @@ $mapaCoresTipo = [
                                     </span>
                                 <?php else: ?>
                                     <span class="tag-badge badge blue lighten-4 blue-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
-                                        🏢 Bloco <?= htmlspecialchars($t['bloco']) ?> - Apt <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                                        🏢 <?= htmlspecialchars(strtoupper($t['bloco']) . $t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
                                     </span>
                                 <?php endif; ?>
                             <?php endforeach; ?>
@@ -1499,7 +1499,7 @@ function renderTagBadge(tag) {
         label = '🏷️ ' + tag.unidade;
         cls = 'badge grey lighten-3 grey-text text-darken-3';
     } else {
-        label = '🏢 Bloco ' + tag.bloco + ' - Apt ' + tag.unidade;
+        label = '🏢 ' + String(tag.bloco).toUpperCase() + tag.unidade;
         cls = 'badge blue lighten-4 blue-text text-darken-4';
     }
 
@@ -1611,6 +1611,12 @@ $(document).on('contextmenu', '.tag-badge', function(e) {
 </script>
 
 <style>
+.tag-badge {
+    transition: box-shadow 0.15s ease;
+}
+.tag-badge:hover {
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.18);
+}
 .btn-resp-icon {
     padding: 0 6px !important;
     height: 28px !important;
