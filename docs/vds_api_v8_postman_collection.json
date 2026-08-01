@@ -722,6 +722,226 @@
             "description": "### Passo 3 do Fluxo de Anexo em Ocorrências\n\nVincula o arquivo salvo temporariamente via `POST /upload` ao comentário ou ocorrência recém-criado (identificado por `destinoUuid` - ID numérico retornado no `POST /ocorrencia/comentario`).\n\n**Parâmetros do Body**:\n- `anexoCaminho`: Sintaxe `{nome_arquivo_temp}*{nome_original_arquivo}` (ex: `uuid.jpeg*NomeOriginal.jpeg`).\n- `tipoId`: ID do tipo de anexo (ex: `\"35\"`).\n- `destinoUuid`: ID numérico da ocorrência ou do evento de comentário (ex: `\"52075990\"`).\n- `cortarQuadrado`: Boolean (`true`/`false`)."
           },
           "response": []
+        },
+        {
+          "name": "2.10 Listar Ocorrências ENVIADAS (Caixa=1) - 🏆 REGISTROS DE VISITANTES",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=1&Lida=9&DtInicio=2026-07-01&DtFim=2026-07-31&Condominio.Uuid={{condominioUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dtExibicao"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "Caixa",
+                  "value": "1"
+                },
+                {
+                  "key": "Lida",
+                  "value": "9"
+                },
+                {
+                  "key": "DtInicio",
+                  "value": "2026-07-01"
+                },
+                {
+                  "key": "DtFim",
+                  "value": "2026-07-31"
+                },
+                {
+                  "key": "Condominio.Uuid",
+                  "value": "{{condominioUuid}}"
+                },
+                {
+                  "key": "Tipo",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "### 🏆 CAIXA DE SAÍDA / ENVIADOS — Contém QUEM REGISTROU OS ACESSOS\n\nQuando o porteiro/operador cadastra um visitante/prestador NA PORTARIA, o sistema cria automaticamente uma ocorrência na **Caixa=1 (enviados)**.\n\n**Campos importantes retornados**:\n- `por`: NOME da pessoa que registrou (porteiro, conselheiro, etc.) — **RESPOSTA PARA \"QUEM REGISTROU\"**\n- `cargo`: Cargo da pessoa (\"CONDOMÍNIO - GESTÃO\", \"Porteiro\", etc.)\n- `foto`: Foto da pessoa que registrou\n- `dePessoaId`: ID NUMÉRICO da pessoa (usar no endpoint `/pessoa/{id}` se existir)\n- `destino`: Unidade visitada (\"Bloco E - 104\")\n- `tipoId` + `tipoNome`: Tipo de visita (ex: 91 = Prestador de Serviços)\n- `dthora` / `dtExibicao`: Data/hora do cadastro\n\n**Filtros adicionais (desabilitados, habilite se quiser)**:\n- `Tipo`: Filtrar por tipoId (ex: 91 = Prestador, ?? = Visitante Social)\n\n**OBS:** o email recebido pelo morador é exatamente essa ocorrência formatada."
+          },
+          "response": []
+        },
+        {
+          "name": "2.11 Listar Tipos de Ocorrência (Fale Com, Controle de Acesso)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia_tipo?Ativo=true&TodosAtivos=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia_tipo"
+              ],
+              "query": [
+                {
+                  "key": "Ativo",
+                  "value": "true"
+                },
+                {
+                  "key": "TodosAtivos",
+                  "value": "true"
+                },
+                {
+                  "key": "Condominio.Uuid",
+                  "value": "{{condominioUuid}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "### Tabela de domínio: todos os tipos de ocorrência disponíveis\n\n**Retorno real (tipoId=91 = Prestador):**\n```json\n{\n  \"uuid\": \"91\",\n  \"nome\": \"Prestador de Serviços\",\n  \"nomeCompleto\": \"Controle de Acesso - Prestador de Serviços\",\n  \"ocoNivelUm\": 48,\n  \"ocoNivelUmNome\": \"Controle de Acesso\",\n  \"logo\": \"acesso_prestador.png\"\n}\n```\n\n**Campos retornados**:\n- `uuid`: ID numérico do tipo (usar como filtro `tipoId` ou `Tipo` em `/ocorrencia`)\n- `nome`: Nome curto\n- `nomeCompleto`: Nome completo com categoria prefixada\n- `ocoNivelUm`: ID da categoria pai (agrupador)\n- `ocoNivelUmNome`: Nome da categoria pai (ex: \"Controle de Acesso\", \"Fale com\")\n- `logo`: Ícone/logo do tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "2.12 Detalhes da Ocorrência por UUID (com condominioUuid)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/{{ocorrenciaUuid}}?condominioUuid={{condominioUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "{{ocorrenciaUuid}}"
+              ],
+              "query": [
+                {
+                  "key": "condominioUuid",
+                  "value": "{{condominioUuid}}"
+                }
+              ]
+            },
+            "description": "### Variação do endpoint de detalhe com `condominioUuid` como query param\n\nRetorna detalhes completos + eventos[] + anexos da ocorrência.\n\n**Dados para ocorrências de Controle de Acesso (tipoId=91):**\n- `por`: Nome de quem registrou\n- `cargo`: Cargo de quem registrou\n- `eventos[0].listaAnexo[0].url`: FOTO do visitante/prestador tirada no momento do cadastro (ex: `/app/dados/visitante/2026/4/f-7909848.jpg`)\n- `eventos[0].destino`: Unidade de destino\n- `dtIni`: Data/hora exata do cadastro (ISO)"
+          },
+          "response": []
+        },
+        {
+          "name": "2.13 Ordem de Serviço da Ocorrência",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/{{ocorrenciaUuid}}/ordem-servico?condominioUuid={{condominioUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "{{ocorrenciaUuid}}",
+                "ordem-servico"
+              ],
+              "query": [
+                {
+                  "key": "condominioUuid",
+                  "value": "{{condominioUuid}}"
+                }
+              ]
+            },
+            "description": "### Retorna ordens de serviço associadas à ocorrência\n\n**Retorno típico:**\n```json\n{\n  \"ordens\": [],\n  \"proximoProtocolo\": \"261493/1\"\n}\n```\n\n- `ordens[]`: Array vazio ou com lista de O.S. vinculadas\n- `proximoProtocolo`: Próximo número de protocolo sequencial disponível para ordem de serviço dessa ocorrência"
+          },
+          "response": []
+        },
+        {
+          "name": "2.14 Marcar Ocorrência como Visualizada (com condominioUuid)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "Content-Length",
+                "value": "0"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ocorrencia/visualizar/{{ocorrenciaUuid}}?condominioUuid={{condominioUuid}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ocorrencia",
+                "visualizar",
+                "{{ocorrenciaUuid}}"
+              ],
+              "query": [
+                {
+                  "key": "condominioUuid",
+                  "value": "{{condominioUuid}}"
+                }
+              ]
+            },
+            "description": "### Variação do PUT visualizar com `condominioUuid` como query param\n\nMarca a ocorrência como visualizada pelo usuário.\n\n**Antes da UI do VDS chamar o GET de detalhes, ela primeiro roda esse PUT.**"
+          },
+          "response": []
         }
       ]
     },
@@ -3181,6 +3401,65 @@
                         ]
                     },
                     "description": "Consulta a validade ou bloqueio de um visitante."
+                },
+                "response": []
+            },
+            {
+                "name": "Listar Destinos da Portaria + Status Facial",
+                "request": {
+                    "method": "GET",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/destino?Condominio.Uuid={{condominioUuid}}",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "destino"],
+                        "query": [
+                            {"key": "Condominio.Uuid", "value": "{{condominioUuid}}"}
+                        ]
+                    },
+                    "description": "### Lista unidades/blocos DESTINOS na portaria + status do reconhecimento facial\n\n**Retorno real:**\n```json\n{\n  \"facialAtiva\": true,\n  \"destino\": [\n    {\n      \"uuid\": \"d0eeaf24-2185-4e79-b0c9-b077f99a2b27\",\n      \"nome\": \"Bloco A - 1001\",\n      \"status\": \"Ocupado\",\n      \"tipo\": \"UNIDADE\"\n    }\n  ]\n}\n```\n\n- `facialAtiva`: se o reconhecimento facial está ativo no condomínio\n- `destino[].status`: \"Ocupado\" ou \"Vazio\"\n- `destino[].tipo`: \"UNIDADE\" (pode haver outros como \"BLOCO\")"
+                },
+                "response": []
+            },
+            {
+                "name": "Dispositivos/Catracas Liberados para o Visitante",
+                "request": {
+                    "method": "GET",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/visitante/{{visitanteUuid}}/dispositivo",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "visitante", "{{visitanteUuid}}", "dispositivo"]
+                    },
+                    "description": "### Quais catracas/dispositivos o visitante tem permissão de usar\n\n**OBS:** `visitanteUuid` é NÚMERO (não UUID com traços)! Ex: \"8045781\", \"7909848\".\n\n**Retorno real:**\n```json\n[\n  {\"uuid\": \"3493\", \"nome\": \"Entrada Principal P1\", \"status.uuid\": \"2\"},\n  {\"uuid\": \"5095\", \"nome\": \"Catraca P2 Entrada\", \"status.uuid\": \"2\"},\n  {\"uuid\": \"5096\", \"nome\": \"Catraca P2 Saída\", \"status.uuid\": \"2\"}\n]\n```\n\n- `uuid`: ID do dispositivo (também NUMÉRICO!)\n- `status.uuid = \"2\"`: Sucesso / Liberado"
+                },
+                "response": []
+            },
+            {
+                "name": "Cadastrar Visitante DIRETO na Portaria (POST)",
+                "request": {
+                    "method": "POST",
+                    "header": [
+                        {"key": "Authorization", "value": "Bearer {{bearerToken}}"},
+                        {"key": "Content-Type", "value": "application/json"},
+                        {"key": "Origin", "value": "{{origin}}"}
+                    ],
+                    "body": {
+                        "mode": "raw",
+                        "raw": "{\n  \"uuid\": \"8045781\",\n  \"nome\": \"Visitante Exemplo\",\n  \"foto\": \"\",\n  \"documento\": \"01063983185\",\n  \"documentoTipo\": {\"uuid\": \"cpf\"},\n  \"estado\": \"DF\",\n  \"empresa\": \"\",\n  \"rg\": \"\",\n  \"placa\": \"\",\n  \"cor\": \"\",\n  \"modelo\": \"\",\n  \"celular\": \"\",\n  \"telefone\": \"\",\n  \"email\": null,\n  \"tipoVisitante\": {\"uuid\": \"91\"},\n  \"destinoUuid\": \"ec283937-fb6b-4df0-b049-92918396f657\",\n  \"destinoTipo\": \"UNIDADE\",\n  \"validade\": \"2026-07-31T23:59:59\",\n  \"dispositivoTipo\": 11,\n  \"observacao\": \"\",\n  \"autorizacaoAcessoUuid\": null,\n  \"permitido\": true,\n  \"vagaId\": null\n}"
+                    },
+                    "url": {
+                        "raw": "{{baseUrl}}/portaria/visitante",
+                        "host": ["{{baseUrl}}"],
+                        "path": ["portaria", "visitante"]
+                    },
+                    "description": "### 🏭 Cadastrar visitante/prestador DIRETAMENTE na portaria\n\nEndpoint usado pelo porteiro na máquina da portaria. **Não requer autorização de acesso prévia** (ao contrário do `/autorizacao_acesso` criado pelo morador).\n\n**Campos importantes:**\n- `uuid`: ID NUMÉRICO do visitante (não UUID com traços)\n- `tipoVisitante.uuid`: \"91\" = Prestador; outros valores = Visitante, Entregador (use `/ocorrencia_tipo` para referência)\n- `destinoUuid`: UUID da unidade de destino (padrão com traços)\n- `validade`: Até quando o acesso vale (formato ISO)\n- `dispositivoTipo`: 11 (tipo de dispositivo/catraca)\n- `autorizacaoAcessoUuid`: NULL = cadastro direto na portaria (sem autorização prévia do morador); se preenchido, é o UUID da autorização criada pelo morador em `/autorizacao_acesso`\n- `foto`: caminho para foto do visitante tirada no momento (opcional)\n\n**Esse POST cria AUTOMATICAMENTE uma ocorrência em Caixa=1** com os dados de quem registrou (`por`, `cargo`, etc.)"
                 },
                 "response": []
             }
