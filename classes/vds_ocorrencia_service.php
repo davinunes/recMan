@@ -632,24 +632,67 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
 
 /**
  * Vincula uma unidade (Tag) a uma ocorrência.
+ * Idempotente: se já existir tag idêntica (mesma ocorrencia/bloco/unidade), retorna a existente.
+ *
+ * @return array ['success'=>bool, 'already_exists'=>bool, 'tag_id'=>int, 'tag'=>array]
  */
-function vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, $tipoVinculo = 'citada') {
-    $link = DBConnect();
+function vds_vincular_unidade_tag($ocorrenciaId, $bloco, $unidade, $tipoVinculo = 'citada', $linkParam = null) {
+    $closeLink = false;
+    $link = $linkParam;
+    if (!$link) {
+        $link = DBConnect();
+        $closeLink = true;
+    }
+
+    $protocolo = null;
     $stmtOco = mysqli_prepare($link, "SELECT protocolo_vds FROM ocorrencias WHERE id = ? LIMIT 1");
-    mysqli_stmt_bind_param($stmtOco, "i", $ocorrenciaId);
-    mysqli_stmt_execute($stmtOco);
-    $resOco = mysqli_stmt_get_result($stmtOco);
-    $rowOco = mysqli_fetch_assoc($resOco);
-    $protocolo = $rowOco['protocolo_vds'] ?? null;
-    mysqli_stmt_close($stmtOco);
+    if ($stmtOco) {
+        mysqli_stmt_bind_param($stmtOco, "i", $ocorrenciaId);
+        mysqli_stmt_execute($stmtOco);
+        $resOco = mysqli_stmt_get_result($stmtOco);
+        $rowOco = mysqli_fetch_assoc($resOco);
+        $protocolo = $rowOco['protocolo_vds'] ?? null;
+        mysqli_stmt_close($stmtOco);
+    }
+
+    // Idempotência: tag idêntica já existente
+    $stmtCheck = mysqli_prepare($link, "SELECT id FROM ocorrencia_unidade_tag WHERE ocorrencia_id = ? AND bloco = ? AND unidade = ? LIMIT 1");
+    if ($stmtCheck) {
+        mysqli_stmt_bind_param($stmtCheck, "iss", $ocorrenciaId, $bloco, $unidade);
+        mysqli_stmt_execute($stmtCheck);
+        $resCheck = mysqli_stmt_get_result($stmtCheck);
+        if ($rowCheck = mysqli_fetch_assoc($resCheck)) {
+            $existingId = (int)$rowCheck['id'];
+            mysqli_stmt_close($stmtCheck);
+            if ($closeLink) DBClose($link);
+            return [
+                'success' => true,
+                'already_exists' => true,
+                'tag_id' => $existingId,
+                'tag' => ['id' => $existingId, 'bloco' => $bloco, 'unidade' => $unidade, 'tipo_vinculo' => $tipoVinculo]
+            ];
+        }
+        mysqli_stmt_close($stmtCheck);
+    }
 
     $stmt = mysqli_prepare($link, "INSERT INTO ocorrencia_unidade_tag (ocorrencia_id, protocolo_vds, bloco, unidade, tipo_vinculo) VALUES (?, ?, ?, ?, ?)");
     mysqli_stmt_bind_param($stmt, "issss", $ocorrenciaId, $protocolo, $bloco, $unidade, $tipoVinculo);
     $success = mysqli_stmt_execute($stmt);
+    $tagId = $success ? (int)mysqli_insert_id($link) : 0;
     mysqli_stmt_close($stmt);
 
-    DBClose($link);
-    return ['success' => $success];
+    if ($closeLink) DBClose($link);
+
+    if (!$success) {
+        return ['success' => false, 'already_exists' => false, 'tag_id' => 0, 'tag' => null, 'message' => 'Falha ao gravar a tag no banco.'];
+    }
+
+    return [
+        'success' => true,
+        'already_exists' => false,
+        'tag_id' => $tagId,
+        'tag' => ['id' => $tagId, 'bloco' => $bloco, 'unidade' => $unidade, 'tipo_vinculo' => $tipoVinculo]
+    ];
 }
 
 /**
@@ -1059,7 +1102,11 @@ function vds_flush_pending_reads($usuarioIdConselho = null) {
 }
 
 /**
- * Adiciona uma tag livre com auto-detecção de tipo (Unidade B1108 ou Notificação 123/2026).
+ * Adiciona uma tag livre com auto-detecção de tipo (Unidade B1108 ou Recurso/Notificação 123/2026).
+ *
+ * Regras:
+ * - Input `numero/numero` (ex: 123/2026, 45/26) => vínculo com RECURSO (id composto = numero_ano_virtual da notificação).
+ * - Input com letra+número (ex: B1108, 1108) => vínculo com UNIDADE.
  */
 function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
     $tagInput = trim($tagInput);
@@ -1067,11 +1114,11 @@ function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
         return ['success' => false, 'message' => 'Tag vazia.'];
     }
 
-    // 1. Notificação / Recurso (ex: 123/2026, 45/26, N123/2026)
+    // 1. Recurso / Notificação (ex: 123/2026, 45/26, N123/2026) — testado ANTES de unidade
     if (preg_match('/(?:N[oº\.\s]*)?(\d+)\/(\d{2,4})/i', $tagInput, $m)) {
         $num = $m[1];
         $ano = strlen($m[2]) == 2 ? '20' . $m[2] : $m[2];
-        return vds_vincular_unidade_tag($ocorrenciaId, 'NOTIF', "{$num}/{$ano}", 'notificacao');
+        return vds_vincular_tag_recurso($ocorrenciaId, "{$num}/{$ano}");
     }
 
     // 2. Unidade (ex: B1108, Bloco B - 1108, Bl. A 102, 1108, B-102)
@@ -1083,6 +1130,154 @@ function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
 
     // 3. Tag livre genérica
     return vds_vincular_unidade_tag($ocorrenciaId, 'TAG', $tagInput, 'tag');
+}
+
+/**
+ * Vincula uma ocorrência a um Recurso/Notificação (ex: 123/2026).
+ *
+ * O `numero` do recurso é o mesmo id composto (numero_ano_virtual) da notificação.
+ * Grava a tag de exibição (NOTIF) e, se o recurso existir, também o vínculo funcional
+ * em `recurso_ocorrencia` (legado lido por getOcorrenciasVinculadas) e `ocorrencia_recurso_link`.
+ */
+function vds_vincular_tag_recurso($ocorrenciaId, $numeroRecurso) {
+    $link = DBConnect();
+
+    // Resolve protocolo da ocorrência
+    $protocolo = null;
+    $stmtOco = mysqli_prepare($link, "SELECT protocolo_vds FROM ocorrencias WHERE id = ? LIMIT 1");
+    if ($stmtOco) {
+        mysqli_stmt_bind_param($stmtOco, "i", $ocorrenciaId);
+        mysqli_stmt_execute($stmtOco);
+        $resOco = mysqli_stmt_get_result($stmtOco);
+        if ($rowOco = mysqli_fetch_assoc($resOco)) {
+            $protocolo = $rowOco['protocolo_vds'] ?? null;
+        }
+        mysqli_stmt_close($stmtOco);
+    }
+
+    // Resolve recurso pelo número composto (recurso.numero = notificacoes.numero_ano_virtual)
+    $recursoId = null;
+    $stmtRec = mysqli_prepare($link, "SELECT id FROM recurso WHERE numero = ? LIMIT 1");
+    if ($stmtRec) {
+        mysqli_stmt_bind_param($stmtRec, "s", $numeroRecurso);
+        mysqli_stmt_execute($stmtRec);
+        $resRec = mysqli_stmt_get_result($stmtRec);
+        if ($rowRec = mysqli_fetch_assoc($resRec)) {
+            $recursoId = (int)$rowRec['id'];
+        }
+        mysqli_stmt_close($stmtRec);
+    }
+
+    // 1) Tag de exibição (NOTIF)
+    $resTag = vds_vincular_unidade_tag($ocorrenciaId, 'NOTIF', $numeroRecurso, 'notificacao', $link);
+    if (!$resTag['success']) {
+        DBClose($link);
+        return $resTag;
+    }
+    $tagId = $resTag['tag_id'];
+
+    // 2) Vínculo funcional com o recurso (legado) — só se o recurso existir
+    if ($recursoId) {
+        $stmtLegacy = mysqli_prepare($link, "INSERT IGNORE INTO recurso_ocorrencia (id_recurso, id_ocorrencia) VALUES (?, ?)");
+        if ($stmtLegacy) {
+            mysqli_stmt_bind_param($stmtLegacy, "ii", $recursoId, $ocorrenciaId);
+            mysqli_stmt_execute($stmtLegacy);
+            mysqli_stmt_close($stmtLegacy);
+        }
+    }
+
+    // 3) Tabela de vínculo com número do recurso
+    $stmtLink = mysqli_prepare($link, "INSERT INTO ocorrencia_recurso_link (ocorrencia_id, protocolo_vds, numero_recurso) VALUES (?, ?, ?)");
+    if ($stmtLink) {
+        mysqli_stmt_bind_param($stmtLink, "iss", $ocorrenciaId, $protocolo, $numeroRecurso);
+        mysqli_stmt_execute($stmtLink);
+        mysqli_stmt_close($stmtLink);
+    }
+
+    DBClose($link);
+
+    if ($resTag['already_exists']) {
+        return [
+            'success' => true,
+            'already_exists' => true,
+            'tag_id' => $tagId,
+            'tag' => $resTag['tag'],
+            'recurso_id' => $recursoId,
+            'message' => "Recurso/Notificação {$numeroRecurso} já vinculado a esta ocorrência."
+        ];
+    }
+
+    return [
+        'success' => true,
+        'already_exists' => false,
+        'tag_id' => $tagId,
+        'tag' => $resTag['tag'],
+        'recurso_id' => $recursoId,
+        'message' => "Recurso/Notificação {$numeroRecurso} vinculado com sucesso!"
+    ];
+}
+
+/**
+ * Remove uma tag (e, se for tag de recurso/notificação, também os vínculos associados).
+ */
+function vds_remover_tag($tagId, $ocorrenciaId = null) {
+    $link = DBConnect();
+
+    $tagRow = null;
+    $stmtSel = mysqli_prepare($link, "SELECT bloco, unidade FROM ocorrencia_unidade_tag WHERE id = ? LIMIT 1");
+    if ($stmtSel) {
+        mysqli_stmt_bind_param($stmtSel, "i", $tagId);
+        mysqli_stmt_execute($stmtSel);
+        $resSel = mysqli_stmt_get_result($stmtSel);
+        $tagRow = mysqli_fetch_assoc($resSel);
+        mysqli_stmt_close($stmtSel);
+    }
+
+    $stmtDel = mysqli_prepare($link, "DELETE FROM ocorrencia_unidade_tag WHERE id = ?");
+    mysqli_stmt_bind_param($stmtDel, "i", $tagId);
+    $success = mysqli_stmt_execute($stmtDel);
+    mysqli_stmt_close($stmtDel);
+
+    if (!$success) {
+        DBClose($link);
+        return ['success' => false, 'message' => 'Falha ao remover a tag.'];
+    }
+
+    // Se era uma tag de notificação/recurso, remove também os vínculos associados
+    if ($tagRow && strtoupper($tagRow['bloco']) === 'NOTIF' && $ocorrenciaId) {
+        $numeroRecurso = $tagRow['unidade'];
+
+        $recursoId = null;
+        $stmtRec = mysqli_prepare($link, "SELECT id FROM recurso WHERE numero = ? LIMIT 1");
+        if ($stmtRec) {
+            mysqli_stmt_bind_param($stmtRec, "s", $numeroRecurso);
+            mysqli_stmt_execute($stmtRec);
+            $resRec = mysqli_stmt_get_result($stmtRec);
+            if ($rowRec = mysqli_fetch_assoc($resRec)) {
+                $recursoId = (int)$rowRec['id'];
+            }
+            mysqli_stmt_close($stmtRec);
+        }
+
+        if ($recursoId) {
+            $stmtLeg = mysqli_prepare($link, "DELETE FROM recurso_ocorrencia WHERE id_recurso = ? AND id_ocorrencia = ?");
+            if ($stmtLeg) {
+                mysqli_stmt_bind_param($stmtLeg, "ii", $recursoId, $ocorrenciaId);
+                mysqli_stmt_execute($stmtLeg);
+                mysqli_stmt_close($stmtLeg);
+            }
+        }
+
+        $stmtLink = mysqli_prepare($link, "DELETE FROM ocorrencia_recurso_link WHERE ocorrencia_id = ? AND numero_recurso = ?");
+        if ($stmtLink) {
+            mysqli_stmt_bind_param($stmtLink, "is", $ocorrenciaId, $numeroRecurso);
+            mysqli_stmt_execute($stmtLink);
+            mysqli_stmt_close($stmtLink);
+        }
+    }
+
+    DBClose($link);
+    return ['success' => true, 'tag_id' => $tagId, 'message' => 'Tag removida com sucesso!'];
 }
 
 /**

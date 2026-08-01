@@ -128,7 +128,7 @@ $sqlTags = "CREATE TABLE IF NOT EXISTS ocorrencia_unidade_tag (
     protocolo_vds VARCHAR(50) DEFAULT NULL,
     bloco VARCHAR(50) NOT NULL,
     unidade VARCHAR(50) NOT NULL,
-    tipo_vinculo ENUM('autora', 'citada', 'reclamada') DEFAULT 'citada',
+    tipo_vinculo ENUM('autora', 'citada', 'reclamada', 'unidade', 'notificacao', 'recurso', 'tag') DEFAULT 'citada',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_bloco_unidade (bloco, unidade),
     KEY idx_ocorrencia (ocorrencia_id)

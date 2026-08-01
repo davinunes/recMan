@@ -140,13 +140,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'adicionar_tag_livre') {
         $ocorrenciaId = (int)$_POST['ocorrencia_id'];
         $tagInput = trim($_POST['tag_input'] ?? '');
+        $resTag = ['success' => false, 'message' => 'Tag vazia.'];
         if (!empty($tagInput)) {
             $resTag = vds_adicionar_tag_livre($ocorrenciaId, $tagInput);
-            if ($resTag['success']) {
-                $msg = "Tag adicionada com sucesso!";
-                $msgType = "success";
-            }
         }
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array_merge([
+                'action' => 'adicionar_tag_livre',
+                'ocorrencia_id' => $ocorrenciaId,
+                'tag_input' => $tagInput
+            ], $resTag), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($resTag['success']) {
+            $msg = $resTag['message'] ?? ($resTag['already_exists'] ? "Tag já vinculada a esta ocorrência." : "Tag adicionada com sucesso!");
+            $msgType = !empty($resTag['already_exists']) ? "warning" : "success";
+        } else {
+            $msg = $resTag['message'] ?? "Falha ao adicionar a tag.";
+            $msgType = "danger";
+        }
+    } elseif ($action === 'remover_tag') {
+        $tagId = (int)$_POST['tag_id'];
+        $ocorrenciaId = (int)$_POST['ocorrencia_id'];
+        $resRem = vds_remover_tag($tagId, $ocorrenciaId);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array_merge([
+                'action' => 'remover_tag',
+                'ocorrencia_id' => $ocorrenciaId,
+                'tag_id' => $tagId
+            ], $resRem), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $msg = $resRem['success'] ? $resRem['message'] : ($resRem['message'] ?? 'Falha ao remover a tag.');
+        $msgType = $resRem['success'] ? "success" : "danger";
     }
 }
 
@@ -761,40 +795,40 @@ $mapaCoresTipo = [
                 </div>
             </div>
 
-            <!-- Tags Vinculadas (Nova Entrada Inteligente Sem Seletores Complexos) -->
+            <!-- Tags Vinculadas (Entrada Inteligente + Remoção via AJAX, Sem Reload) -->
             <div style="background:#fff; padding:8px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                     <strong>Tags / Vínculos:</strong>
-                    <?php if (empty($tags)): ?>
-                        <span style="color:#999;">Nenhuma tag vinculada</span>
-                    <?php else: ?>
-                        <?php foreach ($tags as $t): ?>
-                            <?php if ($t['bloco'] === 'NOTIF'): ?>
-                                <span class="badge orange lighten-4 orange-text text-darken-4" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
-                                    📋 Notificação <?= htmlspecialchars($t['unidade']) ?>
-                                </span>
-                            <?php elseif ($t['bloco'] === 'TAG'): ?>
-                                <span class="badge grey lighten-3 grey-text text-darken-3" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
-                                    🏷️ <?= htmlspecialchars($t['unidade']) ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600;">
-                                    🏢 Bloco <?= htmlspecialchars($t['bloco']) ?> - Apt <?= htmlspecialchars($t['unidade']) ?>
-                                </span>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <span id="tags-container" data-ocorrencia-id="<?= (int)$local['id'] ?>" style="display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <?php if (empty($tags)): ?>
+                            <span id="tags-vazio" style="color:#999;">Nenhuma tag vinculada</span>
+                        <?php else: ?>
+                            <?php foreach ($tags as $t): ?>
+                                <?php if ($t['bloco'] === 'NOTIF'): ?>
+                                    <span class="tag-badge badge orange lighten-4 orange-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                        📋 Notificação <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                                    </span>
+                                <?php elseif ($t['bloco'] === 'TAG'): ?>
+                                    <span class="tag-badge badge grey lighten-3 grey-text text-darken-3" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                        🏷️ <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="tag-badge badge blue lighten-4 blue-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                        🏢 Bloco <?= htmlspecialchars($t['bloco']) ?> - Apt <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                                    </span>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </span>
                 </div>
 
-                <!-- Input Livre Inteligente (+ Tag) -->
-                <form method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
-                    <input type="hidden" name="action" value="adicionar_tag_livre">
-                    <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
-                    <input type="text" name="tag_input" placeholder="Digite Unidade (B1108) ou Notificação (123/2026)..." required style="height:28px; line-height:28px; margin:0; font-size:0.8rem; width:260px; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
-                    <button type="submit" class="btn-small waves-effect waves-light blue darken-1" style="height:28px; line-height:28px; padding:0 8px; font-size:0.75rem;">
+                <!-- Input Livre Inteligente (+ Tag) via AJAX -->
+                <div style="display:flex; gap:6px; align-items:center; margin:0;">
+                    <input type="text" id="input-adicionar-tag" placeholder="Digite Unidade (B1108) ou Notificação (123/2026)..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>);}" style="height:28px; line-height:28px; margin:0; font-size:0.8rem; width:260px; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+                    <button type="button" id="btn-adicionar-tag" onclick="executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>)" class="btn-small waves-effect waves-light blue darken-1" style="height:28px; line-height:28px; padding:0 8px; font-size:0.75rem;">
                         <i class="material-icons left tiny" style="margin-right:2px;">add</i> Tag
                     </button>
-                </form>
+                </div>
             </div>
 
             <!-- Feed do Chat WhatsApp -->
@@ -1453,6 +1487,127 @@ function executarAcaoAjaxLido(ocorrenciaId, uuidRemoto, novoStatusLidoVal) {
         }
     });
 }
+
+/* ================= Tags via AJAX (Sem Reload) ================= */
+
+function renderTagBadge(tag) {
+    let label, cls;
+    if (tag.bloco === 'NOTIF') {
+        label = '📋 Notificação ' + tag.unidade;
+        cls = 'badge orange lighten-4 orange-text text-darken-4';
+    } else if (tag.bloco === 'TAG') {
+        label = '🏷️ ' + tag.unidade;
+        cls = 'badge grey lighten-3 grey-text text-darken-3';
+    } else {
+        label = '🏢 Bloco ' + tag.bloco + ' - Apt ' + tag.unidade;
+        cls = 'badge blue lighten-4 blue-text text-darken-4';
+    }
+
+    return $('<span>')
+        .addClass('tag-badge ' + cls)
+        .attr('data-tag-id', tag.id)
+        .attr('title', 'Clique direito para remover')
+        .css({ float: 'none', padding: '2px 8px', margin: '0', borderRadius: '4px', fontWeight: '600', position: 'relative', cursor: 'context-menu' })
+        .html(label + '<span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>');
+}
+
+function executarAcaoAjaxAdicionarTag(ocorrenciaId) {
+    const $input = $('#input-adicionar-tag');
+    const $btn = $('#btn-adicionar-tag');
+    const tagInput = $input.val().trim();
+    if (!tagInput) return;
+
+    $btn.css('opacity', '0.7').prop('disabled', true);
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'adicionar_tag_livre',
+            ocorrencia_id: ocorrenciaId,
+            tag_input: tagInput
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                $('#tags-vazio').remove();
+                if (res.already_exists) {
+                    M.toast({ html: res.message || 'Tag já vinculada a esta ocorrência.', classes: 'rounded orange' });
+                } else if (res.tag) {
+                    const $badge = renderTagBadge(res.tag);
+                    $('#tags-container').append($badge);
+                    $badge.hide().fadeIn(200);
+                    M.toast({ html: res.message || 'Tag adicionada!', classes: 'rounded green' });
+                } else {
+                    M.toast({ html: res.message || 'Tag vinculada!', classes: 'rounded green' });
+                }
+                $input.val('').focus();
+            } else {
+                M.toast({ html: res.message || 'Falha ao adicionar tag.', classes: 'rounded red' });
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Tag] Erro ao adicionar', err);
+            M.toast({ html: 'Erro de conexão ao adicionar tag.', classes: 'rounded red' });
+        },
+        complete: function() {
+            $btn.css('opacity', '1').prop('disabled', false);
+        }
+    });
+}
+
+function removerTag(tagId, ocorrenciaId) {
+    if (!confirm('Remover esta tag da ocorrência?')) return;
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'remover_tag',
+            tag_id: tagId,
+            ocorrencia_id: ocorrenciaId
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                $('[data-tag-id="' + tagId + '"]').fadeOut(200, function() {
+                    $(this).remove();
+                    if ($('#tags-container').find('.tag-badge').length === 0) {
+                        $('#tags-container').html('<span id="tags-vazio" style="color:#999;">Nenhuma tag vinculada</span>');
+                    }
+                });
+                M.toast({ html: res.message || 'Tag removida!', classes: 'rounded green' });
+            } else {
+                M.toast({ html: res.message || 'Falha ao remover tag.', classes: 'rounded red' });
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Tag] Erro ao remover', err);
+            M.toast({ html: 'Erro de conexão ao remover tag.', classes: 'rounded red' });
+        }
+    });
+}
+
+$(document).on('mouseenter', '.tag-badge', function() {
+    $(this).find('.tag-remove-btn').css('display', 'inline');
+});
+$(document).on('mouseleave', '.tag-badge', function() {
+    $(this).find('.tag-remove-btn').css('display', 'none');
+});
+$(document).on('click', '.tag-remove-btn', function(e) {
+    e.stopPropagation();
+    const $badge = $(this).closest('.tag-badge');
+    const ocorrenciaId = $('#tags-container').data('ocorrencia-id');
+    removerTag($badge.data('tag-id'), ocorrenciaId);
+});
+$(document).on('contextmenu', '.tag-badge', function(e) {
+    e.preventDefault();
+    const $badge = $(this);
+    const ocorrenciaId = $('#tags-container').data('ocorrencia-id');
+    removerTag($badge.data('tag-id'), ocorrenciaId);
+});
 </script>
 
 <style>
