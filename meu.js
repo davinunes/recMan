@@ -1719,21 +1719,42 @@ window.renderToolsetMoradores = function (list) {
             window.__debugCache = window.__debugCache || {};
             const dKey = 'm_' + Date.now() + '_' + idx;
             window.__debugCache[dKey] = m;
+            if (m.uuid) {
+                window.__debugCache['m_uuid_' + m.uuid] = m;
+            }
+
+            const onclDebug = m.uuid
+                ? `onclick="(function(){var d=window.__debugCacheMoradoresDetalhados&&window.__debugCacheMoradoresDetalhados['${m.uuid}'];if(!d){d=window.__debugCache['m_uuid_${m.uuid}']||window.__debugCache['${dKey}'];} window.abrirModalDebugJson('Morador &mdash; ${(m.nome || 'N/A').replace(/'/g, '\\x27')}', d);})();"`
+                : `onclick="window.abrirModalDebugJson('Morador &mdash; ${(m.nome || 'N/A').replace(/'/g, '\\x27')}', window.__debugCache['${dKey}']);"`;
+
             iconeDebugMorador = `
                 <i class="material-icons tooltipped debug-terminal-icon"
-                   style="position:absolute; top:8px; right:8px; font-size:1.15rem; cursor:pointer; color:#1565c0; opacity:0.9;"
-                   onclick="window.abrirModalDebugJson('Morador &mdash; ${(m.nome || 'N/A').replace(/'/g, '&#39;')}', window.__debugCache['${dKey}'])"
+                   style="position:absolute; top:8px; right:8px; font-size:1.15rem; cursor:pointer; color:#1565c0; opacity:0.95; z-index:4;"
+                   ${onclDebug}
                    data-tooltip="Inspecionar JSON deste Morador" title="JSON Morador">terminal</i>
             `;
         }
 
+        const hasUuid = !!(m && m.uuid);
+        const nomeEscp = (m.nome || 'Morador').replace(/"/g, '&quot;');
+        const fallbackJsonStr = hasUuid ? `{uuid:'${m.uuid}', nome:'${nomeEscp}', tipo:'${(m.tipo || 'Morador').replace(/'/g, "\\'")}'}` : 'null';
+        const btnLupa = hasUuid
+            ? `<button type="button" class="btn-lupa-preview"
+                     onclick="event.stopPropagation(); event.preventDefault(); window.abrirDetalhesMorador('${m.uuid}', ${fallbackJsonStr});">
+                   <i class="material-icons tiny">search</i> Ver detalhes
+               </button>`
+            : '';
+
         cardsHtml += `
             <div class="col s12 m6 l3">
-                <div class="card-panel white center-align z-depth-1 hoverable" style="position:relative; border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
-                    ${iconeDebugMorador}
-                    ${avatarEl}
-                    <div style="font-weight:bold; font-size:1rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
-                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo || 'Morador'}</span>
+                <div class="card-morador-wrapper">
+                    <div class="morador-card-preview-lupa">${btnLupa}</div>
+                    <div class="card-panel white center-align z-depth-1 hoverable" style="position:relative; border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                        ${iconeDebugMorador}
+                        ${avatarEl}
+                        <div style="font-weight:bold; font-size:1rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
+                        <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo || 'Morador'}</span>
+                    </div>
                 </div>
             </div>
         `;

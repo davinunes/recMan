@@ -699,6 +699,85 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
 }
 
 /**
+ * Obtém detalhes completos de um morador específico pelo UUID via endpoint GET /morador/{uuid} da API VDS v8.
+ */
+function vds_get_morador_detalhe($moradorUuid, $usuarioIdConselho = null) {
+    if (empty($moradorUuid)) {
+        return ['success' => false, 'message' => 'UUID do morador é obrigatório.'];
+    }
+
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Token VDS indisponível.'];
+    }
+
+    $url = VDS_BASE_URL . '/morador/' . urlencode($moradorUuid);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200 && $response) {
+        $data = json_decode($response, true);
+        if ($data) {
+            $out = $data;
+
+            $fotoPessoa = $out['pessoa']['foto'] ?? null;
+            if (!empty($fotoPessoa) && strpos($fotoPessoa, 'http') !== 0) {
+                $out['pessoa']['fotoUrlCompleta'] = 'https://app.vidadesindico.com.br' . $fotoPessoa;
+            } else {
+                $out['pessoa']['fotoUrlCompleta'] = $fotoPessoa;
+            }
+
+            $fotoUnidade = $out['unidade']['foto'] ?? null;
+            if (!empty($fotoUnidade) && strpos($fotoUnidade, 'http') !== 0) {
+                $out['unidade']['fotoUrlCompleta'] = 'https://app.vidadesindico.com.br' . $fotoUnidade;
+            } else {
+                $out['unidade']['fotoUrlCompleta'] = $fotoUnidade;
+            }
+
+            $fotoRegistradoPor = $out['registradoPor']['foto'] ?? null;
+            if (!empty($fotoRegistradoPor) && strpos($fotoRegistradoPor, 'http') !== 0) {
+                $out['registradoPor']['fotoUrlCompleta'] = 'https://app.vidadesindico.com.br' . $fotoRegistradoPor;
+            } else {
+                $out['registradoPor']['fotoUrlCompleta'] = $fotoRegistradoPor;
+            }
+
+            if (!empty($out['dthora'])) {
+                $out['dthoraFormatada'] = vds_format_datetime($out['dthora'], 'd/m/Y H:i:s');
+            }
+
+            $statusRaw = $out['status'] ?? null;
+            if (is_string($statusRaw)) {
+                $stTrim = trim($statusRaw);
+                $stNum = is_numeric($stTrim) ? (int)$stTrim : null;
+            } else {
+                $stNum = is_numeric($statusRaw) ? (int)$statusRaw : null;
+            }
+            $out['statusNum'] = $stNum;
+            $out['statusAtivo'] = ($stNum === 1);
+            $out['statusLabel'] = ($stNum === 1) ? 'Ativo' : 'Inativo';
+
+            return ['success' => true, 'data' => $out];
+        }
+    }
+
+    return [
+        'success' => false,
+        'httpCode' => $httpCode,
+        'message' => 'Morador não encontrado ou erro na API VDS.'
+    ];
+}
+
+/**
  * Consulta visitantes e prestadores de serviço cadastrados para a unidade na API v8 da VDS.
  */
 function vds_get_visitantes_unidade($bloco, $unidade, $usuarioIdConselho = null) {
