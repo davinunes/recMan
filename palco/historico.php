@@ -1,7 +1,84 @@
 <?php
 require_once __DIR__ . "/../classes/repositorio.php";
 $mesAtualDefault = date('Y-m');
+$userIdDebug = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$isDebugUser = ($userIdDebug === 5);
 ?>
+
+<script>
+    window.RECMAN_USER_ID = <?php echo $userIdDebug; ?>;
+    window.RECMAN_IS_DEBUG_USER = <?php echo $isDebugUser ? 'true' : 'false'; ?>;
+    window.lastEntregaDebugData = null;
+
+    window.isDebugUser = function () {
+        return window.RECMAN_IS_DEBUG_USER === true;
+    };
+
+    window.abrirModalDebugJson = function (titulo, obj) {
+        try {
+            var tituloEl = document.getElementById('debugJsonTitulo');
+            if (tituloEl) tituloEl.textContent = titulo || 'Dados JSON';
+            var preEl = document.getElementById('debugJsonConteudo');
+            if (preEl) {
+                preEl.textContent = JSON.stringify(obj, null, 2);
+            }
+            var modalEl = document.getElementById('modalDebugJson');
+            if (modalEl && typeof M !== 'undefined' && M.Modal) {
+                var inst = M.Modal.getInstance(modalEl);
+                if (inst) inst.open();
+            }
+        } catch (e) {
+            console.error('Erro ao abrir modal de debug JSON:', e);
+            alert('Erro ao exibir JSON: ' + e.message);
+        }
+    };
+
+    window.copiarDebugJson = function () {
+        var preEl = document.getElementById('debugJsonConteudo');
+        if (!preEl) return;
+        var texto = preEl.textContent || '';
+        if (!texto) {
+            M.toast({ html: 'Nada para copiar.', classes: 'orange rounded' });
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texto).then(function () {
+                M.toast({ html: 'JSON copiado para a área de transferência!', classes: 'green rounded' });
+            }).catch(function () {
+                fallbackCopiar(texto);
+            });
+        } else {
+            fallbackCopiar(texto);
+        }
+    };
+
+    function fallbackCopiar(texto) {
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = texto;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            M.toast({ html: 'JSON copiado para a área de transferência!', classes: 'green rounded' });
+        } catch (e) {
+            M.toast({ html: 'Não foi possível copiar o JSON.', classes: 'red rounded' });
+        }
+    }
+
+    window.htmlIconeDebugTerminal = function (onClickFnStr, titulo) {
+        if (!window.isDebugUser()) return '';
+        var onclickAttr = onClickFnStr ? ' onclick="' + onClickFnStr.replace(/"/g, '&quot;') + '"' : '';
+        var titleAttr = titulo ? ' title="' + titulo.replace(/"/g, '&quot;') + '"' : ' title="Inspecionar JSON bruto (Debug)"';
+        return '' +
+            '<i class="material-icons debug-terminal-icon tooltipped" style="' +
+            'font-size:1.1rem; cursor:pointer; color:#1565c0; opacity:0.85; ' +
+            'transition:all 0.2s ease; vertical-align:middle; margin-left:4px;"' +
+            onclickAttr + titleAttr + ' data-tooltip="' + (titulo ? titulo.replace(/"/g, '&quot;') : 'Inspecionar JSON bruto') + '">' +
+            'terminal' +
+            '</i>';
+    };
+</script>
 
 <div class="container" style="width: 95%; max-width: 1400px;">
     <!-- Cabeçalho Principal -->
@@ -331,6 +408,12 @@ $mesAtualDefault = date('Y-m');
     <div class="modal-content">
         <h4 style="display:flex; align-items:center; gap:8px;">
             <i class="material-icons amber-text text-darken-3">inventory_2</i> Detalhes da Encomenda
+            <span id="iconeDebugModalEntrega" class="hide" style="margin-left:auto;">
+                <i class="material-icons debug-terminal-icon tooltipped"
+                   style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
+                   onclick="if(window.lastEntregaDebugData){window.abrirModalDebugJson('Dados brutos da Encomenda (API VDS)', window.lastEntregaDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
+                   data-tooltip="Inspecionar JSON bruto desta Encomenda" title="Inspecionar JSON bruto">terminal</i>
+            </span>
         </h4>
         <div id="conteudoModalEntrega" class="center-align" style="padding: 10px 0;">
             <div class="preloader-wrapper active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div></div></div>
@@ -338,6 +421,37 @@ $mesAtualDefault = date('Y-m');
     </div>
     <div class="modal-footer">
         <button class="modal-close btn waves-effect blue darken-2">Fechar</button>
+    </div>
+</div>
+
+<!-- Modal Debug: Exibir JSON formatado de requisições/dados -->
+<div id="modalDebugJson" class="modal modal-fixed-footer" style="max-width:900px; width:90%;">
+    <div class="modal-content" style="padding-bottom:0;">
+        <h5 style="display:flex; align-items:center; gap:8px; margin-top:0; margin-bottom:10px;">
+            <i class="material-icons blue-grey-text" style="font-size:1.8rem;">code</i>
+            <span id="debugJsonTitulo">Dados JSON</span>
+            <span style="margin-left:auto;">
+                <button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3"
+                        onclick="window.copiarDebugJson();" title="Copiar JSON">
+                    <i class="material-icons left tiny">content_copy</i> Copiar
+                </button>
+            </span>
+        </h5>
+        <div style="
+            background:#263238;
+            color:#eceff1;
+            border-radius:8px;
+            padding:14px 16px;
+            max-height: calc(80vh - 180px);
+            overflow:auto;
+            border:1px solid #37474f;
+        ">
+            <pre id="debugJsonConteudo"
+                 style="margin:0; font-family:Consolas, Monaco, 'Courier New', monospace; font-size:0.82rem; line-height:1.45; white-space:pre-wrap; word-break:break-word;">{ }</pre>
+        </div>
+    </div>
+    <div class="modal-footer" style="background:#fafafa;">
+        <button class="modal-close btn-flat waves-effect">Fechar</button>
     </div>
 </div>
 
@@ -432,5 +546,14 @@ $mesAtualDefault = date('Y-m');
         $('select').formSelect();
         $('.collapsible').collapsible({ accordion: false });
         $('.modal').modal();
+
+        if (window.isDebugUser()) {
+            var iconeEntrega = document.getElementById('iconeDebugModalEntrega');
+            if (iconeEntrega) iconeEntrega.classList.remove('hide');
+
+            if (typeof $('.tooltipped').tooltip === 'function') {
+                $('.tooltipped').tooltip();
+            }
+        }
     });
 </script>

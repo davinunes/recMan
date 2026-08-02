@@ -1709,14 +1709,28 @@ window.renderToolsetMoradores = function (list) {
     }
 
     let cardsHtml = '<div class="row" style="margin-bottom:0;">';
-    list.forEach(m => {
+    list.forEach((m, idx) => {
         let avatarEl = m.foto ? 
             `<img src="${m.foto}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:6px;">` : 
             `<div style="width:64px; height:64px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.5rem;">account_circle</i></div>`;
 
+        let iconeDebugMorador = '';
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            window.__debugCache = window.__debugCache || {};
+            const dKey = 'm_' + Date.now() + '_' + idx;
+            window.__debugCache[dKey] = m;
+            iconeDebugMorador = `
+                <i class="material-icons tooltipped debug-terminal-icon"
+                   style="position:absolute; top:8px; right:8px; font-size:1.15rem; cursor:pointer; color:#1565c0; opacity:0.9;"
+                   onclick="window.abrirModalDebugJson('Morador &mdash; ${(m.nome || 'N/A').replace(/'/g, '&#39;')}', window.__debugCache['${dKey}'])"
+                   data-tooltip="Inspecionar JSON deste Morador" title="JSON Morador">terminal</i>
+            `;
+        }
+
         cardsHtml += `
             <div class="col s12 m6 l3">
-                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="position:relative; border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    ${iconeDebugMorador}
                     ${avatarEl}
                     <div style="font-weight:bold; font-size:1rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
                     <span class="badge-mini cyan darken-1 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo || 'Morador'}</span>
@@ -1727,6 +1741,10 @@ window.renderToolsetMoradores = function (list) {
     cardsHtml += '</div>';
 
     $('#conteudoMoradores').html(cardsHtml);
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser() && typeof $.fn.tooltip === 'function') {
+        setTimeout(function() { $('.tooltipped').tooltip(); }, 50);
+    }
 };
 
 // 0.1 Renderizar Veículos da Unidade (Design Centralizado com Cores por Tipo + Vagas)
@@ -1758,7 +1776,7 @@ window.renderToolsetVeiculos = function (list, vagas) {
 
     let cardsHtml = vagasBannerHtml + '<div class="row" style="margin-bottom:0;">';
 
-    list.forEach(v => {
+    list.forEach((v, idx) => {
         let tipoLower = (v.tipo || '').toLowerCase();
         let isMoto = tipoLower.includes('moto');
         let isBici = tipoLower.includes('bici');
@@ -1791,12 +1809,26 @@ window.renderToolsetVeiculos = function (list, vagas) {
             `<div style="margin-top:4px;"><span class="badge-mini grey darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">block</i> INATIVO</span></div>` : '';
 
         let cardStyle = isAtivo ? 
-            'border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 
-            'border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
+            'position:relative; border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 
+            'position:relative; border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
+
+        let iconeDebugVeiculo = '';
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            window.__debugCache = window.__debugCache || {};
+            const dKey = 'v_' + Date.now() + '_' + idx;
+            window.__debugCache[dKey] = v;
+            iconeDebugVeiculo = `
+                <i class="material-icons tooltipped debug-terminal-icon"
+                   style="position:absolute; top:10px; right:10px; font-size:1.15rem; cursor:pointer; color:#1565c0; opacity:0.95; z-index:2;"
+                   onclick="window.abrirModalDebugJson('Veículo &mdash; ${(v.placa || descVeiculo).replace(/'/g, '&#39;')}', window.__debugCache['${dKey}'])"
+                   data-tooltip="Inspecionar JSON deste Veículo" title="JSON Veículo">terminal</i>
+            `;
+        }
 
         cardsHtml += `
             <div class="col s12 m6 l3">
                 <div class="card-panel white center-align z-depth-1 hoverable" style="${cardStyle}">
+                    ${iconeDebugVeiculo}
                     ${fotoHtml}
                     <div style="margin-bottom:8px;">
                         <span class="badge ${badgeColorClass} white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
@@ -1816,6 +1848,10 @@ window.renderToolsetVeiculos = function (list, vagas) {
     cardsHtml += '</div>';
 
     $('#conteudoVeiculos').html(cardsHtml);
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser() && typeof $.fn.tooltip === 'function') {
+        setTimeout(function() { $('.tooltipped').tooltip(); }, 50);
+    }
 };
 
 // 0.2 Renderizar Visitantes e Prestadores da Portaria
@@ -1827,16 +1863,30 @@ window.renderToolsetVisitantes = function (list) {
     }
 
     let cardsHtml = '<div class="row" style="margin-bottom:0;">';
-    list.forEach(v => {
+    list.forEach((v, idx) => {
         let avatarEl = v.foto ? 
             `<img src="${v.foto}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #8e24aa; margin-bottom:6px;">` : 
             `<div style="width:64px; height:64px; border-radius:50%; background:#f3e5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #8e24aa;"><i class="material-icons purple-text text-darken-2" style="font-size:2.5rem;">person</i></div>`;
 
         let docStr = (v.documento && v.documento !== 'N/A') ? `<div style="font-size:0.78rem; color:#616161; margin-top:4px;" class="truncate" title="${v.documento}"><i class="material-icons tiny" style="vertical-align:middle;">assignment_ind</i> ${v.documento}</div>` : '';
 
+        let iconeDebugVisitante = '';
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            window.__debugCache = window.__debugCache || {};
+            const dKey = 'vis_' + Date.now() + '_' + idx;
+            window.__debugCache[dKey] = v;
+            iconeDebugVisitante = `
+                <i class="material-icons tooltipped debug-terminal-icon"
+                   style="position:absolute; top:8px; right:8px; font-size:1.15rem; cursor:pointer; color:#1565c0; opacity:0.9;"
+                   onclick="window.abrirModalDebugJson('Visitante/Prestador &mdash; ${(v.nome || 'N/A').replace(/'/g, '&#39;')}', window.__debugCache['${dKey}'])"
+                   data-tooltip="Inspecionar JSON deste Visitante/Prestador" title="JSON Visitante">terminal</i>
+            `;
+        }
+
         cardsHtml += `
             <div class="col s12 m6 l3">
-                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                <div class="card-panel white center-align z-depth-1 hoverable" style="position:relative; border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                    ${iconeDebugVisitante}
                     ${avatarEl}
                     <div style="font-weight:bold; font-size:0.98rem; color:#4a148c;" class="truncate" title="${v.nome}">${v.nome}</div>
                     <span class="badge-mini purple darken-2 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${v.tipo || 'Visitante'}</span>
@@ -1848,6 +1898,10 @@ window.renderToolsetVisitantes = function (list) {
     cardsHtml += '</div>';
 
     $('#conteudoVisitantes').html(cardsHtml);
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser() && typeof $.fn.tooltip === 'function') {
+        setTimeout(function() { $('.tooltipped').tooltip(); }, 50);
+    }
 };
 
 
@@ -1954,7 +2008,7 @@ window.renderToolsetEncomendas = function (list) {
             <tbody>
     `;
 
-    list.forEach(e => {
+    list.forEach((e, idx) => {
         let fotoImg = e.foto ? `<img src="${e.foto}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer;" class="img-preview-entrega" data-uuid="${e.uuid}">` : `<i class="material-icons grey-text">inventory_2</i>`;
         let statusBadge = (e.status || '').toLowerCase().includes('entregue') || (e.status || '').toLowerCase().includes('retirado') ? 
             `<span class="badge-mini green white-text">${e.status}</span>` : 
@@ -1963,6 +2017,23 @@ window.renderToolsetEncomendas = function (list) {
         let colIdHtml = e.identificador ? 
             `<span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">qr_code</i> ${e.identificador}</span>` : 
             `<span class="grey-text text-lighten-1" style="font-size:0.85rem;"><i class="material-icons tiny">hourglass_empty</i> Carregando...</span>`;
+
+        let iconeDebugEntrega = '';
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            window.__debugCache = window.__debugCache || {};
+            const dKey = 'ent_' + Date.now() + '_' + idx;
+            window.__debugCache[dKey] = e;
+            if (e.uuid) {
+                window.__debugCache['ent_uuid_' + e.uuid] = e;
+            }
+            const lblEnt = e.identificador || e.descricao || e.uuid || 'Encomenda';
+            iconeDebugEntrega = `
+                <i class="material-icons tooltipped debug-terminal-icon"
+                   style="font-size:1.25rem; cursor:pointer; color:#1565c0; vertical-align:middle; margin-left:3px;"
+                   onclick="window.abrirModalDebugJson('Encomenda &mdash; ${lblEnt.replace(/'/g, '&#39;')}', window.__debugCache['${e.uuid ? ('ent_uuid_' + e.uuid) : dKey}'] || window.__debugCache['${dKey}'])"
+                   data-tooltip="Inspecionar JSON desta Encomenda" title="JSON Encomenda">terminal</i>
+            `;
+        }
 
         tableHtml += `
             <tr class="linha-entrega-toolset" data-uuid="${e.uuid}">
@@ -1976,6 +2047,7 @@ window.renderToolsetEncomendas = function (list) {
                     <button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3 btn-inspect-entrega" data-uuid="${e.uuid}">
                         <i class="material-icons tiny left">visibility</i> Ver
                     </button>
+                    ${iconeDebugEntrega}
                 </td>
             </tr>
         `;
@@ -1995,6 +2067,11 @@ window.renderToolsetEncomendas = function (list) {
             .then(resData => {
                 if (resData && resData.success && resData.data) {
                     const d = resData.data;
+
+                    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+                        window.__debugCache = window.__debugCache || {};
+                        window.__debugCache['ent_uuid_' + uuid] = d;
+                    }
 
                     if (d.identificador) {
                         const colId = row.querySelector('.col-identificador');
@@ -2023,6 +2100,10 @@ window.renderToolsetEncomendas = function (list) {
             })
             .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
     });
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser() && typeof $.fn.tooltip === 'function') {
+        setTimeout(function() { $('.tooltipped').tooltip(); }, 80);
+    }
 };
 
 
@@ -2337,6 +2418,11 @@ $(document).on('click', '.btn-inspect-entrega, .img-preview-entrega', function (
     $.get(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`, function (res) {
         if (res && res.success && res.data) {
             let d = res.data;
+            if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+                window.lastEntregaDebugData = d;
+                window.__debugCache = window.__debugCache || {};
+                window.__debugCache['ent_uuid_' + uuid] = d;
+            }
             let foto = d.fotoUrlCompleta ? `<img src="${d.fotoUrlCompleta}" style="max-width:100%; max-height:350px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">` : '<p class="grey-text">Sem foto registrada</p>';
             
             let html = `
