@@ -1062,7 +1062,8 @@ if ($esseRecurso == null) {
                                     $tipoLower = strtolower($v['tipo'] ?? '');
                                     $isMoto = strpos($tipoLower, 'moto') !== false;
                                     $isBici = strpos($tipoLower, 'bici') !== false;
-                                    $isAtivo = (isset($v['ativo']) && $v['ativo'] !== false && $v['ativo'] !== 0);
+                                    $statusRaw = $v['status'] ?? null;
+                                    $isAtivo = ($statusRaw === 1 || $statusRaw === '1' || (is_string($statusRaw) && trim($statusRaw) === '1'));
 
                                     $iconName = 'directions_car';
                                     $badgeColorClass = $isAtivo ? 'blue-grey darken-3' : 'grey darken-2';

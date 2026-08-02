@@ -662,24 +662,15 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
 
                     $rawDtHora = $item['dtHora'] ?? ($item['dthora'] ?? null);
 
-                    // Verificação abrangente de ativo/inativo
-                    $ativo = true;
-                    if (array_key_exists('ativo', $item)) {
-                        $ativo = (bool)$item['ativo'];
-                    } elseif (array_key_exists('ativo', $auto)) {
-                        $ativo = (bool)$auto['ativo'];
-                    } elseif (isset($item['status'])) {
-                        if (is_numeric($item['status'])) {
-                            $ativo = ((int)$item['status'] === 0);
-                        } else {
-                            $stStr = strtolower((string)$item['status']);
-                            $ativo = ($stStr === 'ativo' || $stStr === '0' || $stStr === 'true');
-                        }
+                    $statusRaw = $item['status'] ?? ($auto['status'] ?? 0);
+                    if (is_string($statusRaw)) {
+                        $statusTrim = trim($statusRaw);
+                        $statusNum = is_numeric($statusTrim) ? (int)$statusTrim : 0;
+                    } else {
+                        $statusNum = (int)$statusRaw;
                     }
-
-                    if (!empty($item['dtExclusao']) || !empty($auto['dtExclusao']) || !empty($item['dtFim'])) {
-                        $ativo = false;
-                    }
+                    $statusParaExibicao = is_numeric($statusRaw) ? (int)$statusRaw : $statusRaw;
+                    $ativo = ($statusNum === 1);
 
                     $veiculos[] = [
                         'uuid' => $item['uuid'] ?? ($auto['uuid'] ?? null),
@@ -692,7 +683,7 @@ function vds_get_veiculos_unidade($bloco, $unidade, $usuarioIdConselho = null) {
                         'observacao' => $observacao,
                         'portadorNecessidade' => !empty($auto['portadorNecessidade']),
                         'integrado' => !empty($auto['integrado']),
-                        'status' => $item['status'] ?? 0,
+                        'status' => $statusParaExibicao,
                         'ativo' => $ativo,
                         'foto' => $fotoUrl,
                         'dtHora' => vds_format_datetime($rawDtHora, 'd/m/Y H:i', 'N/A')

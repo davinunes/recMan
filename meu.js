@@ -1780,7 +1780,8 @@ window.renderToolsetVeiculos = function (list, vagas) {
         let tipoLower = (v.tipo || '').toLowerCase();
         let isMoto = tipoLower.includes('moto');
         let isBici = tipoLower.includes('bici');
-        let isAtivo = (v.ativo !== false && v.ativo !== 0);
+        let statusRaw = v.status;
+        let isAtivo = (statusRaw === 1 || statusRaw === '1' || (typeof statusRaw === 'string' && statusRaw.trim() === '1'));
 
         let iconName = 'directions_car';
         let badgeColorClass = isAtivo ? 'blue-grey darken-3' : 'grey darken-2'; // Carro / Padrão
