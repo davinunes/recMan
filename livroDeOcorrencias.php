@@ -1032,7 +1032,7 @@ $mapaCoresTipo = [
 </div>
 
 <!-- Console de Diagnóstico & Debug VDS (Visível com debug=1 ou se não carregou ocorrência/eventos) -->
-<?php if (!empty($_GET['debug']) || !$detalheSel || empty($eventosRemotos) || !empty($debugPratico)): ?>
+<?php if (!empty($_GET['debug']) ): ?>
     <div style="background:#1e1e1e; color:#00ff66; padding:15px; border-radius:6px; font-family:monospace; font-size:0.8rem; margin:15px; overflow-x:auto;">
         <strong style="color:#fff; font-size:0.9rem;"><i class="material-icons tiny">bug_report</i> Console de Diagnóstico & Debug VDS (Visão: <?= strtoupper($visao) ?>)</strong>
         <hr style="border-color:#444; margin:8px 0;">
