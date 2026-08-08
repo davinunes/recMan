@@ -1,5 +1,5 @@
 <?php
-require "/var/www/html/classes/database.php";
+require_once __DIR__ . "/database.php";
 
 function dump($el)
 {

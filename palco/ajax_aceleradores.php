@@ -1,14 +1,30 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Bloquear acesso se não estiver logado
+if (!isset($_SESSION['user_id'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Sessão expirada.']);
+    exit;
+}
+
+// Iniciar buffer para capturar e descartar qualquer saída acidental de includes
+ob_start();
+
 require_once __DIR__ . "/../classes/repositorio.php";
 require_once __DIR__ . "/../classes/vds_acesso_service.php";
-require_once __DIR__ . "/../palco/usuarioLogado.php";
+
+// Limpar buffer antes de enviar o JSON
+ob_clean();
 
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? '';
 $bloco = $_GET['bloco'] ?? '';
 $unidade = $_GET['unidade'] ?? '';
-$usuarioId = $_SESSION['usuario_id'] ?? null;
+$usuarioId = $_SESSION['user_id'] ?? null;
 
 if (empty($bloco) || empty($unidade)) {
     echo json_encode(['success' => false, 'error' => 'Parâmetros insuficientes (bloco/unidade).']);

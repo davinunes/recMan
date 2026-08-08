@@ -876,7 +876,65 @@ if ($esseRecurso == null) {
             
             if (id === 'entregas') {
                 atualizarFiltroNotificacaoEntregas();
+                fetchDetalhesExtrasEntregas();
             }
+        }
+
+        // Fetch em segundo plano para obter identificador e foto de cada entrega
+        function fetchDetalhesExtrasEntregas() {
+            const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
+            entregasRows.forEach(function (row) {
+                const uuid = row.getAttribute('data-entrega-uuid');
+                if (!uuid || row.dataset.detalhesExtrasCarregados === "true") return;
+
+                fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
+                    .then(res => res.json())
+                    .then(resData => {
+                        if (resData && resData.success && resData.data) {
+                            const d = resData.data;
+                            row.dataset.detalhesExtrasCarregados = "true";
+
+                            // Atualizar Identificador / Código de Rastreio
+                            if (d.identificador) {
+                                const colId = row.querySelector('.col-identificador');
+                                if (colId) {
+                                    const isMatch = checarMatchNotificacao(d.identificador) || checarMatchNotificacao(d.descricao);
+                                    if (isMatch) {
+                                        colId.innerHTML = `
+                                            <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(255,160,0,0.3);">
+                                                <i class="material-icons tiny">star</i> ${d.identificador}
+                                            </span>
+                                        `;
+                                        row.dataset.isNotifMatch = "true";
+                                        row.style.background = "#fff8e1";
+                                        row.style.borderLeft = "4px solid #ffa000";
+                                    } else {
+                                        colId.innerHTML = `
+                                            <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
+                                                <i class="material-icons tiny">qr_code</i> ${d.identificador}
+                                            </span>
+                                        `;
+                                    }
+                                }
+                            }
+
+                            // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
+                            const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
+                            if (fotoUrl) {
+                                const colFoto = row.querySelector('.col-foto');
+                                if (colFoto) {
+                                    colFoto.innerHTML = `
+                                    <img src="${fotoUrl}" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
+                                `;
+                                }
+                            }
+
+                            row.dataset.detalhesCompletos = JSON.stringify(d);
+                            atualizarFiltroNotificacaoEntregas();
+                        }
+                    })
+                    .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
+            });
         }
 
         function formatObjStr(val) {
@@ -1024,59 +1082,6 @@ if ($esseRecurso == null) {
         // Fetch em segundo plano para obter identificador e foto de cada entrega
         document.addEventListener("DOMContentLoaded", function () {
             atualizarFiltroNotificacaoEntregas();
-
-            const entregasRows = document.querySelectorAll('.linha-entrega-item[data-entrega-uuid]');
-            entregasRows.forEach(function (row) {
-                const uuid = row.getAttribute('data-entrega-uuid');
-                if (!uuid) return;
-
-                fetch(`metodo.php?metodo=obterDetalhesEntrega&uuid=${encodeURIComponent(uuid)}`)
-                    .then(res => res.json())
-                    .then(resData => {
-                        if (resData && resData.success && resData.data) {
-                            const d = resData.data;
-
-                            // Atualizar Identificador / Código de Rastreio
-                            if (d.identificador) {
-                                const colId = row.querySelector('.col-identificador');
-                                if (colId) {
-                                    const isMatch = checarMatchNotificacao(d.identificador) || checarMatchNotificacao(d.descricao);
-                                    if (isMatch) {
-                                        colId.innerHTML = `
-                                            <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(255,160,0,0.3);">
-                                                <i class="material-icons tiny">star</i> ${d.identificador}
-                                            </span>
-                                        `;
-                                        row.dataset.isNotifMatch = "true";
-                                        row.style.background = "#fff8e1";
-                                        row.style.borderLeft = "4px solid #ffa000";
-                                    } else {
-                                        colId.innerHTML = `
-                                            <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
-                                                <i class="material-icons tiny">qr_code</i> ${d.identificador}
-                                            </span>
-                                        `;
-                                    }
-                                }
-                            }
-
-                            // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
-                            const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
-                            if (fotoUrl) {
-                                const colFoto = row.querySelector('.col-foto');
-                                if (colFoto) {
-                                    colFoto.innerHTML = `
-                                    <img src="${fotoUrl}" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">
-                                `;
-                                }
-                            }
-
-                            row.dataset.detalhesCompletos = JSON.stringify(d);
-                            atualizarFiltroNotificacaoEntregas();
-                        }
-                    })
-                    .catch(err => console.error('Erro ao carregar detalhes da entrega:', err));
-            });
         });
 
         function inspecionarEntregaComDetalhes(uuid, baseData) {
