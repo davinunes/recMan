@@ -825,7 +825,7 @@ if ($esseRecurso == null) {
                         }
                         
                         html += `
-                            <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarEntregaComDetalhes('${entUuid}', ${jsonEnt})">
+                            <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarItemAcelerador('entrega', ${jsonEnt})">
                                 <td>${ent.dthoraChegada}</td>
                                 <td class="col-identificador">
                                     ${ent.identificador ? `
