@@ -50,16 +50,6 @@ $parecer = getParecer($result['numero']);
 if (isset($result['unidade']) && isset($result['bloco'])) {
     $historico = getNotificacoes($result['unidade'], $result['bloco']);
 
-    // Silenciosamente verificar e resolver UUIDs do bloco e unidade na VDS e buscar moradores/inadimplência
-    require_once __DIR__ . "/../classes/vds_acesso_service.php";
-    $uuidsResolvidos = vds_resolve_bloco_unidade_uuid($result['bloco'], $result['unidade']);
-    $resMoradores = vds_get_moradores_unidade($result['bloco'], $result['unidade']);
-    $moradoresUnidade = $resMoradores['moradores'] ?? [];
-    $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
-    $veiculosUnidade = vds_get_veiculos_unidade($result['bloco'], $result['unidade']);
-    $visitantesUnidade = vds_get_visitantes_unidade($result['bloco'], $result['unidade']);
-
-
     $vagasUnidade = getEstacionamento($result['bloco'], $result['unidade']);
     $vagasFormatadas = [];
     if (!empty($vagasUnidade) && is_array($vagasUnidade)) {
@@ -182,11 +172,8 @@ if ($esseRecurso == null) {
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
                 <i class="material-icons left" style="color: #fff; margin-top: 4px;">home</i>
                 Unidade: <span id="unidadeRecurso">' . $result['unidade'] . $result['bloco'] . '</span>
-            </div>' . ($unidadeInadimplente ? '
-            <div class="chip red white-text font-weight-bold" style="background: #d32f2f; margin: 0; border: 1px solid rgba(255,255,255,0.4); height: 32px; line-height: 32px;">
-                <i class="material-icons left" style="color: #fff; margin-top: 4px;">warning</i>
-                UNIDADE INADIMPLENTE
-            </div>' : '') . '
+            </div>
+            <div id="container-badge-inadimplente" style="display:inline-block;"></div>
 
 
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
@@ -591,22 +578,12 @@ if ($esseRecurso == null) {
     echo '</div>';
 
     // --- ACELERADORES DE ANÁLISE (CONDOMÍNIO DIGITAL API v8) ---
-    require_once __DIR__ . "/../classes/vds_acesso_service.php";
     $dataOcorrencia = !empty($result['data']) ? $result['data'] : date('Y-m-d H:i:s');
     $dtInicio = date('Y-m-d\T00:00', strtotime($dataOcorrencia));
     $dtFim = date('Y-m-d\T23:59', strtotime($dataOcorrencia));
 
     $dtIniJanela = date('Y-m-d', strtotime($dataOcorrencia . ' -1 day'));
     $dtFimJanela = date('Y-m-d', strtotime($dataOcorrencia . ' +1 day'));
-
-    $resMoradores = vds_get_moradores_unidade($result['bloco'], $result['unidade']);
-    $moradoresUnidade = $resMoradores['moradores'] ?? [];
-    $unidadeInadimplente = $resMoradores['inadimplente'] ?? false;
-
-    $acessosUnidade = vds_get_eventos_acesso($result['bloco'], $result['unidade'], $dtInicio, $dtFim);
-    $autorizacoesUnidade = vds_get_autorizacoes_acesso($result['bloco'], $result['unidade'], $dtIniJanela, $dtFimJanela);
-    $entregasUnidade = vds_get_entregas_unidade($result['bloco'], $result['unidade']);
-    $chamadosTag = vds_get_chamados_unidade($result['bloco'], $result['unidade']);
     ?>
 
 
@@ -633,7 +610,274 @@ if ($esseRecurso == null) {
             if (elemsModal.length > 0 && typeof M !== 'undefined' && M.Modal) {
                 M.Modal.init(elemsModal);
             }
+
+            // Carregar Aceleradores de forma assíncrona
+            carregarAceleradoresAssincronos();
         });
+
+        const vdsParams = {
+            bloco: '<?= $result['bloco'] ?>',
+            unidade: '<?= $result['unidade'] ?>',
+            dtInicio: '<?= $dtInicio ?>',
+            dtFim: '<?= $dtFim ?>',
+            dtIniJanela: '<?= $dtIniJanela ?>',
+            dtFimJanela: '<?= $dtFimJanela ?>'
+        };
+
+        function carregarAceleradoresAssincronos() {
+            const actions = [
+                { id: 'moradores', action: 'moradores', target: '#container-moradores', countTarget: '#count-moradores' },
+                { id: 'veiculos', action: 'veiculos', target: '#container-veiculos', countTarget: '#count-veiculos' },
+                { id: 'visitantes', action: 'visitantes', target: '#container-visitantes', countTarget: '#count-visitantes' },
+                { id: 'acessos', action: 'acessos', target: '#container-acessos', countTarget: '#count-acessos' },
+                { id: 'autorizacoes', action: 'autorizacoes', target: '#container-autorizacoes', countTarget: '#count-autorizacoes' },
+                { id: 'entregas', action: 'entregas', target: '#container-entregas', countTarget: '#count-entregas' },
+                { id: 'chamados', action: 'chamados', target: '#container-chamados', countTarget: '#count-chamados' }
+            ];
+
+            actions.forEach(item => {
+                const url = `palco/ajax_aceleradores.php?action=${item.action}&bloco=${vdsParams.bloco}&unidade=${vdsParams.unidade}&dtInicio=${vdsParams.dtInicio}&dtFim=${vdsParams.dtFim}&dtIniJanela=${vdsParams.dtIniJanela}&dtFimJanela=${vdsParams.dtFimJanela}`;
+                
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            renderizarAcelerador(item.id, response.data, item.target, item.countTarget);
+                        } else {
+                            $(item.target).html(`<p class="red-text">Erro ao carregar: ${response.error}</p>`);
+                        }
+                    },
+                    error: function() {
+                        $(item.target).html('<p class="red-text">Erro de conexão.</p>');
+                    }
+                });
+            });
+        }
+
+        function renderizarAcelerador(id, data, target, countTarget) {
+            let html = '';
+            let count = 0;
+
+            if (id === 'moradores') {
+                const moradores = data.moradores || [];
+                const inadimplente = data.inadimplente || false;
+                count = moradores.length;
+                if (inadimplente) {
+                    $('#header-moradores').append('<span class="new badge red pulse" data-badge-caption="INADIMPLENTE" style="margin-left: 10px;"></span>');
+                    $('#container-badge-inadimplente').html(`
+                        <div class="chip red white-text font-weight-bold" style="background: #d32f2f; margin: 0; border: 1px solid rgba(255,255,255,0.4); height: 32px; line-height: 32px;">
+                            <i class="material-icons left" style="color: #fff; margin-top: 4px;">warning</i>
+                            UNIDADE INADIMPLENTE
+                        </div>
+                    `);
+                }
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhum morador cadastrado encontrado para esta unidade.</p>';
+                } else {
+                    html = '<div class="row" style="margin-bottom:0;">';
+                    moradores.forEach(m => {
+                        html += `
+                            <div class="col s12 m6 l3">
+                                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:12px 8px; border:1px solid #e0e0e0; margin-bottom:10px;">
+                                    ${m.foto ? `<img src="${m.foto}" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">` : `<div style="width:54px; height:54px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 4px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.2rem;">account_circle</i></div>`}
+                                    <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
+                                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            } else if (id === 'veiculos') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhum veículo cadastrado encontrado para esta unidade.</p>';
+                } else {
+                    html = '<div class="row" style="margin-bottom:0;">';
+                    data.forEach(v => {
+                        const isAtivo = v.ativo;
+                        const iconName = v.tipo.toLowerCase().includes('moto') ? 'two_wheeler' : (v.tipo.toLowerCase().includes('bici') ? 'pedal_bike' : 'directions_car');
+                        const badgeColorClass = isAtivo ? (iconName === 'two_wheeler' ? 'deep-orange darken-2' : (iconName === 'pedal_bike' ? 'green darken-2' : 'blue-grey darken-3')) : 'grey darken-2';
+                        const descV = [v.marca, v.modelo, v.cor].filter(x => x).join(' ') || 'Veículo';
+                        const cardStyle = isAtivo ? 'border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 'border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
+                        
+                        html += `
+                            <div class="col s12 m6 l3">
+                                <div class="card-panel white center-align z-depth-1 hoverable" style="${cardStyle}">
+                                    ${v.foto ? `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : ''}
+                                    <div style="margin-bottom:8px;">
+                                        <span class="badge ${badgeColorClass} white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+                                            <i class="material-icons tiny">${iconName}</i> ${v.placa}
+                                        </span>
+                                    </div>
+                                    <div style="font-weight:bold; font-size:1.05rem; color:${isAtivo ? '#1a237e' : '#546e7a'}; margin-bottom:2px;" class="truncate" title="${descV}">${descV}</div>
+                                    ${v.proprietario ? `<div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny" style="vertical-align:middle;">person</i> ${v.proprietario}</div>` : ''}
+                                    ${v.portadorNecessidade ? `<div style="margin-top:4px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>` : ''}
+                                    ${!isAtivo ? `<div style="margin-top:4px;"><span class="badge-mini grey darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">block</i> INATIVO</span></div>` : ''}
+                                    ${v.observacao ? `<div style="font-size:0.78rem; color:#757575; font-style:italic; margin-top:4px;" class="truncate" title="${v.observacao}"><i class="material-icons tiny" style="vertical-align:middle;">info</i> ${v.observacao}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            } else if (id === 'visitantes') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhum visitante ou prestador de serviço cadastrado encontrado na portaria para esta unidade.</p>';
+                } else {
+                    html = '<div class="row" style="margin-bottom:0;">';
+                    data.forEach(vis => {
+                        html += `
+                            <div class="col s12 m6 l3">
+                                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                                    ${vis.foto ? `<img src="${vis.foto}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #8e24aa; margin-bottom:6px;">` : `<div style="width:64px; height:64px; border-radius:50%; background:#f3e5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #8e24aa;"><i class="material-icons purple-text text-darken-2" style="font-size:2.5rem;">person</i></div>`}
+                                    <div style="font-weight:bold; font-size:0.98rem; color:#4a148c;" class="truncate" title="${vis.nome}">${vis.nome}</div>
+                                    <span class="badge-mini purple darken-2 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${vis.tipo}</span>
+                                    ${vis.documento && vis.documento !== 'N/A' ? `<div style="font-size:0.78rem; color:#616161; margin-top:4px;" class="truncate" title="${vis.documento}"><i class="material-icons tiny" style="vertical-align:middle;">assignment_ind</i> ${vis.documento}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            } else if (id === 'acessos') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>';
+                } else {
+                    html = '<table class="striped highlight responsive-table" style="font-size:0.85rem;"><thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Inspecionar</th></tr></thead><tbody>';
+                    data.forEach(acc => {
+                        const jsonAcc = JSON.stringify(acc).replace(/'/g, "\\'");
+                        html += `
+                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', ${jsonAcc})">
+                                <td>${acc.dthora.split(' ')[1]}</td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        ${acc.fotoUrl ? `<img src="${acc.fotoUrl}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #6f42c1;">` : '<i class="material-icons purple-text text-lighten-2 tiny">person</i>'}
+                                        <div>
+                                            <b>${acc.pessoaNome}</b>
+                                            <small class="grey-text display-block" style="font-size:0.75rem;">(${acc.perfil})</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${acc.tipoEvento}</td>
+                                <td><span class="btn-small waves-effect waves-light purple lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                }
+            } else if (id === 'autorizacoes') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a unidade no período.</p>';
+                } else {
+                    html = '<table class="striped highlight responsive-table" style="font-size:0.85rem;"><thead><tr><th>Visitante / Prestador</th><th>Documento</th><th>Validade</th><th>Autorizado Por</th><th>Status</th><th>Inspecionar</th></tr></thead><tbody>';
+                    data.forEach(aut => {
+                        const jsonAut = JSON.stringify(aut).replace(/'/g, "\\'");
+                        html += `
+                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('autorizacao', ${jsonAut})">
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        ${aut.foto ? `<img src="${aut.foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">` : '<i class="material-icons grey-text tiny">person</i>'}
+                                        <b>${aut.nome}</b>
+                                    </div>
+                                </td>
+                                <td>${aut.documento}</td>
+                                <td><small>${aut.dtInicio}<br>até ${aut.dtFim}</small></td>
+                                <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${aut.autorizadoPor}</span></td>
+                                <td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${aut.status}</span></td>
+                                <td><span class="btn-small waves-effect waves-light green darken-1 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                }
+            } else if (id === 'entregas') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>';
+                } else {
+                    // Painel de filtro de entregas será atualizado depois
+                    html = `
+                        <div id="painel-filtro-entregas" style="display:none; margin-bottom:10px; background:#fff8e1; border:1px solid #ffe082; padding:8px 12px; border-radius:6px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                            <span style="color:#b78103; font-weight:600; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+                                <i class="material-icons tiny amber-text text-darken-3">stars</i> 
+                                Destacando recebimento da Notificação <b>${recNumCompleto}</b> na portaria
+                            </span>
+                            <button type="button" id="btn-toggle-filtro-entregas" class="btn-flat btn-small amber lighten-4 amber-text text-darken-4 font-weight-bold" onclick="toggleFiltroOutrasEntregas()" style="height:26px; line-height:26px; font-size:0.75rem; text-transform:none; border-radius:4px;">
+                                <i class="material-icons left tiny">visibility_off</i> Ocultar outras entregas (<span id="count-outras-entregas">0</span>)
+                            </button>
+                        </div>
+                        <table class="striped highlight responsive-table" style="font-size:0.85rem;" id="tabela-entregas-acelerador">
+                            <thead><tr><th>Chegada</th><th>Identificador / Rastreio</th><th>Foto / Anexo</th><th>Descrição</th><th>Destinatário</th><th>Inspecionar</th></tr></thead>
+                            <tbody>
+                    `;
+                    data.forEach(ent => {
+                        const entUuid = ent.uuid || ent.id || '';
+                        const jsonEnt = JSON.stringify(ent).replace(/'/g, "\\'");
+                        const isMatch = checarMatchNotificacao(ent.identificador) || checarMatchNotificacao(ent.descricao);
+                        if (isMatch) {
+                            $('#badge-entrega-match-header').show();
+                        }
+                        
+                        html += `
+                            <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarEntregaComDetalhes('${entUuid}', ${jsonEnt})">
+                                <td>${ent.dthoraChegada}</td>
+                                <td class="col-identificador">
+                                    ${ent.identificador ? `
+                                        <span class="badge ${isMatch ? 'amber darken-2' : 'blue lighten-4 blue-text text-darken-3'} white-text font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; ${isMatch ? 'box-shadow:0 2px 6px rgba(255,160,0,0.3);' : ''}">
+                                            <i class="material-icons tiny">${isMatch ? 'star' : 'qr_code'}</i> ${ent.identificador}
+                                        </span>
+                                    ` : (entUuid ? '<span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i> Buscando...</span>' : '<span class="grey-text">-</span>')}
+                                </td>
+                                <td class="col-foto">
+                                    ${ent.foto ? `<img src="${ent.foto}" style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;" alt="Pacote">` : (entUuid ? '<span class="grey-text text-lighten-1 spin-load-foto" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>' : '<span class="grey-text">-</span>')}
+                                </td>
+                                <td><b>${ent.descricao}</b></td>
+                                <td>${ent.destinatario}</td>
+                                <td><span class="btn-small waves-effect waves-light blue lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                }
+            } else if (id === 'chamados') {
+                count = data.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhuma ocorrência vinculada a esta unidade.</p>';
+                } else {
+                    html = '<div class="collection">';
+                    data.forEach(ch => {
+                        const vinculo = ch.vinculo_final || ch.tipo_vinculo || 'autora';
+                        const tagUnidStr = (vdsParams.bloco + vdsParams.unidade).toUpperCase();
+                        html += `
+                            <a href="index.php?pag=livroDeOcorrencias&id=${ch.id}" target="_blank" class="collection-item" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:10px 15px;">
+                                <span>
+                                    <b>Prot ${ch.protocolo_vds || ch.id}</b> - Bloco ${ch.bloco}/${ch.unidade} <small class="grey-text">(${ch.abertura})</small>
+                                    <span class="badge blue lighten-5 blue-text text-darken-3" style="float:none; margin-left:6px; font-weight:600;">Tag: ${tagUnidStr}</span>
+                                </span>
+                                <span style="display:flex; align-items:center; gap:8px;">
+                                    <span class="badge orange lighten-4 orange-text text-darken-3" style="float:none; font-weight:600;">Vínculo: ${vinculo.toUpperCase()}</span>
+                                    <span class="btn-small waves-effect waves-light purple darken-1 white-text" style="height:26px; line-height:26px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar Chat <i class="material-icons right tiny" style="margin-left:2px;">open_in_new</i></span>
+                                </span>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            }
+
+            $(target).html(html);
+            $(countTarget).text(`(${count})`);
+            
+            if (id === 'entregas') {
+                atualizarFiltroNotificacaoEntregas();
+            }
+        }
 
         function formatObjStr(val) {
             if (!val) return 'N/A';
@@ -1009,407 +1253,83 @@ if ($esseRecurso == null) {
             <!-- Abas dos Aceleradores (Collapsible Ativo) -->
             <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
                 <li>
-                    <div class="collapsible-header" style="font-weight: 600;">
+                    <div class="collapsible-header" id="header-moradores" style="font-weight: 600;">
                         <i class="material-icons cyan-text text-darken-2">people</i>
-                        Moradores da Unidade (<?= count($moradoresUnidade) ?>)
-                        <?php if ($unidadeInadimplente): ?>
-                            <span class="new badge red pulse" data-badge-caption="INADIMPLENTE" style="margin-left: 10px;"></span>
-                        <?php endif; ?>
+                        Moradores da Unidade <span id="count-moradores">(...)</span>
                     </div>
-                    <div class="collapsible-body" style="padding: 10px;">
-                        <?php if (empty($moradoresUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhum morador cadastrado encontrado para esta unidade.</p>
-                        <?php else: ?>
-                            <div class="row" style="margin-bottom:0;">
-                                <?php foreach ($moradoresUnidade as $m): ?>
-                                    <div class="col s12 m6 l3">
-                                        <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:12px 8px; border:1px solid #e0e0e0; margin-bottom:10px;">
-                                            <?php if (!empty($m['foto'])): ?>
-                                                <img src="<?= htmlspecialchars($m['foto']) ?>" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">
-                                            <?php else: ?>
-                                                <div style="width:54px; height:54px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 4px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.2rem;">account_circle</i></div>
-                                            <?php endif; ?>
-                                            <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="<?= htmlspecialchars($m['nome']) ?>"><?= htmlspecialchars($m['nome']) ?></div>
-                                            <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;"><?= htmlspecialchars($m['tipo']) ?></span>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-
-                            </div>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-moradores" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando moradores...
+                        </div>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons blue-grey-text text-darken-2">directions_car</i>
-                        Veículos da Unidade (<?= count($veiculosUnidade) ?>)
+                        Veículos da Unidade <span id="count-veiculos">(...)</span>
                     </div>
-                    <div class="collapsible-body" style="padding: 15px 12px;">
-                        <div style="background:#f1f8e9; border:1px solid #c8e6c9; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                            <i class="material-icons green-text text-darken-2" style="font-size:1.4rem;">local_parking</i>
-                            <div>
-                                <span style="font-weight:bold; color:#2e7d32; font-size:0.9rem;">Vaga(s) de Garagem da Unidade:</span>
-                                <span style="font-weight:600; color:#1b5e20; font-size:0.95rem; margin-left:4px;"><?= htmlspecialchars($vagasTexto) ?></span>
-                            </div>
+                    <div class="collapsible-body" id="container-veiculos" style="padding: 15px 12px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando veículos...
                         </div>
-                        <?php if (empty($veiculosUnidade)): ?>
-
-                            <p class="grey-text" style="margin:0;">Nenhum veículo cadastrado encontrado para esta unidade.</p>
-                        <?php else: ?>
-                            <div class="row" style="margin-bottom:0;">
-                                <?php foreach ($veiculosUnidade as $v): ?>
-                                    <?php
-                                    $tipoLower = strtolower($v['tipo'] ?? '');
-                                    $isMoto = strpos($tipoLower, 'moto') !== false;
-                                    $isBici = strpos($tipoLower, 'bici') !== false;
-                                    $statusRaw = $v['status'] ?? null;
-                                    $isAtivo = ($statusRaw === 1 || $statusRaw === '1' || (is_string($statusRaw) && trim($statusRaw) === '1'));
-
-                                    $iconName = 'directions_car';
-                                    $badgeColorClass = $isAtivo ? 'blue-grey darken-3' : 'grey darken-2';
-
-                                    if (!$isAtivo) {
-                                        $badgeColorClass = 'grey darken-2';
-                                    } elseif ($isMoto) {
-                                        $iconName = 'two_wheeler';
-                                        $badgeColorClass = 'deep-orange darken-2';
-                                    } elseif ($isBici) {
-                                        $iconName = 'pedal_bike';
-                                        $badgeColorClass = 'green darken-2';
-                                    }
-
-                                    $descV = implode(' ', array_filter([$v['marca'], $v['modelo'], $v['cor']])) ?: 'Veículo';
-                                    $cardStyle = $isAtivo ? 
-                                        'border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 
-                                        'border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
-                                    ?>
-                                    <div class="col s12 m6 l3">
-                                        <div class="card-panel white center-align z-depth-1 hoverable" style="<?= $cardStyle ?>">
-                                            <?php if (!empty($v['foto'])): ?>
-                                                <img src="<?= htmlspecialchars($v['foto']) ?>" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc; <?= !$isAtivo ? 'filter:grayscale(60%);' : '' ?>">
-                                            <?php endif; ?>
-                                            <div style="margin-bottom:8px;">
-                                                <span class="badge <?= $badgeColorClass ?> white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-                                                    <i class="material-icons tiny"><?= $iconName ?></i> <?= htmlspecialchars($v['placa']) ?>
-                                                </span>
-                                            </div>
-                                            <div style="font-weight:bold; font-size:1.05rem; color:<?= $isAtivo ? '#1a237e' : '#546e7a' ?>; margin-bottom:2px;" class="truncate" title="<?= htmlspecialchars($descV) ?>"><?= htmlspecialchars($descV) ?></div>
-                                            <?php if (!empty($v['proprietario'])): ?>
-                                                <div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['proprietario']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">person</i> <?= htmlspecialchars($v['proprietario']) ?></div>
-                                            <?php endif; ?>
-                                            <?php if (!empty($v['portadorNecessidade'])): ?>
-                                                <div style="margin-top:4px;"><span class="badge-mini blue darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">accessible</i> Vaga PCD</span></div>
-                                            <?php endif; ?>
-                                            <?php if (!$isAtivo): ?>
-                                                <div style="margin-top:4px;"><span class="badge-mini grey darken-2 white-text font-weight-bold" style="font-size:0.72rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">block</i> INATIVO</span></div>
-                                            <?php endif; ?>
-                                            <?php if (!empty($v['observacao'])): ?>
-                                                <div style="font-size:0.78rem; color:#757575; font-style:italic; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($v['observacao']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">info</i> <?= htmlspecialchars($v['observacao']) ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-
-                            </div>
-
-                        <?php endif; ?>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons purple-text text-darken-2">badge</i>
-                        Visitantes & Prestadores da Portaria (<?= count($visitantesUnidade) ?>)
+                        Visitantes & Prestadores da Portaria <span id="count-visitantes">(...)</span>
                     </div>
-                    <div class="collapsible-body" style="padding: 12px;">
-                        <?php if (empty($visitantesUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhum visitante ou prestador de serviço cadastrado encontrado na portaria para esta unidade.</p>
-                        <?php else: ?>
-                            <div class="row" style="margin-bottom:0;">
-                                <?php foreach ($visitantesUnidade as $vis): ?>
-                                    <div class="col s12 m6 l3">
-                                        <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:12px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px;">
-                                            <?php if (!empty($vis['foto'])): ?>
-                                                <img src="<?= htmlspecialchars($vis['foto']) ?>" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #8e24aa; margin-bottom:6px;">
-                                            <?php else: ?>
-                                                <div style="width:64px; height:64px; border-radius:50%; background:#f3e5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 6px auto; border:2px solid #8e24aa;"><i class="material-icons purple-text text-darken-2" style="font-size:2.5rem;">person</i></div>
-                                            <?php endif; ?>
-                                            <div style="font-weight:bold; font-size:0.98rem; color:#4a148c;" class="truncate" title="<?= htmlspecialchars($vis['nome']) ?>"><?= htmlspecialchars($vis['nome']) ?></div>
-                                            <span class="badge-mini purple darken-2 white-text" style="margin-top:6px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;"><?= htmlspecialchars($vis['tipo']) ?></span>
-                                            <?php if (!empty($vis['documento']) && $vis['documento'] !== 'N/A'): ?>
-                                                <div style="font-size:0.78rem; color:#616161; margin-top:4px;" class="truncate" title="<?= htmlspecialchars($vis['documento']) ?>"><i class="material-icons tiny" style="vertical-align:middle;">assignment_ind</i> <?= htmlspecialchars($vis['documento']) ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-visitantes" style="padding: 12px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando visitantes...
+                        </div>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons purple-text">fingerprint</i>
-                        Eventos de Acesso & Visitas (<?= count($acessosUnidade) ?>)
+                        Eventos de Acesso & Visitas <span id="count-acessos">(...)</span>
                     </div>
-
-
-
-                    <div class="collapsible-body" style="padding: 10px;">
-                        <?php if (empty($acessosUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>
-                        <?php else: ?>
-                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
-                                <thead>
-                                    <tr>
-                                        <th>Hora</th>
-                                        <th>Pessoa / Visitante</th>
-                                        <th>Tipo de Evento</th>
-                                        <th>Inspecionar</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($acessosUnidade as $acc): ?>
-                                        <?php $jsonAcc = htmlspecialchars(json_encode($acc, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
-                                        <tr style="cursor:pointer;"
-                                            onclick="inspecionarItemAcelerador('acesso', <?= $jsonAcc ?>)">
-                                            <td><?= date('H:i:s', strtotime($acc['dthora'])) ?></td>
-                                            <td>
-                                                <div style="display:flex; align-items:center; gap:8px;">
-                                                    <?php if (!empty($acc['fotoUrl'])): ?>
-                                                        <img src="<?= htmlspecialchars($acc['fotoUrl']) ?>"
-                                                            style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #6f42c1;">
-                                                    <?php else: ?>
-                                                        <i class="material-icons purple-text text-lighten-2 tiny">person</i>
-                                                    <?php endif; ?>
-                                                    <div>
-                                                        <b><?= htmlspecialchars($acc['pessoaNome']) ?></b>
-                                                        <small class="grey-text display-block"
-                                                            style="font-size:0.75rem;">(<?= htmlspecialchars($acc['perfil']) ?>)</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td><?= htmlspecialchars($acc['tipoEvento']) ?></td>
-                                            <td>
-                                                <span class="btn-small waves-effect waves-light purple lighten-2 white-text"
-                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny"
-                                                        style="margin-left:2px;">search</i>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-acessos" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando acessos...
+                        </div>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons green-text">verified_user</i>
-                        Autorizações de Acesso / Convites (<?= count($autorizacoesUnidade) ?>)
+                        Autorizações de Acesso / Convites <span id="count-autorizacoes">(...)</span>
                     </div>
-                    <div class="collapsible-body" style="padding: 10px;">
-                        <?php if (empty($autorizacoesUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a
-                                unidade no período.</p>
-                        <?php else: ?>
-                            <table class="striped highlight responsive-table" style="font-size:0.85rem;">
-                                <thead>
-                                    <tr>
-                                        <th>Visitante / Prestador</th>
-                                        <th>Documento</th>
-                                        <th>Validade</th>
-                                        <th>Autorizado Por</th>
-                                        <th>Status</th>
-                                        <th>Inspecionar</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($autorizacoesUnidade as $aut): ?>
-                                        <?php $jsonAut = htmlspecialchars(json_encode($aut, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>
-                                        <tr style="cursor:pointer;"
-                                            onclick="inspecionarItemAcelerador('autorizacao', <?= $jsonAut ?>)">
-                                            <td>
-                                                <div style="display:flex; align-items:center; gap:8px;">
-                                                    <?php if (!empty($aut['foto'])): ?>
-                                                        <img src="<?= htmlspecialchars($aut['foto']) ?>"
-                                                            style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">
-                                                    <?php else: ?>
-                                                        <i class="material-icons grey-text tiny">person</i>
-                                                    <?php endif; ?>
-                                                    <b><?= htmlspecialchars($aut['nome']) ?></b>
-                                                </div>
-                                            </td>
-                                            <td><?= htmlspecialchars($aut['documento']) ?></td>
-                                            <td><small><?= htmlspecialchars($aut['dtInicio']) ?><br>até
-                                                    <?= htmlspecialchars($aut['dtFim']) ?></small></td>
-                                            <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold"
-                                                    style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['autorizadoPor']) ?></span>
-                                            </td>
-                                            <td><span class="badge blue lighten-4 blue-text text-darken-4"
-                                                    style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?= htmlspecialchars($aut['status']) ?></span>
-                                            </td>
-                                            <td>
-                                                <span class="btn-small waves-effect waves-light green darken-1 white-text"
-                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny"
-                                                        style="margin-left:2px;">search</i>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-autorizacoes" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando autorizações...
+                        </div>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons blue-text">markunread_mailbox</i>
-                        Entregas e Encomendas (<?= count($entregasUnidade) ?>)
+                        Entregas e Encomendas <span id="count-entregas">(...)</span>
                         <span id="badge-entrega-match-header" class="badge amber darken-2 white-text font-weight-bold" style="display:none; float:none; margin-left:8px; padding:2px 8px; border-radius:4px; font-size:0.75rem;">
                             <i class="material-icons tiny">star</i> Correspondente à Notificação <?= htmlspecialchars($result['numero'] ?? '') ?>
                         </span>
                     </div>
-                    <div class="collapsible-body" style="padding: 10px;">
-                        <?php if (empty($entregasUnidade)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhuma entrega recente registrada.</p>
-                        <?php else: ?>
-                            <!-- Painel de Destaque e Filtro da Notificação -->
-                            <div id="painel-filtro-entregas" style="display:none; margin-bottom:10px; background:#fff8e1; border:1px solid #ffe082; padding:8px 12px; border-radius:6px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                                <span style="color:#b78103; font-weight:600; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
-                                    <i class="material-icons tiny amber-text text-darken-3">stars</i> 
-                                    Destacando recebimento da Notificação <b><?= htmlspecialchars($result['numero'] ?? '') ?></b> na portaria
-                                </span>
-                                <button type="button" id="btn-toggle-filtro-entregas" class="btn-flat btn-small amber lighten-4 amber-text text-darken-4 font-weight-bold" onclick="toggleFiltroOutrasEntregas()" style="height:26px; line-height:26px; font-size:0.75rem; text-transform:none; border-radius:4px;">
-                                    <i class="material-icons left tiny">visibility_off</i> Ocultar outras entregas (<span id="count-outras-entregas">0</span>)
-                                </button>
-                            </div>
-
-                            <table class="striped highlight responsive-table" style="font-size:0.85rem;"
-                                id="tabela-entregas-acelerador">
-                                <thead>
-                                    <tr>
-                                        <th>Chegada</th>
-                                        <th>Identificador / Rastreio</th>
-                                        <th>Foto / Anexo</th>
-                                        <th>Descrição</th>
-                                        <th>Destinatário</th>
-                                        <th>Inspecionar</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                    $numNotifRecurso = (int)$num;
-                                    $anoNotifRecurso = (int)$ano;
-                                    $anoNotifCurto = $anoNotifRecurso ? substr((string)$anoNotifRecurso, -2) : '';
-                                    $recNumStr = htmlspecialchars($result['numero'] ?? '');
-                                    $regexPatternServer = '/(?:\bN?[\-_]?\s*' . $numNotifRecurso . '\s*[\/\-_]?\s*(?:' . $anoNotifRecurso . '|' . $anoNotifCurto . ')?\b|' . preg_quote($recNumStr, '/') . ')/i';
-                                    ?>
-                                    <?php foreach ($entregasUnidade as $ent): ?>
-                                        <?php
-                                        $entUuid = $ent['uuid'] ?? ($ent['id'] ?? '');
-                                        $jsonEnt = htmlspecialchars(json_encode($ent, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
-                                        
-                                        $idStrServer = $ent['identificador'] ?? '';
-                                        $descStrServer = $ent['descricao'] ?? '';
-                                        $isMatchServer = ($numNotifRecurso > 0) && (preg_match($regexPatternServer, $idStrServer) || preg_match($regexPatternServer, $descStrServer));
-                                        ?>
-                                        <tr data-entrega-uuid="<?= htmlspecialchars($entUuid) ?>" 
-                                            data-is-notif-match="<?= $isMatchServer ? 'true' : 'false' ?>"
-                                            class="linha-entrega-item"
-                                            style="cursor:pointer; <?= $isMatchServer ? 'background:#fff8e1; border-left:4px solid #ffa000;' : '' ?>"
-                                            onclick="inspecionarEntregaComDetalhes('<?= htmlspecialchars($entUuid) ?>', <?= $jsonEnt ?>)">
-                                            <td><?= htmlspecialchars($ent['dthoraChegada']) ?></td>
-                                            <td class="col-identificador">
-                                                <?php if (!empty($ent['identificador'])): ?>
-                                                    <?php if ($isMatchServer): ?>
-                                                        <span class="badge amber darken-2 white-text font-weight-bold"
-                                                            style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(255,160,0,0.3);">
-                                                            <i class="material-icons tiny">star</i>
-                                                            <?= htmlspecialchars($ent['identificador']) ?>
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold"
-                                                            style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;">
-                                                            <i class="material-icons tiny">qr_code</i>
-                                                            <?= htmlspecialchars($ent['identificador']) ?>
-                                                        </span>
-                                                    <?php endif; ?>
-                                                <?php elseif (!empty($entUuid)): ?>
-                                                    <span class="grey-text text-lighten-1 spin-load-id" style="font-size:0.8rem;"><i
-                                                            class="material-icons tiny spinning">sync</i> Buscando...</span>
-                                                <?php else: ?>
-                                                    <span class="grey-text">-</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="col-foto">
-                                                <?php if (!empty($ent['foto'])): ?>
-                                                    <img src="<?= htmlspecialchars($ent['foto']) ?>"
-                                                        style="width:28px; height:28px; border-radius:4px; object-fit:cover; border:1px solid #90caf9; cursor:pointer;"
-                                                        alt="Pacote">
-                                                <?php elseif (!empty($entUuid)): ?>
-                                                    <span class="grey-text text-lighten-1 spin-load-foto"
-                                                        style="font-size:0.8rem;"><i
-                                                            class="material-icons tiny spinning">sync</i></span>
-                                                <?php else: ?>
-                                                    <span class="grey-text">-</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><b><?= htmlspecialchars($ent['descricao']) ?></b></td>
-                                            <td><?= htmlspecialchars($ent['destinatario']) ?></td>
-                                            <td>
-                                                <span class="btn-small waves-effect waves-light blue lighten-2 white-text"
-                                                    style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                    Inspecionar <i class="material-icons right tiny"
-                                                        style="margin-left:2px;">search</i>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-entregas" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando entregas...
+                        </div>
                     </div>
                 </li>
                 <li>
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons orange-text">label</i>
-                        Ocorrências Onde a Unidade é Autora ou Citada (<?= count($chamadosTag) ?>)
+                        Ocorrências Onde a Unidade é Autora ou Citada <span id="count-chamados">(...)</span>
                     </div>
-                    <div class="collapsible-body" style="padding: 10px;">
-                        <?php if (empty($chamadosTag)): ?>
-                            <p class="grey-text" style="margin:0;">Nenhuma ocorrência vinculada a esta unidade.</p>
-                        <?php else: ?>
-                            <div class="collection">
-                                <?php foreach ($chamadosTag as $ch): ?>
-                                    <?php
-                                    $vinculo = $ch['vinculo_final'] ?? ($ch['tipo_vinculo'] ?? 'autora');
-                                    $tagUnidStr = strtoupper(($result['bloco'] ?? '') . ($result['unidade'] ?? ''));
-                                    ?>
-                                    <a href="index.php?pag=livroDeOcorrencias&id=<?= $ch['id'] ?>" target="_blank"
-                                        class="collection-item"
-                                        style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:10px 15px;">
-                                        <span>
-                                            <b>Prot <?= htmlspecialchars($ch['protocolo_vds'] ?? $ch['id']) ?></b> - Bloco
-                                            <?= htmlspecialchars($ch['bloco']) ?>/<?= htmlspecialchars($ch['unidade']) ?> <small
-                                                class="grey-text">(<?= date('d/m/Y', strtotime($ch['abertura'])) ?>)</small>
-                                            <span class="badge blue lighten-5 blue-text text-darken-3"
-                                                style="float:none; margin-left:6px; font-weight:600;">Tag:
-                                                <?= htmlspecialchars($tagUnidStr) ?></span>
-                                        </span>
-                                        <span style="display:flex; align-items:center; gap:8px;">
-                                            <span class="badge orange lighten-4 orange-text text-darken-3"
-                                                style="float:none; font-weight:600;">Vínculo: <?= strtoupper($vinculo) ?></span>
-                                            <span class="btn-small waves-effect waves-light purple darken-1 white-text"
-                                                style="height:26px; line-height:26px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
-                                                Inspecionar Chat <i class="material-icons right tiny"
-                                                    style="margin-left:2px;">open_in_new</i>
-                                            </span>
-                                        </span>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                    <div class="collapsible-body" id="container-chamados" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando ocorrências...
+                        </div>
                     </div>
                 </li>
             </ul>
