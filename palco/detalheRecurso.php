@@ -598,6 +598,9 @@ if ($esseRecurso == null) {
     </div>
 
     <script>
+        // Cache global para evitar serialização complexa em atributos HTML
+        window.__aceleradorCache = {};
+
         document.addEventListener("DOMContentLoaded", function () {
             // Inicializar Collapsibles do Materialize
             var elemsCollapsible = document.querySelectorAll('.collapsible');
@@ -749,10 +752,11 @@ if ($esseRecurso == null) {
                     html = '<p class="grey-text" style="margin:0;">Nenhum registro de acesso encontrado no dia.</p>';
                 } else {
                     html = '<table class="striped highlight responsive-table" style="font-size:0.85rem;"><thead><tr><th>Hora</th><th>Pessoa / Visitante</th><th>Tipo de Evento</th><th>Inspecionar</th></tr></thead><tbody>';
-                    data.forEach(acc => {
-                        const jsonAcc = JSON.stringify(acc).replace(/'/g, "\\'");
+                    data.forEach((acc, idx) => {
+                        const cacheKey = `acesso_${idx}`;
+                        window.__aceleradorCache[cacheKey] = acc;
                         html += `
-                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', ${jsonAcc})">
+                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('acesso', '${cacheKey}')">
                                 <td>${acc.dthora.split(' ')[1]}</td>
                                 <td>
                                     <div style="display:flex; align-items:center; gap:8px;">
@@ -776,10 +780,11 @@ if ($esseRecurso == null) {
                     html = '<p class="grey-text" style="margin:0;">Nenhuma autorização ou convite ativo registrado para a unidade no período.</p>';
                 } else {
                     html = '<table class="striped highlight responsive-table" style="font-size:0.85rem;"><thead><tr><th>Visitante / Prestador</th><th>Documento</th><th>Validade</th><th>Autorizado Por</th><th>Status</th><th>Inspecionar</th></tr></thead><tbody>';
-                    data.forEach(aut => {
-                        const jsonAut = JSON.stringify(aut).replace(/'/g, "\\'");
+                    data.forEach((aut, idx) => {
+                        const cacheKey = `autorizacao_${idx}`;
+                        window.__aceleradorCache[cacheKey] = aut;
                         html += `
-                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('autorizacao', ${jsonAut})">
+                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('autorizacao', '${cacheKey}')">
                                 <td>
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         ${aut.foto ? `<img src="${aut.foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #2e7d32;">` : '<i class="material-icons grey-text tiny">person</i>'}
@@ -816,16 +821,17 @@ if ($esseRecurso == null) {
                             <thead><tr><th>Chegada</th><th>Identificador / Rastreio</th><th>Foto / Anexo</th><th>Descrição</th><th>Destinatário</th><th>Inspecionar</th></tr></thead>
                             <tbody>
                     `;
-                    data.forEach(ent => {
+                    data.forEach((ent, idx) => {
                         const entUuid = ent.uuid || ent.id || '';
-                        const jsonEnt = JSON.stringify(ent).replace(/'/g, "\\'");
+                        const cacheKey = `entrega_${idx}`;
+                        window.__aceleradorCache[cacheKey] = ent;
                         const isMatch = checarMatchNotificacao(ent.identificador) || checarMatchNotificacao(ent.descricao);
                         if (isMatch) {
                             $('#badge-entrega-match-header').show();
                         }
                         
                         html += `
-                            <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarItemAcelerador('entrega', ${jsonEnt})">
+                            <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarItemAcelerador('entrega', '${cacheKey}')">
                                 <td>${ent.dthoraChegada}</td>
                                 <td class="col-identificador">
                                     ${ent.identificador ? `
@@ -946,6 +952,11 @@ if ($esseRecurso == null) {
         }
 
         function inspecionarItemAcelerador(tipo, data) {
+            // Se data for uma string, busca no cache global
+            if (typeof data === 'string' && window.__aceleradorCache && window.__aceleradorCache[data]) {
+                data = window.__aceleradorCache[data];
+            }
+
             var html = '';
             if (tipo === 'acesso') {
                 html += '<h5 style="margin-top:0; color:#6f42c1; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso</h5>';
