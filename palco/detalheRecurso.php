@@ -900,9 +900,9 @@ if ($esseRecurso == null) {
                         const cacheKey = 'lib_portaria_' + index;
                         window.__aceleradorCache[cacheKey] = item;
                         
-                        const fotoVisitante = item.fotoVisitanteUrl;
-                        const fotoHtml = fotoVisitante ? `<img src="${fotoVisitante}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : '<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>';
-
+                        const fotoHtml = item.fotoVisitanteUrl ? 
+                            `<img src="${item.fotoVisitanteUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : 
+                            `<span class="grey-text spin-load-foto-visitante" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>`;
                         
                         const porteiroFoto = item.fotoPorteiroUrl ? `<img src="${item.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #004d40; vertical-align:middle; margin-right:5px;" title="${item.cargo || 'Porteiro/Funcionário'}">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
                         const porHtml = `<span style="display:inline-flex; align-items:center;">${porteiroFoto} <span><b>${item.por || 'Portaria'}</b> ${item.cargo ? `<small class="grey-text">(${item.cargo})</small>` : ''}</span></span>`;
@@ -915,7 +915,7 @@ if ($esseRecurso == null) {
                                         ${item.tipoNome || item.titulo}
                                     </span>
                                 </td>
-                                <td>${fotoHtml}</td>
+                                <td class="col-foto-visitante" data-uuid="${item.uuid || ''}">${fotoHtml}</td>
                                 <td><b>${item.mensagemClean || item.titulo}</b></td>
                                 <td>${porHtml}</td>
                                 <td><span class="btn-small waves-effect waves-light teal darken-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
@@ -933,8 +933,13 @@ if ($esseRecurso == null) {
             if (id === 'entregas') {
                 atualizarFiltroNotificacaoEntregas();
                 fetchDetalhesExtrasEntregas();
+            } else if (id === 'liberacoes_portaria') {
+                if (typeof window.fetchFotosVisitantesEmSegundoPlano === 'function') {
+                    window.fetchFotosVisitantesEmSegundoPlano();
+                }
             }
         }
+
 
         // Fetch em segundo plano para obter identificador e foto de cada entrega
         function fetchDetalhesExtrasEntregas() {

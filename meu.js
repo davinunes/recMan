@@ -2419,9 +2419,9 @@ window.renderToolsetLiberacoesPortaria = function (list) {
     `;
 
     list.forEach(item => {
-        let fotoVisitante = item.fotoVisitanteUrl;
-        let fotoHtml = fotoVisitante ? `<img src="${fotoVisitante}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : '<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>';
-
+        let fotoHtml = item.fotoVisitanteUrl ? 
+            `<img src="${item.fotoVisitanteUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : 
+            `<span class="grey-text spin-load-foto-visitante" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>`;
         
         let porteiroFoto = item.fotoPorteiroUrl ? `<img src="${item.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #004d40; vertical-align:middle; margin-right:5px;" title="${item.cargo || 'Porteiro/Funcionário'}">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
         let porHtml = `<span style="display:inline-flex; align-items:center;">${porteiroFoto} <span><b>${item.por || 'Portaria'}</b> ${item.cargo ? `<small class="grey-text">(${item.cargo})</small>` : ''}</span></span>`;
@@ -2430,7 +2430,7 @@ window.renderToolsetLiberacoesPortaria = function (list) {
             <tr style="cursor:pointer;" onclick="window.abrirModalDetalhesPortaria('${item.uuid || ''}')">
                 <td>${item.dthora || item.dtExibicao}</td>
                 <td><span class="badge teal lighten-4 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">${item.tipoNome || item.titulo}</span></td>
-                <td>${fotoHtml}</td>
+                <td class="col-foto-visitante" data-uuid="${item.uuid || ''}">${fotoHtml}</td>
                 <td><b>${item.mensagemClean || item.titulo}</b></td>
                 <td>${porHtml}</td>
                 <td>
@@ -2444,7 +2444,36 @@ window.renderToolsetLiberacoesPortaria = function (list) {
 
     tableHtml += `</tbody></table>`;
     $('#conteudoLiberacoesPortaria').html(tableHtml);
+    window.fetchFotosVisitantesEmSegundoPlano();
 };
+
+window.fetchFotosVisitantesEmSegundoPlano = function () {
+    const cells = document.querySelectorAll('.col-foto-visitante[data-uuid]');
+    cells.forEach(cell => {
+        const uuid = cell.getAttribute('data-uuid');
+        if (!uuid || cell.dataset.fotoCarregada === "true") return;
+
+        fetch(`metodo.php?metodo=detalhesLiberacaoPortaria&uuid=${encodeURIComponent(uuid)}`)
+            .then(res => res.json())
+            .then(resData => {
+                if (resData && resData.success && resData.data) {
+                    const d = resData.data;
+                    cell.dataset.fotoCarregada = "true";
+                    if (d.fotoVisitanteUrl) {
+                        cell.innerHTML = `<img src="${d.fotoVisitanteUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1.5px solid #00695c; box-shadow:0 2px 4px rgba(0,0,0,0.15); cursor:pointer;" alt="Foto Visitante" title="Foto do Visitante Anexada">`;
+                    } else {
+                        cell.innerHTML = `<span class="grey-text" title="Sem foto de visitante anexada"><i class="material-icons tiny">person_outline</i></span>`;
+                    }
+                } else {
+                    cell.innerHTML = `<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>`;
+                }
+            })
+            .catch(() => {
+                cell.innerHTML = `<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>`;
+            });
+    });
+};
+
 
 window.abrirModalDetalhesPortaria = function(uuid) {
     if (!uuid) {
