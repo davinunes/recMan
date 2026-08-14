@@ -349,6 +349,23 @@ $isDebugUser = ($userIdDebug === 5);
                     </div>
                 </li>
 
+                <!-- 8. Liberações da Portaria (Caixa 9 VDS) -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons teal-text text-darken-2">meeting_room</i>
+                            <b>8. Liberações da Portaria</b>
+                            <small class="grey-text text-darken-1" id="labelMesLiberacoesPortaria">(Mês Selecionado)</small>
+                        </span>
+                        <span class="badge teal darken-2 white-text font-weight-bold" id="badgeCountLiberacoesPortaria">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoLiberacoesPortaria">
+                            <!-- Lista de Liberações de Portaria -->
+                        </div>
+                    </div>
+                </li>
+
             </ul>
         </div>
     </div>

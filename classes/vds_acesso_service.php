@@ -1136,3 +1136,111 @@ function vds_extrair_sugestoes_multa_boleto($urlSegundaVia, $boletoStatus = null
         'snippet' => $snippet
     ];
 }
+
+/**
+ * Consulta ocorrências de liberações de portaria e controle de acesso (Caixa 9) para uma unidade na VDS.
+ */
+function vds_get_liberacoes_portaria_unidade($bloco, $unidade, $dtInicio = null, $dtFim = null, $usuarioIdConselho = null) {
+    // 1. Resolver UUIDs de Bloco e Unidade
+    $uuids = vds_resolve_bloco_unidade_uuid($bloco, $unidade, $usuarioIdConselho);
+    $unidadeUuid = $uuids['unidadeUuid'];
+    $blocoUuid = $uuids['blocoUuid'];
+    $condominioUuid = $uuids['condominioUuid'] ?? null;
+
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return [];
+    }
+
+    // Buscaremos Tipo=48 (Controle de Acesso) e Tipo=63 (Portaria) na Caixa=9
+    $tipos = [48, 63];
+    $ocorrencias = [];
+    $vistos = [];
+
+    foreach ($tipos as $tipoId) {
+        $url = VDS_BASE_URL . '/ocorrencia?page=1&limit=50&sortBy=dtExibicao&order=desc&Caixa=9&Lida=9&Tipo=' . $tipoId;
+        
+        if ($condominioUuid) {
+            $url .= '&Condominio.Uuid=' . urlencode($condominioUuid);
+        }
+        if ($unidadeUuid) {
+            $url .= '&Unidade.Uuid=' . urlencode($unidadeUuid);
+        } elseif ($blocoUuid) {
+            $url .= '&Bloco.Uuid=' . urlencode($blocoUuid);
+        }
+        if (!empty($dtInicio)) {
+            $url .= '&DtInicio=' . urlencode(substr($dtInicio, 0, 10));
+        }
+        if (!empty($dtFim)) {
+            $url .= '&DtFim=' . urlencode(substr($dtFim, 0, 10));
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            $json = json_decode($response, true);
+            $regs = $json['regs'] ?? ($json['data'] ?? ($json['items'] ?? (is_array($json) ? $json : [])));
+            if (is_array($regs)) {
+                foreach ($regs as $reg) {
+                    $id = $reg['ocorrenciaId'] ?? ($reg['uuid'] ?? null);
+                    if ($id && isset($vistos[$id])) {
+                        continue;
+                    }
+                    if ($id) {
+                        $vistos[$id] = true;
+                    }
+
+                    $fotoRel = $reg['foto'] ?? null;
+                    $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
+
+                    $msgRaw = $reg['mensagem'] ?? '';
+                    $cleanMsg = preg_replace('/<br\s*\/?>/i', "\n", $msgRaw);
+                    $cleanMsg = preg_replace('/<\/p>/i', "\n", $cleanMsg);
+                    $cleanMsg = trim(strip_tags($cleanMsg));
+
+                    $ocorrencias[] = [
+                        'ocorrenciaId' => $reg['ocorrenciaId'] ?? null,
+                        'uuid' => $reg['uuid'] ?? null,
+                        'protocolo' => $reg['protocolo'] ?? '',
+                        'titulo' => $reg['titulo'] ?? ($reg['tipoNome'] ?? 'Liberação Portaria'),
+                        'tipoNome' => $reg['tipoNome'] ?? 'Controle de Acesso',
+                        'tipoId' => $reg['tipoId'] ?? null,
+                        'dthora' => vds_format_datetime($reg['dthora'] ?? ($reg['dtExibicao'] ?? null), 'd/m/Y H:i:s'),
+                        'dtExibicao' => $reg['dtExibicao'] ?? null,
+                        'por' => $reg['por'] ?? '',
+                        'cargo' => $reg['cargo'] ?? '',
+                        'destino' => $reg['destino'] ?? '',
+                        'mensagem' => $msgRaw,
+                        'mensagemClean' => $cleanMsg,
+                        'fotoUrl' => $fotoUrl,
+                        'statusNome' => $reg['statusNome'] ?? ''
+                    ];
+                }
+            }
+        }
+    }
+
+    // Ordenar por data decrescente
+    usort($ocorrencias, function($a, $b) {
+        $tA = strtotime($a['dtExibicao'] ?? $a['dthora'] ?? 0);
+        $tB = strtotime($b['dtExibicao'] ?? $b['dthora'] ?? 0);
+        return $tB - $tA;
+    });
+
+    return $ocorrencias;
+}
+

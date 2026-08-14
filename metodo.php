@@ -839,6 +839,9 @@ switch ($_GET['metodo']) {
         // 9.1 Visitantes e Prestadores da Portaria
         $visitantes = vds_get_visitantes_unidade($torre, $unidade);
 
+        // 9.2 Liberações da Portaria (Caixa 9 VDS)
+        $liberacoesPortaria = vds_get_liberacoes_portaria_unidade($torre, $unidade, $dtInicio, $dtFim);
+
         // 10. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
@@ -849,13 +852,14 @@ switch ($_GET['metodo']) {
         $recursosConvertidos = 0;
 
         foreach ($notificacoes as $n) {
-            $tipo = strtoupper($n['notificacao'] ?? '');
-            if ($tipo === 'MULTA') $totalMultas++;
-            elseif ($tipo === 'ADVERTENCIA') $totalAdvertencias++;
+            $nf = strtolower($n['notificacao'] ?? '');
+            if (strpos($nf, 'multa') !== false) $totalMultas++;
+            else $totalAdvertencias++;
 
-            if (($n['recurso'] ?? '') === 'Sim') {
+            $stRec = trim($n['status_recurso'] ?? '');
+            if (!empty($stRec)) {
                 $totalRecursos++;
-                $p = strtoupper($n['parecer'] ?? '');
+                $p = strtoupper($n['parecer_conselho'] ?? '');
                 if (strpos($p, 'MANTER') !== false) $recursosMantidos++;
                 elseif (strpos($p, 'REVOGAR') !== false) $recursosRevogados++;
                 elseif (strpos($p, 'CONVERTER') !== false) $recursosConvertidos++;
@@ -902,7 +906,8 @@ switch ($_GET['metodo']) {
             'totalChamadosAutoria' => count($ocorrenciasAutoria),
             'totalChamadosTag' => count($ocorrenciasTag),
             'totalBoletos' => count($boletos),
-            'boletosAbertos' => $boletosAbertos
+            'boletosAbertos' => $boletosAbertos,
+            'totalLiberacoesPortaria' => count($liberacoesPortaria)
         ];
 
         echo json_encode([
@@ -919,7 +924,8 @@ switch ($_GET['metodo']) {
             'reservas' => $reservas,
             'ocorrenciasAutoria' => $ocorrenciasAutoria,
             'ocorrenciasTag' => $ocorrenciasTag,
-            'boletos' => $boletos
+            'boletos' => $boletos,
+            'liberacoesPortaria' => $liberacoesPortaria
         ], JSON_UNESCAPED_UNICODE);
         break;
 

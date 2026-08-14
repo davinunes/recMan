@@ -72,6 +72,14 @@ try {
             echo json_encode(['success' => true, 'data' => $res]);
             break;
 
+        case 'liberacoes_portaria':
+            $dtInicio = $_GET['dtInicio'] ?? '';
+            $dtFim = $_GET['dtFim'] ?? '';
+            $res = vds_get_liberacoes_portaria_unidade($bloco, $unidade, $dtInicio, $dtFim, $usuarioId);
+            echo json_encode(['success' => true, 'data' => $res]);
+            break;
+
+
         default:
             echo json_encode(['success' => false, 'error' => 'Ação inválida.']);
             break;

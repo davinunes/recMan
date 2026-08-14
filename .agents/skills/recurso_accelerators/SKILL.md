@@ -25,6 +25,9 @@ Ao analisar uma notificação/multa objeto de recurso, o Conselho precisa correl
    - Buscar os boletos da unidade (`Ano`, `Bloco.Uuid`, `Unidade.Uuid`).
    - Verificar se o boleto do mês/ano correspondente à notificação possui lançamento de penalidade disciplinar.
    - Seguir o link `urlSegundaVia` (Superlógica) para efetuar o scraping em HTML (`-FaturaHtml-flSegundaVia`) ou extrair texto do PDF buscando ocorrência de "Multa", "Infração" ou "Regimento Interno/RI", destacando o valor e o status de pagamento (Liquidado / Em Aberto).
+7. **Liberações da Portaria (Ocorrências VDS Caixa 9):**
+   - Buscar as ocorrências da Caixa 9 (`Caixa=9&Lida=9`) registradas pelos funcionários/portaria via `GET /ocorrencia?Tipo=48` (Controle de Acesso) e `Tipo=63` (Portaria).
+   - Exibir visitante, prestador, documento, atendente/porteiro responsável e eventos de liberação.
 
 ## 2. Apresentação em Abas / Widgets
 

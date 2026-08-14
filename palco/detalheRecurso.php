@@ -635,7 +635,8 @@ if ($esseRecurso == null) {
                 { id: 'acessos', action: 'acessos', target: '#container-acessos', countTarget: '#count-acessos' },
                 { id: 'autorizacoes', action: 'autorizacoes', target: '#container-autorizacoes', countTarget: '#count-autorizacoes' },
                 { id: 'entregas', action: 'entregas', target: '#container-entregas', countTarget: '#count-entregas' },
-                { id: 'chamados', action: 'chamados', target: '#container-chamados', countTarget: '#count-chamados' }
+                { id: 'chamados', action: 'chamados', target: '#container-chamados', countTarget: '#count-chamados' },
+                { id: 'liberacoes_portaria', action: 'liberacoes_portaria', target: '#container-liberacoes-portaria', countTarget: '#count-liberacoes-portaria' }
             ];
 
             actions.forEach(item => {
@@ -875,7 +876,50 @@ if ($esseRecurso == null) {
                     });
                     html += '</div>';
                 }
+            } else if (id === 'liberacoes_portaria') {
+                const list = Array.isArray(data) ? data : [];
+                count = list.length;
+                if (count === 0) {
+                    html = '<p class="grey-text" style="margin:0;">Nenhuma liberação de portaria/controle de acesso encontrada para esta unidade no período.</p>';
+                } else {
+                    html = `
+                        <table class="striped highlight responsive-table" style="font-size:0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Tipo</th>
+                                    <th>Foto</th>
+                                    <th>Detalhes / Visitante</th>
+                                    <th>Liberado Por</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    list.forEach((item, index) => {
+                        const cacheKey = 'lib_portaria_' + index;
+                        window.__aceleradorCache[cacheKey] = item;
+                        const fotoHtml = item.fotoUrl ? `<img src="${item.fotoUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto">` : '<span class="grey-text">-</span>';
+                        
+                        html += `
+                            <tr style="cursor:pointer;" onclick="inspecionarItemAcelerador('liberacao_portaria', '${cacheKey}')">
+                                <td>${item.dthora || item.dtExibicao}</td>
+                                <td>
+                                    <span class="badge teal lighten-4 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">
+                                        ${item.tipoNome || item.titulo}
+                                    </span>
+                                </td>
+                                <td>${fotoHtml}</td>
+                                <td><b>${item.mensagemClean || item.titulo}</b></td>
+                                <td><small class="grey-text text-darken-2">${item.por || 'Portaria'}</small></td>
+                                <td><span class="btn-small waves-effect waves-light teal darken-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                }
             }
+
 
             $(target).html(html);
             $(countTarget).text(`(${count})`);
@@ -1001,7 +1045,29 @@ if ($esseRecurso == null) {
             } else if (tipo === 'entrega') {
                 inspecionarEntregaComDetalhes(data.uuid || '', data);
                 return;
+            } else if (tipo === 'liberacao_portaria') {
+                html += '<h5 style="margin-top:0; color:#00695c; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">meeting_room</i> Inspecionar Liberação de Portaria (Caixa 9)</h5>';
+                if (data.fotoUrl) {
+                    html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.fotoUrl + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #00695c; box-shadow:0 4px 12px rgba(0,105,92,0.25);"></div>';
+                }
+                html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+                html += '<tr><td style="width:35%;"><b>Tipo / Categoria:</b></td><td><b style="font-size:1.05rem;">' + formatObjStr(data.tipoNome || data.titulo) + '</b></td></tr>';
+                if (data.protocolo) {
+                    html += '<tr><td><b>Protocolo VDS:</b></td><td><code style="background:#e0f2f1; color:#004d40; padding:2px 8px; border-radius:4px; font-weight:bold;">' + data.protocolo + '</code></td></tr>';
+                }
+                html += '<tr><td><b>Data / Hora da Liberação:</b></td><td>' + formatObjStr(data.dthora) + '</td></tr>';
+                if (data.por) {
+                    html += '<tr><td><b>Liberado Por (Atendente):</b></td><td><span class="badge teal lighten-5 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + formatObjStr(data.por) + (data.cargo ? ' (' + data.cargo + ')' : '') + '</span></td></tr>';
+                }
+                if (data.destino) {
+                    html += '<tr><td><b>Destino:</b></td><td>' + formatObjStr(data.destino) + '</td></tr>';
+                }
+                if (data.mensagemClean) {
+                    html += '<tr><td><b>Conteúdo / Visitante:</b></td><td style="white-space:pre-line;">' + formatObjStr(data.mensagemClean) + '</td></tr>';
+                }
+                html += '</table>';
             }
+
 
             document.getElementById('conteudoInspecionarAcelerador').innerHTML = html;
             var elem = document.getElementById('modalInspecionarAcelerador');
@@ -1345,6 +1411,17 @@ if ($esseRecurso == null) {
                     <div class="collapsible-body" id="container-chamados" style="padding: 10px;">
                         <div class="center-align grey-text" style="padding: 20px;">
                             <i class="material-icons spinning tiny">sync</i> Carregando ocorrências...
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons teal-text">meeting_room</i>
+                        Liberações da Portaria (Caixa 9 VDS) <span id="count-liberacoes-portaria">(...)</span>
+                    </div>
+                    <div class="collapsible-body" id="container-liberacoes-portaria" style="padding: 10px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando liberações da portaria...
                         </div>
                     </div>
                 </li>

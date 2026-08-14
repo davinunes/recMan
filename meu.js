@@ -1580,6 +1580,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
     $('#labelMesEncomendas').text('(' + mesExtenso + ')');
     $('#labelMesAutorizacoes').text('(' + mesExtenso + ')');
     $('#labelMesReservas').text('(' + mesExtenso + ')');
+    $('#labelMesLiberacoesPortaria').text('(' + mesExtenso + ')');
     $('#labelAnoBoletos').text('(' + anoStr + ')');
 
     $.ajax({
@@ -1603,6 +1604,7 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
                 window.renderToolsetOcorrenciasAutoria(res.ocorrenciasAutoria || []);
                 window.renderToolsetOcorrenciasTag(res.ocorrenciasTag || []);
                 window.renderToolsetBoletos(res.boletos || []);
+                window.renderToolsetLiberacoesPortaria(res.liberacoesPortaria || []);
 
                 $('#toolsetContainer').removeClass('hide');
                 $('#unitBrief').removeClass('hide');
@@ -2331,6 +2333,47 @@ window.renderToolsetBoletos = function (list) {
     tableHtml += `</tbody></table>`;
     $('#conteudoBoletos').html(tableHtml);
 };
+
+// 8. Renderizar Liberações da Portaria (Caixa 9 VDS)
+window.renderToolsetLiberacoesPortaria = function (list) {
+    list = list || [];
+    $('#badgeCountLiberacoesPortaria').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoLiberacoesPortaria').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">meeting_room</i> Nenhuma liberação de portaria/controle de acesso registrada na VDS para este mês.</div>');
+        return;
+    }
+
+    let tableHtml = `
+        <table class="striped responsive-table" style="font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th>Data / Hora</th>
+                    <th>Tipo</th>
+                    <th>Foto</th>
+                    <th>Detalhes / Visitante</th>
+                    <th>Liberado Por</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    list.forEach(item => {
+        let fotoHtml = item.fotoUrl ? `<img src="${item.fotoUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto">` : '<span class="grey-text">-</span>';
+        tableHtml += `
+            <tr>
+                <td>${item.dthora || item.dtExibicao}</td>
+                <td><span class="badge teal lighten-4 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">${item.tipoNome || item.titulo}</span></td>
+                <td>${fotoHtml}</td>
+                <td><b>${item.mensagemClean || item.titulo}</b></td>
+                <td><small class="grey-text text-darken-2">${item.por || 'Portaria'}</small></td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table>`;
+    $('#conteudoLiberacoesPortaria').html(tableHtml);
+};
+
 
 // Helper simples para formatar data BR YYYY-MM-DD -> DD/MM/YYYY
 window.formatDateBR = function(dtStr) {
