@@ -1227,7 +1227,7 @@ function vds_get_liberacoes_portaria_unidade($bloco, $unidade, $dtInicio = null,
                         'mensagem' => $msgRaw,
                         'mensagemClean' => $cleanMsg,
                         'fotoPorteiroUrl' => $fotoUrl,
-                        'fotoUrl' => $fotoUrl,
+                        'fotoVisitanteUrl' => null,
                         'statusNome' => $reg['statusNome'] ?? ''
                     ];
                 }
@@ -1283,11 +1283,13 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
             $fotoVisitanteUrl = null;
             $eventosFormatados = [];
 
+            // 1. Procurar foto do visitante nos anexos dos eventos
             if (isset($data['eventos']) && is_array($data['eventos'])) {
                 foreach ($data['eventos'] as $ev) {
-                    if (isset($ev['listaAnexo']) && is_array($ev['listaAnexo'])) {
-                        foreach ($ev['listaAnexo'] as $anexo) {
-                            $anxUrl = $anexo['url'] ?? '';
+                    $anexos = $ev['listaAnexo'] ?? ($ev['listaAnexos'] ?? ($ev['anexos'] ?? []));
+                    if (is_array($anexos)) {
+                        foreach ($anexos as $anexo) {
+                            $anxUrl = is_array($anexo) ? ($anexo['url'] ?? ($anexo['caminho'] ?? '')) : (is_string($anexo) ? $anexo : '');
                             if (!empty($anxUrl)) {
                                 $fotoVisitanteUrl = (strpos($anxUrl, 'http') === 0) ? $anxUrl : 'https://app.vidadesindico.com.br' . $anxUrl;
                                 break 2;
@@ -1295,7 +1297,20 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
                         }
                     }
                 }
+            }
 
+            // 2. Se não encontrou nos eventos, procurar na raiz de listaAnexo
+            if (empty($fotoVisitanteUrl) && isset($data['listaAnexo']) && is_array($data['listaAnexo'])) {
+                foreach ($data['listaAnexo'] as $anxRoot) {
+                    $u = is_array($anxRoot) ? ($anxRoot['url'] ?? '') : (is_string($anxRoot) ? $anxRoot : '');
+                    if (!empty($u)) {
+                        $fotoVisitanteUrl = (strpos($u, 'http') === 0) ? $u : 'https://app.vidadesindico.com.br' . $u;
+                        break;
+                    }
+                }
+            }
+
+            if (isset($data['eventos']) && is_array($data['eventos'])) {
                 foreach ($data['eventos'] as $ev) {
                     $evFotoRel = $ev['foto'] ?? null;
                     $evFotoPorteiroUrl = !empty($evFotoRel) ? (strpos($evFotoRel, 'http') === 0 ? $evFotoRel : 'https://app.vidadesindico.com.br' . $evFotoRel) : $fotoPorteiroUrl;
@@ -1306,12 +1321,13 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
                     $cleanMsg = trim(strip_tags($cleanMsg));
 
                     $anexosEv = [];
-                    if (isset($ev['listaAnexo']) && is_array($ev['listaAnexo'])) {
-                        foreach ($ev['listaAnexo'] as $anx) {
-                            $u = $anx['url'] ?? '';
+                    $anxList = $ev['listaAnexo'] ?? ($ev['listaAnexos'] ?? ($ev['anexos'] ?? []));
+                    if (is_array($anxList)) {
+                        foreach ($anxList as $anx) {
+                            $u = is_array($anx) ? ($anx['url'] ?? '') : (is_string($anx) ? $anx : '');
                             if ($u) {
                                 $anexosEv[] = [
-                                    'nome' => $anx['nome'] ?? 'Anexo',
+                                    'nome' => is_array($anx) ? ($anx['nome'] ?? 'Anexo') : 'Anexo',
                                     'url' => (strpos($u, 'http') === 0) ? $u : 'https://app.vidadesindico.com.br' . $u
                                 ];
                             }
@@ -1354,5 +1370,6 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
 
     return ['success' => false, 'error' => "HTTP {$httpCode} ao consultar detalhes da ocorrência na VDS."];
 }
+
 
 

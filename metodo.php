@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . "/classes/repositorio.php";
+require_once __DIR__ . "/classes/vds_acesso_service.php";
+require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
+
 
 switch ($_GET['metodo']) {
     case "novoUsuario":

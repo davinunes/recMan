@@ -900,8 +900,9 @@ if ($esseRecurso == null) {
                         const cacheKey = 'lib_portaria_' + index;
                         window.__aceleradorCache[cacheKey] = item;
                         
-                        const fotoVisitante = item.fotoVisitanteUrl || item.fotoUrl;
+                        const fotoVisitante = item.fotoVisitanteUrl;
                         const fotoHtml = fotoVisitante ? `<img src="${fotoVisitante}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : '<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>';
+
                         
                         const porteiroFoto = item.fotoPorteiroUrl ? `<img src="${item.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #004d40; vertical-align:middle; margin-right:5px;" title="${item.cargo || 'Porteiro/Funcionário'}">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
                         const porHtml = `<span style="display:inline-flex; align-items:center;">${porteiroFoto} <span><b>${item.por || 'Portaria'}</b> ${item.cargo ? `<small class="grey-text">(${item.cargo})</small>` : ''}</span></span>`;
