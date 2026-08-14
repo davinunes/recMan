@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../classes/repositorio.php";
 $mesAtualDefault = date('Y-m');
-$userIdDebug = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$userIdDebug = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 $isDebugUser = ($userIdDebug === 5);
 ?>
 
@@ -89,7 +89,8 @@ $isDebugUser = ($userIdDebug === 5);
                 Toolset Operacional por Unidade
             </h4>
             <p class="grey-text text-darken-1" style="margin: 5px 0 0 0; font-size: 0.95rem;">
-                Painel unificado de dados da unidade: Notificações, Recursos, Encomendas, Autorizações, Reservas, Ocorrências e Boletos.
+                Painel unificado de dados da unidade: Notificações, Recursos, Encomendas, Autorizações, Reservas,
+                Ocorrências e Boletos.
             </p>
         </div>
     </div>
@@ -121,28 +122,35 @@ $isDebugUser = ($userIdDebug === 5);
                 <label for="vagaFiltro" class="active">OU Vaga</label>
             </div>
 
-            
+
             <!-- Seletor de Mês e Navegação Temporal -->
             <div class="col s12 m4" style="margin-top: 0;">
-                <label class="grey-text text-darken-2" style="font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 4px;">
+                <label class="grey-text text-darken-2"
+                    style="font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 4px;">
                     <i class="material-icons tiny">date_range</i> MÊS DE ABRANGÊNCIA (ACELERADORES)
                 </label>
                 <div style="display: flex; align-items: center; gap: 5px;">
-                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnMesAnterior" title="Mês Anterior">
+                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnMesAnterior"
+                        title="Mês Anterior">
                         <i class="material-icons">chevron_left</i>
                     </button>
-                    <input type="month" id="mesAnoFiltro" value="<?php echo $mesAtualDefault; ?>" class="browser-default custom-month-input" style="height: 36px; padding: 0 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; font-weight: 500;">
-                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnProximoMes" title="Próximo Mês">
+                    <input type="month" id="mesAnoFiltro" value="<?php echo $mesAtualDefault; ?>"
+                        class="browser-default custom-month-input"
+                        style="height: 36px; padding: 0 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; font-weight: 500;">
+                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnProximoMes"
+                        title="Próximo Mês">
                         <i class="material-icons">chevron_right</i>
                     </button>
-                    <button type="button" class="btn-flat btn-small waves-effect blue lighten-5 blue-text text-darken-3" id="btnMesAtual" title="Ir para o Mês Atual" style="font-weight: bold;">
+                    <button type="button" class="btn-flat btn-small waves-effect blue lighten-5 blue-text text-darken-3"
+                        id="btnMesAtual" title="Ir para o Mês Atual" style="font-weight: bold;">
                         Hoje
                     </button>
                 </div>
             </div>
 
             <div class="col s12 m2 center-align" style="margin-top: 0;">
-                <button class="btn waves-effect waves-light blue darken-2 style-btn-search" id="buscaHistoricoUnidade" style="width: 100%; height: 42px; line-height: 42px; border-radius: 6px;">
+                <button class="btn waves-effect waves-light blue darken-2 style-btn-search" id="buscaHistoricoUnidade"
+                    style="width: 100%; height: 42px; line-height: 42px; border-radius: 6px;">
                     <i class="material-icons left">search</i> CARREGAR
                 </button>
             </div>
@@ -159,7 +167,8 @@ $isDebugUser = ($userIdDebug === 5);
         <div class="col s12 center-align grey-text" style="padding: 50px 20px;">
             <i class="material-icons" style="font-size: 5rem; opacity: 0.25;">tune</i>
             <h5 style="font-weight: 300; margin-top: 10px;">Nenhuma unidade selecionada</h5>
-            <p style="font-size: 0.95rem;">Informe a unidade, o bloco e clique em <b>Carregar</b> para visualizar o toolset completo.</p>
+            <p style="font-size: 0.95rem;">Informe a unidade, o bloco e clique em <b>Carregar</b> para visualizar o
+                toolset completo.</p>
         </div>
     </div>
 
@@ -168,12 +177,19 @@ $isDebugUser = ($userIdDebug === 5);
         <div class="col s12 center-align">
             <div class="preloader-wrapper big active">
                 <div class="spinner-layer spinner-blue-only">
-                    <div class="circle-clipper left"><div class="circle"></div></div>
-                    <div class="gap-patch"><div class="circle"></div></div>
-                    <div class="circle-clipper right"><div class="circle"></div></div>
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
                 </div>
             </div>
-            <p class="grey-text" style="margin-top: 15px; font-weight: 500;">Carregando aceleradores e histórico da unidade...</p>
+            <p class="grey-text" style="margin-top: 15px; font-weight: 500;">Carregando aceleradores e histórico da
+                unidade...</p>
         </div>
     </div>
 
@@ -181,7 +197,7 @@ $isDebugUser = ($userIdDebug === 5);
     <div id="toolsetContainer" class="row hide" style="margin-top: 10px;">
         <div class="col s12">
             <ul class="collapsible popout z-depth-1" id="toolsetCollapsible" style="border: none;">
-                
+
                 <!-- 0. Moradores da Unidade -->
                 <li>
                     <div class="collapsible-header flex-header-collapsible">
@@ -207,28 +223,12 @@ $isDebugUser = ($userIdDebug === 5);
                             <b>Veículos da Unidade</b>
                             <small class="grey-text text-darken-1">(Cadastro VDS)</small>
                         </span>
-                        <span class="badge blue-grey darken-2 white-text font-weight-bold" id="badgeCountVeiculos">0</span>
+                        <span class="badge blue-grey darken-2 white-text font-weight-bold"
+                            id="badgeCountVeiculos">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoVeiculos">
                             <!-- Cards dos Veículos -->
-                        </div>
-                    </div>
-                </li>
-
-                <!-- 0.2 Visitantes & Prestadores da Portaria -->
-                <li>
-                    <div class="collapsible-header flex-header-collapsible">
-                        <span class="title-with-icon">
-                            <i class="material-icons purple-text text-darken-2">badge</i>
-                            <b>Visitantes & Prestadores da Portaria</b>
-                            <small class="grey-text text-darken-1">(Cadastro Portaria VDS)</small>
-                        </span>
-                        <span class="badge purple darken-2 white-text font-weight-bold" id="badgeCountVisitantes">0</span>
-                    </div>
-                    <div class="collapsible-body white">
-                        <div id="conteudoVisitantes">
-                            <!-- Cards dos Visitantes -->
                         </div>
                     </div>
                 </li>
@@ -261,7 +261,8 @@ $isDebugUser = ($userIdDebug === 5);
                             <b>2. Encomendas & Correspondências</b>
                             <small class="grey-text text-darken-1" id="labelMesEncomendas">(Mês Selecionado)</small>
                         </span>
-                        <span class="badge amber darken-3 white-text font-weight-bold" id="badgeCountEncomendas">0</span>
+                        <span class="badge amber darken-3 white-text font-weight-bold"
+                            id="badgeCountEncomendas">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoEncomendas">
@@ -278,7 +279,8 @@ $isDebugUser = ($userIdDebug === 5);
                             <b>3. Autorizações de Acesso & Convites</b>
                             <small class="grey-text text-darken-1" id="labelMesAutorizacoes">(Mês Selecionado)</small>
                         </span>
-                        <span class="badge teal darken-1 white-text font-weight-bold" id="badgeCountAutorizacoes">0</span>
+                        <span class="badge teal darken-1 white-text font-weight-bold"
+                            id="badgeCountAutorizacoes">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoAutorizacoes">
@@ -312,7 +314,8 @@ $isDebugUser = ($userIdDebug === 5);
                             <b>5. Ocorrências Registradas pela Unidade</b>
                             <small class="grey-text text-darken-1">(Própria Autoria)</small>
                         </span>
-                        <span class="badge blue darken-2 white-text font-weight-bold" id="badgeCountOcorrenciasAutoria">0</span>
+                        <span class="badge blue darken-2 white-text font-weight-bold"
+                            id="badgeCountOcorrenciasAutoria">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoOcorrenciasAutoria">
@@ -329,7 +332,8 @@ $isDebugUser = ($userIdDebug === 5);
                             <b>6. Ocorrências Envolvendo a Unidade</b>
                             <small class="grey-text text-darken-1">(Tags, Citações e Ré)</small>
                         </span>
-                        <span class="badge purple darken-2 white-text font-weight-bold" id="badgeCountOcorrenciasTag">0</span>
+                        <span class="badge purple darken-2 white-text font-weight-bold"
+                            id="badgeCountOcorrenciasTag">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoOcorrenciasTag">
@@ -361,9 +365,11 @@ $isDebugUser = ($userIdDebug === 5);
                         <span class="title-with-icon">
                             <i class="material-icons teal-text text-darken-2">meeting_room</i>
                             <b>8. Liberações da Portaria</b>
-                            <small class="grey-text text-darken-1" id="labelMesLiberacoesPortaria">(Mês Selecionado)</small>
+                            <small class="grey-text text-darken-1" id="labelMesLiberacoesPortaria">(Mês
+                                Selecionado)</small>
                         </span>
-                        <span class="badge teal darken-2 white-text font-weight-bold" id="badgeCountLiberacoesPortaria">0</span>
+                        <span class="badge teal darken-2 white-text font-weight-bold"
+                            id="badgeCountLiberacoesPortaria">0</span>
                     </div>
                     <div class="collapsible-body white">
                         <div id="conteudoLiberacoesPortaria">
@@ -371,6 +377,25 @@ $isDebugUser = ($userIdDebug === 5);
                         </div>
                     </div>
                 </li>
+
+                <!-- 0.2 Visitantes & Prestadores da Portaria -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons purple-text text-darken-2">badge</i>
+                            <b>Visitantes & Prestadores Cadastrados</b>
+                            <small class="grey-text text-darken-1">(Cadastro Portaria VDS)</small>
+                        </span>
+                        <span class="badge purple darken-2 white-text font-weight-bold"
+                            id="badgeCountVisitantes">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoVisitantes">
+                            <!-- Cards dos Visitantes -->
+                        </div>
+                    </div>
+                </li>
+
 
             </ul>
         </div>
@@ -396,8 +421,9 @@ $isDebugUser = ($userIdDebug === 5);
 <div id="modalCienciaNotificacao" class="modal">
     <div class="modal-content">
         <h4><i class="material-icons left blue-text">event_available</i> Registrar Data de Ciência / Retirada</h4>
-        <p class="grey-text">Informe a data em que o morador tomou ciência ou retirou a notificação <b id="lblNotificacaoVirtual"></b>.</p>
-        
+        <p class="grey-text">Informe a data em que o morador tomou ciência ou retirou a notificação <b
+                id="lblNotificacaoVirtual"></b>.</p>
+
         <input type="hidden" id="virtualNotificacaoTarget">
         <div class="input-field" style="margin-top: 20px;">
             <input type="date" id="inputDataRetirada" class="validate">
@@ -414,8 +440,9 @@ $isDebugUser = ($userIdDebug === 5);
 <div id="modalCobrancaMulta" class="modal">
     <div class="modal-content">
         <h4><i class="material-icons left green-text">monetization_on</i> Confirmar Lançamento de Cobrança</h4>
-        <p class="grey-text">Informe o valor e a data de vencimento do boleto referente à notificação <b id="lblCobrancaVirtual"></b>.</p>
-        
+        <p class="grey-text">Informe o valor e a data de vencimento do boleto referente à notificação <b
+                id="lblCobrancaVirtual"></b>.</p>
+
         <input type="hidden" id="cobrancaNotificacaoTarget">
         <div class="row" style="margin-top: 20px;">
             <div class="input-field col s12 m6">
@@ -448,13 +475,19 @@ $isDebugUser = ($userIdDebug === 5);
             <i class="material-icons amber-text text-darken-3">inventory_2</i> Detalhes da Encomenda
             <span id="iconeDebugModalEntrega" class="hide" style="margin-left:auto;">
                 <i class="material-icons debug-terminal-icon tooltipped"
-                   style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
-                   onclick="if(window.lastEntregaDebugData){window.abrirModalDebugJson('Dados brutos da Encomenda (API VDS)', window.lastEntregaDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
-                   data-tooltip="Inspecionar JSON bruto desta Encomenda" title="Inspecionar JSON bruto">terminal</i>
+                    style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
+                    onclick="if(window.lastEntregaDebugData){window.abrirModalDebugJson('Dados brutos da Encomenda (API VDS)', window.lastEntregaDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
+                    data-tooltip="Inspecionar JSON bruto desta Encomenda" title="Inspecionar JSON bruto">terminal</i>
             </span>
         </h4>
         <div id="conteudoModalEntrega" class="center-align" style="padding: 10px 0;">
-            <div class="preloader-wrapper active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div></div></div>
+            <div class="preloader-wrapper active">
+                <div class="spinner-layer spinner-blue-only">
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="modal-footer">
@@ -470,7 +503,7 @@ $isDebugUser = ($userIdDebug === 5);
             <span id="debugJsonTitulo">Dados JSON</span>
             <span style="margin-left:auto;">
                 <button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3"
-                        onclick="window.copiarDebugJson();" title="Copiar JSON">
+                    onclick="window.copiarDebugJson();" title="Copiar JSON">
                     <i class="material-icons left tiny">content_copy</i> Copiar
                 </button>
             </span>
@@ -485,7 +518,7 @@ $isDebugUser = ($userIdDebug === 5);
             border:1px solid #37474f;
         ">
             <pre id="debugJsonConteudo"
-                 style="margin:0; font-family:Consolas, Monaco, 'Courier New', monospace; font-size:0.82rem; line-height:1.45; white-space:pre-wrap; word-break:break-word;">{ }</pre>
+                style="margin:0; font-family:Consolas, Monaco, 'Courier New', monospace; font-size:0.82rem; line-height:1.45; white-space:pre-wrap; word-break:break-word;">{ }</pre>
         </div>
     </div>
     <div class="modal-footer" style="background:#fafafa;">
@@ -502,17 +535,23 @@ $isDebugUser = ($userIdDebug === 5);
             <span id="detalheMoradorStatusBadge" style="margin-left:8px;"></span>
             <span id="detalheMoradorIconeDebug" class="hide" style="margin-left:auto;">
                 <i class="material-icons debug-terminal-icon tooltipped"
-                   style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
-                   onclick="if(window.lastMoradorDebugData){window.abrirModalDebugJson('Dados completos do Morador (API VDS)', window.lastMoradorDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
-                   data-tooltip="Inspecionar JSON bruto deste Morador" title="Inspecionar JSON">terminal</i>
+                    style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
+                    onclick="if(window.lastMoradorDebugData){window.abrirModalDebugJson('Dados completos do Morador (API VDS)', window.lastMoradorDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
+                    data-tooltip="Inspecionar JSON bruto deste Morador" title="Inspecionar JSON">terminal</i>
             </span>
         </h5>
         <div id="detalheMoradorLoading" class="center-align" style="padding: 30px 0;">
             <div class="preloader-wrapper active">
                 <div class="spinner-layer spinner-blue-only">
-                    <div class="circle-clipper left"><div class="circle"></div></div>
-                    <div class="gap-patch"><div class="circle"></div></div>
-                    <div class="circle-clipper right"><div class="circle"></div></div>
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
                 </div>
             </div>
             <p class="grey-text" style="margin-top:12px; font-weight:500;">Carregando detalhes do morador...</p>
@@ -529,40 +568,59 @@ $isDebugUser = ($userIdDebug === 5);
                 <div class="col s12 m8 l9" style="padding-top: 8px;">
                     <div class="row" style="margin-bottom: 0;">
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel cyan lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#006064; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">business</i> Vínculo com a Unidade
+                            <div class="card-panel cyan lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#006064; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">business</i> Vínculo
+                                    com a Unidade
                                 </h6>
-                                <div id="detalheMoradorUnidade" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorUnidade"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel blue lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#0d47a1; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">contacts</i> Dados Pessoais
+                            <div class="card-panel blue lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#0d47a1; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contacts</i> Dados
+                                    Pessoais
                                 </h6>
-                                <div id="detalheMoradorPessoa" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorPessoa"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel purple lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#4a148c; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">contact_phone</i> Contato
+                            <div class="card-panel purple lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#4a148c; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contact_phone</i>
+                                    Contato
                                 </h6>
-                                <div id="detalheMoradorContato" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorContato"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel green lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#1b5e20; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">location_on</i> Endereço
+                            <div class="card-panel green lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#1b5e20; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">location_on</i>
+                                    Endereço
                                 </h6>
-                                <div id="detalheMoradorEndereco" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorEndereco"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12" style="margin-bottom: 6px;">
-                            <div class="card-panel grey lighten-4" style="border-radius: 8px; padding: 10px 14px; margin: 0;">
-                                <div id="detalheMoradorAuditoria" style="font-size: 0.82rem; color:#455a64; display:flex; align-items:center; gap:10px; flex-wrap:wrap;"></div>
+                            <div class="card-panel grey lighten-4"
+                                style="border-radius: 8px; padding: 10px 14px; margin: 0;">
+                                <div id="detalheMoradorAuditoria"
+                                    style="font-size: 0.82rem; color:#455a64; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -572,7 +630,8 @@ $isDebugUser = ($userIdDebug === 5);
         <div id="detalheMoradorErro" class="hide" style="padding: 30px 0;">
             <div class="center-align red-text">
                 <i class="material-icons" style="font-size: 3rem; opacity: 0.7;">error_outline</i>
-                <p style="margin-top: 10px; font-weight: 500;" id="detalheMoradorMsgErro">Não foi possível carregar os detalhes do morador.</p>
+                <p style="margin-top: 10px; font-weight: 500;" id="detalheMoradorMsgErro">Não foi possível carregar os
+                    detalhes do morador.</p>
             </div>
         </div>
     </div>
@@ -585,19 +644,28 @@ $isDebugUser = ($userIdDebug === 5);
 <div id="modalSugestoesMultaBoleto" class="modal modal-fixed-footer" style="max-width: 850px; max-height: 85%;">
     <div class="modal-content">
         <h4 style="display:flex; align-items:center; gap:8px;">
-            <i class="material-icons blue-text text-darken-2">find_in_page</i> Extração e Confirmação de Multas no Boleto
+            <i class="material-icons blue-text text-darken-2">find_in_page</i> Extração e Confirmação de Multas no
+            Boleto
         </h4>
-        <p class="grey-text" style="margin-bottom: 20px;">Análise da composição de cobrança da fatura Superlógica buscando ocorrências de penalidade disciplinar/regimento interno.</p>
-        
+        <p class="grey-text" style="margin-bottom: 20px;">Análise da composição de cobrança da fatura Superlógica
+            buscando ocorrências de penalidade disciplinar/regimento interno.</p>
+
         <div id="loadingSugestoesBoleto" class="center-align" style="padding: 40px 0;">
             <div class="preloader-wrapper active">
                 <div class="spinner-layer spinner-blue-only">
-                    <div class="circle-clipper left"><div class="circle"></div></div>
-                    <div class="gap-patch"><div class="circle"></div></div>
-                    <div class="circle-clipper right"><div class="circle"></div></div>
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
                 </div>
             </div>
-            <p class="grey-text" style="margin-top: 15px; font-weight: 500;">Analisando composição de cobrança da fatura...</p>
+            <p class="grey-text" style="margin-top: 15px; font-weight: 500;">Analisando composição de cobrança da
+                fatura...</p>
         </div>
 
         <div id="containerSugestoesBoleto" class="hide">
@@ -618,28 +686,33 @@ $isDebugUser = ($userIdDebug === 5);
         padding: 15px 20px !important;
         font-size: 1.05rem;
     }
+
     .title-with-icon {
         display: flex;
         align-items: center;
         gap: 10px;
     }
+
     .kpi-card-toolset {
         padding: 14px 16px;
         border-radius: 10px;
         color: white;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         cursor: pointer;
     }
+
     .kpi-card-toolset:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(0,0,0,0.14);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
     }
+
     .kpi-val {
         font-size: 1.6rem;
         font-weight: 700;
         line-height: 1.1;
     }
+
     .kpi-lbl {
         font-size: 0.75rem;
         text-transform: uppercase;
@@ -647,6 +720,7 @@ $isDebugUser = ($userIdDebug === 5);
         opacity: 0.9;
         margin-top: 3px;
     }
+
     .badge-mini {
         padding: 3px 8px;
         border-radius: 4px;
@@ -654,17 +728,37 @@ $isDebugUser = ($userIdDebug === 5);
         font-weight: 600;
         display: inline-block;
     }
+
     .card-notificacao-toolset {
         border-left: 5px solid #ccc;
         border-radius: 6px;
         transition: all 0.2s ease;
     }
-    .card-notificacao-toolset.MULTA { border-left-color: #f44336; }
-    .card-notificacao-toolset.ADVERTENCIA { border-left-color: #ff9800; }
-    .card-notificacao-toolset.RECURSO { border-left-color: #2196f3; }
-    .parecer-manter { background-color: #ffebee !important; }
-    .parecer-converter { background-color: #fff3e0 !important; }
-    .parecer-revogar { background-color: #e8f5e9 !important; }
+
+    .card-notificacao-toolset.MULTA {
+        border-left-color: #f44336;
+    }
+
+    .card-notificacao-toolset.ADVERTENCIA {
+        border-left-color: #ff9800;
+    }
+
+    .card-notificacao-toolset.RECURSO {
+        border-left-color: #2196f3;
+    }
+
+    .parecer-manter {
+        background-color: #ffebee !important;
+    }
+
+    .parecer-converter {
+        background-color: #fff3e0 !important;
+    }
+
+    .parecer-revogar {
+        background-color: #e8f5e9 !important;
+    }
+
     .morador-card-preview-lupa {
         position: absolute;
         top: 50%;
@@ -675,11 +769,13 @@ $isDebugUser = ($userIdDebug === 5);
         transition: all 0.25s ease-in-out;
         z-index: 5;
     }
+
     .card-morador-wrapper:hover .morador-card-preview-lupa {
         opacity: 1;
         transform: translate(-50%, -50%);
         pointer-events: auto;
     }
+
     .btn-lupa-preview {
         background: rgba(0, 96, 100, 0.92);
         color: white;
@@ -696,22 +792,27 @@ $isDebugUser = ($userIdDebug === 5);
         border: none;
         transition: all 0.2s ease;
     }
+
     .btn-lupa-preview:hover {
         background: rgba(0, 77, 64, 1);
         box-shadow: 0 6px 18px rgba(0, 77, 64, 0.45);
         transform: scale(1.04);
     }
+
     .card-morador-wrapper {
         position: relative;
         overflow: visible;
     }
+
     .card-morador-wrapper .card-panel {
         transition: all 0.25s ease;
     }
+
     .card-morador-wrapper:hover .card-panel {
         transform: translateY(-3px);
-        box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
     }
+
     .morador-status-badge {
         display: inline-flex;
         align-items: center;
@@ -723,25 +824,30 @@ $isDebugUser = ($userIdDebug === 5);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+
     .morador-status-ativo {
         background: #e8f5e9;
         color: #1b5e20;
         border: 1px solid #a5d6a7;
     }
+
     .morador-status-inativo {
         background: #ffebee;
         color: #b71c1c;
         border: 1px solid #ef9a9a;
     }
+
     .detalhe-morador-linha {
         padding: 2px 0;
     }
+
     .detalhe-morador-linha span.lbl {
         color: #546e7a;
         font-weight: 600;
         font-size: 0.78rem;
         margin-right: 4px;
     }
+
     .detalhe-morador-foto-wrap {
         width: 120px;
         height: 120px;
@@ -754,6 +860,7 @@ $isDebugUser = ($userIdDebug === 5);
         justify-content: center;
         background: #e0f7fa;
     }
+
     .detalhe-morador-foto-wrap img {
         width: 100%;
         height: 100%;

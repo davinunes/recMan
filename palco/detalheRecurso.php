@@ -67,7 +67,7 @@ if (isset($result['unidade']) && isset($result['bloco'])) {
 $parts = explode('/', $result['numero']);
 $num = isset($parts[0]) ? (int) $parts[0] : 0;
 $ano = isset($parts[1]) ? (int) $parts[1] : 0;
-$anoNotifCurto = $ano ? substr((string)$ano, -2) : '';
+$anoNotifCurto = $ano ? substr((string) $ano, -2) : '';
 $notifRecurso = getNotificacaoByNumeroAno($num, $ano);
 $artigoNota = ($notifRecurso && isset($notifRecurso['artigo'])) ? $notifRecurso['artigo'] : null;
 
@@ -641,19 +641,19 @@ if ($esseRecurso == null) {
 
             actions.forEach(item => {
                 const url = `palco/ajax_aceleradores.php?action=${item.action}&bloco=${vdsParams.bloco}&unidade=${vdsParams.unidade}&dtInicio=${vdsParams.dtInicio}&dtFim=${vdsParams.dtFim}&dtIniJanela=${vdsParams.dtIniJanela}&dtFimJanela=${vdsParams.dtFimJanela}`;
-                
+
                 $.ajax({
                     url: url,
                     type: 'GET',
                     dataType: 'json',
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             renderizarAcelerador(item.id, response.data, item.target, item.countTarget);
                         } else {
                             $(item.target).html(`<p class="red-text">Erro ao carregar: ${response.error}</p>`);
                         }
                     },
-                    error: function() {
+                    error: function () {
                         $(item.target).html('<p class="red-text">Erro de conexão.</p>');
                     }
                 });
@@ -706,7 +706,7 @@ if ($esseRecurso == null) {
                         const badgeColorClass = isAtivo ? (iconName === 'two_wheeler' ? 'deep-orange darken-2' : (iconName === 'pedal_bike' ? 'green darken-2' : 'blue-grey darken-3')) : 'grey darken-2';
                         const descV = [v.marca, v.modelo, v.cor].filter(x => x).join(' ') || 'Veículo';
                         const cardStyle = isAtivo ? 'border-radius:12px; padding:16px 12px; border:1px solid #e0e0e0; margin-bottom:14px;' : 'border-radius:12px; padding:16px 12px; border:1px dashed #b0bec5; margin-bottom:14px; opacity:0.65; background-color:#fafafa; filter:grayscale(30%);';
-                        
+
                         html += `
                             <div class="col s12 m6 l3">
                                 <div class="card-panel white center-align z-depth-1 hoverable" style="${cardStyle}">
@@ -830,7 +830,7 @@ if ($esseRecurso == null) {
                         if (isMatch) {
                             $('#badge-entrega-match-header').show();
                         }
-                        
+
                         html += `
                             <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarItemAcelerador('entrega', '${cacheKey}')">
                                 <td>${ent.dthoraChegada}</td>
@@ -899,11 +899,11 @@ if ($esseRecurso == null) {
                     list.forEach((item, index) => {
                         const cacheKey = 'lib_portaria_' + index;
                         window.__aceleradorCache[cacheKey] = item;
-                        
-                        const fotoHtml = item.fotoVisitanteUrl ? 
-                            `<img src="${item.fotoVisitanteUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : 
+
+                        const fotoHtml = item.fotoVisitanteUrl ?
+                            `<img src="${item.fotoVisitanteUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` :
                             `<span class="grey-text spin-load-foto-visitante" style="font-size:0.8rem;"><i class="material-icons tiny spinning">sync</i></span>`;
-                        
+
                         const porteiroFoto = item.fotoPorteiroUrl ? `<img src="${item.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #004d40; vertical-align:middle; margin-right:5px;" title="${item.cargo || 'Porteiro/Funcionário'}">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
                         const porHtml = `<span style="display:inline-flex; align-items:center;">${porteiroFoto} <span><b>${item.por || 'Portaria'}</b> ${item.cargo ? `<small class="grey-text">(${item.cargo})</small>` : ''}</span></span>`;
 
@@ -929,7 +929,7 @@ if ($esseRecurso == null) {
 
             $(target).html(html);
             $(countTarget).text(`(${count})`);
-            
+
             if (id === 'entregas') {
                 atualizarFiltroNotificacaoEntregas();
                 fetchDetalhesExtrasEntregas();
@@ -1070,8 +1070,8 @@ if ($esseRecurso == null) {
         }
 
         // Helper para verificar se um identificador ou descrição bate com o número/ano da notificação do recurso
-        const numNotifRecurso = <?= (int)$num ?>;
-        const anoNotifRecurso = <?= (int)$ano ?>;
+        const numNotifRecurso = <?= (int) $num ?>;
+        const anoNotifRecurso = <?= (int) $ano ?>;
         const anoNotifCurto = "<?= $anoNotifCurto ?>";
         const recNumCompleto = "<?= htmlspecialchars($result['numero'] ?? '') ?>";
 
@@ -1239,7 +1239,7 @@ if ($esseRecurso == null) {
 
                 html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
                 html += '<label style="font-size:0.8rem; font-weight:600; color:#795548;">Data de Ciência:</label>';
-                html += '<input type="text" id="input-data-retirada-modal" value="' + (dataSugerida || diaRetiradaAtual.replace('Indisponível','')) + '" placeholder="DD/MM/AAAA" style="width:130px; height:32px; padding:4px 8px; border:1px solid #bdbdbd; border-radius:4px; font-size:0.9rem; text-align:center;" maxlength="10">';
+                html += '<input type="text" id="input-data-retirada-modal" value="' + (dataSugerida || diaRetiradaAtual.replace('Indisponível', '')) + '" placeholder="DD/MM/AAAA" style="width:130px; height:32px; padding:4px 8px; border:1px solid #bdbdbd; border-radius:4px; font-size:0.9rem; text-align:center;" maxlength="10">';
                 html += '<button type="button" onclick="upsertDataRetiradaNotificacao()" id="btn-salvar-retirada-modal" class="btn waves-effect waves-light amber darken-3 white-text" style="height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;">';
                 html += '<i class="material-icons left tiny" style="margin-right:4px;">save</i> ' + (jaTemRetirada ? 'Atualizar Data' : 'Salvar Data de Ciência');
                 html += '</button>';
@@ -1278,39 +1278,39 @@ if ($esseRecurso == null) {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.text())
-            .then(txt => {
-                if (txt.trim() === 'success') {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">check</i> Salvo!';
-                    btn.className = 'btn waves-effect waves-light green darken-2 white-text';
-                    btn.style.cssText += 'height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;';
-                    if (feedback) feedback.innerHTML = '<span class="green-text text-darken-3"><i class="material-icons tiny">check_circle</i> Data de ciência da notificação <b>' + recNumCompleto + '</b> atualizada para <b>' + valor + '</b>.</span>';
-
-                    // Atualizar a exibição do dia de retirada na página (se houver elemento)
-                    const elemRetirada = document.querySelector('.detalhe-dia-retirada');
-                    if (elemRetirada) {
-                        elemRetirada.innerHTML = valor;
-                        elemRetirada.classList.remove('red-text');
-                        elemRetirada.classList.add('green-text', 'text-darken-3');
-                    }
-
-                    setTimeout(() => {
-                        btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Atualizar Data';
-                        btn.className = 'btn waves-effect waves-light amber darken-3 white-text';
+                .then(res => res.text())
+                .then(txt => {
+                    if (txt.trim() === 'success') {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">check</i> Salvo!';
+                        btn.className = 'btn waves-effect waves-light green darken-2 white-text';
                         btn.style.cssText += 'height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;';
-                    }, 3000);
-                } else {
+                        if (feedback) feedback.innerHTML = '<span class="green-text text-darken-3"><i class="material-icons tiny">check_circle</i> Data de ciência da notificação <b>' + recNumCompleto + '</b> atualizada para <b>' + valor + '</b>.</span>';
+
+                        // Atualizar a exibição do dia de retirada na página (se houver elemento)
+                        const elemRetirada = document.querySelector('.detalhe-dia-retirada');
+                        if (elemRetirada) {
+                            elemRetirada.innerHTML = valor;
+                            elemRetirada.classList.remove('red-text');
+                            elemRetirada.classList.add('green-text', 'text-darken-3');
+                        }
+
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Atualizar Data';
+                            btn.className = 'btn waves-effect waves-light amber darken-3 white-text';
+                            btn.style.cssText += 'height:32px; line-height:32px; padding:0 16px; font-size:0.8rem; border-radius:4px; font-weight:600; text-transform:none;';
+                        }, 3000);
+                    } else {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Tentar Novamente';
+                        if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro ao salvar: ' + txt + '</span>';
+                    }
+                })
+                .catch(err => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Tentar Novamente';
-                    if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro ao salvar: ' + txt + '</span>';
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="material-icons left tiny" style="margin-right:4px;">save</i> Tentar Novamente';
-                if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro de conexão: ' + err.message + '</span>';
-            });
+                    if (feedback) feedback.innerHTML = '<span class="red-text"><i class="material-icons tiny">error</i> Erro de conexão: ' + err.message + '</span>';
+                });
         }
     </script>
 
@@ -1327,7 +1327,7 @@ if ($esseRecurso == null) {
             </p>
 
             <!-- Abas dos Aceleradores (Collapsible Ativo) -->
-            <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
+            < class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
                 <li>
                     <div class="collapsible-header" id="header-moradores" style="font-weight: 600;">
                         <i class="material-icons cyan-text text-darken-2">people</i>
@@ -1347,17 +1347,6 @@ if ($esseRecurso == null) {
                     <div class="collapsible-body" id="container-veiculos" style="padding: 15px 12px;">
                         <div class="center-align grey-text" style="padding: 20px;">
                             <i class="material-icons spinning tiny">sync</i> Carregando veículos...
-                        </div>
-                    </div>
-                </li>
-                <li>
-                    <div class="collapsible-header" style="font-weight: 600;">
-                        <i class="material-icons purple-text text-darken-2">badge</i>
-                        Visitantes & Prestadores da Portaria <span id="count-visitantes">(...)</span>
-                    </div>
-                    <div class="collapsible-body" id="container-visitantes" style="padding: 12px;">
-                        <div class="center-align grey-text" style="padding: 20px;">
-                            <i class="material-icons spinning tiny">sync</i> Carregando visitantes...
                         </div>
                     </div>
                 </li>
@@ -1387,8 +1376,10 @@ if ($esseRecurso == null) {
                     <div class="collapsible-header" style="font-weight: 600;">
                         <i class="material-icons blue-text">markunread_mailbox</i>
                         Entregas e Encomendas <span id="count-entregas">(...)</span>
-                        <span id="badge-entrega-match-header" class="badge amber darken-2 white-text font-weight-bold" style="display:none; float:none; margin-left:8px; padding:2px 8px; border-radius:4px; font-size:0.75rem;">
-                            <i class="material-icons tiny">star</i> Correspondente à Notificação <?= htmlspecialchars($result['numero'] ?? '') ?>
+                        <span id="badge-entrega-match-header" class="badge amber darken-2 white-text font-weight-bold"
+                            style="display:none; float:none; margin-left:8px; padding:2px 8px; border-radius:4px; font-size:0.75rem;">
+                            <i class="material-icons tiny">star</i> Correspondente à Notificação
+                            <?= htmlspecialchars($result['numero'] ?? '') ?>
                         </span>
                     </div>
                     <div class="collapsible-body" id="container-entregas" style="padding: 10px;">
@@ -1419,7 +1410,18 @@ if ($esseRecurso == null) {
                         </div>
                     </div>
                 </li>
-            </ul>
+                <li>
+                    <div class="collapsible-header" style="font-weight: 600;">
+                        <i class="material-icons purple-text text-darken-2">badge</i>
+                        Visitantes & Prestadores Cadastrados <span id="count-visitantes">(...)</span>
+                    </div>
+                    <div class="collapsible-body" id="container-visitantes" style="padding: 12px;">
+                        <div class="center-align grey-text" style="padding: 20px;">
+                            <i class="material-icons spinning tiny">sync</i> Carregando visitantes...
+                        </div>
+                    </div>
+                </li>
+                </ul>
         </div>
     </div>
 
