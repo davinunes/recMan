@@ -1327,7 +1327,8 @@ if ($esseRecurso == null) {
             </p>
 
             <!-- Abas dos Aceleradores (Collapsible Ativo) -->
-            < class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
+            <ul class="collapsible z-depth-0" style="border: 1px solid #e0e0e0;">
+
                 <li>
                     <div class="collapsible-header" id="header-moradores" style="font-weight: 600;">
                         <i class="material-icons cyan-text text-darken-2">people</i>
