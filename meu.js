@@ -1550,23 +1550,34 @@ $(document).on('click', '#btnMesAtual', function () {
     }
 });
 
-$(document).on('change', '#mesAnoFiltro', function () {
-    if ($('#unidade').val() && $('#bloco').val()) {
-        $('#buscaHistoricoUnidade').click();
+// Auto-resolução de Bloco e Unidade ao digitar Vaga de Estacionamento
+$(document).on('change blur', '#vagaFiltro', function () {
+    let vaga = $(this).val();
+    if (vaga && vaga.trim() !== '') {
+        $.ajax({
+            url: `metodo.php?metodo=buscarUnidadePorVaga&vaga=${encodeURIComponent(vaga)}`,
+            method: 'GET',
+            dataType: 'json',
+            success: function (res) {
+                if (res && res.success) {
+                    $('#unidade').val(res.unidade);
+                    $('#bloco').val(res.bloco);
+                    if (typeof M !== 'undefined' && M.FormSelect) {
+                        M.FormSelect.init(document.querySelectorAll('select'));
+                    }
+                    if (typeof M !== 'undefined' && M.updateTextFields) {
+                        M.updateTextFields();
+                    }
+                    M.toast({ html: `Vaga ${res.vaga} vinculada ao Bloco ${res.bloco} - Unidade ${res.unidade}`, classes: 'green rounded' });
+                } else {
+                    M.toast({ html: res.error || 'Vaga não encontrada.', classes: 'orange rounded' });
+                }
+            }
+        });
     }
 });
 
-// Handler da Busca de Histórico / Toolset
-$(document).on('click', '#buscaHistoricoUnidade', function (e) {
-    let unidade = $("#unidade").val();
-    let bloco = $("#bloco").val();
-    let mesAno = $("#mesAnoFiltro").val() || new Date().toISOString().slice(0, 7);
-
-    if (!unidade || !bloco) {
-        M.toast({ html: 'Informe a Unidade e o Bloco!', classes: 'orange rounded' });
-        return;
-    }
-
+function executarBuscaHistorico(unidade, bloco, mesAno) {
     $('#emptyState').addClass('hide');
     $('#toolsetContainer').addClass('hide');
     $('#unitBrief').addClass('hide');
@@ -1620,9 +1631,58 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
         error: function () {
             $('#toolsetLoader').addClass('hide');
             $('#emptyState').removeClass('hide');
-            M.toast({ html: 'Erro de comunicação com o servidor', classes: 'red rounded' });
+            M.toast({ html: 'Erro de conexão ao consultar histórico.', classes: 'red rounded' });
         }
     });
+}
+
+// Handler da Busca de Histórico / Toolset
+$(document).on('click', '#buscaHistoricoUnidade', function (e) {
+    let unidade = $("#unidade").val();
+    let bloco = $("#bloco").val();
+    let vaga = $("#vagaFiltro").val();
+    let mesAno = $("#mesAnoFiltro").val() || new Date().toISOString().slice(0, 7);
+
+    // Se unidade ou bloco estiverem vazios, mas vaga informada, resolver vaga primeiro
+    if ((!unidade || !bloco) && vaga && vaga.trim() !== '') {
+        $.ajax({
+            url: `metodo.php?metodo=buscarUnidadePorVaga&vaga=${encodeURIComponent(vaga)}`,
+            method: 'GET',
+            dataType: 'json',
+            success: function (res) {
+                if (res && res.success) {
+                    $('#unidade').val(res.unidade);
+                    $('#bloco').val(res.bloco);
+                    if (typeof M !== 'undefined' && M.FormSelect) {
+                        M.FormSelect.init(document.querySelectorAll('select'));
+                    }
+                    if (typeof M !== 'undefined' && M.updateTextFields) {
+                        M.updateTextFields();
+                    }
+                    executarBuscaHistorico(res.unidade, res.bloco, mesAno);
+                } else {
+                    M.toast({ html: res.error || 'Vaga não encontrada.', classes: 'orange rounded' });
+                }
+            },
+            error: function () {
+                M.toast({ html: 'Erro ao consultar vaga de estacionamento.', classes: 'red rounded' });
+            }
+        });
+        return;
+    }
+
+    if (!unidade || !bloco) {
+        M.toast({ html: 'Informe a Unidade e o Bloco (ou a Vaga)!', classes: 'orange rounded' });
+        return;
+    }
+
+    executarBuscaHistorico(unidade, bloco, mesAno);
+});
+
+$(document).on('change', '#mesAnoFiltro', function () {
+    if ($('#unidade').val() && $('#bloco').val()) {
+        $('#buscaHistoricoUnidade').click();
+    }
 });
 
 // Renderização da Dashboard KPI da Unidade

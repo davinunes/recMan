@@ -97,12 +97,12 @@ $isDebugUser = ($userIdDebug === 5);
     <!-- Card de Filtros (Unidade, Bloco e Período) -->
     <div class="card-panel white z-depth-1" style="border-radius: 12px; padding: 18px 24px; margin-bottom: 20px;">
         <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
-            <div class="input-field col s12 m3" style="margin-top: 0;">
+            <div class="input-field col s12 m2" style="margin-top: 0;">
                 <i class="material-icons prefix">business</i>
                 <input type="number" id="unidade" name="unidade" class="validate" placeholder="Ex: 101">
                 <label for="unidade" class="active">Unidade</label>
             </div>
-            <div class="input-field col s12 m3" style="margin-top: 0;">
+            <div class="input-field col s12 m2" style="margin-top: 0;">
                 <i class="material-icons prefix">location_city</i>
                 <select id="bloco" name="bloco">
                     <option value="" disabled selected>Escolha o Bloco</option>
@@ -115,6 +115,12 @@ $isDebugUser = ($userIdDebug === 5);
                 </select>
                 <label class="active">Bloco / Torre</label>
             </div>
+            <div class="input-field col s12 m2" style="margin-top: 0;">
+                <i class="material-icons prefix">directions_car</i>
+                <input type="number" id="vagaFiltro" name="vaga" class="validate" placeholder="Ex: 105">
+                <label for="vagaFiltro" class="active">OU Vaga</label>
+            </div>
+
             
             <!-- Seletor de Mês e Navegação Temporal -->
             <div class="col s12 m4" style="margin-top: 0;">

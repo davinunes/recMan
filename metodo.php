@@ -929,6 +929,28 @@ switch ($_GET['metodo']) {
         ], JSON_UNESCAPED_UNICODE);
         break;
 
+    case "buscarUnidadePorVaga":
+        $vaga = $_GET['vaga'] ?? $_POST['vaga'] ?? '';
+        if (empty($vaga)) {
+            echo json_encode(['success' => false, 'error' => 'Informe o número da vaga.']);
+            break;
+        }
+        $info = getUnidadePorVaga($vaga);
+        if ($info) {
+            echo json_encode([
+                'success' => true,
+                'bloco' => $info['bloco'],
+                'unidade' => $info['unidade'],
+                'local' => $info['local'] ?? '',
+                'tipo' => $info['tipo'] ?? '',
+                'vaga' => $info['id_estacionamento']
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode(['success' => false, 'error' => "Vaga {$vaga} não encontrada no cadastro."], JSON_UNESCAPED_UNICODE);
+        }
+        break;
+
+
 
 
 

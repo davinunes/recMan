@@ -1086,6 +1086,21 @@ function getEstacionamento($bloco, $unidade)
     return $r;
 }
 
+function getUnidadePorVaga($vaga)
+{
+    $vagaClean = (int)preg_replace('/[^0-9]/', '', (string)$vaga);
+    if ($vagaClean <= 0) {
+        return null;
+    }
+    $sql = "SELECT bloco, unidade, id_estacionamento, local, tipo FROM conselho.estacionamento WHERE id_estacionamento = $vagaClean LIMIT 1";
+    $result = DBExecute($sql);
+    if ($result && mysqli_num_rows($result) > 0) {
+        return mysqli_fetch_assoc($result);
+    }
+    return null;
+}
+
+
 function getNumeroRecurso($id_recurso)
 {
     $sql2 = " select numero ";
