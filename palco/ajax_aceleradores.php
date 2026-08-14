@@ -79,6 +79,13 @@ try {
             echo json_encode(['success' => true, 'data' => $res]);
             break;
 
+        case 'detalhes_liberacao_portaria':
+            $uuid = $_GET['uuid'] ?? '';
+            $res = vds_get_liberacao_portaria_detalhes($uuid, $usuarioId);
+            echo json_encode($res);
+            break;
+
+
 
         default:
             echo json_encode(['success' => false, 'error' => 'Ação inválida.']);

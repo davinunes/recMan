@@ -2409,23 +2409,34 @@ window.renderToolsetLiberacoesPortaria = function (list) {
                 <tr>
                     <th>Data / Hora</th>
                     <th>Tipo</th>
-                    <th>Foto</th>
+                    <th>Foto Visitante</th>
                     <th>Detalhes / Visitante</th>
                     <th>Liberado Por</th>
+                    <th>Ação</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
     list.forEach(item => {
-        let fotoHtml = item.fotoUrl ? `<img src="${item.fotoUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto">` : '<span class="grey-text">-</span>';
+        let fotoVisitante = item.fotoVisitanteUrl || item.fotoUrl;
+        let fotoHtml = fotoVisitante ? `<img src="${fotoVisitante}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #00695c;" alt="Foto Visitante">` : '<span class="grey-text"><i class="material-icons tiny">person_outline</i></span>';
+        
+        let porteiroFoto = item.fotoPorteiroUrl ? `<img src="${item.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #004d40; vertical-align:middle; margin-right:5px;" title="${item.cargo || 'Porteiro/Funcionário'}">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
+        let porHtml = `<span style="display:inline-flex; align-items:center;">${porteiroFoto} <span><b>${item.por || 'Portaria'}</b> ${item.cargo ? `<small class="grey-text">(${item.cargo})</small>` : ''}</span></span>`;
+
         tableHtml += `
-            <tr>
+            <tr style="cursor:pointer;" onclick="window.abrirModalDetalhesPortaria('${item.uuid || ''}')">
                 <td>${item.dthora || item.dtExibicao}</td>
                 <td><span class="badge teal lighten-4 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">${item.tipoNome || item.titulo}</span></td>
                 <td>${fotoHtml}</td>
                 <td><b>${item.mensagemClean || item.titulo}</b></td>
-                <td><small class="grey-text text-darken-2">${item.por || 'Portaria'}</small></td>
+                <td>${porHtml}</td>
+                <td>
+                    <button class="btn-small waves-effect waves-light teal darken-2 white-text" type="button" onclick="event.stopPropagation(); window.abrirModalDetalhesPortaria('${item.uuid || ''}')" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                        Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                    </button>
+                </td>
             </tr>
         `;
     });
@@ -2433,6 +2444,118 @@ window.renderToolsetLiberacoesPortaria = function (list) {
     tableHtml += `</tbody></table>`;
     $('#conteudoLiberacoesPortaria').html(tableHtml);
 };
+
+window.abrirModalDetalhesPortaria = function(uuid) {
+    if (!uuid) {
+        M.toast({ html: 'Identificador da ocorrência indisponível.', classes: 'orange rounded' });
+        return;
+    }
+
+    var modalEl = document.getElementById('modalDetalhesLiberacaoPortaria') || document.getElementById('modalInspecionarAcelerador');
+    if (!modalEl) return;
+
+    var targetConteudo = document.getElementById('conteudoDetalhesPortaria') || document.getElementById('conteudoInspecionarAcelerador');
+    
+    if (targetConteudo) {
+        targetConteudo.innerHTML = `
+            <div class="center-align grey-text" style="padding:35px 20px;">
+                <i class="material-icons spinning medium teal-text">sync</i>
+                <p style="font-weight:500; margin-top:10px;">Carregando detalhes e eventos da liberação na VDS...</p>
+            </div>
+        `;
+    }
+
+    var instance = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl);
+    instance.open();
+
+    var url = `metodo.php?metodo=detalhesLiberacaoPortaria&uuid=${encodeURIComponent(uuid)}`;
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success && res.data) {
+                var d = res.data;
+                var html = '';
+
+                html += `<h5 style="margin-top:0; color:#00695c; font-weight:600; display:flex; align-items:center; gap:8px;">
+                    <i class="material-icons">meeting_room</i> ${d.titulo || 'Liberação de Portaria (Caixa 9)'}
+                </h5>`;
+
+                if (d.fotoVisitanteUrl) {
+                    html += `
+                        <div style="text-align:center; margin:15px 0;">
+                            <img src="${d.fotoVisitanteUrl}" style="max-width:240px; max-height:220px; border-radius:12px; border:3px solid #00695c; box-shadow:0 4px 12px rgba(0,105,92,0.25);" alt="Foto do Visitante">
+                            <div class="grey-text text-darken-1" style="font-size:0.8rem; margin-top:4px; font-weight:500;">
+                                <i class="material-icons tiny" style="vertical-align:middle;">badge</i> Foto do Visitante / Prestador Anexada
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `<table class="striped" style="font-size:0.9rem; margin-top:10px;">`;
+                if (d.protocolo) {
+                    html += `<tr><td style="width:35%;"><b>Protocolo VDS:</b></td><td><code style="background:#e0f2f1; color:#004d40; padding:2px 8px; border-radius:4px; font-weight:bold;">${d.protocolo}</code></td></tr>`;
+                }
+                html += `<tr><td><b>Tipo / Categoria:</b></td><td><span class="badge teal lighten-4 teal-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">${d.tipoNome || d.titulo}</span></td></tr>`;
+                html += `<tr><td><b>Data / Hora:</b></td><td>${d.data || 'N/A'}</td></tr>`;
+
+                if (d.por) {
+                    var porteiroFoto = d.fotoPorteiroUrl ? `<img src="${d.fotoPorteiroUrl}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #004d40; vertical-align:middle; margin-right:6px;">` : '<i class="material-icons tiny grey-text" style="vertical-align:middle; margin-right:4px;">person</i>';
+                    html += `<tr><td><b>Liberado Por (Atendente):</b></td><td><span style="display:inline-flex; align-items:center;">${porteiroFoto} <b>${d.por}</b></span></td></tr>`;
+                }
+                html += `</table>`;
+
+                if (d.eventos && d.eventos.length > 0) {
+                    html += `<h6 style="margin-top:20px; font-weight:bold; color:#37474f; border-bottom:2px solid #e0f2f1; padding-bottom:6px;">
+                        <i class="material-icons tiny" style="vertical-align:middle;">history</i> Linha do Tempo dos Eventos (${d.eventos.length})
+                    </h6>`;
+                    html += `<div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">`;
+
+                    d.eventos.forEach(function(ev) {
+                        var isEntrada = (ev.tipo === 49);
+                        var badgeColor = isEntrada ? 'teal' : 'grey';
+                        var evIcon = isEntrada ? 'login' : 'logout';
+                        var evTitulo = isEntrada ? 'Entrada / Liberação na Portaria' : (ev.mensagemClean || 'Registro de Saída');
+
+                        var evPorteiroFoto = ev.fotoPorteiroUrl ? `<img src="${ev.fotoPorteiroUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:4px;">` : '';
+
+                        html += `
+                            <div style="background:${isEntrada ? '#f0fdf4' : '#f8fafc'}; border-left:4px solid ${isEntrada ? '#0d9488' : '#94a3b8'}; padding:10px 14px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span class="badge ${badgeColor} lighten-4 ${badgeColor}-text text-darken-4 font-weight-bold" style="float:none; padding:2px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">
+                                        <i class="material-icons tiny">${evIcon}</i> ${ev.titulo || evTitulo}
+                                    </span>
+                                    <small class="grey-text font-weight-bold">${ev.dtHora || ''}</small>
+                                </div>
+                                ${ev.destino ? `<div style="font-size:0.85rem; color:#475569; margin:2px 0;"><b>Destino:</b> ${ev.destino}</div>` : ''}
+                                ${ev.mensagemClean ? `<div style="font-size:0.88rem; color:#1e293b; white-space:pre-line; margin-top:4px;">${ev.mensagemClean}</div>` : ''}
+                                ${ev.por ? `<div style="font-size:0.8rem; color:#64748b; margin-top:6px; display:flex; align-items:center;">${evPorteiroFoto} Registrado por <b>${ev.por}</b> ${ev.cargo ? '(' + ev.cargo + ')' : ''}</div>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                }
+
+                if (targetConteudo) {
+                    targetConteudo.innerHTML = html;
+                }
+            } else {
+                if (targetConteudo) {
+                    targetConteudo.innerHTML = `<p class="red-text" style="padding:15px;">Erro ao carregar detalhes: ${(res && res.error) ? res.error : 'Falha de comunicação.'}</p>`;
+                }
+            }
+        },
+        error: function() {
+            if (targetConteudo) {
+                targetConteudo.innerHTML = '<p class="red-text" style="padding:15px;">Erro de conexão com o servidor.</p>';
+            }
+        }
+    });
+};
+
 
 
 // Helper simples para formatar data BR YYYY-MM-DD -> DD/MM/YYYY

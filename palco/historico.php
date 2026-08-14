@@ -377,6 +377,21 @@ $isDebugUser = ($userIdDebug === 5);
     </div>
 </div>
 
+<!-- Modal: Detalhes da Liberação de Portaria (Caixa 9 VDS) -->
+<div id="modalDetalhesLiberacaoPortaria" class="modal" style="border-radius:12px; max-width:650px;">
+    <div class="modal-content" style="padding: 20px 24px;">
+        <div id="conteudoDetalhesPortaria">
+            <div class="center-align grey-text" style="padding: 30px;">
+                <i class="material-icons spinning medium teal-text">sync</i>
+                <p>Carregando detalhes e eventos da liberação na VDS...</p>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-teal btn-flat font-weight-bold">Fechar</a>
+    </div>
+</div>
+
 <!-- Modal 1: Cadastrar/Atualizar Data de Ciência (Retirada da Notificação) -->
 <div id="modalCienciaNotificacao" class="modal">
     <div class="modal-content">

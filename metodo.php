@@ -950,6 +950,13 @@ switch ($_GET['metodo']) {
         }
         break;
 
+    case "detalhesLiberacaoPortaria":
+        $uuid = $_GET['uuid'] ?? $_POST['uuid'] ?? '';
+        $res = vds_get_liberacao_portaria_detalhes($uuid);
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        break;
+
+
 
 
 

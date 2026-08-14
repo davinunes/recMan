@@ -1226,6 +1226,7 @@ function vds_get_liberacoes_portaria_unidade($bloco, $unidade, $dtInicio = null,
                         'destino' => $reg['destino'] ?? '',
                         'mensagem' => $msgRaw,
                         'mensagemClean' => $cleanMsg,
+                        'fotoPorteiroUrl' => $fotoUrl,
                         'fotoUrl' => $fotoUrl,
                         'statusNome' => $reg['statusNome'] ?? ''
                     ];
@@ -1243,4 +1244,115 @@ function vds_get_liberacoes_portaria_unidade($bloco, $unidade, $dtInicio = null,
 
     return $ocorrencias;
 }
+
+/**
+ * Consulta os detalhes completos de uma ocorrência de liberação de portaria na API v8 da VDS (incluindo eventos de entrada/saída e foto do visitante).
+ */
+function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
+    if (empty($uuid)) {
+        return ['success' => false, 'error' => 'UUID da ocorrência não informado.'];
+    }
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'error' => 'Token VDS não disponível.'];
+    }
+
+    $url = VDS_BASE_URL . '/ocorrencia/' . urlencode($uuid);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200 && $response) {
+        $data = json_decode($response, true);
+        if ($data) {
+            $fotoPorteiroRel = $data['foto'] ?? null;
+            $fotoPorteiroUrl = !empty($fotoPorteiroRel) ? (strpos($fotoPorteiroRel, 'http') === 0 ? $fotoPorteiroRel : 'https://app.vidadesindico.com.br' . $fotoPorteiroRel) : null;
+
+            $fotoVisitanteUrl = null;
+            $eventosFormatados = [];
+
+            if (isset($data['eventos']) && is_array($data['eventos'])) {
+                foreach ($data['eventos'] as $ev) {
+                    if (isset($ev['listaAnexo']) && is_array($ev['listaAnexo'])) {
+                        foreach ($ev['listaAnexo'] as $anexo) {
+                            $anxUrl = $anexo['url'] ?? '';
+                            if (!empty($anxUrl)) {
+                                $fotoVisitanteUrl = (strpos($anxUrl, 'http') === 0) ? $anxUrl : 'https://app.vidadesindico.com.br' . $anxUrl;
+                                break 2;
+                            }
+                        }
+                    }
+                }
+
+                foreach ($data['eventos'] as $ev) {
+                    $evFotoRel = $ev['foto'] ?? null;
+                    $evFotoPorteiroUrl = !empty($evFotoRel) ? (strpos($evFotoRel, 'http') === 0 ? $evFotoRel : 'https://app.vidadesindico.com.br' . $evFotoRel) : $fotoPorteiroUrl;
+
+                    $msgRaw = $ev['mensagem'] ?? '';
+                    $cleanMsg = preg_replace('/<br\s*\/?>/i', "\n", $msgRaw);
+                    $cleanMsg = preg_replace('/<\/p>/i', "\n", $cleanMsg);
+                    $cleanMsg = trim(strip_tags($cleanMsg));
+
+                    $anexosEv = [];
+                    if (isset($ev['listaAnexo']) && is_array($ev['listaAnexo'])) {
+                        foreach ($ev['listaAnexo'] as $anx) {
+                            $u = $anx['url'] ?? '';
+                            if ($u) {
+                                $anexosEv[] = [
+                                    'nome' => $anx['nome'] ?? 'Anexo',
+                                    'url' => (strpos($u, 'http') === 0) ? $u : 'https://app.vidadesindico.com.br' . $u
+                                ];
+                            }
+                        }
+                    }
+
+                    $eventosFormatados[] = [
+                        'tipo' => $ev['tipo'] ?? 0,
+                        'titulo' => $ev['titulo'] ?? '',
+                        'dtHora' => vds_format_datetime($ev['dtHora'] ?? null, 'd/m/Y H:i:s'),
+                        'dtFim' => vds_format_datetime($ev['dtFim'] ?? null, 'd/m/Y H:i:s'),
+                        'mensagem' => $msgRaw,
+                        'mensagemClean' => $cleanMsg,
+                        'destino' => $ev['destino'] ?? '',
+                        'por' => $ev['por'] ?? '',
+                        'cargo' => $ev['cargo'] ?? '',
+                        'fotoPorteiroUrl' => $evFotoPorteiroUrl,
+                        'statusNome' => $ev['statusNome'] ?? '',
+                        'anexos' => $anexosEv
+                    ];
+                }
+            }
+
+            return [
+                'success' => true,
+                'data' => [
+                    'ocorrenciaId' => $data['ocorrenciaId'] ?? null,
+                    'protocolo' => $data['protocolo'] ?? '',
+                    'titulo' => $data['titulo'] ?? '',
+                    'tipoNome' => $data['tipoNome'] ?? '',
+                    'data' => $data['data'] ?? '',
+                    'por' => $data['por'] ?? '',
+                    'fotoPorteiroUrl' => $fotoPorteiroUrl,
+                    'fotoVisitanteUrl' => $fotoVisitanteUrl,
+                    'eventos' => $eventosFormatados
+                ]
+            ];
+        }
+    }
+
+    return ['success' => false, 'error' => "HTTP {$httpCode} ao consultar detalhes da ocorrência na VDS."];
+}
+
 
