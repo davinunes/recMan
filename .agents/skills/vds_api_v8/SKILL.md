@@ -143,3 +143,23 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 - **Listar Reservas (Filtros por Recurso, Data e Status):** `GET /reserva?Recurso.Uuid={recursoUuid}&DtIni={dtIni}&DtFim={dtFim}&Agendamento=false&ReservaCalendario=true`
 - **Consultar Histórico da Reserva:** `GET /reserva_historico/{uuid}`
 - **Realizar Reserva ou Entrar na Fila de Espera (POST Único):** `POST /reserva`
+
+### H. Busca Global & Registros Genéricos
+- **Busca Genérica por Termo e Tipo:** `GET /registros?tipo={tipo}&busca={busca}`
+  - **Headers Obrigatórios:** `Authorization: Bearer <token>`, `Origin: https://app1.vidadesindico.com.br`
+  - **Query Params:**
+    - `tipo`: `ALL` (padrão), `APARTAMENTO`, `AUTOMOVEL`, `MORADOR`, `SINDICO`, `GARAGEM`, `RECURSO`
+    - `busca`: Termo de pesquisa livre (ex: placa `PBG-4587`, nome `Fulano`, unidade `101`)
+  - **Formato da Resposta:** Array JSON de objetos no esquema:
+    ```json
+    [
+      {
+        "id": "c95b4d96-5309-4912-9300-61865811fb0f",
+        "foto": null,
+        "titulo": "Bloco A - Unidade NI",
+        "subtitulo": "Ocupado",
+        "descricao": "",
+        "tipo": "APARTAMENTO"
+      }
+    ]
+    ```

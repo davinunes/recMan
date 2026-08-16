@@ -82,8 +82,8 @@ $isDebugUser = ($userIdDebug === 5);
 
 <div class="container" style="width: 95%; max-width: 1400px;">
     <!-- Cabeçalho Principal -->
-    <div class="row style-header-toolset" style="margin-bottom: 10px; margin-top: 15px;">
-        <div class="col s12">
+    <div class="row style-header-toolset" style="margin-bottom: 10px; margin-top: 15px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div class="col s12 m8">
             <h4 style="font-weight: 300; margin: 0; display: flex; align-items: center; gap: 10px;">
                 <i class="material-icons blue-text text-darken-2" style="font-size: 2.5rem;">build_circle</i>
                 Toolset Operacional por Unidade
@@ -92,6 +92,11 @@ $isDebugUser = ($userIdDebug === 5);
                 Painel unificado de dados da unidade: Notificações, Recursos, Encomendas, Autorizações, Reservas,
                 Ocorrências e Boletos.
             </p>
+        </div>
+        <div class="col s12 m4 right-align" style="margin-top: 10px;">
+            <button type="button" class="btn waves-effect waves-light purple darken-2 modal-trigger" data-target="modalBuscaVDS" id="btnAbrirBuscaVDS" style="border-radius: 6px; font-weight: 500; height: 42px; line-height: 42px; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="material-icons">manage_search</i> BUSCA RÁPIDA VDS
+            </button>
         </div>
     </div>
 
@@ -676,6 +681,354 @@ $isDebugUser = ($userIdDebug === 5);
         <button class="modal-close btn-flat waves-effect">Fechar</button>
     </div>
 </div>
+
+<!-- Modal Busca Rápida VDS -->
+<div id="modalBuscaVDS" class="modal modal-fixed-footer" style="max-width: 950px; width: 92%; max-height: 88%; border-radius: 12px;">
+    <div class="modal-content" style="padding: 20px 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px;">
+            <h5 style="margin: 0; font-weight: 400; display: flex; align-items: center; gap: 10px;" class="purple-text text-darken-3">
+                <i class="material-icons" style="font-size: 2rem;">manage_search</i>
+                Busca Global / Registros VDS
+            </h5>
+            <a href="#!" class="modal-close waves-effect waves-circle btn-flat grey-text"><i class="material-icons">close</i></a>
+        </div>
+
+        <!-- Caixa de Pesquisa e Filtros -->
+        <div class="row" style="margin-bottom: 10px;">
+            <div class="input-field col s12 m9" style="margin-top: 0;">
+                <i class="material-icons prefix purple-text text-darken-2">search</i>
+                <input type="text" id="vdsBuscaQuery" placeholder="Digite o termo (placa, nome, apartamento, vaga, etc)...">
+                <label for="vdsBuscaQuery" class="active">Termo de Pesquisa</label>
+            </div>
+            <div class="col s12 m3" style="margin-top: 0;">
+                <button type="button" id="btnExecutarBuscaVDS" class="btn waves-effect waves-light purple darken-2 style-btn-search" style="width: 100%; height: 45px; line-height: 45px; border-radius: 6px;">
+                    <i class="material-icons left">search</i> PESQUISAR
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros por Tipo (Chips) -->
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col s12">
+                <label class="grey-text text-darken-2" style="font-weight: bold; display: block; margin-bottom: 6px; font-size: 0.82rem;">
+                    CLASSIFICAR POR TIPO:
+                </label>
+                <div id="vdsTipoChipsContainer" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    <button type="button" class="vds-tipo-chip active" data-tipo="ALL">TODOS</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="APARTAMENTO"><i class="material-icons tiny">business</i> APARTAMENTO</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="MORADOR"><i class="material-icons tiny">person</i> MORADOR</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="AUTOMOVEL"><i class="material-icons tiny">directions_car</i> AUTOMÓVEL</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="GARAGEM"><i class="material-icons tiny">local_parking</i> GARAGEM</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="SINDICO"><i class="material-icons tiny">star</i> SÍNDICO</button>
+                    <button type="button" class="vds-tipo-chip" data-tipo="RECURSO"><i class="material-icons tiny">pool</i> RECURSO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar de Status da Busca -->
+        <div id="vdsBuscaStatusBar" class="hide" style="margin-bottom: 12px; padding: 8px 14px; background: #f3e5f5; border-radius: 6px; font-size: 0.85rem; color: #4a148c; font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
+            <span id="vdsBuscaCountText">0 resultados encontrados</span>
+            <span id="vdsBuscaFilterText" class="grey-text text-darken-2" style="font-size: 0.8rem;">Filtro: ALL</span>
+        </div>
+
+        <!-- Preloader/Spinner -->
+        <div id="vdsBuscaLoader" class="center-align hide" style="padding: 35px 0;">
+            <div class="preloader-wrapper active">
+                <div class="spinner-layer spinner-purple-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <p class="grey-text text-darken-1" style="margin-top: 12px; font-weight: 500;">Consultando API VDS...</p>
+        </div>
+
+        <!-- Resultados -->
+        <div id="vdsBuscaResultados" class="row" style="margin-bottom: 0;">
+            <div class="col s12 center-align grey-text" style="padding: 40px 0;">
+                <i class="material-icons" style="font-size: 4.5rem; opacity: 0.25;">manage_search</i>
+                <h6 style="font-weight: 300; margin-top: 10px;">Consulta de Registros VDS</h6>
+                <p style="font-size: 0.9rem;">Informe um termo acima (placa, nome, apartamento, vaga, etc.) e clique em Pesquisar.</p>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background: #fafafa;">
+        <button type="button" class="modal-close btn-flat waves-effect font-weight-bold grey-text text-darken-2">Fechar</button>
+    </div>
+</div>
+
+<style>
+    .vds-tipo-chip {
+        background: #f1f1f1;
+        color: #424242;
+        border: 1px solid #e0e0e0;
+        border-radius: 16px;
+        padding: 5px 14px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        outline: none;
+    }
+    .vds-tipo-chip:hover {
+        background: #e1bee7;
+        color: #4a148c;
+        border-color: #ce93d8;
+    }
+    .vds-tipo-chip.active {
+        background: #7b1fa2;
+        color: #ffffff;
+        border-color: #6a1b9a;
+        box-shadow: 0 2px 5px rgba(123, 31, 162, 0.35);
+    }
+    .vds-card-item {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: #fff;
+        transition: all 0.2s ease;
+    }
+    .vds-card-item:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-color: #ce93d8;
+    }
+    .vds-badge-tipo {
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+</style>
+
+<script>
+    (function () {
+        var tipoAtualVDS = 'ALL';
+
+        function extrairBlocoUnidade(item) {
+            if (!item) return null;
+            var textos = [item.titulo || '', item.subtitulo || '', item.descricao || ''];
+            
+            // Regex 1: "Bloco C - 904", "Bloco A - Unidade 101", "Bl. B - Apto 202"
+            var reg1 = /(?:Bloco|Bl\.?)\s*([A-Z0-9]+)[\s\-\,]+(?:Unid(?:ade)?\.?|Apt(?:o)?\.?|Unit\.?|NI)?\s*([0-9]+)/i;
+            // Regex 2: "Bloco C - 904"
+            var reg2 = /(?:Bloco|Bl\.?)\s*([A-Z0-9]+)\s*\-\s*([0-9]+)/i;
+            // Regex 3: "C - 904"
+            var reg3 = /\b([A-F0-9])\s*\-\s*([0-9]{2,4})\b/i;
+
+            for (var i = 0; i < textos.length; i++) {
+                var txt = textos[i];
+                if (!txt) continue;
+
+                var m = txt.match(reg1) || txt.match(reg2) || txt.match(reg3);
+                if (m && m[1] && m[2]) {
+                    return { bloco: m[1].toUpperCase(), unidade: m[2] };
+                }
+            }
+            return null;
+        }
+
+        window.executarBuscaVDS = function () {
+            var inputEl = document.getElementById('vdsBuscaQuery');
+            var q = inputEl ? inputEl.value.trim() : '';
+
+            if (!q) {
+                M.toast({ html: 'Digite um termo para pesquisar.', classes: 'orange rounded' });
+                return;
+            }
+
+            var loader = document.getElementById('vdsBuscaLoader');
+            var resContainer = document.getElementById('vdsBuscaResultados');
+            var statusBar = document.getElementById('vdsBuscaStatusBar');
+            var countText = document.getElementById('vdsBuscaCountText');
+            var filterText = document.getElementById('vdsBuscaFilterText');
+
+            if (loader) loader.classList.remove('hide');
+            if (resContainer) resContainer.classList.add('hide');
+            if (statusBar) statusBar.classList.add('hide');
+
+            $.get('api/vds_busca_generica.php', { busca: q, tipo: tipoAtualVDS }, function (res) {
+                if (loader) loader.classList.add('hide');
+                if (resContainer) resContainer.classList.remove('hide');
+
+                if (res && res.success && Array.isArray(res.data)) {
+                    var items = res.data;
+                    if (countText) countText.textContent = items.length + ' registro(s) encontrado(s)';
+                    if (filterText) filterText.textContent = 'Filtro: ' + (res.tipo || tipoAtualVDS);
+                    if (statusBar) {
+                        statusBar.classList.remove('hide');
+                        statusBar.style.display = 'flex';
+                    }
+
+                    if (items.length === 0) {
+                        resContainer.innerHTML = '' +
+                            '<div class="col s12 center-align grey-text" style="padding: 40px 0;">' +
+                            '   <i class="material-icons" style="font-size: 4rem; opacity: 0.3;">search_off</i>' +
+                            '   <h6 style="font-weight: 400; margin-top: 10px;">Nenhum registro encontrado</h6>' +
+                            '   <p style="font-size: 0.9rem;">Tente buscar com outro termo ou altere o filtro de tipo.</p>' +
+                            '</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    items.forEach(function (item) {
+                        var tipo = (item.tipo || 'DESCONHECIDO').toUpperCase();
+                        var bgCor = '#616161';
+                        var icone = 'info';
+
+                        switch (tipo) {
+                            case 'APARTAMENTO':
+                                bgCor = '#1976d2'; icone = 'business'; break;
+                            case 'MORADOR':
+                                bgCor = '#00897b'; icone = 'person'; break;
+                            case 'AUTOMOVEL':
+                                bgCor = '#f57c00'; icone = 'directions_car'; break;
+                            case 'GARAGEM':
+                                bgCor = '#e65100'; icone = 'local_parking'; break;
+                            case 'SINDICO':
+                                bgCor = '#8e24aa'; icone = 'star'; break;
+                            case 'RECURSO':
+                                bgCor = '#388e3c'; icone = 'pool'; break;
+                        }
+
+                        var bu = extrairBlocoUnidade(item);
+                        var fotoHtml = '';
+                        if (item.foto) {
+                            fotoHtml = '<img src="' + item.foto + '" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">';
+                        } else {
+                            fotoHtml = '<div style="width: 48px; height: 48px; border-radius: 50%; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: ' + bgCor + ';"><i class="material-icons">' + icone + '</i></div>';
+                        }
+
+                        var btnCarregar = '';
+                        if (bu && bu.bloco && bu.unidade) {
+                            btnCarregar = '' +
+                                '<button type="button" class="btn-small waves-effect waves-light blue darken-2 btn-carregar-unidade-vds" ' +
+                                'data-bloco="' + bu.bloco + '" data-unidade="' + bu.unidade + '" style="border-radius: 4px; font-weight: 500; height: 32px; line-height: 32px; margin-right: 6px;" title="Carregar no Toolset de Histórico">' +
+                                '<i class="material-icons left tiny">launch</i> Carregar Unid. ' + bu.bloco + '-' + bu.unidade + '' +
+                                '</button>';
+                        }
+
+                        var btnMorador = '';
+                        if (tipo === 'MORADOR' && item.id) {
+                            btnMorador = '' +
+                                '<button type="button" class="btn-small waves-effect waves-light cyan darken-2" onclick="abrirDetalhesMorador(\'' + item.id + '\')" style="border-radius: 4px; font-weight: 500; height: 32px; line-height: 32px; margin-right: 6px;" title="Ver detalhes completos do morador">' +
+                                '<i class="material-icons left tiny">visibility</i> Detalhes' +
+                                '</button>';
+                        }
+
+                        var tituloEsc = $('<div>').text(item.titulo || 'Sem Título').html();
+                        var subtituloEsc = item.subtitulo ? $('<div>').text(item.subtitulo).html() : '';
+                        var descEsc = item.descricao ? $('<div>').text(item.descricao).html() : '';
+                        var uuidEsc = $('<div>').text(item.id || '').html();
+
+                        html += '' +
+                            '<div class="col s12 m6">' +
+                            '   <div class="vds-card-item">' +
+                            '       <div style="display: flex; align-items: flex-start; gap: 12px;">' +
+                            '           <div>' + fotoHtml + '</div>' +
+                            '           <div style="flex: 1; min-width: 0;">' +
+                            '               <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px;">' +
+                            '                   <span class="vds-badge-tipo" style="background-color: ' + bgCor + ';"><i class="material-icons tiny">' + icone + '</i> ' + tipo + '</span>' +
+                            '               </div>' +
+                            '               <h6 style="margin: 4px 0 2px 0; font-weight: 600; font-size: 0.98rem; word-break: break-word;">' + tituloEsc + '</h6>' +
+                            (subtituloEsc ? '               <div style="font-size: 0.85rem; color: #616161; font-weight: 500;">' + subtituloEsc + '</div>' : '') +
+                            (descEsc ? '               <div style="font-size: 0.8rem; color: #757575; margin-top: 4px; word-break: break-word;">' + descEsc + '</div>' : '') +
+                            '               <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">' +
+                            btnCarregar +
+                            btnMorador +
+                            '                   <button type="button" class="btn-flat btn-small waves-effect grey lighten-3 grey-text text-darken-3" onclick="copiarUuidVDS(\'' + uuidEsc + '\')" style="height: 32px; line-height: 32px; font-size: 0.75rem; border-radius: 4px;" title="Copiar UUID remoto da VDS">' +
+                            '                       <i class="material-icons left tiny">content_copy</i> Copiar UUID' +
+                            '                   </button>' +
+                            '               </div>' +
+                            '           </div>' +
+                            '       </div>' +
+                            '   </div>' +
+                            '</div>';
+                    });
+
+                    resContainer.innerHTML = html;
+                } else {
+                    var errMsg = (res && res.error) ? res.error : 'Falha ao buscar registros na VDS.';
+                    resContainer.innerHTML = '' +
+                        '<div class="col s12 center-align red-text" style="padding: 30px 0;">' +
+                        '   <i class="material-icons" style="font-size: 3.5rem;">error_outline</i>' +
+                        '   <p style="font-weight: 500; margin-top: 8px;">' + $('<div>').text(errMsg).html() + '</p>' +
+                        '</div>';
+                }
+            }, 'json').fail(function () {
+                if (loader) loader.classList.add('hide');
+                if (resContainer) resContainer.classList.remove('hide');
+                resContainer.innerHTML = '' +
+                    '<div class="col s12 center-align red-text" style="padding: 30px 0;">' +
+                    '   <i class="material-icons" style="font-size: 3.5rem;">wifi_off</i>' +
+                    '   <p style="font-weight: 500; margin-top: 8px;">Erro de conexão HTTP ao comunicar com a API de busca.</p>' +
+                    '</div>';
+            });
+        };
+
+        window.copiarUuidVDS = function (uuid) {
+            if (!uuid) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(uuid).then(function () {
+                    M.toast({ html: 'UUID copiado!', classes: 'green rounded' });
+                }).catch(function () {
+                    fallbackCopiar(uuid);
+                });
+            } else {
+                fallbackCopiar(uuid);
+            }
+        };
+
+        $(document).on('click', '.vds-tipo-chip', function () {
+            $('.vds-tipo-chip').removeClass('active');
+            $(this).addClass('active');
+            tipoAtualVDS = $(this).attr('data-tipo') || 'ALL';
+
+            var q = $('#vdsBuscaQuery').val().trim();
+            if (q) {
+                window.executarBuscaVDS();
+            }
+        });
+
+        $(document).on('keypress', '#vdsBuscaQuery', function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                window.executarBuscaVDS();
+            }
+        });
+
+        $(document).on('click', '#btnExecutarBuscaVDS', function () {
+            window.executarBuscaVDS();
+        });
+
+        $(document).on('click', '.btn-carregar-unidade-vds', function () {
+            var bloco = $(this).attr('data-bloco');
+            var unidade = $(this).attr('data-unidade');
+
+            if (bloco && unidade) {
+                $('#bloco').val(bloco).formSelect();
+                $('#unidade').val(unidade);
+
+                var modalEl = document.getElementById('modalBuscaVDS');
+                if (modalEl && typeof M !== 'undefined' && M.Modal) {
+                    var inst = M.Modal.getInstance(modalEl);
+                    if (inst) inst.close();
+                }
+
+                $('#buscaHistoricoUnidade').click();
+                M.toast({ html: 'Unidade ' + bloco + '-' + unidade + ' selecionada e carregando...', classes: 'blue rounded' });
+            }
+        });
+    })();
+</script>
 
 
 <style>

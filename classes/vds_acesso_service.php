@@ -1371,5 +1371,63 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
     return ['success' => false, 'error' => "HTTP {$httpCode} ao consultar detalhes da ocorrência na VDS."];
 }
 
+/**
+ * Realiza busca genérica/global de registros na API v8 da VDS.
+ * Endpoint: GET /registros?tipo={tipo}&busca={busca}
+ * 
+ * @param string $busca Termo a ser pesquisado (ex: nome, placa, apartamento, vaga, etc.)
+ * @param string $tipo Tipo de registro (ALL, APARTAMENTO, AUTOMOVEL, MORADOR, SINDICO, GARAGEM, RECURSO)
+ * @param int|null $usuarioIdConselho ID do usuário conselheiro para recuperar token JWT
+ * @return array ['success' => bool, 'data' => array, 'count' => int, 'tipo' => string, 'error' => string|null]
+ */
+function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
+    if (empty(trim($busca))) {
+        return ['success' => true, 'data' => [], 'count' => 0, 'tipo' => strtoupper($tipo)];
+    }
 
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'error' => 'Nenhum token ativo da VDS disponível.'];
+    }
 
+    $tipoClean = !empty($tipo) ? strtoupper(trim($tipo)) : 'ALL';
+    $url = VDS_BASE_URL . '/registros?tipo=' . urlencode($tipoClean) . '&busca=' . urlencode(trim($busca));
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER,
+            'Accept: application/json, text/plain, */*'
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlErr) {
+        return ['success' => false, 'error' => 'Erro de comunicação cURL com VDS: ' . $curlErr];
+    }
+
+    if ($httpCode !== 200) {
+        return ['success' => false, 'error' => "HTTP {$httpCode} ao realizar busca genérica na VDS."];
+    }
+
+    $json = json_decode($response, true);
+    if (!is_array($json)) {
+        return ['success' => false, 'error' => 'Resposta inválida retornada pela VDS.'];
+    }
+
+    return [
+        'success' => true,
+        'data' => $json,
+        'count' => count($json),
+        'tipo' => $tipoClean
+    ];
+}
