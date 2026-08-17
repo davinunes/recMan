@@ -294,6 +294,24 @@ $isDebugUser = ($userIdDebug === 5);
                     </div>
                 </li>
 
+                <!-- 3.1 Eventos de Acesso & Entradas/Saídas -->
+                <li>
+                    <div class="collapsible-header flex-header-collapsible">
+                        <span class="title-with-icon">
+                            <i class="material-icons deep-purple-text text-darken-2">fingerprint</i>
+                            <b>Eventos de Acesso & Entradas/Saídas</b>
+                            <small class="grey-text text-darken-1" id="labelMesAcessos">(Mês Selecionado)</small>
+                        </span>
+                        <span class="badge deep-purple darken-1 white-text font-weight-bold"
+                            id="badgeCountAcessos">0</span>
+                    </div>
+                    <div class="collapsible-body white">
+                        <div id="conteudoAcessos">
+                            <!-- Tabela de Eventos de Acesso -->
+                        </div>
+                    </div>
+                </li>
+
                 <!-- 4. Reservas de Área Comum -->
                 <li>
                     <div class="collapsible-header flex-header-collapsible">
@@ -419,6 +437,19 @@ $isDebugUser = ($userIdDebug === 5);
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-teal btn-flat font-weight-bold">Fechar</a>
+    </div>
+</div>
+
+<!-- Modal: Detalhes do Evento de Acesso -->
+<div id="modalDetalhesAcesso" class="modal" style="border-radius:12px; max-width:600px;">
+    <div class="modal-content" style="padding: 20px 24px;">
+        <div id="conteudoDetalhesAcesso">
+            <!-- Preenchido via JavaScript -->
+        </div>
+    </div>
+    <div class="modal-footer" style="background:#fafafa; display:flex; justify-content:space-between; align-items:center;">
+        <div id="debugAcessoFooterModal"></div>
+        <a href="#!" class="modal-close waves-effect waves-purple btn-flat font-weight-bold">Fechar</a>
     </div>
 </div>
 

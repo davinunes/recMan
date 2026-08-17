@@ -1590,6 +1590,7 @@ function executarBuscaHistorico(unidade, bloco, mesAno) {
     
     $('#labelMesEncomendas').text('(' + mesExtenso + ')');
     $('#labelMesAutorizacoes').text('(' + mesExtenso + ')');
+    $('#labelMesAcessos').text('(' + mesExtenso + ')');
     $('#labelMesReservas').text('(' + mesExtenso + ')');
     $('#labelMesLiberacoesPortaria').text('(' + mesExtenso + ')');
     $('#labelAnoBoletos').text('(' + anoStr + ')');
@@ -1611,6 +1612,7 @@ function executarBuscaHistorico(unidade, bloco, mesAno) {
 
                 window.renderToolsetEncomendas(res.entregas || []);
                 window.renderToolsetAutorizacoes(res.autorizacoes || []);
+                window.renderToolsetAcessos(res.acessos || []);
                 window.renderToolsetReservas(res.reservas || []);
                 window.renderToolsetOcorrenciasAutoria(res.ocorrenciasAutoria || []);
                 window.renderToolsetOcorrenciasTag(res.ocorrenciasTag || []);
@@ -1703,13 +1705,13 @@ window.renderToolsetDashboard = function (stats) {
 
     let kpiHtml = seloInadimplencia + `
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(3);">
+            <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(2);">
                 <div class="kpi-val">${stats.totalNotificacoes}</div>
                 <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(3);">
+            <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(2);">
                 <div class="kpi-val">${stats.totalRecursos}</div>
                 <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
             </div>
@@ -1721,21 +1723,27 @@ window.renderToolsetDashboard = function (stats) {
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset purple darken-2" onclick="window.focusToolsetSection(2);">
+            <div class="kpi-card-toolset purple darken-2" onclick="window.focusToolsetSection(11);">
                 <div class="kpi-val">${stats.totalVisitantes || 0}</div>
                 <div class="kpi-lbl">Visitantes / Prestadores</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(4);">
+            <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(3);">
                 <div class="kpi-val">${stats.totalEntregas}</div>
                 <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
             </div>
         </div>
-        <div class="col s12 m4 l2" style="margin-bottom:10px;">
-            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(5);">
+        <div class="col s12 m4 l3" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(4);">
                 <div class="kpi-val">${stats.totalAutorizacoes}</div>
                 <div class="kpi-lbl">Acessos Autorizados</div>
+            </div>
+        </div>
+        <div class="col s12 m4 l3" style="margin-bottom:10px;">
+            <div class="kpi-card-toolset deep-purple darken-1" onclick="window.focusToolsetSection(5);">
+                <div class="kpi-val">${stats.totalAcessos || 0}</div>
+                <div class="kpi-lbl">Eventos de Acesso (Mês)</div>
             </div>
         </div>
         <div class="col s12 m6 l6" style="margin-top:5px; margin-bottom:5px;">
@@ -2224,6 +2232,167 @@ window.renderToolsetAutorizacoes = function (list) {
     cardsHtml += '</div>';
 
     $('#conteudoAutorizacoes').html(cardsHtml);
+};
+
+// 3.1 Renderizar Eventos de Acesso (Catracas, Portões, Biometria/Facial/Tags)
+window.renderToolsetAcessos = function (list) {
+    list = list || [];
+    $('#badgeCountAcessos').text(list.length);
+    if (!list || list.length === 0) {
+        $('#conteudoAcessos').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">fingerprint</i> Nenhum evento de acesso registrado no mês selecionado.</div>');
+        return;
+    }
+
+    let tableHtml = `
+        <table class="striped highlight responsive-table" style="font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th>Data / Hora</th>
+                    <th>Pessoa / Morador / Visitante</th>
+                    <th>Perfil</th>
+                    <th>Evento / Ponto de Acesso</th>
+                    <th>Sentido / Dispositivo</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    list.forEach((acc, idx) => {
+        let fotoImg = acc.fotoUrl ? 
+            `<img src="${acc.fotoUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1.5px solid #673ab7; vertical-align:middle; margin-right:6px;" alt="Foto">` : 
+            `<div style="width:32px; height:32px; border-radius:50%; background:#ede7f6; display:inline-flex; align-items:center; justify-content:center; margin-right:6px; border:1.5px solid #d1c4e9; vertical-align:middle;"><i class="material-icons deep-purple-text tiny">person</i></div>`;
+
+        let sentidoBadge = acc.saida ? 
+            `<span class="badge blue lighten-5 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${acc.saida}</span>` : 
+            '';
+
+        let dispTexto = [acc.dispositivo, acc.receptor].filter(Boolean).join(' • ');
+
+        let iconeDebugAcesso = '';
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            window.__debugCache = window.__debugCache || {};
+            const dKey = 'acc_' + Date.now() + '_' + idx;
+            window.__debugCache[dKey] = acc;
+            if (acc.uuid) {
+                window.__debugCache['acc_uuid_' + acc.uuid] = acc;
+            }
+            const lblAcc = acc.pessoaNome || acc.tipoEvento || 'Acesso';
+            iconeDebugAcesso = `
+                <i class="material-icons tooltipped debug-terminal-icon"
+                   style="font-size:1.2rem; cursor:pointer; color:#1565c0; vertical-align:middle; margin-left:4px;"
+                   onclick="event.stopPropagation(); window.abrirModalDebugJson('Evento de Acesso &mdash; ${lblAcc.replace(/'/g, '&#39;')}', window.__debugCache['${acc.uuid ? ('acc_uuid_' + acc.uuid) : dKey}'] || window.__debugCache['${dKey}']);"
+                   data-tooltip="Inspecionar JSON deste Acesso" title="JSON Acesso">terminal</i>
+            `;
+        }
+
+        const cacheKey = `acesso_hist_${idx}`;
+        window.__aceleradorCache = window.__aceleradorCache || {};
+        window.__aceleradorCache[cacheKey] = acc;
+
+        tableHtml += `
+            <tr style="cursor:pointer;" onclick="window.abrirModalDetalhesAcesso('${cacheKey}')">
+                <td><b>${acc.dthora || 'N/A'}</b></td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        ${fotoImg}
+                        <div>
+                            <b>${acc.pessoaNome || 'Morador / Visitante'}</b>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge purple lighten-5 purple-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${acc.perfil || 'Acesso'}</span></td>
+                <td>
+                    <b>${acc.tipoEvento || acc.statusAcesso || 'Acesso'}</b>
+                    ${acc.modulo ? `<small class="grey-text display-block" style="font-size:0.75rem; display:block;">Ponto: ${acc.modulo}</small>` : ''}
+                </td>
+                <td>
+                    ${sentidoBadge}
+                    ${dispTexto ? `<small class="grey-text" style="font-size:0.75rem; margin-left:4px;">${dispTexto}</small>` : ''}
+                </td>
+                <td>
+                    <button type="button" class="btn-small waves-effect waves-light deep-purple darken-1 white-text" onclick="event.stopPropagation(); window.abrirModalDetalhesAcesso('${cacheKey}');" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                        Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                    </button>
+                    ${iconeDebugAcesso}
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table>`;
+    $('#conteudoAcessos').html(tableHtml);
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser() && typeof $.fn.tooltip === 'function') {
+        setTimeout(function() { $('.tooltipped').tooltip(); }, 80);
+    }
+};
+
+window.abrirModalDetalhesAcesso = function(dataOrCacheKey) {
+    let data = dataOrCacheKey;
+    if (typeof dataOrCacheKey === 'string' && window.__aceleradorCache && window.__aceleradorCache[dataOrCacheKey]) {
+        data = window.__aceleradorCache[dataOrCacheKey];
+    }
+    if (!data) return;
+
+    let modalEl = document.getElementById('modalDetalhesAcesso');
+    let targetConteudo = document.getElementById('conteudoDetalhesAcesso');
+    if (!modalEl || !targetConteudo) return;
+
+    let html = `
+        <h5 style="margin-top:0; color:#4a148c; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <i class="material-icons">fingerprint</i> Inspecionar Evento de Acesso
+        </h5>
+    `;
+
+    if (data.fotoUrl) {
+        html += `
+            <div style="text-align:center; margin:15px 0;">
+                <img src="${data.fotoUrl}" style="max-width:240px; max-height:220px; border-radius:12px; border:3px solid #673ab7; box-shadow:0 4px 12px rgba(103,58,183,0.25);" alt="Foto do Acesso">
+            </div>
+        `;
+    }
+
+    html += `<table class="striped" style="font-size:0.9rem; margin-top:10px;">`;
+    html += `<tr><td style="width:35%;"><b>Pessoa / Visitante:</b></td><td><b style="font-size:1.05rem; color:#263238;">${data.pessoaNome || 'N/A'}</b></td></tr>`;
+    html += `<tr><td><b>Perfil / Categoria:</b></td><td><span class="badge purple lighten-4 purple-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">${data.perfil || 'N/A'}</span></td></tr>`;
+    
+    if (data.modulo) {
+        html += `<tr><td><b>Ponto de Acesso (Módulo):</b></td><td><b>${data.modulo}</b></td></tr>`;
+    }
+    if (data.saida) {
+        html += `<tr><td><b>Sentido:</b></td><td><span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px;">${data.saida}</span></td></tr>`;
+    }
+    if (data.dispositivo || data.receptor) {
+        html += `<tr><td><b>Dispositivo / Leitor:</b></td><td>${[data.dispositivo, data.receptor].filter(Boolean).join(' • ')}</td></tr>`;
+    }
+    html += `<tr><td><b>Data / Hora:</b></td><td><i class="material-icons tiny grey-text" style="vertical-align:middle;">event</i> ${data.dthora || 'N/A'}</td></tr>`;
+    
+    if (data.statusAcesso && data.statusAcesso !== data.tipoEvento) {
+        html += `<tr><td><b>Status do Acesso:</b></td><td>${data.statusAcesso}</td></tr>`;
+    }
+    if (data.descricao) {
+        html += `<tr><td><b>Observações:</b></td><td>${data.descricao}</td></tr>`;
+    }
+    html += `</table>`;
+
+    targetConteudo.innerHTML = html;
+
+    let debugFooter = document.getElementById('debugAcessoFooterModal');
+    if (debugFooter) {
+        if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+            debugFooter.innerHTML = `
+                <button type="button" class="btn-flat btn-small waves-effect blue lighten-5 blue-text text-darken-3 font-weight-bold" onclick="window.abrirModalDebugJson('Evento de Acesso &mdash; ${(data.pessoaNome || 'Acesso').replace(/'/g, '\\x27')}', ${JSON.stringify(data).replace(/"/g, '&quot;')});">
+                    <i class="material-icons left tiny">code</i> Ver JSON Bruto
+                </button>
+            `;
+        } else {
+            debugFooter.innerHTML = '';
+        }
+    }
+
+    let instance = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl);
+    instance.open();
 };
 
 // 4. Renderizar Reservas de Área Comum

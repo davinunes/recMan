@@ -845,6 +845,13 @@ switch ($_GET['metodo']) {
         // 9.2 Liberações da Portaria (Caixa 9 VDS)
         $liberacoesPortaria = vds_get_liberacoes_portaria_unidade($torre, $unidade, $dtInicio, $dtFim);
 
+        // 9.3 Eventos de Acesso da Unidade (Catracas, Portões, Biometria/Facial/Tags)
+        $usuarioId = $_SESSION['user_id'] ?? null;
+        $dtInicioAcesso = "{$mesAno}-01T00:00";
+        $dtFimAcesso = date("Y-m-t\T23:59", strtotime("{$mesAno}-01"));
+        $acessos = vds_get_eventos_acesso($torre, $unidade, $dtInicioAcesso, $dtFimAcesso, $usuarioId);
+        if (!is_array($acessos)) $acessos = [];
+
         // 10. Cálculo da Dashboard Estatística (KPI)
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
@@ -910,7 +917,8 @@ switch ($_GET['metodo']) {
             'totalChamadosTag' => count($ocorrenciasTag),
             'totalBoletos' => count($boletos),
             'boletosAbertos' => $boletosAbertos,
-            'totalLiberacoesPortaria' => count($liberacoesPortaria)
+            'totalLiberacoesPortaria' => count($liberacoesPortaria),
+            'totalAcessos' => count($acessos)
         ];
 
         echo json_encode([
@@ -924,6 +932,7 @@ switch ($_GET['metodo']) {
             'notificacoes' => $notificacoes,
             'entregas' => $entregas,
             'autorizacoes' => $autorizacoes,
+            'acessos' => $acessos,
             'reservas' => $reservas,
             'ocorrenciasAutoria' => $ocorrenciasAutoria,
             'ocorrenciasTag' => $ocorrenciasTag,
