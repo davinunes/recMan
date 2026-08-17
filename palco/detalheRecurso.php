@@ -578,7 +578,8 @@ if ($esseRecurso == null) {
     echo '</div>';
 
     // --- ACELERADORES DE ANÁLISE (CONDOMÍNIO DIGITAL API v8) ---
-    $dataOcorrencia = !empty($result['data']) ? $result['data'] : date('Y-m-d H:i:s');
+    // Filtro temporal baseado na data do fato ocorrido da notificação
+    $dataOcorrencia = !empty($notifRecurso['data_ocorrido']) ? $notifRecurso['data_ocorrido'] : (!empty($result['data']) ? $result['data'] : date('Y-m-d H:i:s'));
     $dtInicio = date('Y-m-d\T00:00', strtotime($dataOcorrencia));
     $dtFim = date('Y-m-d\T23:59', strtotime($dataOcorrencia));
 
