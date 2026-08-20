@@ -136,27 +136,29 @@ $(document).ready(function () {
             url: "datatable_br.json"
         }
     });
-    $('#listaSolucoes').DataTable({
-        searching: true, // Oculta o campo de busca
-        paging: false, // Desativa a paginação
-        "order": [
-            [1, 'desc'],
-            [0, 'asc']
-        ],
-        pageLength: 25,
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tudo"]], // permite listar todos os itens
-        dom: '<"top"lf>rt<"bottom"ip><"clear">',
-        language: {
-            url: "datatable_br.json"
-        },
-        initComplete: function () {
-            // Adiciona estilo para posicionar a caixa de pesquisa à esquerda
-            $('.dataTables_filter').css('text-align', 'left');
+    if ($('#listaSolucoes').is('table')) {
+        $('#listaSolucoes').DataTable({
+            searching: true, // Oculta o campo de busca
+            paging: false, // Desativa a paginação
+            "order": [
+                [1, 'desc'],
+                [0, 'asc']
+            ],
+            pageLength: 25,
+            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tudo"]], // permite listar todos os itens
+            dom: '<"top"lf>rt<"bottom"ip><"clear">',
+            language: {
+                url: "datatable_br.json"
+            },
+            initComplete: function () {
+                // Adiciona estilo para posicionar a caixa de pesquisa à esquerda
+                $('.dataTables_filter').css('text-align', 'left');
 
-            // Ajusta a altura das linhas após a inicialização
-            $('.dataTables_filter tbody tr').css('height', '5px');
-        }
-    });
+                // Ajusta a altura das linhas após a inicialização
+                $('.dataTables_filter tbody tr').css('height', '5px');
+            }
+        });
+    }
 
     $('#avatar').on('change', function () {
         var file = $(this)[0].files[0]; // Obtém o arquivo selecionado
@@ -1366,6 +1368,77 @@ $(document).on('dblclick', '.edit-retirado', function (e) {
     });
 });
 
+// Abertura do modal de multa através do botão do Card (Touch-friendly)
+$(document).on('click', '.btn-abrir-modal-cobranca', function (e) {
+    e.preventDefault();
+    var $btn = $(this);
+    var id = $btn.data('id') || '';
+    var numero = $btn.data('numero') || '';
+    var ano = $btn.data('ano') || '';
+    var unidade = $btn.data('unidade') || '';
+    var bloco = $btn.data('bloco') || '';
+    var valor = $btn.data('valor') || '';
+    var dataVencimento = $btn.data('vencimento') || '';
+    var dataPagamento = $btn.data('pagamento') || '';
+
+    // Se id não foi montado, monta a partir de numero e ano
+    if (!id && numero && ano) {
+        id = numero + '/' + ano;
+    } else if (id && (!numero || !ano)) {
+        var partes = id.split('/');
+        numero = partes[0];
+        ano = partes[1] || '';
+    }
+
+    // Preencher o modal com os dados
+    $('#modal-multa-numero').text(numero + '/' + ano);
+    $('#modal-multa-unidade').text(unidade);
+    $('#modal-multa-bloco').text(bloco);
+    $('#modal-multa-id').val(id);
+    $('#modal-multa-numero-raw').val(numero);
+    $('#modal-multa-ano-raw').val(ano);
+
+    // Formatar valor se houver
+    if (valor !== '' && valor !== '-') {
+        var valorLimpo = String(valor).replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+        $('#valor-multa').val(valorLimpo);
+    } else {
+        $('#valor-multa').val('');
+    }
+
+    // Formatar data vencimento para input date (YYYY-MM-DD)
+    if (dataVencimento && dataVencimento !== '-') {
+        if (dataVencimento.indexOf('/') > -1) {
+            $('#data-vencimento').val(dataVencimento.split('/').reverse().join('-'));
+        } else {
+            $('#data-vencimento').val(dataVencimento);
+        }
+    } else {
+        $('#data-vencimento').val('');
+    }
+
+    // Formatar data pagamento para input date (YYYY-MM-DD)
+    if (dataPagamento && dataPagamento !== '-') {
+        if (dataPagamento.indexOf('/') > -1) {
+            $('#data-pagamento').val(dataPagamento.split('/').reverse().join('-'));
+        } else {
+            $('#data-pagamento').val(dataPagamento);
+        }
+    } else {
+        $('#data-pagamento').val('');
+    }
+
+    // Abrir o modal
+    var modalElem = $('#modal-multa');
+    var instance = M.Modal.getInstance(modalElem);
+    if (instance) {
+        instance.open();
+    } else {
+        modalElem.modal().modal('open');
+    }
+});
+
+// Retrocompatibilidade: Duplo clique em células de tabela com classe .edit-multa-cobrada
 $(document).on('dblclick', '.edit-multa-cobrada', function (e) {
     var row = $(this).closest('tr');
     var id = row.data('id');
@@ -1374,13 +1447,11 @@ $(document).on('dblclick', '.edit-multa-cobrada', function (e) {
     var unidade = row.find('td:eq(2)').text();
     var bloco = row.find('td:eq(3)').text();
 
-    // Preencher o modal com os dados existentes
     $('#modal-multa-numero').text(numero + '/' + ano);
     $('#modal-multa-unidade').text(unidade);
     $('#modal-multa-bloco').text(bloco);
     $('#modal-multa-id').val(id);
 
-    // Se já existir dados de multa, preencher os campos
     var valorAtual = row.find('td:eq(11)').text();
     var dataVencAtual = row.find('td:eq(12)').text();
     var dataPagAtual = row.find('td:eq(13)').text();
@@ -1397,25 +1468,26 @@ $(document).on('dblclick', '.edit-multa-cobrada', function (e) {
         $('#data-pagamento').val(dataPagAtual.split('/').reverse().join('-'));
     }
 
-    // Abrir o modal
     $('#modal-multa').modal('open');
 });
 
-
-// Função para salvar os dados da multa
+// Salvar dados da cobrança de multa via AJAX
 $(document).on('click', '#salvar-multa', function (e) {
+    e.preventDefault();
     var id = $('#modal-multa-id').val();
     var valor = $('#valor-multa').val();
     var dataVencimento = $('#data-vencimento').val();
     var dataPagamento = $('#data-pagamento').val();
 
-    // Validação básica - apenas valor e data de vencimento são obrigatórios
+    // Validação
     if (!valor || !dataVencimento) {
         M.toast({ html: 'Valor e Data de Vencimento são obrigatórios!', classes: 'red rounded' });
         return;
     }
 
-    // Enviar dados para o servidor
+    var $btnSalvar = $(this);
+    $btnSalvar.prop('disabled', true).addClass('disabled');
+
     $.ajax({
         url: 'metodo.php?metodo=upsertMultaCobrada',
         method: 'POST',
@@ -1423,22 +1495,159 @@ $(document).on('click', '#salvar-multa', function (e) {
             id: id,
             valor: valor,
             data_vencimento: dataVencimento,
-            data_pagamento: dataPagamento || '' // Envia string vazia se não preenchido
+            data_pagamento: dataPagamento || ''
         },
         success: function (response) {
+            $btnSalvar.prop('disabled', false).removeClass('disabled');
             if (response === 'success') {
-                M.toast({ html: 'Multa salva com sucesso!', classes: 'green rounded' });
+                M.toast({ html: `Cobrança para a notificação <b>${id}</b> salva com sucesso!`, classes: 'green rounded' });
                 $('#modal-multa').modal('close');
+
+                // Atualizar visualmente se for tabela
                 $(`tr[data-id="${id}"]`).remove();
-                // location.reload();
+
+                // Atualizar visualmente se for Card
+                var $cardWrapper = $(`.card-cobranca-wrapper[data-id="${id}"]`);
+                if ($cardWrapper.length > 0) {
+                    var valorNum = parseFloat(valor);
+                    var valorFmt = isNaN(valorNum) ? valor : 'R$ ' + valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    var dtVencFmt = dataVencimento.split('-').reverse().join('/');
+                    var dtPagFmt = dataPagamento ? dataPagamento.split('-').reverse().join('/') : '-';
+
+                    var $card = $cardWrapper.find('.card-cobranca');
+                    $card.removeClass('card-status-pendente').addClass('card-status-cobrado');
+                    
+                    var $boxFin = $card.find('.box-financeiro-cobranca');
+                    $boxFin.removeClass('box-fin-pendente').addClass('box-fin-pago');
+                    $boxFin.find('.valor-multa-destaque').removeClass('grey-text text-darken-1').addClass('green-text text-darken-3').text(valorFmt);
+                    $boxFin.find('.card-val-venc').text(dtVencFmt);
+                    $boxFin.find('.card-val-pagto').text(dtPagFmt);
+
+                    var $btnAcao = $card.find('.btn-abrir-modal-cobranca');
+                    $btnAcao.removeClass('btn-cobranca-lancar').addClass('btn-cobranca-editar')
+                        .attr('data-valor', valor)
+                        .attr('data-vencimento', dtVencFmt)
+                        .attr('data-pagamento', dtPagFmt)
+                        .html('<i class="material-icons">edit</i> Editar');
+
+                    // Se a página estiver filtrando apenas não cobradas (cobrada=Nao), remove o card
+                    var urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('cobrada') === 'Nao') {
+                        $cardWrapper.fadeOut(400, function() {
+                            $(this).remove();
+                        });
+                    }
+                }
             } else {
-                M.toast({ html: 'Erro ao salvar: ' + response, classes: 'red rounded' });
+                M.toast({ html: 'Erro ao salvar cobrança: ' + response, classes: 'red rounded' });
             }
         },
         error: function (xhr, status, error) {
+            $btnSalvar.prop('disabled', false).removeClass('disabled');
             M.toast({ html: 'Erro de conexão: ' + error, classes: 'red rounded' });
         }
     });
+});
+
+// Abertura do modal para ajuste rápido de Data de Ciência no Card
+$(document).on('click', '.edit-retirado-touch', function (e) {
+    e.preventDefault();
+    var id = $(this).data('id') || '';
+    var diaAtual = $(this).data('dia') || '';
+
+    $('#modal-ciencia-id').val(id);
+    $('#modal-ciencia-subtitulo').html(`Notificação: <b>#${id}</b>`);
+
+    if (diaAtual && diaAtual.indexOf('/') > -1) {
+        $('#input-nova-data-ciencia').val(diaAtual.split('/').reverse().join('-'));
+    } else {
+        $('#input-nova-data-ciencia').val(diaAtual);
+    }
+
+    var modalElem = $('#modal-data-ciencia');
+    var instance = M.Modal.getInstance(modalElem);
+    if (instance) {
+        instance.open();
+    } else {
+        modalElem.modal().modal('open');
+    }
+});
+
+// Salvar nova data de ciência via AJAX
+$(document).on('click', '#salvar-data-ciencia', function (e) {
+    e.preventDefault();
+    var id = $('#modal-ciencia-id').val();
+    var novaData = $('#input-nova-data-ciencia').val();
+
+    if (!novaData) {
+        M.toast({ html: 'Por favor, selecione uma data.', classes: 'amber darken-2 rounded' });
+        return;
+    }
+
+    $.ajax({
+        url: 'metodo.php?metodo=atualizaDataRetiradaNotificacao',
+        method: 'POST',
+        data: { virtual: id, dia_retirada: novaData },
+        success: function (response) {
+            if (response === 'success' || response.indexOf('sucesso') > -1 || response === 'ok') {
+                M.toast({ html: 'Data de ciência atualizada!', classes: 'green rounded' });
+                $('#modal-data-ciencia').modal('close');
+
+                var dataFmt = novaData.split('-').reverse().join('/');
+                var $elem = $(`.edit-retirado-touch[data-id="${id}"]`);
+                if ($elem.length > 0) {
+                    $elem.attr('data-dia', dataFmt);
+                    $elem.html(`<span class="badge-ciencia badge-prazo-ok">${dataFmt}</span>`);
+                }
+            } else {
+                M.toast({ html: 'Resposta: ' + response, classes: 'rounded' });
+            }
+        },
+        error: function () {
+            M.toast({ html: 'Erro de comunicação ao salvar data.', classes: 'red rounded' });
+        }
+    });
+});
+
+// Busca rápida instantânea nos cards
+$(document).on('input keyup', '#busca-rapida-cards', function () {
+    var termo = $(this).val().toLowerCase().trim();
+    var $limparBtn = $('#limpar-busca-rapida');
+
+    if (termo.length > 0) {
+        $limparBtn.removeClass('hide');
+    } else {
+        $limparBtn.addClass('hide');
+    }
+
+    var totalVisiveis = 0;
+    $('.card-cobranca-wrapper').each(function () {
+        var searchContent = $(this).attr('data-search') || '';
+        if (termo === '' || searchContent.indexOf(termo) > -1) {
+            $(this).show();
+            totalVisiveis++;
+        } else {
+            $(this).hide();
+        }
+    });
+});
+
+// Limpar busca rápida
+$(document).on('click', '#limpar-busca-rapida', function () {
+    $('#busca-rapida-cards').val('').trigger('input').focus();
+});
+
+// Toggle para recolher/expandir o formulário de filtros no mobile
+$(document).on('click', '#btn-toggle-filtros', function () {
+    var $painel = $('#painel-filtros-body');
+    var $texto = $('#texto-toggle-filtros');
+    if ($painel.is(':visible')) {
+        $painel.slideUp(200);
+        $texto.text('Mostrar Filtros');
+    } else {
+        $painel.slideDown(200);
+        $texto.text('Ocultar Filtros');
+    }
 });
 
 $(document).on('click', '.parecer', function (e) {
