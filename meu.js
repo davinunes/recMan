@@ -1620,16 +1620,18 @@ $(document).on('input keyup', '#busca-rapida-cards', function () {
         $limparBtn.addClass('hide');
     }
 
-    var totalVisiveis = 0;
     $('.card-cobranca-wrapper').each(function () {
         var searchContent = $(this).attr('data-search') || '';
         if (termo === '' || searchContent.indexOf(termo) > -1) {
             $(this).show();
-            totalVisiveis++;
         } else {
             $(this).hide();
         }
     });
+
+    if (window.recalcularResumoCobranca) {
+        window.recalcularResumoCobranca();
+    }
 });
 
 // Limpar busca rápida
@@ -1650,15 +1652,11 @@ $(document).on('click', '#btn-toggle-filtros', function () {
     }
 });
 
-$(document).on('click', '.parecer', function (e) {
+// Clique triplo para ocultar registros com o mesmo resultado / parecer
+$(document).on('click', '.parecer, .click-triplo-target', function (e) {
     var $this = $(this);
-    var total = -1;
 
-    $("#listaSolucoes tr").each(function () {
-        total++;
-    });
-
-    // Inicializar ou incrementar contador
+    // Inicializar ou incrementar contador de cliques
     if (!$this.data('clickCount')) {
         $this.data('clickCount', 1);
 
@@ -1673,40 +1671,60 @@ $(document).on('click', '.parecer', function (e) {
 
     // Se for triplo clique
     if ($this.data('clickCount') === 3) {
-        var valorParecer = $this.text().trim();
+        var valorParecer = ($this.attr('data-valor') || $this.text()).replace('⚖️', '').trim();
 
         if (valorParecer !== '') {
-            // Contar quantas linhas serão removidas
             var count = 0;
-            $('.parecer').each(function () {
-                if ($(this).text().trim() === valorParecer) {
-                    count++;
-                }
+
+            // 1. Suporte a Cards (Visualização Atual)
+            var $cardsMatch = $('.card-cobranca-wrapper').filter(function() {
+                var cardParecer = ($(this).attr('data-parecer') || $(this).find('.chip-parecer, .parecer').text()).replace('⚖️', '').trim();
+                return cardParecer.toLowerCase() === valorParecer.toLowerCase() && $(this).is(':visible');
             });
 
-            // Remover todas as linhas com o mesmo parecer
-            $('.parecer').each(function () {
-                if ($(this).text().trim() === valorParecer) {
+            if ($cardsMatch.length > 0) {
+                count = $cardsMatch.length;
+                $cardsMatch.fadeOut(300, function () {
+                    $(this).remove();
+                    if (window.recalcularResumoCobranca) {
+                        window.recalcularResumoCobranca();
+                    }
+                });
+
+                M.toast({
+                    html: `✂️ Ocultados <b>${count}</b> cards com parecer: "<b>${valorParecer}</b>"`,
+                    classes: 'orange darken-3 rounded',
+                    displayLength: 4000
+                });
+            }
+
+            // 2. Retrocompatibilidade: Linhas de Tabela
+            var $rowsMatch = $('.parecer').filter(function() {
+                return $(this).text().trim() === valorParecer && $(this).closest('tr').length > 0;
+            });
+
+            if ($rowsMatch.length > 0 && $cardsMatch.length === 0) {
+                count = $rowsMatch.length;
+                $rowsMatch.each(function () {
                     $(this).closest('tr').fadeOut(300, function () {
                         $(this).remove();
                     });
-                }
-            });
+                });
 
-            M.toast({
-                html: '✂️ Removidas ' + count + ' linhas com parecer: "' + valorParecer + '"',
-                classes: 'orange rounded',
-                displayLength: 4000
-            });
+                M.toast({
+                    html: '✂️ Removidas ' + count + ' linhas com parecer: "' + valorParecer + '"',
+                    classes: 'orange darken-3 rounded',
+                    displayLength: 4000
+                });
 
-            total = total - count;
-
-            $("#listaSolucoes_info").html("Total de itens: " + total);
+                var totalTabela = $("#listaSolucoes tr").length - 1 - count;
+                $("#listaSolucoes_info").html("Total de itens: " + Math.max(0, totalTabela));
+            }
 
         } else {
             M.toast({
-                html: '⚠️ Parecer vazio!',
-                classes: 'red rounded'
+                html: '⚠️ Parecer vazio para filtro!',
+                classes: 'amber darken-3 rounded'
             });
         }
 

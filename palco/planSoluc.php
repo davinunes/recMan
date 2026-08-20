@@ -280,7 +280,7 @@ require "classes/repositorio.php";
     }
     ?>
 
-    <!-- Grid de Cards Responsivos -->
+    <!-- Grid de Cards Responsivos (Estilo Linha/Row Esticada em Desktop e Card no Mobile) -->
     <div id="cards-cobranca-container" class="row" style="margin-top: 10px;">
         <?php if (empty($lista)): ?>
             <div class="col s12 center-align" style="padding: 60px 0;">
@@ -311,9 +311,10 @@ require "classes/repositorio.php";
                 $temCiencia = !empty($item['dia_retirada']);
                 
                 // Valor formatado
-                $valorFormatado = (!empty($item['valor']) && (float)$item['valor'] > 0) 
-                    ? 'R$ ' . number_format((float)$item['valor'], 2, ',', '.') 
-                    : '-';
+                $valorNum = (!empty($item['valor']) && (float)$item['valor'] > 0) ? (float)$item['valor'] : 0.0;
+                $valorFormatado = $valorNum > 0 ? 'R$ ' . number_format($valorNum, 2, ',', '.') : '-';
+
+                $parecerTexto = trim($item['existe_parecer'] ?? '');
 
                 // Dados em formato seguro para busca rápida
                 $searchableText = strtolower(implode(' ', [
@@ -328,23 +329,28 @@ require "classes/repositorio.php";
                     $item['status'] ?? '',
                     $temMulta ? 'cobrado sim paga' : 'pendente nao cobrado',
                     $item['existe_recurso'] ? 'recurso sim' : 'sem recurso',
-                    $item['existe_parecer'] ?? '',
+                    $parecerTexto,
                     $valorFormatado
                 ]));
             ?>
-            <div class="col s12 m6 l4 xl3 card-cobranca-wrapper" data-id="<?php echo htmlspecialchars($idNotificacao); ?>" data-search="<?php echo htmlspecialchars($searchableText); ?>">
-                <div class="card card-cobranca hoverable <?php echo $cardClasseStatus; ?>">
+            <div class="col s12 card-cobranca-wrapper" 
+                 data-id="<?php echo htmlspecialchars($idNotificacao); ?>" 
+                 data-search="<?php echo htmlspecialchars($searchableText); ?>"
+                 data-cobrado="<?php echo $temMulta ? '1' : '0'; ?>"
+                 data-valor="<?php echo $valorNum; ?>"
+                 data-parecer="<?php echo htmlspecialchars($parecerTexto); ?>">
+                
+                <div class="card card-cobranca-row hoverable <?php echo $cardClasseStatus; ?>">
                     
-                    <!-- Header do Card -->
-                    <div class="card-cobranca-header">
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <!-- Coluna 1: Identificação, Unidade e Status -->
+                    <div class="cobranca-col-identificacao">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span class="custom-chip-badge <?php echo $tipoBadgeClass; ?>">
                                 <?php echo htmlspecialchars($item['notificacao'] ?: 'NOTIFICAÇÃO'); ?>
                             </span>
                             <span class="card-cobranca-num">#<?php echo htmlspecialchars($idNotificacao); ?></span>
                         </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
                             <div class="chip-unidade-destaque">
                                 <i class="material-icons tiny">business</i>
                                 <span>Bloco <b><?php echo htmlspecialchars($item['torre']); ?></b> - Apt <b><?php echo htmlspecialchars($item['unidade']); ?></b></span>
@@ -355,34 +361,33 @@ require "classes/repositorio.php";
                         </div>
                     </div>
 
-                    <!-- Corpo do Card -->
-                    <div class="card-cobranca-body">
-                        
-                        <!-- Box Financeiro (Multa Cobrada) -->
-                        <div class="box-financeiro-cobranca <?php echo $temMulta ? 'box-fin-pago' : 'box-fin-pendente'; ?>">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.85rem;">
+                    <!-- Coluna 2: Bloco Financeiro (Cobrança, Valor, Vencimento, Pagamento) -->
+                    <div class="cobranca-col-financeiro">
+                        <div class="box-financeiro-cobranca-row <?php echo $temMulta ? 'box-fin-pago' : 'box-fin-pendente'; ?>">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.82rem;">
                                     <?php if ($temMulta): ?>
                                         <i class="material-icons green-text text-darken-2 tiny">check_circle</i>
-                                        <span class="green-text text-darken-3">Multa Cobrada</span>
+                                        <span class="green-text text-darken-3">Cobrada</span>
                                     <?php else: ?>
                                         <i class="material-icons amber-text text-darken-3 tiny">pending_actions</i>
-                                        <span class="amber-text text-darken-4">Cobrança Não Lançada</span>
+                                        <span class="amber-text text-darken-4">Pendente</span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="valor-multa-destaque <?php echo $temMulta ? 'green-text text-darken-3' : 'grey-text text-darken-1'; ?>">
                                     <?php echo $valorFormatado; ?>
                                 </div>
                             </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.78rem; margin-top: 6px; color: #555;">
+                            <div style="display: flex; gap: 12px; font-size: 0.75rem; color: #555; margin-top: 3px;">
                                 <div><b>Venc:</b> <span class="card-val-venc"><?php echo !empty($item['data_vencimento']) ? htmlspecialchars($item['data_vencimento']) : '-'; ?></span></div>
                                 <div><b>Pagto:</b> <span class="card-val-pagto"><?php echo !empty($item['data_pagamento']) ? htmlspecialchars($item['data_pagamento']) : '-'; ?></span></div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Grid de Prazos e Datas -->
-                        <div class="grid-datas-cobranca">
+                    <!-- Coluna 3: Prazos e Datas (Ocorrido, Envio, Ciência) -->
+                    <div class="cobranca-col-datas">
+                        <div class="grid-datas-cobranca-row">
                             <div class="item-data-cobranca">
                                 <span class="lbl-data">Ocorrido</span>
                                 <span class="val-data"><?php echo !empty($item['data_ocorrido']) ? htmlspecialchars($item['data_ocorrido']) : '-'; ?></span>
@@ -392,38 +397,39 @@ require "classes/repositorio.php";
                                 <span class="val-data"><?php echo !empty($item['data_envio']) ? htmlspecialchars($item['data_envio']) : '-'; ?></span>
                             </div>
                             <div class="item-data-cobranca">
-                                <span class="lbl-data">Ciência/Retirada</span>
+                                <span class="lbl-data">Ciência</span>
                                 <span class="val-data edit-retirado-touch" data-id="<?php echo htmlspecialchars($idNotificacao); ?>" data-dia="<?php echo htmlspecialchars($item['dia_retirada'] ?? ''); ?>" title="Clique para editar data de ciência">
                                     <?php if ($temCiencia): ?>
                                         <span class="badge-ciencia <?php echo ($diferencaDias !== null && $diferencaDias < 6) ? 'badge-prazo-ok' : 'badge-prazo-long'; ?>">
                                             <?php echo htmlspecialchars($item['dia_retirada']); ?>
                                         </span>
                                     <?php else: ?>
-                                        <span class="grey-text">-</span>
+                                        <span class="grey-text text-lighten-1" style="font-size: 0.75rem;">+ Adicionar</span>
                                     <?php endif; ?>
                                 </span>
                             </div>
                         </div>
-
-                        <!-- Jurídico / Recursos e Parecer -->
-                        <div class="box-juridico-cobranca" style="margin-top: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #e0e0e0; padding-top: 6px;">
-                            <div>
-                                <span class="grey-text text-darken-1">Recurso:</span>
-                                <b><?php echo !empty($item['existe_recurso']) ? '<span class="blue-text text-darken-2">Sim</span>' : '<span class="grey-text">Não</span>'; ?></b>
-                            </div>
-                            <?php if (!empty($item['existe_parecer'])): ?>
-                                <div>
-                                    <span class="chip-parecer" title="Conclusão do Parecer">
-                                        ⚖️ <?php echo htmlspecialchars($item['existe_parecer']); ?>
-                                    </span>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-
                     </div>
 
-                    <!-- Rodapé de Ações do Card -->
-                    <div class="card-cobranca-actions">
+                    <!-- Coluna 4: Jurídico (Recurso e Parecer com suporte a clique triplo) -->
+                    <div class="cobranca-col-juridico">
+                        <div style="font-size: 0.8rem; margin-bottom: 3px;">
+                            <span class="grey-text text-darken-1">Recurso:</span>
+                            <b><?php echo !empty($item['existe_recurso']) ? '<span class="blue-text text-darken-2">Sim</span>' : '<span class="grey-text">Não</span>'; ?></b>
+                        </div>
+                        <div>
+                            <?php if (!empty($parecerTexto)): ?>
+                                <span class="chip-parecer parecer click-triplo-target" data-valor="<?php echo htmlspecialchars($parecerTexto); ?>" title="Clique 3x para ocultar todos com este parecer">
+                                    ⚖️ <?php echo htmlspecialchars($parecerTexto); ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="grey-text" style="font-size: 0.75rem;">Sem parecer</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Coluna 5: Ações (Boletos VDS e Lançar/Editar Cobrança) -->
+                    <div class="cobranca-col-acoes">
                         <button type="button" 
                                 class="btn-card-action btn-inspecionar-boletos waves-effect waves-light" 
                                 data-bloco="<?php echo htmlspecialchars($item['torre']); ?>" 
@@ -446,7 +452,7 @@ require "classes/repositorio.php";
                                 data-pagamento="<?php echo htmlspecialchars($item['data_pagamento'] ?? ''); ?>"
                                 title="<?php echo $temMulta ? 'Editar Lançamento de Cobrança' : 'Lançar Cobrança de Multa'; ?>">
                             <i class="material-icons"><?php echo $temMulta ? 'edit' : 'attach_money'; ?></i> 
-                            <?php echo $temMulta ? 'Editar' : 'Lançar Cobrança'; ?>
+                            <?php echo $temMulta ? 'Editar' : 'Lançar'; ?>
                         </button>
                     </div>
 
@@ -458,7 +464,7 @@ require "classes/repositorio.php";
 </div>
 
 <style>
-/* Estilos Específicos para a Visualização em Cards Responsivos */
+/* Estilos Específicos para a Visualização em Row-Cards Responsivos */
 .custom-select-cobranca {
     display: block;
     width: 100%;
@@ -476,22 +482,26 @@ require "classes/repositorio.php";
     border-color: #1565c0;
 }
 
-.card-cobranca {
-    border-radius: 12px;
+/* Card em Formato de Linha Esticada (Row-Card) */
+.card-cobranca-row {
+    border-radius: 10px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 3px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     background: #ffffff;
+    margin-bottom: 10px;
+    padding: 10px 16px;
     display: flex;
-    flex-direction: column;
-    height: 100%;
-    margin-bottom: 20px;
-    overflow: hidden;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-.card-cobranca:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+.card-cobranca-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    background: #fafbfc;
 }
 
 .card-status-cobrado {
@@ -502,23 +512,46 @@ require "classes/repositorio.php";
     border-left: 5px solid #f59e0b !important;
 }
 
-.card-cobranca-header {
-    padding: 12px 14px 10px 14px;
-    background: #f8fafc;
-    border-bottom: 1px solid #edf2f7;
+/* Colunas do Row-Card */
+.cobranca-col-identificacao {
+    flex: 1.2;
+    min-width: 180px;
+}
+
+.cobranca-col-financeiro {
+    flex: 1.4;
+    min-width: 210px;
+}
+
+.cobranca-col-datas {
+    flex: 1.3;
+    min-width: 200px;
+}
+
+.cobranca-col-juridico {
+    flex: 1;
+    min-width: 130px;
+}
+
+.cobranca-col-acoes {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 220px;
 }
 
 .card-cobranca-num {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #1e293b;
 }
 
 .custom-chip-badge {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
@@ -544,13 +577,13 @@ require "classes/repositorio.php";
     gap: 4px;
     background: #e0f2fe;
     color: #0369a1;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 0.82rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
 }
 
 .chip-status-geral {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: #64748b;
     background: #f1f5f9;
@@ -558,15 +591,9 @@ require "classes/repositorio.php";
     border-radius: 4px;
 }
 
-.card-cobranca-body {
-    padding: 12px 14px;
-    flex: 1;
-}
-
-.box-financeiro-cobranca {
-    padding: 8px 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
+.box-financeiro-cobranca-row {
+    padding: 6px 10px;
+    border-radius: 6px;
 }
 
 .box-fin-pago {
@@ -580,18 +607,16 @@ require "classes/repositorio.php";
 }
 
 .valor-multa-destaque {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 800;
 }
 
-.grid-datas-cobranca {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
+.grid-datas-cobranca-row {
+    display: flex;
+    gap: 12px;
     background: #fafafa;
     border-radius: 6px;
-    padding: 6px 8px;
-    margin-bottom: 6px;
+    padding: 6px 10px;
     border: 1px solid #f0f0f0;
 }
 
@@ -601,14 +626,14 @@ require "classes/repositorio.php";
 }
 
 .lbl-data {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: #78909c;
     text-transform: uppercase;
     font-weight: 600;
 }
 
 .val-data {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: #37474f;
 }
@@ -617,7 +642,7 @@ require "classes/repositorio.php";
     display: inline-block;
     padding: 1px 4px;
     border-radius: 4px;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
 }
 
 .badge-prazo-ok {
@@ -632,21 +657,20 @@ require "classes/repositorio.php";
 
 .chip-parecer {
     display: inline-block;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 2px 6px;
+    padding: 3px 8px;
     border-radius: 4px;
     background: #f3e8ff;
     color: #7e22ce;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, opacity 0.1s;
 }
 
-.card-cobranca-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #f8fafc;
-    border-top: 1px solid #edf2f7;
+.chip-parecer:active {
+    transform: scale(0.96);
+    opacity: 0.8;
 }
 
 .btn-card-action {
@@ -656,19 +680,19 @@ require "classes/repositorio.php";
     gap: 4px;
     border: none;
     border-radius: 6px;
-    height: 36px;
-    line-height: 36px;
-    font-size: 0.8rem;
+    height: 34px;
+    line-height: 34px;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
     transition: background-color 0.2s, box-shadow 0.2s;
-    padding: 0 6px;
+    padding: 0 10px;
     outline: none;
 }
 
 .btn-card-action i {
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .btn-inspecionar-boletos {
@@ -702,20 +726,37 @@ require "classes/repositorio.php";
     opacity: 0.8;
 }
 
-/* Responsividade Mobile (< 600px) */
-@media (max-width: 600px) {
-    .card-cobranca-actions {
+/* Responsividade Mobile (< 992px) */
+@media (max-width: 992px) {
+    .card-cobranca-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px;
+    }
+    .cobranca-col-identificacao,
+    .cobranca-col-financeiro,
+    .cobranca-col-datas,
+    .cobranca-col-juridico,
+    .cobranca-col-acoes {
+        min-width: 100%;
+        width: 100%;
+    }
+    .cobranca-col-acoes {
+        display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        padding: 8px 10px;
+        gap: 8px;
+        margin-top: 4px;
     }
     .btn-card-action {
-        font-size: 0.75rem;
+        width: 100%;
         height: 38px;
         line-height: 38px;
+        font-size: 0.8rem;
     }
-    .grid-datas-cobranca {
-        grid-template-columns: 1fr 1fr;
+    .grid-datas-cobranca-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 }
 </style>
@@ -723,14 +764,31 @@ require "classes/repositorio.php";
 <script>
 // Atualizar estatísticas de resumo dinamicamente
 (function() {
-    var total = <?php echo (int)$totalRegistros; ?>;
-    var cobrados = <?php echo (int)$totalCobrados; ?>;
-    var pendentes = <?php echo (int)$totalPendentes; ?>;
-    var valorFmt = "R$ <?php echo number_format($valorTotalCobrado, 2, ',', '.'); ?>";
-    
-    var htmlStats = `<b>Total:</b> ${total} &nbsp;|&nbsp; <b class="green-text text-darken-2">Cobrados:</b> ${cobrados} (${valorFmt}) &nbsp;|&nbsp; <b class="amber-text text-darken-3">Pendentes:</b> ${pendentes}`;
-    var el = document.getElementById('stats-resumo-cobrancas');
-    if (el) el.innerHTML = htmlStats;
+    window.recalcularResumoCobranca = function() {
+        var total = 0;
+        var cobrados = 0;
+        var pendentes = 0;
+        var valorTotalCobrado = 0.0;
+
+        $('.card-cobranca-wrapper:visible').each(function() {
+            total++;
+            var isCobrado = $(this).attr('data-cobrado') === '1';
+            if (isCobrado) {
+                cobrados++;
+                var v = parseFloat($(this).attr('data-valor') || 0);
+                if (!isNaN(v)) valorTotalCobrado += v;
+            } else {
+                pendentes++;
+            }
+        });
+
+        var valorFmt = "R$ " + valorTotalCobrado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var htmlStats = `<b>Total:</b> ${total} &nbsp;|&nbsp; <b class="green-text text-darken-2">Cobrados:</b> ${cobrados} (${valorFmt}) &nbsp;|&nbsp; <b class="amber-text text-darken-3">Pendentes:</b> ${pendentes}`;
+        var el = document.getElementById('stats-resumo-cobrancas');
+        if (el) el.innerHTML = htmlStats;
+    };
+
+    recalcularResumoCobranca();
 })();
 </script>
 
