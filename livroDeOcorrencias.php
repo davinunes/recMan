@@ -17,6 +17,371 @@ $hasUltraLogin = !empty($tokenConselheiroAtual);
 // Visão atual (Prático = padrão; Analítico = baseado no banco local)
 $visao = $_GET['visao'] ?? 'pratico';
 
+// Mapa de cores para ocoTipo
+$mapaCoresTipo = [
+    115 => ['nome' => 'Fale com o Conselho', 'bg' => '#6f42c1', 'color' => '#ffffff'],
+    247 => ['nome' => 'Monitoramento', 'bg' => '#fd7e14', 'color' => '#ffffff'],
+    114 => ['nome' => 'Livro de ocorrência', 'bg' => '#0d6efd', 'color' => '#ffffff'],
+    86  => ['nome' => 'Fale com o Síndico', 'bg' => '#dc3545', 'color' => '#ffffff'],
+    109 => ['nome' => 'Fale com o Síndico de Bloco', 'bg' => '#b02a37', 'color' => '#ffffff'],
+    102 => ['nome' => 'Fale com a Administração', 'bg' => '#20c997', 'color' => '#ffffff'],
+    145 => ['nome' => 'Fale com a Mensageria', 'bg' => '#ffc107', 'color' => '#000000'],
+    87  => ['nome' => 'Fale com a portaria', 'bg' => '#795548', 'color' => '#ffffff'],
+    126 => ['nome' => 'Fale com a Supervisão', 'bg' => '#0dcaf0', 'color' => '#000000'],
+    172 => ['nome' => 'Suporte ao Controle de Acesso', 'bg' => '#495057', 'color' => '#ffffff']
+];
+
+/**
+ * Função para renderizar o bloco completo do chat/detalhes da ocorrência
+ */
+function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselho, $hasUltraLogin, $mapaCoresTipo) {
+    if (!$detalheSel || empty($detalheSel['local'])) {
+        return '<div style="padding: 40px; text-align: center; color: #888;">Selecione uma ocorrência na lista para visualizar o chat e mensagens.</div>';
+    }
+
+    $local = $detalheSel['local'];
+    $notas = $detalheSel['notasInternas'] ?? [];
+    $tags = $detalheSel['tagsUnidades'] ?? [];
+    $remote = $detalheSel['remoteData'] ?? null;
+    $tipoId = (int)($local['oco_tipo'] ?? 115);
+    $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
+
+    $dadosJsonLoc = !empty($local['dados_json']) ? json_decode($local['dados_json'], true) : [];
+    
+    // Verificar status de leitura relacional específico para este conselheiro
+    $linkL = DBConnect();
+    vds_ensure_leitura_table_exists($linkL);
+    $stmtCheckL = mysqli_prepare($linkL, "SELECT lido FROM ocorrencia_leitura_conselheiro WHERE conselheiro_id = ? AND ocorrencia_id = ? LIMIT 1");
+    $isLidaConselheiro = false;
+    if ($stmtCheckL) {
+        $locId = (int)$local['id'];
+        mysqli_stmt_bind_param($stmtCheckL, "ii", $usuarioIdConselho, $locId);
+        mysqli_stmt_execute($stmtCheckL);
+        $resCheckL = mysqli_stmt_get_result($stmtCheckL);
+        $rowCheckL = mysqli_fetch_assoc($resCheckL);
+        if ($rowCheckL) {
+            $isLidaConselheiro = ((int)$rowCheckL['lido'] === 1);
+        } else {
+            $isLidaConselheiro = !empty($dadosJsonLoc['lida']) || !empty($dadosJsonLoc['isLida']);
+        }
+        mysqli_stmt_close($stmtCheckL);
+    }
+    DBClose($linkL);
+
+    $isLidaVds = $isLidaConselheiro;
+
+    ob_start();
+    ?>
+    <!-- Header do Chat -->
+    <div class="chat-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <a href="javascript:void(0)" onclick="voltarParaListaMobile()" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;" title="Voltar à lista">
+                <i class="material-icons">arrow_back</i>
+            </a>
+
+            <div>
+                <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>; margin-bottom:3px;">
+                    <?= htmlspecialchars($infoTipo['nome']) ?>
+                </span>
+                <h6 style="margin: 2px 0; font-weight:600;">
+                    Bloco <?= htmlspecialchars($local['bloco']) ?> - Unidade <?= htmlspecialchars($local['unidade']) ?> 
+                    <small style="color:#666;">(Protocolo: <?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>)</small>
+                </h6>
+                <div style="font-size: 0.8rem; color: #666;">
+                    Abertura: <?= htmlspecialchars($local['abertura']) ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões Práticos com Ações AJAX Silenciosas (Sem Reload e Sem Skeleton) -->
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <!-- Grupo de Ícones para Classificação de Responsabilidade -->
+            <div style="display:flex; align-items:center; gap:4px; background:#f8f9fa; padding:2px 6px; border-radius:6px; border:1px solid #dee2e6;">
+                <span style="font-weight:600; font-size:0.75rem; color:#555; margin-right:2px;">Resp:</span>
+
+                <!-- Botão Não Atribuído -->
+                <button type="button" id="btn-resp-none" class="btn-flat btn-small btn-resp-icon <?= empty($local['responsabilidade']) ? 'active' : '' ?>" title="Não Atribuído / Pendente" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, '')">
+                    <i class="material-icons tiny">person_off</i>
+                </button>
+
+                <!-- Botão Síndico -->
+                <button type="button" id="btn-resp-sindico" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sindico' ? 'active-sindico' : '' ?>" title="Síndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sindico')">
+                    <i class="material-icons tiny">gavel</i>
+                </button>
+
+                <!-- Botão Subsíndico -->
+                <button type="button" id="btn-resp-sub" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sub' ? 'active-sub' : '' ?>" title="Subsíndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sub')">
+                    <i class="material-icons tiny">badge</i>
+                </button>
+            </div>
+
+            <!-- Marcar/Desmarcar Resolvido (Local) via AJAX -->
+            <button type="button" id="btn-ajax-resolvido" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $local['resolvido'] ? 'Reabrir Chamado (Local)' : 'Marcar como Resolvido (Local)' ?>" onclick="executarAcaoAjaxResolvido(<?= $local['id'] ?>, <?= $local['resolvido'] ? 0 : 1 ?>)">
+                <i class="material-icons left tiny" id="icon-ajax-resolvido"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
+                <span id="lbl-ajax-resolvido"><?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?></span>
+            </button>
+
+            <!-- Marcar como Lido / Não Lido (VDS Remoto - Icon Button Sugestivo via AJAX) -->
+            <button type="button" id="btn-ajax-lido" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $isLidaVds ? 'Marcar como NÃO Lido na VDS' : 'Marcar como LIDO na VDS' ?>" onclick="executarAcaoAjaxLido(<?= $local['id'] ?>, '<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= $isLidaVds ? 0 : 1 ?>)">
+                <i class="material-icons left tiny" id="icon-ajax-lido"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
+                <span id="lbl-ajax-lido"><?= $isLidaVds ? 'Marcar NÃO Lido' : 'Marcar Lido' ?></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tags Vinculadas (Entrada Inteligente + Remoção via AJAX, Sem Reload) -->
+    <div style="background:#fff; padding:8px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+            <strong>Tags / Vínculos:</strong>
+            <span id="tags-container" data-ocorrencia-id="<?= (int)$local['id'] ?>" style="display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                <?php if (empty($tags)): ?>
+                    <span id="tags-vazio" style="color:#999;">Nenhuma tag vinculada</span>
+                <?php else: ?>
+                    <?php foreach ($tags as $t): ?>
+                        <?php if ($t['bloco'] === 'NOTIF'): ?>
+                            <span class="tag-badge badge orange lighten-4 orange-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                📋 Notificação <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                            </span>
+                        <?php elseif ($t['bloco'] === 'TAG'): ?>
+                            <span class="tag-badge badge grey lighten-3 grey-text text-darken-3" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                🏷️ <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="tag-badge badge blue lighten-4 blue-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
+                                🏢 <?= htmlspecialchars(strtoupper($t['bloco']) . $t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
+                            </span>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </span>
+        </div>
+
+        <!-- Input Livre Inteligente (+ Tag) via AJAX -->
+        <div style="display:flex; gap:6px; align-items:center; margin:0;">
+            <input type="text" id="input-adicionar-tag" placeholder="Digite Unidade (B1108) ou Notificação (123/2026)..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>);}" style="height:28px; line-height:28px; margin:0; font-size:0.8rem; width:260px; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
+            <button type="button" id="btn-adicionar-tag" onclick="executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>)" class="btn-small waves-effect waves-light blue darken-1" style="height:28px; line-height:28px; padding:0 8px; font-size:0.75rem;">
+                <i class="material-icons left tiny" style="margin-right:2px;">add</i> Tag
+            </button>
+        </div>
+    </div>
+
+    <!-- Feed do Chat WhatsApp -->
+    <div class="chat-body">
+        <!-- Mensagens da VDS (Morador / Remoto) -->
+        <?php
+        $eventosRemotos = [];
+        if (!empty($remote)) {
+            if (isset($remote['eventos']) && is_array($remote['eventos'])) {
+                $eventosRemotos = $remote['eventos'];
+            } elseif (isset($remote['regs']) && is_array($remote['regs'])) {
+                $eventosRemotos = $remote['regs'];
+            } elseif (isset($remote['data']['eventos']) && is_array($remote['data']['eventos'])) {
+                $eventosRemotos = $remote['data']['eventos'];
+            } elseif (is_array($remote) && isset($remote[0])) {
+                $eventosRemotos = $remote;
+            }
+        }
+
+        // Fallback: Se não houver lista de eventos na resposta remota, extrai a mensagem inicial do dados_json armazenado localmente
+        if (empty($eventosRemotos) && !empty($local['dados_json'])) {
+            $dadosJsonLocal = json_decode($local['dados_json'], true);
+            if (!empty($dadosJsonLocal)) {
+                if (isset($dadosJsonLocal['eventos']) && is_array($dadosJsonLocal['eventos'])) {
+                    $eventosRemotos = $dadosJsonLocal['eventos'];
+                } elseif (!empty($dadosJsonLocal['mensagem']) || !empty($dadosJsonLocal['titulo'])) {
+                    $eventosRemotos[] = [
+                        'por' => $dadosJsonLocal['por'] ?? ($dadosJsonLocal['autor']['nome'] ?? 'Morador/Solicitante'),
+                        'cargo' => $dadosJsonLocal['cargo'] ?? 'Morador',
+                        'mensagem' => $dadosJsonLocal['mensagem'] ?? ($dadosJsonLocal['titulo'] ?? ''),
+                        'dtHora' => $dadosJsonLocal['dtExibicao'] ?? ($dadosJsonLocal['dthora'] ?? ($dadosJsonLocal['abertura'] ?? '')),
+                        'foto' => $dadosJsonLocal['foto'] ?? '',
+                        'listaAnexo' => $dadosJsonLocal['listaAnexo'] ?? []
+                    ];
+                }
+            }
+        }
+
+        // Mapear IDs de eventos VDS publicados pelo Conselho => dados do conselheiro (nome, avatar, id)
+        $publishedEventMap = [];
+        foreach ($notas as $n) {
+            if (!empty($n['vds_evento_uuid'])) {
+                $publishedEventMap[(string)$n['vds_evento_uuid']] = [
+                    'nome' => $n['conselheiro_nome'] ?? 'Conselheiro',
+                    'avatar' => $n['conselheiro_avatar'] ?? null,
+                    'id' => $n['conselheiro_id'] ?? null
+                ];
+            }
+        }
+        ?>
+
+        <?php if (!empty($eventosRemotos)): ?>
+            <?php foreach ($eventosRemotos as $ev): ?>
+                <?php
+                $evId = (string)($ev['ocorrencia'] ?? ($ev['ocorrenciaId'] ?? ($ev['id'] ?? '')));
+                $conselheiroAutor = ($evId && isset($publishedEventMap[$evId])) ? $publishedEventMap[$evId] : null;
+
+                $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
+                $cargo = $ev['cargo'] ?? 'Morador';
+                $mensagemTexto = $ev['mensagem'] ?? '';
+                $dthoraStr = $ev['dtHora'] ?? ($ev['dthora'] ?? ($ev['data'] ?? ''));
+                if (preg_match('/^\d{4}-\d{2}-\d{2}T/', $dthoraStr)) {
+                    $dthoraStr = date('d/m/Y H:i', strtotime($dthoraStr));
+                }
+                
+                $foto = $ev['foto'] ?? ($ev['fotoUrl'] ?? '');
+                if ($foto && strpos($foto, '/') === 0) {
+                    $foto = 'https://app.vidadesindico.com.br' . $foto;
+                }
+                ?>
+                <div class="msg-bubble msg-left">
+                    <div class="msg-author">
+                        <span style="display:flex; align-items:center; gap:6px;">
+                            <?php if ($foto): ?>
+                                <img src="<?= htmlspecialchars($foto) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
+                            <?php endif; ?>
+                            <b><?= htmlspecialchars($porNome) ?></b> 
+                            <small style="color:#666;">(<?= htmlspecialchars($cargo) ?>)</small>
+                        </span>
+                    </div>
+                    
+                    <div style="margin-top:4px;"><?= vds_format_mensagem_text($mensagemTexto) ?></div>
+
+                    <?php if (!empty($ev['listaAnexo'])): ?>
+                        <div style="margin-top: 8px; display:flex; flex-direction:column; gap:6px;">
+                            <?php foreach ($ev['listaAnexo'] as $anx): ?>
+                                <?php
+                                $anxUrl = $anx['url'] ?? '';
+                                if ($anxUrl && strpos($anxUrl, '/') === 0) {
+                                    $anxUrl = 'https://app.vidadesindico.com.br' . $anxUrl;
+                                }
+                                $nomeAnx = $anx['nome'] ?? 'anexo';
+                                $ext = strtolower(pathinfo($nomeAnx, PATHINFO_EXTENSION));
+                                ?>
+                                <?php if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
+                                    <div>
+                                        <img src="<?= htmlspecialchars($anxUrl) ?>" class="responsive-img materialboxed z-depth-1" style="max-width:280px; max-height:200px; border-radius:8px; cursor:pointer;" alt="<?= htmlspecialchars($nomeAnx) ?>">
+                                    </div>
+                                <?php elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])): ?>
+                                    <div>
+                                        <video controls preload="metadata" style="max-width:300px; max-height:220px; border-radius:8px;">
+                                            <source src="<?= htmlspecialchars($anxUrl) ?>" type="video/<?= $ext === 'mov' ? 'mp4' : $ext ?>">
+                                            Seu navegador não suporta a exibição deste vídeo.
+                                        </video>
+                                    </div>
+                                <?php else: ?>
+                                    <a href="<?= htmlspecialchars($anxUrl) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
+                                        <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars($nomeAnx) ?>
+                                    </a>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span><?= htmlspecialchars($dthoraStr) ?></span>
+                        <?php if ($conselheiroAutor): ?>
+                            <span style="background:#e8f5e9; color:#2e7d32; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                <?php if (!empty($conselheiroAutor['avatar'])): ?>
+                                    <img src="<?= htmlspecialchars($conselheiroAutor['avatar']) ?>" style="width:16px; height:16px; border-radius:50%; object-fit:cover;">
+                                <?php else: ?>
+                                    <i class="material-icons tiny" style="font-size:1rem;">person</i>
+                                <?php endif; ?>
+                                Publicado por <?= htmlspecialchars($conselheiroAutor['nome']) ?> (ID: <?= htmlspecialchars($conselheiroAutor['id']) ?>)
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+
+        <!-- Notas Internas do Conselho (somente as NÃO publicadas no remoto) -->
+        <?php foreach ($notas as $n): ?>
+            <?php if ($n['enviado_remoto']) continue; ?>
+            <?php
+            $avatarUser = !empty($n['conselheiro_avatar']) ? $n['conselheiro_avatar'] : '';
+            if (empty($avatarUser) && isset($_SESSION['avatar']) && $n['conselheiro_id'] == $usuarioIdConselho) {
+                $avatarUser = $_SESSION['avatar'];
+            }
+            if ($avatarUser && strpos($avatarUser, 'http') !== 0 && strpos($avatarUser, '/') !== 0) {
+                $avatarUser = '/' . $avatarUser;
+            }
+            $isMinhaNota = ((int)($n['conselheiro_id'] ?? 0) === (int)$usuarioIdConselho);
+            ?>
+            <div class="msg-bubble msg-internal" id="nota-interna-item-<?= $n['id'] ?>">
+                <div class="msg-author">
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <?php if ($avatarUser): ?>
+                            <img src="<?= htmlspecialchars($avatarUser) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #e0c068;">
+                        <?php else: ?>
+                            <i class="material-icons tiny" style="vertical-align:middle; color:#856404;">lock_outline</i>
+                        <?php endif; ?>
+                        <b><?= htmlspecialchars($n['conselheiro_nome']) ?></b> 
+                        <small style="color:#856404;">(ID: <?= htmlspecialchars($n['conselheiro_id'] ?? '1') ?> - Nota Interna)</small>
+                    </span>
+                </div>
+                <div style="margin-top:4px; font-size:0.95rem;"><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
+                
+                <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                    <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
+                    
+                    <?php if ($isMinhaNota): ?>
+                        <?php if ($hasUltraLogin): ?>
+                            <button type="button" class="btn-small orange white-text font-weight-bold btn-publicar-nota" onclick="publicarNotaRemotoAjax(<?= $n['id'] ?>, <?= $local['id'] ?>)" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
+                                Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
+                            </button>
+                        <?php else: ?>
+                            <a href="index.php?pag=configVds" class="btn-small grey lighten-1 black-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.72rem; border-radius:4px; text-transform:none;" title="Ative seu Ultra-Login para publicar diretamente na VDS">
+                                <i class="material-icons left tiny" style="margin-right:2px;">vpn_key</i> Requer Ultra-Login p/ Publicar VDS
+                            </a>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <span style="font-size:0.72rem; color:#856404; font-style:italic; background:#fff3cd; padding:2px 8px; border-radius:4px; border:1px solid #ffeeba; display:inline-flex; align-items:center; gap:3px;">
+                            <i class="material-icons tiny" style="vertical-align:middle; font-size:0.85rem;">lock</i> Apenas Leitura (Somente o autor pode publicar)
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Footer: Adicionar Nota Interna (1º Fator) -->
+    <div class="chat-footer">
+        <form id="form-adicionar-nota-interna" onsubmit="submeterNotaInternaAjax(event, <?= $local['id'] ?>)" style="margin:0;">
+            <input type="hidden" name="action" value="adicionar_nota_interna">
+            <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+            
+            <div style="display:flex; gap:10px; align-items:center;">
+                <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho..." required style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
+                <button type="submit" id="btn-salvar-nota-interna" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
+                    Salvar Nota Interna <i class="material-icons right">note_add</i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// Endpoint AJAX: Carregar Detalhes do Chat
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'carregar_detalhe') {
+    $selId = $_REQUEST['id'] ?? null;
+    $detalheSel = null;
+    if ($selId) {
+        $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
+    }
+    $htmlChat = vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselho, $hasUltraLogin, $mapaCoresTipo);
+
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => !empty($detalheSel),
+        'ocorrencia_id' => $selId,
+        'html' => $htmlChat,
+        'local' => $detalheSel['local'] ?? null
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // Processar Ações POST
 $msg = null;
 $msgType = 'info';
@@ -38,16 +403,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $texto = trim($_POST['texto'] ?? '');
         $conselheiroNome = $_SESSION['user_nome'] ?? ($_SESSION['nome'] ?? ($_SESSION['usuario_nome'] ?? 'Conselheiro'));
         
+        $resNota = ['success' => false, 'message' => 'Texto da nota vazio.'];
         if (!empty($texto)) {
             $resNota = vds_adicionar_nota_interna($ocorrenciaId, $usuarioIdConselho, $conselheiroNome, $texto);
-            if ($resNota['success']) {
-                $msg = "Nota interna salva no Conselho com sucesso.";
-                $msgType = "success";
-            }
+        }
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => $resNota['success'] ?? false,
+                'action' => 'adicionar_nota_interna',
+                'ocorrencia_id' => $ocorrenciaId,
+                'message' => $resNota['success'] ? "Nota interna salva no Conselho com sucesso." : ($resNota['message'] ?? 'Falha ao salvar nota.')
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($resNota['success']) {
+            $msg = "Nota interna salva no Conselho com sucesso.";
+            $msgType = "success";
         }
     } elseif ($action === 'publicar_remoto') {
         $notaId = (int)$_POST['nota_id'];
         $resPub = vds_publicar_nota_remoto($notaId, $usuarioIdConselho);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => $resPub['success'] ?? false,
+                'action' => 'publicar_remoto',
+                'nota_id' => $notaId,
+                'blockedByLock' => !empty($resPub['blockedByLock']),
+                'message' => $resPub['message'] ?? ''
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if ($resPub['success']) {
             $msg = $resPub['message'];
             $msgType = "success";
@@ -296,22 +689,6 @@ if (!$selId && !$isMobileView && !empty($ocorrencias)) {
 if (!$detalheSel && $selId) {
     $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
 }
-
-
-
-// Mapa de cores para ocoTipo
-$mapaCoresTipo = [
-    115 => ['nome' => 'Fale com o Conselho', 'bg' => '#6f42c1', 'color' => '#ffffff'],
-    247 => ['nome' => 'Monitoramento', 'bg' => '#fd7e14', 'color' => '#ffffff'],
-    114 => ['nome' => 'Livro de ocorrência', 'bg' => '#0d6efd', 'color' => '#ffffff'],
-    86  => ['nome' => 'Fale com o Síndico', 'bg' => '#dc3545', 'color' => '#ffffff'],
-    109 => ['nome' => 'Fale com o Síndico de Bloco', 'bg' => '#b02a37', 'color' => '#ffffff'],
-    102 => ['nome' => 'Fale com a Administração', 'bg' => '#20c997', 'color' => '#ffffff'],
-    145 => ['nome' => 'Fale com a Mensageria', 'bg' => '#ffc107', 'color' => '#000000'],
-    87  => ['nome' => 'Fale com a portaria', 'bg' => '#795548', 'color' => '#ffffff'],
-    126 => ['nome' => 'Fale com a Supervisão', 'bg' => '#0dcaf0', 'color' => '#000000'],
-    172 => ['nome' => 'Suporte ao Controle de Acesso', 'bg' => '#495057', 'color' => '#ffffff']
-];
 ?>
 
 <style>
@@ -612,7 +989,7 @@ $mapaCoresTipo = [
                             $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
                             $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
                             ?>
-                            <div class="item-oco <?= $isSel ? 'active' : '' ?>" id="item-oco-<?= $oco['id'] ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>&id=<?= $oco['id'] ?>&bloco=<?= urlencode($blocoFiltro) ?>&unidade=<?= urlencode($unidadeFiltro) ?>&status=<?= urlencode($statusFiltro) ?>&oco_tipo=<?= urlencode($tipoFiltro) ?>&responsabilidade=<?= urlencode($respFiltro) ?>'">
+                            <div class="item-oco <?= $isSel ? 'active' : '' ?>" id="item-oco-<?= $oco['id'] ?>" data-id="<?= $oco['id'] ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="selecionarOcorrencia(<?= $oco['id'] ?>, this, event)">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
                                         <?= htmlspecialchars($infoTipo['nome']) ?>
@@ -702,332 +1079,8 @@ $mapaCoresTipo = [
         </div>
 
         <div id="chat-real-content" style="height:100%; display:flex; flex-direction:column;">
-        <?php if (!$detalheSel): ?>
-            <div style="padding: 40px; text-align: center; color: #888;">Selecione uma ocorrência na lista para visualizar o chat e mensagens.</div>
-        <?php else: ?>
-            <?php
-            $local = $detalheSel['local'];
-            $notas = $detalheSel['notasInternas'];
-            $tags = $detalheSel['tagsUnidades'];
-            $remote = $detalheSel['remoteData'];
-            $tipoId = (int)($local['oco_tipo'] ?? 115);
-            $infoTipo = $mapaCoresTipo[$tipoId] ?? ['nome' => 'Ocorrência', 'bg' => '#6c757d', 'color' => '#fff'];
-
-            $dadosJsonLoc = !empty($local['dados_json']) ? json_decode($local['dados_json'], true) : [];
-            
-            // Verificar status de leitura relacional específico para este conselheiro
-            $linkL = DBConnect();
-            vds_ensure_leitura_table_exists($linkL);
-            $stmtCheckL = mysqli_prepare($linkL, "SELECT lido FROM ocorrencia_leitura_conselheiro WHERE conselheiro_id = ? AND ocorrencia_id = ? LIMIT 1");
-            $isLidaConselheiro = false;
-            if ($stmtCheckL) {
-                $locId = (int)$local['id'];
-                mysqli_stmt_bind_param($stmtCheckL, "ii", $usuarioIdConselho, $locId);
-                mysqli_stmt_execute($stmtCheckL);
-                $resCheckL = mysqli_stmt_get_result($stmtCheckL);
-                $rowCheckL = mysqli_fetch_assoc($resCheckL);
-                if ($rowCheckL) {
-                    $isLidaConselheiro = ((int)$rowCheckL['lido'] === 1);
-                } else {
-                    $isLidaConselheiro = !empty($dadosJsonLoc['lida']) || !empty($dadosJsonLoc['isLida']);
-                }
-                mysqli_stmt_close($stmtCheckL);
-            }
-            DBClose($linkL);
-
-            $isLidaVds = $isLidaConselheiro;
-            ?>
-
-            <!-- Header do Chat -->
-            <div class="chat-header">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <a href="index.php?pag=livroDeOcorrencias&visao=<?= $visao ?>" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;">
-                        <i class="material-icons">arrow_back</i>
-                    </a>
-
-                    <div>
-                        <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>; margin-bottom:3px;">
-                            <?= htmlspecialchars($infoTipo['nome']) ?>
-                        </span>
-                        <h6 style="margin: 2px 0; font-weight:600;">
-                            Bloco <?= htmlspecialchars($local['bloco']) ?> - Unidade <?= htmlspecialchars($local['unidade']) ?> 
-                            <small style="color:#666;">(Protocolo: <?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>)</small>
-                        </h6>
-                        <div style="font-size: 0.8rem; color: #666;">
-                            Abertura: <?= htmlspecialchars($local['abertura']) ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Botões Práticos com Ações AJAX Silenciosas (Sem Reload e Sem Skeleton) -->
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <!-- Grupo de Ícones para Classificação de Responsabilidade -->
-                    <div style="display:flex; align-items:center; gap:4px; background:#f8f9fa; padding:2px 6px; border-radius:6px; border:1px solid #dee2e6;">
-                        <span style="font-weight:600; font-size:0.75rem; color:#555; margin-right:2px;">Resp:</span>
-
-                        <!-- Botão Não Atribuído -->
-                        <button type="button" id="btn-resp-none" class="btn-flat btn-small btn-resp-icon <?= empty($local['responsabilidade']) ? 'active' : '' ?>" title="Não Atribuído / Pendente" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, '')">
-                            <i class="material-icons tiny">person_off</i>
-                        </button>
-
-                        <!-- Botão Síndico -->
-                        <button type="button" id="btn-resp-sindico" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sindico' ? 'active-sindico' : '' ?>" title="Síndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sindico')">
-                            <i class="material-icons tiny">gavel</i>
-                        </button>
-
-                        <!-- Botão Subsíndico -->
-                        <button type="button" id="btn-resp-sub" class="btn-flat btn-small btn-resp-icon <?= $local['responsabilidade'] === 'sub' ? 'active-sub' : '' ?>" title="Subsíndico" onclick="executarAcaoAjaxResponsabilidade(<?= $local['id'] ?>, 'sub')">
-                            <i class="material-icons tiny">badge</i>
-                        </button>
-                    </div>
-
-                    <!-- Marcar/Desmarcar Resolvido (Local) via AJAX -->
-                    <button type="button" id="btn-ajax-resolvido" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $local['resolvido'] ? 'Reabrir Chamado (Local)' : 'Marcar como Resolvido (Local)' ?>" onclick="executarAcaoAjaxResolvido(<?= $local['id'] ?>, <?= $local['resolvido'] ? 0 : 1 ?>)">
-                        <i class="material-icons left tiny" id="icon-ajax-resolvido"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
-                        <span id="lbl-ajax-resolvido"><?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?></span>
-                    </button>
-
-                    <!-- Marcar como Lido / Não Lido (VDS Remoto - Icon Button Sugestivo via AJAX) -->
-                    <button type="button" id="btn-ajax-lido" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $isLidaVds ? 'Marcar como NÃO Lido na VDS' : 'Marcar como LIDO na VDS' ?>" onclick="executarAcaoAjaxLido(<?= $local['id'] ?>, '<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= $isLidaVds ? 0 : 1 ?>)">
-                        <i class="material-icons left tiny" id="icon-ajax-lido"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
-                        <span id="lbl-ajax-lido"><?= $isLidaVds ? 'Marcar NÃO Lido' : 'Marcar Lido' ?></span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tags Vinculadas (Entrada Inteligente + Remoção via AJAX, Sem Reload) -->
-            <div style="background:#fff; padding:8px 20px; border-bottom:1px solid #e0e0e0; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-                    <strong>Tags / Vínculos:</strong>
-                    <span id="tags-container" data-ocorrencia-id="<?= (int)$local['id'] ?>" style="display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px;">
-                        <?php if (empty($tags)): ?>
-                            <span id="tags-vazio" style="color:#999;">Nenhuma tag vinculada</span>
-                        <?php else: ?>
-                            <?php foreach ($tags as $t): ?>
-                                <?php if ($t['bloco'] === 'NOTIF'): ?>
-                                    <span class="tag-badge badge orange lighten-4 orange-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
-                                        📋 Notificação <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
-                                    </span>
-                                <?php elseif ($t['bloco'] === 'TAG'): ?>
-                                    <span class="tag-badge badge grey lighten-3 grey-text text-darken-3" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
-                                        🏷️ <?= htmlspecialchars($t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="tag-badge badge blue lighten-4 blue-text text-darken-4" data-tag-id="<?= (int)$t['id'] ?>" title="Clique direito para remover" style="float:none; padding:2px 8px; margin:0; border-radius:4px; font-weight:600; position:relative; cursor:context-menu;">
-                                        🏢 <?= htmlspecialchars(strtoupper($t['bloco']) . $t['unidade']) ?><span class="tag-remove-btn" title="Remover tag" style="display:none; cursor:pointer; margin-left:6px; color:#d32f2f; font-weight:bold;">×</span>
-                                    </span>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </span>
-                </div>
-
-                <!-- Input Livre Inteligente (+ Tag) via AJAX -->
-                <div style="display:flex; gap:6px; align-items:center; margin:0;">
-                    <input type="text" id="input-adicionar-tag" placeholder="Digite Unidade (B1108) ou Notificação (123/2026)..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>);}" style="height:28px; line-height:28px; margin:0; font-size:0.8rem; width:260px; padding:0 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">
-                    <button type="button" id="btn-adicionar-tag" onclick="executarAcaoAjaxAdicionarTag(<?= (int)$local['id'] ?>)" class="btn-small waves-effect waves-light blue darken-1" style="height:28px; line-height:28px; padding:0 8px; font-size:0.75rem;">
-                        <i class="material-icons left tiny" style="margin-right:2px;">add</i> Tag
-                    </button>
-                </div>
-            </div>
-
-            <!-- Feed do Chat WhatsApp -->
-            <div class="chat-body">
-                <!-- Mensagens da VDS (Morador / Remoto) -->
-                <?php
-                $eventosRemotos = [];
-                if (!empty($remote)) {
-                    if (isset($remote['eventos']) && is_array($remote['eventos'])) {
-                        $eventosRemotos = $remote['eventos'];
-                    } elseif (isset($remote['regs']) && is_array($remote['regs'])) {
-                        $eventosRemotos = $remote['regs'];
-                    } elseif (isset($remote['data']['eventos']) && is_array($remote['data']['eventos'])) {
-                        $eventosRemotos = $remote['data']['eventos'];
-                    } elseif (is_array($remote) && isset($remote[0])) {
-                        $eventosRemotos = $remote;
-                    }
-                }
-
-                // Fallback: Se não houver lista de eventos na resposta remota, extrai a mensagem inicial do dados_json armazenado localmente
-                if (empty($eventosRemotos) && !empty($local['dados_json'])) {
-                    $dadosJsonLocal = json_decode($local['dados_json'], true);
-                    if (!empty($dadosJsonLocal)) {
-                        if (isset($dadosJsonLocal['eventos']) && is_array($dadosJsonLocal['eventos'])) {
-                            $eventosRemotos = $dadosJsonLocal['eventos'];
-                        } elseif (!empty($dadosJsonLocal['mensagem']) || !empty($dadosJsonLocal['titulo'])) {
-                            $eventosRemotos[] = [
-                                'por' => $dadosJsonLocal['por'] ?? ($dadosJsonLocal['autor']['nome'] ?? 'Morador/Solicitante'),
-                                'cargo' => $dadosJsonLocal['cargo'] ?? 'Morador',
-                                'mensagem' => $dadosJsonLocal['mensagem'] ?? ($dadosJsonLocal['titulo'] ?? ''),
-                                'dtHora' => $dadosJsonLocal['dtExibicao'] ?? ($dadosJsonLocal['dthora'] ?? ($dadosJsonLocal['abertura'] ?? '')),
-                                'foto' => $dadosJsonLocal['foto'] ?? '',
-                                'listaAnexo' => $dadosJsonLocal['listaAnexo'] ?? []
-                            ];
-                        }
-                    }
-                }
-
-                // Mapear IDs de eventos VDS publicados pelo Conselho => dados do conselheiro (nome, avatar, id)
-                $publishedEventMap = [];
-                foreach ($notas as $n) {
-                    if (!empty($n['vds_evento_uuid'])) {
-                        $publishedEventMap[(string)$n['vds_evento_uuid']] = [
-                            'nome' => $n['conselheiro_nome'] ?? 'Conselheiro',
-                            'avatar' => $n['conselheiro_avatar'] ?? null,
-                            'id' => $n['conselheiro_id'] ?? null
-                        ];
-                    }
-                }
-                ?>
-
-                <?php if (!empty($eventosRemotos)): ?>
-                    <?php foreach ($eventosRemotos as $ev): ?>
-                        <?php
-                        $evId = (string)($ev['ocorrencia'] ?? ($ev['ocorrenciaId'] ?? ($ev['id'] ?? '')));
-                        $conselheiroAutor = ($evId && isset($publishedEventMap[$evId])) ? $publishedEventMap[$evId] : null;
-
-                        $porNome = $ev['por'] ?? ($ev['autor']['nome'] ?? 'Morador/Solicitante');
-                        $cargo = $ev['cargo'] ?? 'Morador';
-                        $mensagemTexto = $ev['mensagem'] ?? '';
-                        $dthoraStr = $ev['dtHora'] ?? ($ev['dthora'] ?? ($ev['data'] ?? ''));
-                        if (preg_match('/^\d{4}-\d{2}-\d{2}T/', $dthoraStr)) {
-                            $dthoraStr = date('d/m/Y H:i', strtotime($dthoraStr));
-                        }
-                        
-                        $foto = $ev['foto'] ?? ($ev['fotoUrl'] ?? '');
-                        if ($foto && strpos($foto, '/') === 0) {
-                            $foto = 'https://app.vidadesindico.com.br' . $foto;
-                        }
-                        ?>
-                        <div class="msg-bubble msg-left">
-                            <div class="msg-author">
-                                <span style="display:flex; align-items:center; gap:6px;">
-                                    <?php if ($foto): ?>
-                                        <img src="<?= htmlspecialchars($foto) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
-                                    <?php endif; ?>
-                                    <b><?= htmlspecialchars($porNome) ?></b> 
-                                    <small style="color:#666;">(<?= htmlspecialchars($cargo) ?>)</small>
-                                </span>
-                            </div>
-                            
-                            <div style="margin-top:4px;"><?= vds_format_mensagem_text($mensagemTexto) ?></div>
-
-                            <?php if (!empty($ev['listaAnexo'])): ?>
-                                <div style="margin-top: 8px; display:flex; flex-direction:column; gap:6px;">
-                                    <?php foreach ($ev['listaAnexo'] as $anx): ?>
-                                        <?php
-                                        $anxUrl = $anx['url'] ?? '';
-                                        if ($anxUrl && strpos($anxUrl, '/') === 0) {
-                                            $anxUrl = 'https://app.vidadesindico.com.br' . $anxUrl;
-                                        }
-                                        $nomeAnx = $anx['nome'] ?? 'anexo';
-                                        $ext = strtolower(pathinfo($nomeAnx, PATHINFO_EXTENSION));
-                                        ?>
-                                        <?php if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
-                                            <div>
-                                                <img src="<?= htmlspecialchars($anxUrl) ?>" class="responsive-img materialboxed z-depth-1" style="max-width:280px; max-height:200px; border-radius:8px; cursor:pointer;" alt="<?= htmlspecialchars($nomeAnx) ?>">
-                                            </div>
-                                        <?php elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])): ?>
-                                            <div>
-                                                <video controls preload="metadata" style="max-width:300px; max-height:220px; border-radius:8px;">
-                                                    <source src="<?= htmlspecialchars($anxUrl) ?>" type="video/<?= $ext === 'mov' ? 'mp4' : $ext ?>">
-                                                    Seu navegador não suporta a exibição deste vídeo.
-                                                </video>
-                                            </div>
-                                        <?php else: ?>
-                                            <a href="<?= htmlspecialchars($anxUrl) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">
-                                                <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars($nomeAnx) ?>
-                                            </a>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center;">
-                                <span><?= htmlspecialchars($dthoraStr) ?></span>
-                                <?php if ($conselheiroAutor): ?>
-                                    <span style="background:#e8f5e9; color:#2e7d32; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
-                                        <?php if (!empty($conselheiroAutor['avatar'])): ?>
-                                            <img src="<?= htmlspecialchars($conselheiroAutor['avatar']) ?>" style="width:16px; height:16px; border-radius:50%; object-fit:cover;">
-                                        <?php else: ?>
-                                            <i class="material-icons tiny" style="font-size:1rem;">person</i>
-                                        <?php endif; ?>
-                                        Publicado por <?= htmlspecialchars($conselheiroAutor['nome']) ?> (ID: <?= htmlspecialchars($conselheiroAutor['id']) ?>)
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-
-                <!-- Notas Internas do Conselho (somente as NÃO publicadas no remoto) -->
-                <?php foreach ($notas as $n): ?>
-                    <?php if ($n['enviado_remoto']) continue; ?>
-                    <?php
-                    $avatarUser = !empty($n['conselheiro_avatar']) ? $n['conselheiro_avatar'] : '';
-                    if (empty($avatarUser) && isset($_SESSION['avatar']) && $n['conselheiro_id'] == $usuarioIdConselho) {
-                        $avatarUser = $_SESSION['avatar'];
-                    }
-                    if ($avatarUser && strpos($avatarUser, 'http') !== 0 && strpos($avatarUser, '/') !== 0) {
-                        $avatarUser = '/' . $avatarUser;
-                    }
-                    $isMinhaNota = ((int)($n['conselheiro_id'] ?? 0) === (int)$usuarioIdConselho);
-                    ?>
-                    <div class="msg-bubble msg-internal">
-                        <div class="msg-author">
-                            <span style="display:flex; align-items:center; gap:6px;">
-                                <?php if ($avatarUser): ?>
-                                    <img src="<?= htmlspecialchars($avatarUser) ?>" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #e0c068;">
-                                <?php else: ?>
-                                    <i class="material-icons tiny" style="vertical-align:middle; color:#856404;">lock_outline</i>
-                                <?php endif; ?>
-                                <b><?= htmlspecialchars($n['conselheiro_nome']) ?></b> 
-                                <small style="color:#856404;">(ID: <?= htmlspecialchars($n['conselheiro_id'] ?? '1') ?> - Nota Interna)</small>
-                            </span>
-                        </div>
-                        <div style="margin-top:4px; font-size:0.95rem;"><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
-                        
-                        <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                            <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
-                            
-                            <?php if ($isMinhaNota): ?>
-                                <?php if ($hasUltraLogin): ?>
-                                    <form method="POST" style="margin:0;">
-                                        <input type="hidden" name="action" value="publicar_remoto">
-                                        <input type="hidden" name="nota_id" value="<?= $n['id'] ?>">
-                                        <button type="submit" class="btn-small orange white-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.75rem; border-radius:4px;">
-                                            Publicar no Remoto (VDS) <i class="material-icons right tiny" style="margin-left:4px;">send</i>
-                                        </button>
-                                    </form>
-                                <?php else: ?>
-                                    <a href="index.php?pag=configVds" class="btn-small grey lighten-1 black-text font-weight-bold" style="height:26px; line-height:26px; padding:0 10px; font-size:0.72rem; border-radius:4px; text-transform:none;" title="Ative seu Ultra-Login para publicar diretamente na VDS">
-                                        <i class="material-icons left tiny" style="margin-right:2px;">vpn_key</i> Requer Ultra-Login p/ Publicar VDS
-                                    </a>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span style="font-size:0.72rem; color:#856404; font-style:italic; background:#fff3cd; padding:2px 8px; border-radius:4px; border:1px solid #ffeeba; display:inline-flex; align-items:center; gap:3px;">
-                                    <i class="material-icons tiny" style="vertical-align:middle; font-size:0.85rem;">lock</i> Apenas Leitura (Somente o autor pode publicar)
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-
-            <!-- Footer: Adicionar Nota Interna (1º Fator) -->
-            <div class="chat-footer">
-                <form method="POST">
-                    <input type="hidden" name="action" value="adicionar_nota_interna">
-                    <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
-                    
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <textarea name="texto" placeholder="Digite uma Nota Interna do Conselho..." required style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
-                        <button type="submit" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
-                            Salvar Nota Interna <i class="material-icons right">note_add</i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        <?php endif; ?>
+            <?= vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselho, $hasUltraLogin, $mapaCoresTipo) ?>
+        </div>
     </div>
 </div>
 
@@ -1115,12 +1168,50 @@ $mapaCoresTipo = [
         <?php endif; ?>
     </div>
 <?php endif; ?>
-        </div> <!-- Fecha #chat-real-content -->
-    </div>
 
 <script>
+// Gerenciamento de Persistência de Grupos Colapsados (LocalStorage)
+const STORAGE_KEY_GRUPOS = 'vds_grupos_colapsados';
+
+function getGruposColapsados() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_GRUPOS)) || {};
+    } catch(e) {
+        return {};
+    }
+}
+
+function setGrupoColapsado(groupId, isCollapsed) {
+    try {
+        const state = getGruposColapsados();
+        state[groupId] = isCollapsed;
+        localStorage.setItem(STORAGE_KEY_GRUPOS, JSON.stringify(state));
+    } catch(e) {}
+}
+
+function aplicarEstadoGruposSalvo() {
+    const state = getGruposColapsados();
+    for (let groupId in state) {
+        if (state.hasOwnProperty(groupId)) {
+            const isCollapsed = !!state[groupId];
+            const $body = $('#' + groupId);
+            const $icon = $('.grupo-oco-header[data-target="' + groupId + '"]').find('.grupo-icon-toggle');
+            if (isCollapsed) {
+                $body.hide();
+                $icon.text('expand_more');
+            } else {
+                $body.show();
+                $icon.text('expand_less');
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Finalizar a barra de progresso superior e ocultar o Skeleton Global de Tela Cheia
+    // 1. Restaurar o estado dos grupos colapsados pelo conselheiro
+    aplicarEstadoGruposSalvo();
+
+    // 2. Finalizar barra de progresso e overlay inicial
     let $loader = $('#vds-top-loader');
     if ($loader.length) {
         $loader.css('width', '100%');
@@ -1130,75 +1221,67 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
     }
     $('#vds-content-skeleton-overlay, #vds-full-page-skeleton-overlay').fadeOut(250);
+
     // Controller de Skeleton Screen & Progress Bar (Vercel Style)
     window.triggerVdsSkeleton = function(onlyChat = true) {
-        // 1. Mostrar barra de progresso horizontal no topo da janela
         let $loader = $('#vds-top-loader');
         if (!$loader.length) {
             $('body').append('<div id="vds-top-loader"></div>');
             $loader = $('#vds-top-loader');
         }
-        $loader.css({ width: '20%', opacity: 1 });
-        setTimeout(() => $loader.css('width', '55%'), 150);
-        setTimeout(() => $loader.css('width', '85%'), 400);
+        $loader.css({ width: '25%', opacity: 1 });
+        setTimeout(() => $loader.css('width', '65%'), 120);
+        setTimeout(() => $loader.css('width', '88%'), 300);
 
-        // 2. Ocultar o conteúdo real e exibir o Esqueleto instantaneamente
         if (onlyChat) {
+            // Apenas o painel da direita pisca/shimmer de forma limpa e discreta
             $('#chat-real-content').hide();
             $('#vds-skeleton-chat-container').addClass('active').show();
         } else {
             $('#chat-real-content').hide();
             $('#vds-skeleton-chat-container').addClass('active').show();
-            $('.sidebar-feed').css('opacity', '0.55');
+            $('.sidebar-feed').css('opacity', '0.65');
         }
     };
 
-    // Ativar o Skeleton ao clicar em qualquer item de ocorrência na lista
-    $(document).on('click', '.item-oco', function() {
-        triggerVdsSkeleton(true);
-    });
-
-    // Ativar o Skeleton ao trocar de visão (Prático x Analítico), sincronizar ou filtrar
-    $(document).on('click', 'a[href*="livroDeOcorrencias"], button[type="submit"]', function() {
-        triggerVdsSkeleton(false);
-    });
-
-    // Ativar ao submeter formulários de filtro / ação
-    $(document).on('submit', 'form', function() {
-        triggerVdsSkeleton(false);
-    });
-    // 1. Toggle individual de cabeçalho de categoria/grupo
+    // Toggle individual de cabeçalho de categoria/grupo com persistência
     $(document).on('click', '.grupo-oco-header', function() {
         const targetId = $(this).data('target');
         const $body = $('#' + targetId);
         const $icon = $(this).find('.grupo-icon-toggle');
         
         $body.slideToggle(150, function() {
-            if ($body.is(':visible')) {
-                $icon.text('expand_less');
-            } else {
-                $icon.text('expand_more');
-            }
+            const isVisible = $body.is(':visible');
+            $icon.text(isVisible ? 'expand_less' : 'expand_more');
+            setGrupoColapsado(targetId, !isVisible);
         });
     });
 
-    // 2. Master Toggle: Recolher / Expandir Todos os Grupos
+    // Master Toggle: Recolher / Expandir Todos os Grupos com persistência
     let todosExpandidos = true;
     $('#btn-toggle-todos-grupos').on('click', function(e) {
         e.preventDefault();
         todosExpandidos = !todosExpandidos;
+        const state = getGruposColapsados();
         if (todosExpandidos) {
             $('.grupo-oco-body').slideDown(150);
             $('.grupo-icon-toggle').text('expand_less');
             $('#lbl-toggle-grupos').text('Recolher Todos');
+            $('.grupo-oco-body').each(function() {
+                state[$(this).attr('id')] = false;
+            });
         } else {
             $('.grupo-oco-body').slideUp(150);
             $('.grupo-icon-toggle').text('expand_more');
             $('#lbl-toggle-grupos').text('Expandir Todos');
+            $('.grupo-oco-body').each(function() {
+                state[$(this).attr('id')] = true;
+            });
         }
+        localStorage.setItem(STORAGE_KEY_GRUPOS, JSON.stringify(state));
     });
 
-    // 3. Busca Rápida Dinâmica no Cliente (Navegador)
+    // Busca Rápida Dinâmica no Cliente (Navegador)
     $('#input-busca-rapida-oco').on('keyup input', function() {
         const term = $(this).val().toLowerCase().trim();
         let visiveisTotais = 0;
@@ -1230,7 +1313,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#cnt-visivel-ocorrencias').text(visiveisTotais);
     });
 
-    // 4. Carregamento Progressivo via AJAX da API VDS (Página 2, 3, etc. injetadas dinamicamente)
+    // Carregamento Progressivo via AJAX da API VDS (Páginas 2, 3, etc.)
     const mapaCoresTipoJS = <?= json_encode($mapaCoresTipo, JSON_UNESCAPED_UNICODE) ?>;
     const visaoJS = <?= json_encode($visao) ?>;
     let vdsCurrentPage = 1;
@@ -1276,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const protText = oco.protocolo_vds || oco.id;
 
             const itemHtml = `
-                <div class="item-oco" id="item-oco-${oco.id}" onclick="window.location.href='index.php?pag=livroDeOcorrencias&visao=${visaoJS}&id=${oco.id}'">
+                <div class="item-oco" id="item-oco-${oco.id}" data-id="${oco.id}" onclick="selecionarOcorrencia(${oco.id}, this, event)">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span class="badge-tipo" style="background-color: ${infoTipo.bg}; color: ${infoTipo.color};">
                             ${infoTipo.nome}
@@ -1291,8 +1374,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                        <span>Resp: <strong>${respText}</strong></span>
-                        <span style="color: ${resolvidoColor};">
+                        <span>Resp: <strong class="resp-text-label">${respText}</strong></span>
+                        <span class="status-resolvido-label" style="color: ${resolvidoColor};">
                             ${resolvidoText}
                         </span>
                     </div>
@@ -1345,6 +1428,168 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(carregarProximaPaginaPratico, 1500);
     }
 });
+
+// Função Central de Seleção Discreta por AJAX (Sem Recarregar a Sidebar e Sem Piscar a Tela)
+window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true) {
+    if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+
+    // 1. Atualizar visualmente o item ativo na lista sem recriar nenhum nó do DOM
+    $('.item-oco').removeClass('active');
+    $('#item-oco-' + ocorrenciaId).addClass('active');
+
+    // 2. Em visualização mobile, alternar da lista para o chat
+    if ($(window).width() <= 992) {
+        $('.sidebar-feed').hide();
+        $('.chat-container').css('display', 'flex');
+    }
+
+    // 3. Exibir skeleton shimmer de carregamento apenas no chat da direita
+    triggerVdsSkeleton(true);
+
+    const visaoJS = <?= json_encode($visao) ?>;
+
+    // 4. Carregar detalhes do chat via AJAX
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'GET',
+        data: {
+            is_ajax: 1,
+            action: 'carregar_detalhe',
+            id: ocorrenciaId,
+            visao: visaoJS
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success && res.html) {
+                $('#chat-real-content').html(res.html).show();
+                $('#vds-skeleton-chat-container').removeClass('active').hide();
+
+                // Inicializar visualizadores de imagens (materialbox) se disponível
+                if ($.fn.materialbox) {
+                    $('#chat-real-content .materialboxed').materialbox();
+                }
+
+                // Finalizar barra de progresso no topo
+                let $loader = $('#vds-top-loader');
+                if ($loader.length) {
+                    $loader.css('width', '100%');
+                    setTimeout(function() {
+                        $loader.css('opacity', 0);
+                        setTimeout(() => $loader.css('width', '0%'), 400);
+                    }, 150);
+                }
+
+                // Atualizar histórico da URL no navegador de forma limpa (SPA)
+                if (pushState && window.history && window.history.pushState) {
+                    const urlAtual = new URL(window.location.href);
+                    urlAtual.searchParams.set('id', ocorrenciaId);
+                    window.history.pushState({ id: ocorrenciaId, visao: visaoJS }, '', urlAtual.toString());
+                }
+            } else {
+                $('#vds-skeleton-chat-container').removeClass('active').hide();
+                $('#chat-real-content').html('<div style="padding:40px; text-align:center; color:#d32f2f;">Não foi possível carregar os dados desta ocorrência.</div>').show();
+            }
+        },
+        error: function(xhr, status, err) {
+            console.error('[VDS Chat AJAX] Erro ao carregar ocorrência ' + ocorrenciaId, err);
+            $('#vds-skeleton-chat-container').removeClass('active').hide();
+            $('#chat-real-content').html('<div style="padding:40px; text-align:center; color:#d32f2f;">Erro de conexão ao carregar chamado.</div>').show();
+        }
+    });
+};
+
+// Voltar para a lista no mobile
+window.voltarParaListaMobile = function() {
+    $('.chat-container').hide();
+    $('.sidebar-feed').show();
+};
+
+// Sincronizar botões Voltar / Avançar do navegador
+window.addEventListener('popstate', function(e) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+    if (idParam) {
+        selecionarOcorrencia(idParam, null, null, false);
+    }
+});
+
+// Submissão de Nota Interna via AJAX sem Reload
+window.submeterNotaInternaAjax = function(e, ocorrenciaId) {
+    e.preventDefault();
+    const $form = $('#form-adicionar-nota-interna');
+    const $textarea = $('#input-texto-nota-interna');
+    const $btn = $('#btn-salvar-nota-interna');
+    const texto = $textarea.val().trim();
+
+    if (!texto) return;
+
+    $btn.prop('disabled', true).css('opacity', '0.7');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'adicionar_nota_interna',
+            ocorrencia_id: ocorrenciaId,
+            texto: texto
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success) {
+                M.toast({ html: res.message || 'Nota interna salva no Conselho!', classes: 'rounded green' });
+                // Recarrega apenas o chat silenciosamente
+                selecionarOcorrencia(ocorrenciaId, null, null, false);
+            } else {
+                M.toast({ html: (res && res.message) ? res.message : 'Falha ao salvar nota.', classes: 'rounded red' });
+                $btn.prop('disabled', false).css('opacity', '1');
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Nota Interna] Erro', err);
+            M.toast({ html: 'Erro de conexão ao salvar nota.', classes: 'rounded red' });
+            $btn.prop('disabled', false).css('opacity', '1');
+        }
+    });
+};
+
+// Publicação Remota de Nota via AJAX sem Reload
+window.publicarNotaRemotoAjax = function(notaId, ocorrenciaId) {
+    if (!confirm('Deseja publicar esta nota como comentário oficial na VDS?')) return;
+
+    const $btn = $('.btn-publicar-nota');
+    $btn.prop('disabled', true).css('opacity', '0.7');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'publicar_remoto',
+            nota_id: notaId
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success) {
+                M.toast({ html: res.message || 'Nota publicada na VDS com sucesso!', classes: 'rounded green' });
+                selecionarOcorrencia(ocorrenciaId, null, null, false);
+            } else {
+                const msgErr = (res && res.message) ? res.message : 'Falha ao publicar nota na VDS.';
+                const toastCls = (res && res.blockedByLock) ? 'orange' : 'red';
+                M.toast({ html: msgErr, classes: 'rounded ' + toastCls });
+                $btn.prop('disabled', false).css('opacity', '1');
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Publicar Nota] Erro', err);
+            M.toast({ html: 'Erro de conexão ao publicar nota na VDS.', classes: 'rounded red' });
+            $btn.prop('disabled', false).css('opacity', '1');
+        }
+    });
+};
 
 // Funções de Ação Silenciosa por AJAX sem Reload e sem Skeleton Overlay
 function executarAcaoAjaxResponsabilidade(ocorrenciaId, respVal) {
