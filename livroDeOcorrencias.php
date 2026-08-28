@@ -4,6 +4,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . "/classes/database.php";
+require_once __DIR__ . "/classes/repositorio.php";
+require_once __DIR__ . "/classes/mail_helper.php";
 require_once __DIR__ . "/classes/vds_auth_service.php";
 require_once __DIR__ . "/classes/vds_ocorrencia_service.php";
 
@@ -164,6 +166,14 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
             </button>
         </div>
     </div>
+
+    <?php
+    // Identificar protocolo para busca no Gmail (se for Monitoramento ou tiver protocolo disponível)
+    $protocoloBusca = trim((string)($local['protocolo_vds'] ?? ''));
+    $isMonitoramento = ($tipoId === 247 || stripos($infoTipo['nome'] ?? '', 'Monitoramento') !== false);
+    ?>
+    <!-- Container Dinâmico para Card de E-mail do Gmail (Monitoramento) -->
+    <div id="gmail-card-container" data-protocolo="<?= htmlspecialchars($protocoloBusca) ?>" data-is-monitoramento="<?= $isMonitoramento ? '1' : '0' ?>" style="display:none;"></div>
 
     <!-- Feed do Chat WhatsApp -->
     <div class="chat-body">
@@ -379,6 +389,28 @@ if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'carregar_de
         'html' => $htmlChat,
         'local' => $detalheSel['local'] ?? null
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Endpoint AJAX: Buscar E-mail no Gmail por Protocolo
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'buscar_gmail_protocolo') {
+    $protocolo = trim($_REQUEST['protocolo'] ?? '');
+    $resGmail = MailHelper::searchMessagesByProtocolo($protocolo);
+
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($resGmail, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Endpoint AJAX: Obter Conteúdo Completo do E-mail do Gmail para Modal
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'obter_conteudo_email_gmail') {
+    $messageId = trim($_REQUEST['message_id'] ?? '');
+    $resMsg = MailHelper::getMessageContent($messageId);
+
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($resMsg, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -1427,6 +1459,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isVisaoPratico && vdsHasMore) {
         setTimeout(carregarProximaPaginaPratico, 1500);
     }
+
+    // Inicializar Modal de E-mail do Gmail
+    if ($.fn.modal) {
+        $('#modal-visualizar-email-gmail').modal();
+    }
+
+    // Disparar busca de e-mail no Gmail se já houver ocorrência carregada inicialmente
+    verificarEIniciarBuscaGmail();
 });
 
 // Função Central de Seleção Discreta por AJAX (Sem Recarregar a Sidebar e Sem Piscar a Tela)
@@ -1471,6 +1511,9 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
                 if ($.fn.materialbox) {
                     $('#chat-real-content .materialboxed').materialbox();
                 }
+
+                // Iniciar verificação assíncrona de e-mail no Gmail (se for ocorrência de Monitoramento)
+                verificarEIniciarBuscaGmail();
 
                 // Finalizar barra de progresso no topo
                 let $loader = $('#vds-top-loader');
@@ -1853,7 +1896,183 @@ $(document).on('contextmenu', '.tag-badge', function(e) {
     const ocorrenciaId = $('#tags-container').data('ocorrencia-id');
     removerTag($badge.data('tag-id'), ocorrenciaId);
 });
+
+// Funções de Integração do Gmail (Monitoramento)
+function escapeHtmlGmail(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function verificarEIniciarBuscaGmail() {
+    const $container = $('#gmail-card-container');
+    if (!$container.length) return;
+
+    const protocolo = ($container.data('protocolo') || '').toString().trim();
+    const isMonitoramento = parseInt($container.data('is-monitoramento')) === 1;
+
+    // Apenas dispara a busca se for ocorrência de Monitoramento ou tiver protocolo válido
+    if (!protocolo || !isMonitoramento) return;
+
+    $container.hide().html('');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'GET',
+        data: {
+            is_ajax: 1,
+            action: 'buscar_gmail_protocolo',
+            protocolo: protocolo
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.found) {
+                const subject = res.subject || ('E-mail com protocolo ' + protocolo);
+                const from = res.from || 'Remetente Desconhecido';
+                const date = res.date || '';
+                const mailId = res.id || '';
+                const webLink = res.webLink || ('https://mail.google.com/mail/#inbox/' + mailId);
+
+                const cardHtml = `
+                    <div class="gmail-monitoramento-card" style="background:#fff9f8; border:1px solid #ffccba; border-left:4px solid #ea4335; border-radius:6px; padding:10px 16px; margin:10px 20px 0 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:240px;">
+                            <div style="background:#ea4335; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="material-icons" style="font-size:19px;">mail</i>
+                            </div>
+                            <div style="line-height:1.35; overflow:hidden;">
+                                <div style="font-size:0.75rem; font-weight:700; color:#d93025; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
+                                    <span>E-mail do Alarme / Monitoramento</span>
+                                </div>
+                                <div style="font-size:0.88rem; font-weight:600; color:#202124; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtmlGmail(subject)}">
+                                    ${escapeHtmlGmail(subject)}
+                                </div>
+                                <div style="font-size:0.75rem; color:#5f6368;">
+                                    <strong>De:</strong> ${escapeHtmlGmail(from)} ${date ? '&bull; ' + escapeHtmlGmail(date) : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                            <button type="button" class="btn-small waves-effect waves-light white grey-text text-darken-3" style="border:1px solid #dadce0; height:30px; line-height:30px; padding:0 10px; font-size:0.8rem; text-transform:none; font-weight:500; box-shadow:none;" onclick="abrirModalVisualizarEmailGmail('${mailId}')">
+                                <i class="material-icons left tiny" style="margin-right:4px; color:#5f6368;">visibility</i> Ler E-mail
+                            </button>
+                            <a href="${webLink}" target="_blank" class="btn-small waves-effect waves-light red darken-1" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem; text-transform:none; font-weight:500; box-shadow:none;" title="Abrir diretamente na caixa de entrada do Gmail">
+                                <i class="material-icons right tiny" style="margin-left:4px;">open_in_new</i> Ver no Gmail
+                            </a>
+                        </div>
+                    </div>
+                `;
+                $container.html(cardHtml).slideDown(200);
+            }
+        },
+        error: function(err) {
+            console.warn('[Gmail Protocolo] Erro ao buscar e-mail em segundo plano:', err);
+        }
+    });
+}
+
+function abrirModalVisualizarEmailGmail(messageId) {
+    if (!messageId) return;
+
+    const $modal = $('#modal-visualizar-email-gmail');
+    if (!$modal.length) return;
+
+    // Resetar campos
+    $('#modal-email-subject').text('Carregando e-mail...');
+    $('#modal-email-from').text('-');
+    $('#modal-email-to').text('-');
+    $('#modal-email-date').text('-');
+    $('#modal-email-body').html('');
+    $('#modal-email-body-wrapper').hide();
+    $('#modal-email-loading').show();
+    $('#modal-email-external-link').attr('href', 'https://mail.google.com/mail/#inbox/' + messageId);
+
+    // Abrir Modal
+    const instance = M.Modal.getInstance($modal[0]) || M.Modal.init($modal[0]);
+    instance.open();
+
+    // Carregar dados via AJAX
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'GET',
+        data: {
+            is_ajax: 1,
+            action: 'obter_conteudo_email_gmail',
+            message_id: messageId
+        },
+        dataType: 'json',
+        success: function(res) {
+            $('#modal-email-loading').hide();
+            if (res && res.success) {
+                $('#modal-email-subject').text(res.subject || '(Sem Assunto)');
+                $('#modal-email-from').text(res.from || '-');
+                $('#modal-email-to').text(res.to || '-');
+                $('#modal-email-date').text(res.date || '-');
+                $('#modal-email-body').html(res.body || '<em>(Mensagem sem conteúdo legível)</em>');
+                $('#modal-email-body-wrapper').fadeIn(150);
+                if (res.webLink) {
+                    $('#modal-email-external-link').attr('href', res.webLink);
+                }
+            } else {
+                $('#modal-email-subject').text('Erro ao carregar e-mail');
+                $('#modal-email-body').html('<div style="color:#d32f2f; padding:20px; text-align:center;">' + (res.error || 'Não foi possível carregar o conteúdo do e-mail.') + '</div>');
+                $('#modal-email-body-wrapper').show();
+            }
+        },
+        error: function(err) {
+            console.error('[Gmail Modal] Erro ao carregar corpo do e-mail', err);
+            $('#modal-email-loading').hide();
+            $('#modal-email-subject').text('Falha na requisição');
+            $('#modal-email-body').html('<div style="color:#d32f2f; padding:20px; text-align:center;">Erro de conexão ao buscar o e-mail no servidor.</div>');
+            $('#modal-email-body-wrapper').show();
+        }
+    });
+}
 </script>
+
+<!-- Modal de Visualização de E-mail do Gmail -->
+<div id="modal-visualizar-email-gmail" class="modal modal-fixed-footer" style="max-height:85%; height:80%; width:75%; max-width:900px; border-radius:8px;">
+    <div class="modal-content" style="padding:20px; display:flex; flex-direction:column; height:calc(100% - 56px);">
+        <!-- Cabeçalho do E-mail -->
+        <div id="modal-email-header" style="border-bottom:1px solid #e0e0e0; padding-bottom:12px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                <h5 id="modal-email-subject" style="margin:0 0 6px 0; font-size:1.15rem; font-weight:600; color:#202124;">Carregando e-mail...</h5>
+                <span class="badge red white-text" style="border-radius:4px; font-size:0.75rem; float:none; margin:0;">Gmail</span>
+            </div>
+            <div id="modal-email-meta" style="font-size:0.85rem; color:#5f6368; line-height:1.4;">
+                <div><strong>De:</strong> <span id="modal-email-from">-</span></div>
+                <div><strong>Para:</strong> <span id="modal-email-to">-</span></div>
+                <div><strong>Data:</strong> <span id="modal-email-date">-</span></div>
+            </div>
+        </div>
+
+        <!-- Preloader / Loading -->
+        <div id="modal-email-loading" style="text-align:center; padding:40px 0;">
+            <div class="preloader-wrapper small active">
+                <div class="spinner-layer spinner-red-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <div style="margin-top:10px; color:#666; font-size:0.9rem;">Carregando mensagem do Gmail...</div>
+        </div>
+
+        <!-- Corpo do E-mail -->
+        <div id="modal-email-body-wrapper" style="flex:1; overflow-y:auto; background:#ffffff; border:1px solid #e0e0e0; border-radius:6px; padding:15px; display:none;">
+            <div id="modal-email-body" style="font-family:inherit; font-size:0.95rem; color:#202124; line-height:1.5; word-break:break-word;"></div>
+        </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0 20px;">
+        <a id="modal-email-external-link" href="#" target="_blank" class="btn-flat red-text waves-effect" style="font-weight:600;">
+            <i class="material-icons left tiny">open_in_new</i> Abrir no Gmail Web
+        </a>
+        <button type="button" class="modal-close btn-flat waves-effect">Fechar</button>
+    </div>
+</div>
 
 <style>
 .tag-badge {
