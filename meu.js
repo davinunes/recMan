@@ -3409,7 +3409,46 @@ function initMaterialboxed() {
             var $img = $(el);
             // Salva o transform original gerado pelo Materialize
             getOriginalTransform($img);
-            
+
+            // ── Corrige o tamanho ampliado para caber na viewport ──────────────
+            // O Materialize define width/height inline com o tamanho NATURAL da
+            // imagem, o que gera scroll quando a imagem é maior que a tela.
+            // Aqui recalculamos para que ela caiba dentro de 95vw × 90vh.
+            (function fixMaterialboxSize() {
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+                var maxW = vw * 0.95;
+                var maxH = vh * 0.90;
+
+                // Dimensões naturais da imagem
+                var natW = el.naturalWidth  || parseFloat(el.style.width)  || el.offsetWidth;
+                var natH = el.naturalHeight || parseFloat(el.style.height) || el.offsetHeight;
+
+                if (!natW || !natH) return; // segurança
+
+                // Calcula ratio para caber dentro de maxW × maxH
+                var ratio = Math.min(maxW / natW, maxH / natH, 1); // nunca aumenta além do natural
+
+                var newW = Math.round(natW * ratio);
+                var newH = Math.round(natH * ratio);
+
+                // Sobrescreve as dimensões que o Materialize colocou inline
+                el.style.width  = newW + 'px';
+                el.style.height = newH + 'px';
+
+                // Recentraliza: o Materialize usa top/left + transform para posicionar.
+                // Zeramos o transform e reposicionamos via top/left para o centro exato.
+                el.style.transform = 'none';
+                $img.data('originalTransform', ''); // atualiza a referência interna
+
+                el.style.position = 'fixed';
+                el.style.top  = Math.round((vh - newH) / 2) + 'px';
+                el.style.left = Math.round((vw - newW) / 2) + 'px';
+                el.style.marginTop  = '0';
+                el.style.marginLeft = '0';
+            })();
+            // ───────────────────────────────────────────────────────────────────
+
             // Adiciona a barra de controles flutuantes
             $('#materialbox-controls').remove();
             $('body').append(`
@@ -3426,12 +3465,15 @@ function initMaterialboxed() {
             document.body.style.overflow = '';
             
             var $img = $(el);
-            var orig = getOriginalTransform($img);
-            if (orig) {
-                el.style.transform = orig;
-            } else {
-                el.style.transform = 'none';
-            }
+
+            // Limpa os dados de zoom/pan para que a próxima abertura comece do zero
+            $img.data('scale', 1);
+            $img.data('translateX', 0);
+            $img.data('translateY', 0);
+            $img.data('originalTransform', undefined);
+
+            // Garante transform neutro para a animação de fechamento do Materialize
+            el.style.transform = 'none';
             $img.css('cursor', '');
             
             // Remove a barra de controles
