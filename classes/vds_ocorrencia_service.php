@@ -467,7 +467,7 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
 /**
  * Adiciona uma Nota Interna do Conselho (1º Fator - Salva localmente por padrão).
  */
-function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroNome, $texto, $anexoCaminho = null) {
+function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroNome, $texto, $anexoData = null) {
     $link = DBConnect();
 
     // Obter protocolo
@@ -479,6 +479,42 @@ function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroN
     $protocolo = $rowOco['protocolo_vds'] ?? null;
     mysqli_stmt_close($stmtOco);
 
+    $anexoCaminho = null;
+
+    if (!empty($anexoData)) {
+        $storageDir = __DIR__ . '/../storage/comentarios/';
+        if (!is_dir($storageDir)) {
+            @mkdir($storageDir, 0755, true);
+        }
+
+        if (is_array($anexoData) && isset($anexoData['tmp_name']) && $anexoData['error'] === UPLOAD_ERR_OK) {
+            $ext = pathinfo($anexoData['name'], PATHINFO_EXTENSION);
+            if (empty($ext)) $ext = 'jpg';
+            $fileName = 'anexo_' . date('Ymd_His') . '_' . uniqid() . '.' . strtolower($ext);
+            $fullPath = $storageDir . $fileName;
+            if (move_uploaded_file($anexoData['tmp_name'], $fullPath)) {
+                $anexoCaminho = 'storage/comentarios/' . $fileName;
+            }
+        } elseif (is_string($anexoData) && strpos($anexoData, 'data:image/') === 0) {
+            if (preg_match('/^data:image\/(\w+);base64,/', $anexoData, $type)) {
+                $data = substr($anexoData, strpos($anexoData, ',') + 1);
+                $ext = strtolower($type[1]);
+                if ($ext === 'jpeg') $ext = 'jpg';
+                $data = base64_decode($data);
+
+                if ($data !== false) {
+                    $fileName = 'anexo_' . date('Ymd_His') . '_' . uniqid() . '.' . $ext;
+                    $fullPath = $storageDir . $fileName;
+                    if (file_put_contents($fullPath, $data)) {
+                        $anexoCaminho = 'storage/comentarios/' . $fileName;
+                    }
+                }
+            }
+        } elseif (is_string($anexoData) && !empty($anexoData)) {
+            $anexoCaminho = $anexoData;
+        }
+    }
+
     $stmt = mysqli_prepare($link, "INSERT INTO ocorrencia_notas_internas (ocorrencia_id, protocolo_vds, conselheiro_id, conselheiro_nome, texto, anexo_caminho, enviado_remoto) VALUES (?, ?, ?, ?, ?, ?, 0)");
     mysqli_stmt_bind_param($stmt, "isisss", $ocorrenciaId, $protocolo, $conselheiroId, $conselheiroNome, $texto, $anexoCaminho);
     $success = mysqli_stmt_execute($stmt);
@@ -486,7 +522,7 @@ function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroN
     mysqli_stmt_close($stmt);
 
     DBClose($link);
-    return ['success' => $success, 'notaId' => $notaId];
+    return ['success' => $success, 'notaId' => $notaId, 'anexo_caminho' => $anexoCaminho];
 }
 
 /**
@@ -578,12 +614,49 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         $resJson = json_decode($response, true);
         $vdsEventoId = (string)($resJson['ocorrenciaId'] ?? ($resJson['id'] ?? null));
 
+        // Se a nota possuía um anexo local, realiza o upload e vinculação na VDS (3 Etapas)
+        $anexoEnviadoVds = false;
+        if (!empty($nota['anexo_caminho'])) {
+            $localFullPath = __DIR__ . '/../' . ltrim($nota['anexo_caminho'], '/\\');
+            if (file_exists($localFullPath)) {
+                $fileBytes = file_get_contents($localFullPath);
+                if ($fileBytes !== false) {
+                    $ext = strtolower(pathinfo($localFullPath, PATHINFO_EXTENSION));
+                    $mime = ($ext === 'png') ? 'image/png' : (($ext === 'gif') ? 'image/gif' : (($ext === 'webp') ? 'image/webp' : 'image/jpeg'));
+                    $base64String = 'data:' . $mime . ';base64,' . base64_encode($fileBytes);
+                    
+                    // Passo 1 VDS: Upload temporário
+                    $resUp = vds_upload_midia($base64String, $usuarioIdConselho);
+                    if ($resUp['success'] && !empty($resUp['data']['url'])) {
+                        $rawUrl = $resUp['data']['url'];
+                        $tempFileName = basename(str_replace('\\', '/', $rawUrl));
+                        $originalFileName = basename($localFullPath);
+                        
+                        // Passo 3 VDS: Vinculação do Anexo ao evento/comentário criado
+                        if ($vdsEventoId) {
+                            $resBind = vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho);
+                            if ($resBind['success']) {
+                                $anexoEnviadoVds = true;
+                                // Remove o arquivo físico local conforme solicitado
+                                @unlink($localFullPath);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         $stmtUp = mysqli_prepare($link, "UPDATE ocorrencia_notas_internas SET enviado_remoto = 1, data_envio_remoto = NOW(), vds_evento_uuid = ? WHERE id = ?");
         mysqli_stmt_bind_param($stmtUp, "si", $vdsEventoId, $notaId);
         mysqli_stmt_execute($stmtUp);
         mysqli_stmt_close($stmtUp);
         DBClose($link);
-        return ['success' => true, 'message' => "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId}" . ($vdsEventoId ? ", Evento VDS {$vdsEventoId}" : "") . ")!"];
+
+        $msgSucesso = "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId}" . ($vdsEventoId ? ", Evento VDS {$vdsEventoId}" : "") . ")!";
+        if ($anexoEnviadoVds) {
+            $msgSucesso .= " Anexo enviado para a VDS e limpo do servidor local.";
+        }
+        return ['success' => true, 'message' => $msgSucesso];
     }
 
     DBClose($link);
@@ -591,7 +664,7 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
 }
 
 /**
- * Upload de mídias/anexos na VDS.
+ * Upload de mídias/anexos na VDS (Passo 1).
  */
 function vds_upload_midia($base64String, $usuarioIdConselho = null) {
     $token = vds_get_token($usuarioIdConselho);
@@ -628,6 +701,55 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
     }
 
     return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro no upload de imagem/arquivo.'];
+}
+
+/**
+ * Vincula um arquivo/anexo (upload temporário no staging) a uma ocorrência/comentário VDS (Passo 3).
+ */
+function vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho, false);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Token indisponível para vinculação de anexo.'];
+    }
+
+    $anexoCaminho = $tempFileName . '*' . $originalFileName;
+
+    $payloadData = [
+        'anexoCaminho' => $anexoCaminho,
+        'tipoId' => '35',
+        'destinoUuid' => (string)$vdsEventoId,
+        'cortarQuadrado' => true
+    ];
+
+    $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
+
+    $ch = curl_init(VDS_BASE_URL . '/anexo');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 12,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+    }
+
+    if ($httpCode === 200 || $httpCode === 201) {
+        return ['success' => true, 'data' => json_decode($response, true)];
+    }
+
+    return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao vincular anexo na VDS (' . $httpCode . '). Resposta: ' . substr($response, 0, 200)];
 }
 
 /**

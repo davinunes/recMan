@@ -330,6 +330,13 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                     </span>
                 </div>
                 <div style="margin-top:4px; font-size:0.95rem;"><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
+                <?php if (!empty($n['anexo_caminho'])): ?>
+                    <div style="margin-top:6px;">
+                        <a href="<?= htmlspecialchars($n['anexo_caminho']) ?>" target="_blank" title="Clique para abrir a imagem">
+                            <img src="<?= htmlspecialchars($n['anexo_caminho']) ?>" style="max-width:220px; max-height:180px; border-radius:6px; border:1px solid #dcdcdc; object-fit:cover; display:block; margin-top:4px;">
+                        </a>
+                    </div>
+                <?php endif; ?>
                 
                 <div class="msg-time" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                     <span style="font-size:0.75rem; color:#856404;"><?= htmlspecialchars($n['created_at']) ?></span>
@@ -355,13 +362,27 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
     </div>
 
     <!-- Footer: Adicionar Nota Interna (1º Fator) -->
-    <div class="chat-footer">
-        <form id="form-adicionar-nota-interna" onsubmit="submeterNotaInternaAjax(event, <?= $local['id'] ?>)" style="margin:0;">
+    <div class="chat-footer" style="padding-top:4px;">
+        <!-- Preview do Anexo (Imagem Selecionada ou Colada) -->
+        <div id="preview-anexo-nota-container" style="display:none; padding:6px 12px; background:#f5f5f5; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; align-items:center; gap:10px;">
+            <img id="preview-anexo-nota-img" src="" style="height:48px; max-width:80px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
+            <span id="preview-anexo-nota-info" style="font-size:0.8rem; color:#555; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+            <button type="button" class="btn-flat btn-small" onclick="removerAnexoNotaPreview()" title="Remover anexo" style="padding:0 6px; color:#d32f2f;">
+                <i class="material-icons tiny">close</i>
+            </button>
+        </div>
+
+        <form id="form-adicionar-nota-interna" onsubmit="submeterNotaInternaAjax(event, <?= $local['id'] ?>)" style="margin:0;" enctype="multipart/form-data">
             <input type="hidden" name="action" value="adicionar_nota_interna">
             <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
+            <input type="hidden" name="anexo_base64" id="input-anexo-base64" value="">
+            <input type="file" name="anexo" id="input-anexo-nota" accept="image/*" style="display:none;" onchange="tratarAnexoNotaArquivo(this)">
             
             <div style="display:flex; gap:10px; align-items:center;">
-                <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho..." required style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
+                <label for="input-anexo-nota" id="btn-clip-anexo" class="btn-flat waves-effect" title="Anexar Imagem" style="padding:0 10px; margin:0; height:50px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#555; border:1px solid #ccc; border-radius:6px; background:#fff;">
+                    <i class="material-icons" style="font-size:1.4rem;">attach_file</i>
+                </label>
+                <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho... (Cole Ctrl+V ou anexe uma imagem)" style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
                 <button type="submit" id="btn-salvar-nota-interna" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
                     Salvar Nota Interna <i class="material-icons right">note_add</i>
                 </button>
@@ -435,9 +456,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $texto = trim($_POST['texto'] ?? '');
         $conselheiroNome = $_SESSION['user_nome'] ?? ($_SESSION['nome'] ?? ($_SESSION['usuario_nome'] ?? 'Conselheiro'));
         
-        $resNota = ['success' => false, 'message' => 'Texto da nota vazio.'];
-        if (!empty($texto)) {
-            $resNota = vds_adicionar_nota_interna($ocorrenciaId, $usuarioIdConselho, $conselheiroNome, $texto);
+        $anexoData = null;
+        if (!empty($_FILES['anexo']) && $_FILES['anexo']['error'] === UPLOAD_ERR_OK) {
+            $anexoData = $_FILES['anexo'];
+        } elseif (!empty($_POST['anexo_base64'])) {
+            $anexoData = $_POST['anexo_base64'];
+        }
+
+        $resNota = ['success' => false, 'message' => 'Digite uma mensagem ou anexe uma imagem.'];
+        if (!empty($texto) || !empty($anexoData)) {
+            $resNota = vds_adicionar_nota_interna($ocorrenciaId, $usuarioIdConselho, $conselheiroNome, $texto, $anexoData);
         }
 
         if (!empty($_REQUEST['is_ajax'])) {
@@ -1559,31 +1587,87 @@ window.addEventListener('popstate', function(e) {
     }
 });
 
+// Trata visualização do arquivo de anexo selecionado via botão
+window.tratarAnexoNotaArquivo = function(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('#input-anexo-base64').val(''); // Limpa o base64 se veio via upload de arquivo
+            $('#preview-anexo-nota-img').attr('src', e.target.result);
+            $('#preview-anexo-nota-info').text('Arquivo selecionado: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+            $('#preview-anexo-nota-container').css('display', 'flex');
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+// Limpa preview de anexo
+window.removerAnexoNotaPreview = function() {
+    $('#input-anexo-nota').val('');
+    $('#input-anexo-base64').val('');
+    $('#preview-anexo-nota-img').attr('src', '');
+    $('#preview-anexo-nota-info').text('');
+    $('#preview-anexo-nota-container').css('display', 'none');
+};
+
+// Handler de Paste (Ctrl+V) no campo de texto para capturar imagens da área de transferência
+$(document).off('paste', '#input-texto-nota-interna').on('paste', '#input-texto-nota-interna', function(e) {
+    const clipboardData = (e.originalEvent || e).clipboardData;
+    if (!clipboardData || !clipboardData.items) return;
+
+    for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.type.indexOf('image') !== -1) {
+            const file = item.getAsFile();
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    $('#input-anexo-base64').val(evt.target.result);
+                    $('#input-anexo-nota').val(''); // Limpa arquivo do input file
+                    $('#preview-anexo-nota-img').attr('src', evt.target.result);
+                    $('#preview-anexo-nota-info').text('Imagem colada da área de transferência (' + file.type + ')');
+                    $('#preview-anexo-nota-container').css('display', 'flex');
+                };
+                reader.readAsDataURL(file);
+                e.preventDefault();
+                break;
+            }
+        }
+    }
+});
+
 // Submissão de Nota Interna via AJAX sem Reload
 window.submeterNotaInternaAjax = function(e, ocorrenciaId) {
     e.preventDefault();
-    const $form = $('#form-adicionar-nota-interna');
+    const form = document.getElementById('form-adicionar-nota-interna');
     const $textarea = $('#input-texto-nota-interna');
     const $btn = $('#btn-salvar-nota-interna');
     const texto = $textarea.val().trim();
+    const hasBase64 = $('#input-anexo-base64').val();
+    const hasFile = $('#input-anexo-nota')[0] && $('#input-anexo-nota')[0].files.length > 0;
 
-    if (!texto) return;
+    if (!texto && !hasBase64 && !hasFile) {
+        M.toast({ html: 'Digite uma mensagem ou anexe uma imagem.', classes: 'rounded orange' });
+        return;
+    }
 
     $btn.prop('disabled', true).css('opacity', '0.7');
+
+    const formData = new FormData(form);
+    formData.append('is_ajax', '1');
 
     $.ajax({
         url: 'index.php?pag=livroDeOcorrencias',
         type: 'POST',
-        data: {
-            is_ajax: 1,
-            action: 'adicionar_nota_interna',
-            ocorrencia_id: ocorrenciaId,
-            texto: texto
-        },
+        data: formData,
+        contentType: false,
+        processData: false,
         dataType: 'json',
         success: function(res) {
             if (res && res.success) {
                 M.toast({ html: res.message || 'Nota interna salva no Conselho!', classes: 'rounded green' });
+                removerAnexoNotaPreview();
                 // Recarrega apenas o chat silenciosamente
                 selecionarOcorrencia(ocorrenciaId, null, null, false);
             } else {
