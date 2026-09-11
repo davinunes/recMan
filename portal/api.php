@@ -8,7 +8,34 @@ define('EMAIL_SINDICO_NOTIFICACAO', 'sindicogeral.miami@gmail.com, centralderecu
 
 $action = $_GET['action'] ?? '';
 
+/**
+ * Sanitiza o número e ano da notificação/recurso.
+ * Impede que múltiplos separadores ou barras concatenadas (ex: 322/26/2026) sejam processados.
+ * Se o campo número contiver barra (ex: "322/26"), extrai estritamente "322"
+ * e garante que o ano contenha apenas dígitos.
+ */
+function sanitizarNumeroAnoNotificacao($numero, $ano) {
+    $numeroStr = (string)$numero;
+    if (strpos($numeroStr, '/') !== false) {
+        $partes = explode('/', $numeroStr);
+        $numeroStr = trim($partes[0]);
+    } else {
+        $numeroStr = trim($numeroStr);
+    }
+
+    $anoStr = trim(preg_replace('/[^\d]/', '', (string)$ano));
+    $numeroCompleto = ($numeroStr !== '' && $anoStr !== '') ? ($numeroStr . '/' . $anoStr) : $numeroStr;
+
+    return [$numeroStr, $anoStr, $numeroCompleto];
+}
+
+// Sanitização preventiva e global das entradas POST 'numero' e 'ano'
+if (isset($_POST['numero']) || isset($_POST['ano'])) {
+    list($_POST['numero'], $_POST['ano']) = sanitizarNumeroAnoNotificacao($_POST['numero'] ?? '', $_POST['ano'] ?? '');
+}
+
 function sincronizarNotificacaoSupabase($numero, $ano) {
+    list($numero, $ano) = sanitizarNumeroAnoNotificacao($numero, $ano);
     $envPath = __DIR__ . '/../magnacom-sistema/.env';
     if (!file_exists($envPath)) return null;
     

@@ -3304,414 +3304,80 @@ function ajustaValores(data) {
     M.FormSelect.init(document.querySelector("#bloco"));
 }
 
-// Recupera e padroniza o transform original do Materialize, removendo o valor 'none' indesejado
-function getOriginalTransform($img) {
-    if (!$img.length) return '';
-    var orig = $img.data('originalTransform');
-    if (orig === undefined) {
-        var el = $img[0];
-        orig = el ? (el.style.transform || '') : '';
-        if (orig === 'none') {
-            orig = '';
-        }
-        $img.data('originalTransform', orig);
-    }
-    return orig === 'none' ? '' : orig;
-}
-
-// Intercepta e previne o scroll da página quando o materialbox estiver aberto, direcionando para o zoom
-window.addEventListener('wheel', function(e) {
-    if (window.isMaterialboxOpen) {
-        e.preventDefault();
-        
-        var $img = $('.materialboxed.active');
-        if ($img.length) {
-            var el = $img[0];
-            var scale = parseFloat($img.data('scale') || 1);
-            var originalTransform = getOriginalTransform($img);
-            
-            // Normaliza o delta da roda do mouse de forma segura
-            var deltaY = e.deltaY;
-            if (e.wheelDelta) {
-                deltaY = -e.wheelDelta;
-            }
-            if (e.detail) {
-                deltaY = e.detail;
-            }
-            
-            // deltaY < 0 significa scroll para cima (zoom in), deltaY > 0 significa scroll para baixo (zoom out)
-            var delta = deltaY < 0 ? 0.25 : -0.25;
-            scale = Math.min(Math.max(scale + delta, 1), 5);
-            
-            $img.data('scale', scale);
-            
-            if (scale === 1) {
-                $img.data('translateX', 0);
-                $img.data('translateY', 0);
-            }
-            
-            var tx = parseFloat($img.data('translateX') || 0);
-            var ty = parseFloat($img.data('translateY') || 0);
-            
-            el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-            console.log('Wheel zoom deltaY:', deltaY, 'scale:', scale);
-        }
-    }
-}, { passive: false });
-
-window.addEventListener('scroll', function(e) {
-    if (window.isMaterialboxOpen) {
-        e.stopImmediatePropagation();
-    }
-}, true);
-
-// Bloqueia qualquer clique de fechar o visualizador (como no overlay ou na imagem) no capture phase.
-// O fechamento fica restrito EXCLUSIVAMENTE ao botão de fechar 'X' ou tecla ESC, permitindo cliques nos controles.
-window.addEventListener('click', function(e) {
-    if (window.isMaterialboxOpen && e.target) {
-        if (typeof e.target.closest === 'function') {
-            // Se o clique for dentro do container de controle, permite a propagação normal
-            if (e.target.closest('#materialbox-controls')) {
-                return;
-            }
-            // Se clicar no botão de fechar ou dentro dele, permite fechar
-            if (e.target.closest('#mb-close') || (e.target.closest('.material-icons') && e.target.textContent.trim() === 'close')) {
-                return;
-            }
-        }
-        
-        // Bloqueia outros cliques (overlay, imagem, etc)
-        e.stopImmediatePropagation();
-        e.preventDefault();
-    }
-}, true); // true = capturing phase!
-
-// Inicializa o materialbox com callbacks personalizados para controle de zoom e barra de botões
+// Inicializa o materialbox com ajuste para tamanho máximo no elemento pai/viewport ou tamanho original
 function initMaterialboxed() {
     $('.materialboxed').materialbox({
         onOpenStart: function(el) {
-            window.isMaterialboxOpen = true;
-            document.body.style.overflow = 'hidden';
-            
             var $img = $(el);
-            $img.data('scale', 1);
-            $img.data('translateX', 0);
-            $img.data('translateY', 0);
-            $img.data('isDragging', false);
-            $img.data('hasMoved', false);
-            
-            $img.css({
-                'cursor': 'grab',
-                'transition': 'transform 0.1s ease-out, left 0.3s, top 0.3s, width 0.3s, height 0.3s'
-            });
+            // Salva estilos inline originais para restauração
+            $img.data('orig-width', el.style.width || '');
+            $img.data('orig-height', el.style.height || '');
+            $img.data('orig-max-width', el.style.maxWidth || '');
+            $img.data('orig-max-height', el.style.maxHeight || '');
+            $img.data('orig-position', el.style.position || '');
+            $img.data('orig-top', el.style.top || '');
+            $img.data('orig-left', el.style.left || '');
+            $img.data('orig-transform', el.style.transform || '');
         },
         onOpenEnd: function(el) {
             var $img = $(el);
-            // Salva o transform original gerado pelo Materialize
-            getOriginalTransform($img);
+            var vw = window.innerWidth;
+            var vh = window.innerHeight;
+            var maxW = vw * 0.95;
+            var maxH = vh * 0.92;
 
-            // ── Corrige o tamanho ampliado para caber na viewport ──────────────
-            // O Materialize define width/height inline com o tamanho NATURAL da
-            // imagem, o que gera scroll quando a imagem é maior que a tela.
-            // Aqui recalculamos para que ela caiba dentro de 95vw × 90vh.
-            (function fixMaterialboxSize() {
-                var vw = window.innerWidth;
-                var vh = window.innerHeight;
-                var maxW = vw * 0.95;
-                var maxH = vh * 0.90;
+            // Dimensões naturais da imagem
+            var natW = el.naturalWidth || el.offsetWidth;
+            var natH = el.naturalHeight || el.offsetHeight;
 
-                // Dimensões naturais da imagem
-                var natW = el.naturalWidth  || parseFloat(el.style.width)  || el.offsetWidth;
-                var natH = el.naturalHeight || parseFloat(el.style.height) || el.offsetHeight;
-
-                if (!natW || !natH) return; // segurança
-
-                // Calcula ratio para caber dentro de maxW × maxH
-                var ratio = Math.min(maxW / natW, maxH / natH, 1); // nunca aumenta além do natural
-
+            if (natW && natH) {
+                // Altera as dimensões para o máximo possível até tocar a largura ou altura do pai,
+                // ou mantém o tamanho original caso este seja menor que o espaço disponível.
+                var ratio = Math.min(maxW / natW, maxH / natH, 1);
                 var newW = Math.round(natW * ratio);
                 var newH = Math.round(natH * ratio);
 
-                // Sobrescreve as dimensões que o Materialize colocou inline
-                el.style.width  = newW + 'px';
+                el.style.width = newW + 'px';
                 el.style.height = newH + 'px';
-
-                // Recentraliza: o Materialize usa top/left + transform para posicionar.
-                // Zeramos o transform e reposicionamos via top/left para o centro exato.
-                el.style.transform = 'none';
-                $img.data('originalTransform', ''); // atualiza a referência interna
-
+                el.style.maxWidth = 'none';
+                el.style.maxHeight = 'none';
                 el.style.position = 'fixed';
-                el.style.top  = Math.round((vh - newH) / 2) + 'px';
+                el.style.top = Math.round((vh - newH) / 2) + 'px';
                 el.style.left = Math.round((vw - newW) / 2) + 'px';
-                el.style.marginTop  = '0';
+                el.style.marginTop = '0';
                 el.style.marginLeft = '0';
-            })();
-            // ───────────────────────────────────────────────────────────────────
-
-            // Adiciona a barra de controles flutuantes
-            $('#materialbox-controls').remove();
-            $('body').append(`
-                <div id="materialbox-controls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10005; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); transition: opacity 0.3s ease;">
-                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-in" style="background: transparent; margin:0;" title="Aumentar Zoom"><i class="material-icons">add</i></button>
-                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-out" style="background: transparent; margin:0;" title="Diminuir Zoom"><i class="material-icons">remove</i></button>
-                    <button class="btn-floating btn-flat btn-small white-text" id="mb-zoom-reset" style="background: transparent; margin:0;" title="Ajustar / Resetar"><i class="material-icons">crop_free</i></button>
-                    <button class="btn-floating btn-flat btn-small white-text" id="mb-close" style="background: transparent; margin:0;" title="Fechar"><i class="material-icons">close</i></button>
-                </div>
-            `);
+                el.style.transform = 'none';
+                el.style.cursor = 'pointer';
+            }
         },
         onCloseStart: function(el) {
-            window.isMaterialboxOpen = false;
-            document.body.style.overflow = '';
-            
             var $img = $(el);
-
-            // Limpa os dados de zoom/pan para que a próxima abertura comece do zero
-            $img.data('scale', 1);
-            $img.data('translateX', 0);
-            $img.data('translateY', 0);
-            $img.data('originalTransform', undefined);
-
-            // Garante transform neutro para a animação de fechamento do Materialize
             el.style.transform = 'none';
-            $img.css('cursor', '');
-            
-            // Remove a barra de controles
-            $('#materialbox-controls').fadeOut(200, function() {
-                $(this).remove();
-            });
+        },
+        onCloseEnd: function(el) {
+            var $img = $(el);
+            el.style.width = $img.data('orig-width') || '';
+            el.style.height = $img.data('orig-height') || '';
+            el.style.maxWidth = $img.data('orig-max-width') || '';
+            el.style.maxHeight = $img.data('orig-max-height') || '';
+            el.style.position = $img.data('orig-position') || '';
+            el.style.top = $img.data('orig-top') || '';
+            el.style.left = $img.data('orig-left') || '';
+            el.style.marginTop = '';
+            el.style.marginLeft = '';
+            el.style.transform = $img.data('orig-transform') || '';
+            el.style.cursor = '';
         }
     });
 }
 
-// Ações para a barra de controles flutuantes
-$(document).on('click', '#mb-zoom-in', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var $img = $('.materialboxed.active');
-    if ($img.length) {
-        var el = $img[0];
-        var scale = parseFloat($img.data('scale') || 1);
-        scale = Math.min(scale + 0.3, 5);
-        $img.data('scale', scale);
-        
-        var tx = parseFloat($img.data('translateX') || 0);
-        var ty = parseFloat($img.data('translateY') || 0);
-        var originalTransform = getOriginalTransform($img);
-        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-    }
-});
-
-$(document).on('click', '#mb-zoom-out', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var $img = $('.materialboxed.active');
-    if ($img.length) {
-        var el = $img[0];
-        var scale = parseFloat($img.data('scale') || 1);
-        scale = Math.max(scale - 0.3, 1);
-        $img.data('scale', scale);
-        
-        if (scale === 1) {
-            $img.data('translateX', 0);
-            $img.data('translateY', 0);
-        }
-        
-        var tx = parseFloat($img.data('translateX') || 0);
-        var ty = parseFloat($img.data('translateY') || 0);
-        var originalTransform = getOriginalTransform($img);
-        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-    }
-});
-
-$(document).on('click', '#mb-zoom-reset', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var $img = $('.materialboxed.active');
-    if ($img.length) {
-        var el = $img[0];
-        $img.data('scale', 1);
-        $img.data('translateX', 0);
-        $img.data('translateY', 0);
-        var originalTransform = getOriginalTransform($img);
-        el.style.transform = originalTransform || 'none';
-    }
-});
-
-$(document).on('click', '#mb-close', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var $img = $('.materialboxed.active');
-    if ($img.length) {
-        var instance = M.Materialbox.getInstance($img[0]);
-        if (instance) instance.close();
-    }
-});
-
-// Manipuladores de mouse para arrastar (pan) a imagem com zoom (suporta clique do meio ou clique esquerdo quando com zoom)
-var startX, startY;
-$(document).on('mousedown', '.materialboxed.active', function(e) {
-    var $img = $(this);
-    // e.button === 0: clique esquerdo (permite pan se scale > 1)
-    // e.button === 1: clique do meio (roda) - permite pan sempre
-    if (($img.data('scale') > 1 && e.button === 0) || e.button === 1) {
-        e.preventDefault();
-        $img.data('isDragging', true);
-        $img.data('hasMoved', false);
-        $img.data('dragStartX', e.clientX);
-        $img.data('dragStartY', e.clientY);
-        startX = e.clientX - parseFloat($img.data('translateX') || 0) * $img.data('scale');
-        startY = e.clientY - parseFloat($img.data('translateY') || 0) * $img.data('scale');
-        $img.css('cursor', 'grabbing');
-    }
-});
-
-$(document).on('mousemove', function(e) {
-    var $img = $('.materialboxed.active');
-    if ($img.length && $img.data('isDragging')) {
-        var el = $img[0];
-        var scale = $img.data('scale');
-        
-        var dx = Math.abs(e.clientX - $img.data('dragStartX'));
-        var dy = Math.abs(e.clientY - $img.data('dragStartY'));
-        if (dx > 5 || dy > 5) {
-            $img.data('hasMoved', true);
-        }
-        
-        var tx = (e.clientX - startX) / scale;
-        var ty = (e.clientY - startY) / scale;
-        
-        $img.data('translateX', tx);
-        $img.data('translateY', ty);
-        
-        var originalTransform = getOriginalTransform($img);
-        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-    }
-});
-
-$(document).on('mouseup mouseleave', '.materialboxed.active', function(e) {
-    var $img = $(this);
-    if ($img.data('isDragging')) {
-        $img.data('isDragging', false);
-        $img.css('cursor', 'grab');
-    }
-});
-
-// Clique na imagem ativa para alternar entre 1x e 2.5x de zoom (se não tiver arrastado)
+// Fechar imagem ativa ao clicar diretamente nela
 $(document).on('click', '.materialboxed.active', function(e) {
-    var $img = $(this);
-    if ($img.data('hasMoved')) {
-        $img.data('hasMoved', false);
-        return;
+    e.preventDefault();
+    var instance = M.Materialbox.getInstance(this);
+    if (instance) {
+        instance.close();
     }
-    
-    // Zoom toggle com botão esquerdo (e.button === 0)
-    if (e.button === 0) {
-        var el = this;
-        var currentScale = parseFloat($img.data('scale') || 1);
-        var newScale = currentScale > 1 ? 1 : 2.5;
-        
-        $img.data('scale', newScale);
-        $img.data('translateX', 0);
-        $img.data('translateY', 0);
-        
-        var originalTransform = getOriginalTransform($img);
-        if (newScale === 1) {
-            el.style.transform = originalTransform || 'none';
-        } else {
-            el.style.transform = originalTransform + ' scale(' + newScale + ') translate(0px, 0px)';
-        }
-    }
-});
-
-// Suporte a gestos touch em dispositivos móveis (pinch zoom e pan)
-var touchStartDist = 0;
-var touchStartScale = 1;
-var touchStartX = 0, touchStartY = 0;
-var touchStartTx = 0, touchStartTy = 0;
-var isPinching = false;
-var isTouchDragging = false;
-
-$(document).on('touchstart', '.materialboxed.active', function(e) {
-    var $img = $(this);
-    var touches = e.originalEvent.touches;
-    
-    if (touches.length === 2) {
-        isPinching = true;
-        isTouchDragging = false;
-        touchStartDist = Math.hypot(
-            touches[0].clientX - touches[1].clientX,
-            touches[0].clientY - touches[1].clientY
-        );
-        touchStartScale = parseFloat($img.data('scale') || 1);
-    } else if (touches.length === 1 && $img.data('scale') > 1) {
-        isTouchDragging = true;
-        isPinching = false;
-        $img.data('hasMoved', false);
-        touchStartX = touches[0].clientX;
-        touchStartY = touches[0].clientY;
-        $img.data('dragStartX', touches[0].clientX);
-        $img.data('dragStartY', touches[0].clientY);
-        touchStartTx = parseFloat($img.data('translateX') || 0);
-        touchStartTy = parseFloat($img.data('translateY') || 0);
-    }
-});
-
-$(document).on('touchmove', '.materialboxed.active', function(e) {
-    var $img = $(this);
-    var el = this;
-    var touches = e.originalEvent.touches;
-    var originalTransform = getOriginalTransform($img);
-    
-    if (isPinching && touches.length === 2) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        var dist = Math.hypot(
-            touches[0].clientX - touches[1].clientX,
-            touches[0].clientY - touches[1].clientY
-        );
-        var factor = dist / touchStartDist;
-        var scale = Math.min(Math.max(touchStartScale * factor, 1), 5);
-        
-        $img.data('scale', scale);
-        
-        if (scale === 1) {
-            $img.data('translateX', 0);
-            $img.data('translateY', 0);
-        }
-        
-        var tx = parseFloat($img.data('translateX') || 0);
-        var ty = parseFloat($img.data('translateY') || 0);
-        
-        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-    } else if (isTouchDragging && touches.length === 1 && $img.data('scale') > 1) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        var scale = $img.data('scale');
-        var dx = touches[0].clientX - touchStartX;
-        var dy = touches[0].clientY - touchStartY;
-        
-        var adx = Math.abs(touches[0].clientX - $img.data('dragStartX'));
-        var ady = Math.abs(touches[0].clientY - $img.data('dragStartY'));
-        if (adx > 5 || ady > 5) {
-            $img.data('hasMoved', true);
-        }
-        
-        var tx = touchStartTx + (dx / scale);
-        var ty = touchStartTy + (dy / scale);
-        
-        $img.data('translateX', tx);
-        $img.data('translateY', ty);
-        
-        el.style.transform = originalTransform + ' scale(' + scale + ') translate(' + tx + 'px, ' + ty + 'px)';
-    }
-});
-
-$(document).on('touchend', '.materialboxed.active', function(e) {
-    isPinching = false;
-    isTouchDragging = false;
 });
 
 // Renderiza uma linha de sugestão de multa evitando duplicatas
