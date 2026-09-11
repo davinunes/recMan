@@ -3305,11 +3305,13 @@ function ajustaValores(data) {
 }
 
 // Inicializa o materialbox com ajuste para tamanho máximo no elemento pai/viewport ou tamanho original
-function initMaterialboxed() {
-    $('.materialboxed').materialbox({
+function initMaterialboxed(selector) {
+    var $target = selector ? $(selector) : $('.materialboxed');
+    $target.materialbox({
         onOpenStart: function(el) {
+            document.body.style.overflow = 'hidden';
             var $img = $(el);
-            // Salva estilos inline originais para restauração
+            // Salva estilos inline originais da miniatura para restauração
             $img.data('orig-width', el.style.width || '');
             $img.data('orig-height', el.style.height || '');
             $img.data('orig-max-width', el.style.maxWidth || '');
@@ -3331,7 +3333,7 @@ function initMaterialboxed() {
             var natH = el.naturalHeight || el.offsetHeight;
 
             if (natW && natH) {
-                // Altera as dimensões para o máximo possível até tocar a largura ou altura do pai,
+                // Altera as dimensões para o máximo possível até tocar a largura ou altura do pai/viewport,
                 // ou mantém o tamanho original caso este seja menor que o espaço disponível.
                 var ratio = Math.min(maxW / natW, maxH / natH, 1);
                 var newW = Math.round(natW * ratio);
@@ -3347,12 +3349,23 @@ function initMaterialboxed() {
                 el.style.marginTop = '0';
                 el.style.marginLeft = '0';
                 el.style.transform = 'none';
-                el.style.cursor = 'pointer';
+                el.style.cursor = 'zoom-out';
             }
+
+            // Registra listener de fechar para o próximo clique na imagem aberta (não conflita com abertura)
+            $img.off('click.mbClose').one('click.mbClose', function() {
+                var instance = M.Materialbox.getInstance(this);
+                if (instance && instance.isOpen) {
+                    instance.close();
+                }
+            });
         },
         onCloseStart: function(el) {
+            document.body.style.overflow = '';
             var $img = $(el);
+            $img.off('click.mbClose');
             el.style.transform = 'none';
+            el.style.cursor = '';
         },
         onCloseEnd: function(el) {
             var $img = $(el);
@@ -3370,15 +3383,6 @@ function initMaterialboxed() {
         }
     });
 }
-
-// Fechar imagem ativa ao clicar diretamente nela
-$(document).on('click', '.materialboxed.active', function(e) {
-    e.preventDefault();
-    var instance = M.Materialbox.getInstance(this);
-    if (instance) {
-        instance.close();
-    }
-});
 
 // Renderiza uma linha de sugestão de multa evitando duplicatas
 function renderSingleSuggestionRow(s) {

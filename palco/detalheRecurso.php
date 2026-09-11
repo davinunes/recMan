@@ -1603,8 +1603,8 @@ if ($esseRecurso == null) {
                                 $list.append(cardHtml);
                             });
 
-                            // Inicializa zoom das novas imagens injetadas
-                            $('.materialboxed').materialbox();
+                            // Inicializa visualizador das novas imagens injetadas
+                            initMaterialboxed();
                         }
                     },
                     error: function (xhr, status, error) {

@@ -1535,8 +1535,10 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
                 $('#chat-real-content').html(res.html).show();
                 $('#vds-skeleton-chat-container').removeClass('active').hide();
 
-                // Inicializar visualizadores de imagens (materialbox) se disponível
-                if ($.fn.materialbox) {
+                // Inicializar visualizadores de imagens se disponível
+                if (typeof initMaterialboxed === 'function') {
+                    initMaterialboxed('#chat-real-content .materialboxed');
+                } else if ($.fn.materialbox) {
                     $('#chat-real-content .materialboxed').materialbox();
                 }
 

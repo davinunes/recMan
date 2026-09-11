@@ -77,18 +77,13 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <div class="flex gap-4 mb-6">
                         <div class="w-2/3">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
-                            <input x-model="notificacaoStr" 
-                                @keydown="if ($event.key === '/') $event.preventDefault();"
-                                @input="sanitizarCamposNotificacao()"
-                                type="text" placeholder="Ex: 154" required
+                            <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required
                                 class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                         </div>
                         <div class="w-1/3 text-center pt-8 text-2xl text-gray-400">/</div>
                         <div class="w-2/3">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
-                            <input x-model="anoStr" 
-                                @input="sanitizarCamposNotificacao()"
-                                type="text" placeholder="Ex: 2026" required
+                            <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
                                 class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                         </div>
                     </div>
@@ -329,16 +324,13 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <div class="flex gap-4 mb-4">
                         <div class="w-1/2">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
-                            <input x-model="notificacaoStr" 
-                                @keydown="if ($event.key === '/') $event.preventDefault();"
-                                @input.debounce.300ms="sanitizarCamposNotificacao(); verificarExistenciaLogin()"
+                            <input x-model="notificacaoStr" @input.debounce.500ms="verificarExistenciaLogin()"
                                 type="text" placeholder="Ex: 154" required
                                 class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
                         </div>
                         <div class="w-1/2">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
-                            <input x-model="anoStr" 
-                                @input.debounce.300ms="sanitizarCamposNotificacao(); verificarExistenciaLogin()" type="text"
+                            <input x-model="anoStr" @input.debounce.500ms="verificarExistenciaLogin()" type="text"
                                 placeholder="Ex: 2026" required
                                 class="shadow border rounded-lg w-full py-3 px-4 text-gray-700">
                         </div>
@@ -589,17 +581,14 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     this.etapa = 1;
                 },
 
-                sanitizarCamposNotificacao() {
+                sanitizarCamposEnvio() {
                     if (this.notificacaoStr) {
+                        // Remove a barra e tudo o que tem à direita no campo número
                         if (this.notificacaoStr.indexOf('/') !== -1) {
                             let partes = this.notificacaoStr.split('/');
                             this.notificacaoStr = partes[0].trim();
-                            if (partes.length > 1) {
-                                let possivelAno = partes[1].replace(/\D/g, '').trim();
-                                if (possivelAno.length === 4) {
-                                    this.anoStr = possivelAno;
-                                }
-                            }
+                        } else {
+                            this.notificacaoStr = this.notificacaoStr.trim();
                         }
                     }
                     if (this.anoStr) {
@@ -608,7 +597,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 },
 
                 async checarNotificacao() {
-                    this.sanitizarCamposNotificacao();
+                    this.sanitizarCamposEnvio();
                     if (!this.notificacaoStr || !this.anoStr) return;
                     this.carregando = true;
                     this.erro = false;
@@ -727,7 +716,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 },
 
                 async enviarCodigo() {
-                    this.sanitizarCamposNotificacao();
+                    this.sanitizarCamposEnvio();
                     if (!this.emailContato) return;
                     this.carregando = true;
                     this.erro = false;
@@ -779,7 +768,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 },
 
                 async enviarRecursoFinal() {
-                    this.sanitizarCamposNotificacao();
+                    this.sanitizarCamposEnvio();
                     this.carregando = true;
                     this.erro = false;
 
@@ -823,7 +812,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 },
 
                 async loginExisting() {
-                    this.sanitizarCamposNotificacao();
+                    this.sanitizarCamposEnvio();
                     if (!this.notificacaoStr || !this.anoStr || !this.senhaAcesso) return;
                     this.carregando = true;
                     this.erro = false;
