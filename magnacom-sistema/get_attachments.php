@@ -28,6 +28,7 @@ if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'error' => 'Acesso negado: usuário não autenticado.']);
     exit;
 }
+session_write_close(); // Libera trava de sessão antes das consultas externas ao Supabase
 
 $rec = isset($_REQUEST['rec']) ? trim($_REQUEST['rec']) : '';
 if (empty($rec)) {

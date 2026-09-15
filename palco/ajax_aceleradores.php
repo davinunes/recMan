@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+$usuarioId = $_SESSION['user_id'] ?? null;
+session_write_close(); // Libera trava de sessão PHP imediatamente para execução paralela dos 8 aceleradores
+
 // Iniciar buffer para capturar e descartar qualquer saída acidental de includes
 ob_start();
 

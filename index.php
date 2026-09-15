@@ -35,6 +35,8 @@ if (!isset($_SESSION['user_id'])) {
 
 $esseUsuario = $_SESSION["user_id"];
 $meuAvatar = $_SESSION["avatar"];
+// Libera o lock exclusivo de sessão para permitir que requisições AJAX paralelas executem sem bloqueio
+session_write_close();
 header("Content-Type: text/html; charset=UTF-8");
 ?>
 <!DOCTYPE html>
