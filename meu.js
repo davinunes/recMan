@@ -1745,11 +1745,7 @@ $(document).on('click', '#btnMesAnterior', function () {
     let parts = curVal.split('-');
     let d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 2, 1);
     let newMes = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    inputMes.val(newMes);
-    
-    if ($('#unidade').val() && $('#bloco').val()) {
-        $('#buscaHistoricoUnidade').click();
-    }
+    inputMes.val(newMes).trigger('change');
 });
 
 $(document).on('click', '#btnProximoMes', function () {
@@ -1760,21 +1756,13 @@ $(document).on('click', '#btnProximoMes', function () {
     let parts = curVal.split('-');
     let d = new Date(parseInt(parts[0]), parseInt(parts[1]), 1);
     let newMes = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    inputMes.val(newMes);
-    
-    if ($('#unidade').val() && $('#bloco').val()) {
-        $('#buscaHistoricoUnidade').click();
-    }
+    inputMes.val(newMes).trigger('change');
 });
 
 $(document).on('click', '#btnMesAtual', function () {
     let inputMes = $('#mesAnoFiltro');
     let newMes = new Date().toISOString().slice(0, 7);
-    inputMes.val(newMes);
-    
-    if ($('#unidade').val() && $('#bloco').val()) {
-        $('#buscaHistoricoUnidade').click();
-    }
+    inputMes.val(newMes).trigger('change');
 });
 
 // Auto-resolução de Bloco e Unidade ao digitar Vaga de Estacionamento
@@ -1804,39 +1792,122 @@ $(document).on('change blur', '#vagaFiltro', function () {
     }
 });
 
-function executarBuscaHistorico(unidade, bloco, mesAno) {
-    $('#emptyState').addClass('hide');
-    $('#toolsetContainer').addClass('hide');
-    $('#unitBrief').addClass('hide');
-    $('#toolsetLoader').removeClass('hide');
+// Variáveis e Tokens de requisição assíncrona do Toolset
+window._ajaxToolsetLocal = null;
+window._ajaxToolsetVds = null;
+window.globalToolsetLocalStats = null;
 
-    // Atualizar labels de mês nos aceleradores
+// Atualizador dos rótulos de mês nos aceleradores
+window.atualizarLabelsMesHistorico = function (mesAno) {
+    if (!mesAno) return;
     let anoStr = mesAno.substring(0, 4);
     let mesStr = mesAno.substring(5, 7);
     let mesExtenso = mesStr + '/' + anoStr;
-    
+
     $('#labelMesEncomendas').text('(' + mesExtenso + ')');
     $('#labelMesAutorizacoes').text('(' + mesExtenso + ')');
     $('#labelMesAcessos').text('(' + mesExtenso + ')');
     $('#labelMesReservas').text('(' + mesExtenso + ')');
     $('#labelMesLiberacoesPortaria').text('(' + mesExtenso + ')');
     $('#labelAnoBoletos').text('(' + anoStr + ')');
+};
 
-    $.ajax({
-        url: `metodo.php?metodo=toolsetUnidade&unidade=${encodeURIComponent(unidade)}&bloco=${encodeURIComponent(bloco)}&mesAno=${encodeURIComponent(mesAno)}`,
+// Skeletons e Spinners de Segundo Plano nas Seções da VDS
+window.setVdsSectionsLoading = function () {
+    const secoesVds = [
+        { id: 'Moradores', nome: 'moradores' },
+        { id: 'Encomendas', nome: 'encomendas' },
+        { id: 'Autorizacoes', nome: 'autorizações de acesso' },
+        { id: 'Acessos', nome: 'eventos de acesso' },
+        { id: 'Reservas', nome: 'reservas de área comum' },
+        { id: 'OcorrenciasAutoria', nome: 'ocorrências registradas' },
+        { id: 'OcorrenciasTag', nome: 'ocorrências citadas' },
+        { id: 'Boletos', nome: 'lançamentos e boletos' },
+        { id: 'LiberacoesPortaria', nome: 'liberações de portaria' },
+        { id: 'Visitantes', nome: 'visitantes cadastrados' }
+    ];
+
+    secoesVds.forEach(s => {
+        $('#badgeCount' + s.id).html('<i class="material-icons tiny spinning" style="font-size:11px;">sync</i>');
+        $('#conteudo' + s.id).html(`
+            <div class="vds-loading-state center-align grey-text" style="padding:24px;">
+                <div class="preloader-wrapper small active">
+                    <div class="spinner-layer spinner-blue-only">
+                        <div class="circle-clipper left"><div class="circle"></div></div>
+                        <div class="gap-patch"><div class="circle"></div></div>
+                        <div class="circle-clipper right"><div class="circle"></div></div>
+                    </div>
+                </div>
+                <p style="margin-top:10px; font-size:0.85rem; font-weight:500; color:#546e7a;">
+                    <i class="material-icons tiny spinning" style="vertical-align:middle;">sync</i> Carregando ${s.nome} na VDS em segundo plano...
+                </p>
+            </div>
+        `);
+    });
+};
+
+// Tratamento de falha de comunicação com a VDS (sem afetar dados locais)
+window.handleVdsSyncError = function (unidade, bloco, mesAno) {
+    let retryHtml = `
+        <div class="center-align grey-text text-darken-1" style="padding:22px 16px;">
+            <i class="material-icons orange-text text-darken-2" style="font-size:2.2rem;">cloud_off</i>
+            <div style="font-weight:600; margin-top:6px; color:#455a64;">Não foi possível sincronizar com a VDS no momento</div>
+            <div style="font-size:0.82rem; color:#78909c; margin-top:2px;">A API remota demorou para responder ou está instável. Os dados locais do nosso banco continuam acessíveis acima.</div>
+            <button type="button" class="btn-flat btn-small waves-effect blue lighten-5 blue-text text-darken-3" 
+                style="margin-top:10px; font-weight:600; border-radius:4px;"
+                onclick="window.recarregarApenasVds('${unidade}', '${bloco}', '${mesAno}')">
+                <i class="material-icons tiny left">refresh</i> Tentar carregar VDS novamente
+            </button>
+        </div>
+    `;
+
+    ['Moradores', 'Encomendas', 'Autorizacoes', 'Acessos', 'Reservas', 'OcorrenciasAutoria', 'OcorrenciasTag', 'Boletos', 'LiberacoesPortaria', 'Visitantes'].forEach(sec => {
+        $('#conteudo' + sec).html(retryHtml);
+        $('#badgeCount' + sec).text('!');
+    });
+
+    $('#conteudoVeiculos .vds-sync-placeholder').html(`
+        <div class="orange-text center-align" style="padding:10px; font-size:0.85rem;">
+            <i class="material-icons tiny" style="vertical-align:middle;">warning</i> Não foi possível carregar os veículos da VDS.
+        </div>
+    `);
+    $('#badgeCountVeiculos').text('!');
+
+    M.toast({ html: 'Dados locais carregados. VDS indisponível ou com alta latência.', classes: 'orange rounded' });
+};
+
+window.recarregarApenasVds = function (unidade, bloco, mesAno) {
+    window.setVdsSectionsLoading();
+    if (window.renderToolsetVeiculos && window.globalToolsetResponse) {
+        window.renderToolsetVeiculos([], window.globalToolsetResponse.vagas || [], true);
+    }
+    window.carregarDadosVdsBackground(unidade, bloco, mesAno);
+};
+
+// FASE 2: Consulta em Segundo Plano à VDS
+window.carregarDadosVdsBackground = function (unidade, bloco, mesAno) {
+    if (window._ajaxToolsetVds) {
+        window._ajaxToolsetVds.abort();
+        window._ajaxToolsetVds = null;
+    }
+
+    window._ajaxToolsetVds = $.ajax({
+        url: `metodo.php?metodo=toolsetUnidade&modo=vds&unidade=${encodeURIComponent(unidade)}&bloco=${encodeURIComponent(bloco)}&mesAno=${encodeURIComponent(mesAno)}`,
         method: 'GET',
         dataType: 'json',
         success: function (res) {
-            $('#toolsetLoader').addClass('hide');
-
+            window._ajaxToolsetVds = null;
             if (res && res.success) {
-                window.globalToolsetResponse = res;
-                window.renderToolsetDashboard(res.estatisticas);
-                window.renderToolsetMoradores(res.moradores || []);
-                window.renderToolsetVeiculos(res.veiculos || [], res.vagas || []);
-                window.renderToolsetVisitantes(res.visitantes || []);
-                window.renderToolsetNotificacoes(res.notificacoes || []);
+                window.globalToolsetResponse = Object.assign(window.globalToolsetResponse || {}, res);
 
+                // Mesclar estatísticas locais com as remotas
+                let fullStats = Object.assign({}, window.globalToolsetLocalStats || {}, res.estatisticas || {});
+                window.renderToolsetDashboard(fullStats, false);
+
+                // Renderizar todas as seções VDS
+                window.renderToolsetMoradores(res.moradores || []);
+                window.renderToolsetVeiculos(res.veiculos || [], window.globalToolsetResponse.vagas || [], false);
+                window.renderToolsetVisitantes(res.visitantes || []);
                 window.renderToolsetEncomendas(res.entregas || []);
                 window.renderToolsetAutorizacoes(res.autorizacoes || []);
                 window.renderToolsetAcessos(res.acessos || []);
@@ -1846,21 +1917,85 @@ function executarBuscaHistorico(unidade, bloco, mesAno) {
                 window.renderToolsetBoletos(res.boletos || []);
                 window.renderToolsetLiberacoesPortaria(res.liberacoesPortaria || []);
 
+                if (typeof $('.tooltipped').tooltip === 'function') {
+                    $('.tooltipped').tooltip();
+                }
+            } else {
+                window.handleVdsSyncError(unidade, bloco, mesAno);
+            }
+        },
+        error: function (xhr, status) {
+            if (status === 'abort') return;
+            window._ajaxToolsetVds = null;
+            window.handleVdsSyncError(unidade, bloco, mesAno);
+        }
+    });
+};
+
+function executarBuscaHistorico(unidade, bloco, mesAno) {
+    // Abortar requisições ativas se houver
+    if (window._ajaxToolsetLocal) {
+        window._ajaxToolsetLocal.abort();
+        window._ajaxToolsetLocal = null;
+    }
+    if (window._ajaxToolsetVds) {
+        window._ajaxToolsetVds.abort();
+        window._ajaxToolsetVds = null;
+    }
+
+    $('#emptyState').addClass('hide');
+    $('#toolsetContainer').addClass('hide');
+    $('#unitBrief').addClass('hide');
+    $('#toolsetLoader').removeClass('hide');
+
+    window.atualizarLabelsMesHistorico(mesAno);
+
+    // FASE 1: Consultar banco local MySQL (resposta imediata em ~20ms)
+    window._ajaxToolsetLocal = $.ajax({
+        url: `metodo.php?metodo=toolsetUnidade&modo=local&unidade=${encodeURIComponent(unidade)}&bloco=${encodeURIComponent(bloco)}&mesAno=${encodeURIComponent(mesAno)}`,
+        method: 'GET',
+        dataType: 'json',
+        success: function (res) {
+            window._ajaxToolsetLocal = null;
+            $('#toolsetLoader').addClass('hide');
+
+            if (res && res.success) {
+                window.globalToolsetLocalStats = res.estatisticas || {};
+                window.globalToolsetResponse = res;
+
+                // Renderizar imediatamente os dados locais no painel de KPIs
+                window.renderToolsetDashboard(res.estatisticas, true);
+
+                // Renderizar Notificações & Recursos (dados do MySQL local)
+                window.renderToolsetNotificacoes(res.notificacoes || []);
+
+                // Renderizar vagas locais de garagem com placeholder para veículos VDS
+                window.renderToolsetVeiculos([], res.vagas || [], true);
+
+                // Configurar skeletons e spinners de segundo plano nas seções VDS
+                window.setVdsSectionsLoading();
+
+                // Exibir container imediatamente para o usuário
                 $('#toolsetContainer').removeClass('hide');
                 $('#unitBrief').removeClass('hide');
 
                 // Reinicializar collapsibles e tooltips
                 $('.collapsible').collapsible({ accordion: false });
                 $('.tooltipped').tooltip();
+
+                // FASE 2: Disparar consultas remotas à API VDS em segundo plano
+                window.carregarDadosVdsBackground(unidade, bloco, mesAno);
             } else {
-                M.toast({ html: res.error || 'Erro ao consultar toolset da unidade', classes: 'red rounded' });
+                M.toast({ html: res.error || 'Erro ao consultar dados locais da unidade', classes: 'red rounded' });
                 $('#emptyState').removeClass('hide');
             }
         },
-        error: function () {
+        error: function (xhr, status) {
+            if (status === 'abort') return;
+            window._ajaxToolsetLocal = null;
             $('#toolsetLoader').addClass('hide');
             $('#emptyState').removeClass('hide');
-            M.toast({ html: 'Erro de conexão ao consultar histórico.', classes: 'red rounded' });
+            M.toast({ html: 'Erro de conexão ao consultar histórico local.', classes: 'red rounded' });
         }
     });
 }
@@ -1909,67 +2044,95 @@ $(document).on('click', '#buscaHistoricoUnidade', function (e) {
 });
 
 $(document).on('change', '#mesAnoFiltro', function () {
-    if ($('#unidade').val() && $('#bloco').val()) {
-        $('#buscaHistoricoUnidade').click();
+    let unidade = $('#unidade').val();
+    let bloco = $('#bloco').val();
+    if (unidade && bloco) {
+        let mesAno = $(this).val() || new Date().toISOString().slice(0, 7);
+        // Se a unidade já estiver exibida com notificações carregadas, só atualiza os dados do mês da VDS
+        if (!$('#toolsetContainer').hasClass('hide') && window.globalToolsetResponse && window.globalToolsetResponse.notificacoes) {
+            window.atualizarLabelsMesHistorico(mesAno);
+            window.setVdsSectionsLoading();
+            window.carregarDadosVdsBackground(unidade, bloco, mesAno);
+        } else {
+            $('#buscaHistoricoUnidade').click();
+        }
     }
 });
 
-// Renderização da Dashboard KPI da Unidade
-window.renderToolsetDashboard = function (stats) {
+// Renderização da Dashboard KPI da Unidade (Suporta estado parcial assíncrono)
+window.renderToolsetDashboard = function (stats, isVdsLoading) {
     if (!stats) return;
 
-    let seloInadimplencia = stats.inadimplente ? `
-        <div class="col s12" style="margin-bottom:12px;">
-            <div class="card-panel red darken-2 white-text flex-responsive" style="padding:12px 18px; border-radius:8px; display:flex; align-items:center; gap:12px; box-shadow: 0 4px 12px rgba(211,47,47,0.35);">
-                <i class="material-icons" style="font-size:2.2rem;">warning</i>
-                <div>
-                    <div style="font-weight:bold; font-size:1.1rem; text-transform:uppercase; letter-spacing:0.5px;">⚠️ UNIDADE INADIMPLENTE</div>
-                    <div style="font-size:0.85rem; opacity:0.95;">Esta unidade possui débitos ou pendências financeiras registradas na administração do condomínio.</div>
+    let seloInadimplencia = '';
+    if (!isVdsLoading && stats.inadimplente) {
+        seloInadimplencia = `
+            <div class="col s12" style="margin-bottom:12px;">
+                <div class="card-panel red darken-2 white-text flex-responsive" style="padding:12px 18px; border-radius:8px; display:flex; align-items:center; gap:12px; box-shadow: 0 4px 12px rgba(211,47,47,0.35);">
+                    <i class="material-icons" style="font-size:2.2rem;">warning</i>
+                    <div>
+                        <div style="font-weight:bold; font-size:1.1rem; text-transform:uppercase; letter-spacing:0.5px;">⚠️ UNIDADE INADIMPLENTE</div>
+                        <div style="font-size:0.85rem; opacity:0.95;">Esta unidade possui débitos ou pendências financeiras registradas na administração do condomínio.</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    ` : '';
+        `;
+    }
+
+    let veiculosVal = isVdsLoading ? '<i class="material-icons tiny spinning" style="font-size:1.4rem;">sync</i>' : (stats.totalVeiculos || 0);
+    let visitantesVal = isVdsLoading ? '<i class="material-icons tiny spinning" style="font-size:1.4rem;">sync</i>' : (stats.totalVisitantes || 0);
+    let entregasVal = isVdsLoading ? '<i class="material-icons tiny spinning" style="font-size:1.4rem;">sync</i>' : (stats.totalEntregas || 0);
+    let entregasLbl = isVdsLoading ? 'Encomendas (VDS...)' : `Encomendas (${stats.entregasPendentes || 0} Pend)`;
+    let autorizacoesVal = isVdsLoading ? '<i class="material-icons tiny spinning" style="font-size:1.4rem;">sync</i>' : (stats.totalAutorizacoes || 0);
+    let acessosVal = isVdsLoading ? '<i class="material-icons tiny spinning" style="font-size:1.4rem;">sync</i>' : (stats.totalAcessos || 0);
+
+    let ocorrenciasHtml = isVdsLoading 
+        ? `<div style="font-weight:500; font-size:0.92rem; opacity:0.9;"><i class="material-icons tiny spinning" style="font-size:1.1rem; vertical-align:middle; margin-right:4px;">sync</i> Sincronizando ocorrências com VDS...</div>`
+        : `<div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria || 0} | Citada/Tag: ${stats.totalChamadosTag || 0}</div>`;
+
+    let boletosHtml = isVdsLoading
+        ? `<div style="font-weight:500; font-size:0.92rem; opacity:0.9;"><i class="material-icons tiny spinning" style="font-size:1.1rem; vertical-align:middle; margin-right:4px;">sync</i> Sincronizando financeiro com VDS...</div>`
+        : `<div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos || 0} | Em Aberto: ${stats.boletosAbertos || 0}</div>`;
 
     let kpiHtml = seloInadimplencia + `
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
             <div class="kpi-card-toolset red darken-1" onclick="window.focusToolsetSection(2);">
-                <div class="kpi-val">${stats.totalNotificacoes}</div>
-                <div class="kpi-lbl">Notificações (${stats.totalMultas} Multas / ${stats.totalAdvertencias} Adv)</div>
+                <div class="kpi-val">${stats.totalNotificacoes || 0}</div>
+                <div class="kpi-lbl">Notificações (${stats.totalMultas || 0} Multas / ${stats.totalAdvertencias || 0} Adv)</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
             <div class="kpi-card-toolset blue darken-2" onclick="window.focusToolsetSection(2);">
-                <div class="kpi-val">${stats.totalRecursos}</div>
-                <div class="kpi-lbl">Recursos (${stats.recursosMantidos} M / ${stats.recursosRevogados} R / ${stats.recursosConvertidos} C)</div>
+                <div class="kpi-val">${stats.totalRecursos || 0}</div>
+                <div class="kpi-lbl">Recursos (${stats.recursosMantidos || 0} M / ${stats.recursosRevogados || 0} R / ${stats.recursosConvertidos || 0} C)</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
             <div class="kpi-card-toolset blue-grey darken-3" onclick="window.focusToolsetSection(1);">
-                <div class="kpi-val">${stats.totalVeiculos || 0}</div>
+                <div class="kpi-val">${veiculosVal}</div>
                 <div class="kpi-lbl">Veículos Cadastrados</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
             <div class="kpi-card-toolset purple darken-2" onclick="window.focusToolsetSection(11);">
-                <div class="kpi-val">${stats.totalVisitantes || 0}</div>
+                <div class="kpi-val">${visitantesVal}</div>
                 <div class="kpi-lbl">Visitantes / Prestadores</div>
             </div>
         </div>
         <div class="col s12 m4 l2" style="margin-bottom:10px;">
             <div class="kpi-card-toolset amber darken-3" onclick="window.focusToolsetSection(3);">
-                <div class="kpi-val">${stats.totalEntregas}</div>
-                <div class="kpi-lbl">Encomendas (${stats.entregasPendentes} Pend)</div>
+                <div class="kpi-val">${entregasVal}</div>
+                <div class="kpi-lbl">${entregasLbl}</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
             <div class="kpi-card-toolset teal darken-1" onclick="window.focusToolsetSection(4);">
-                <div class="kpi-val">${stats.totalAutorizacoes}</div>
+                <div class="kpi-val">${autorizacoesVal}</div>
                 <div class="kpi-lbl">Acessos Autorizados</div>
             </div>
         </div>
         <div class="col s12 m4 l3" style="margin-bottom:10px;">
             <div class="kpi-card-toolset deep-purple darken-1" onclick="window.focusToolsetSection(5);">
-                <div class="kpi-val">${stats.totalAcessos || 0}</div>
+                <div class="kpi-val">${acessosVal}</div>
                 <div class="kpi-lbl">Eventos de Acesso (Mês)</div>
             </div>
         </div>
@@ -1977,7 +2140,7 @@ window.renderToolsetDashboard = function (stats) {
             <div class="kpi-card-toolset blue-grey darken-4" onclick="window.focusToolsetSection(7);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Ocorrências no Condomínio</div>
-                    <div style="font-weight:600; font-size:1.05rem;">Própria Autoria: ${stats.totalChamadosAutoria} | Citada/Tag: ${stats.totalChamadosTag}</div>
+                    ${ocorrenciasHtml}
                 </div>
                 <i class="material-icons">forum</i>
             </div>
@@ -1986,7 +2149,7 @@ window.renderToolsetDashboard = function (stats) {
             <div class="kpi-card-toolset green darken-2" onclick="window.focusToolsetSection(9);" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.8;">Situação Financeira / Boletos</div>
-                    <div style="font-weight:600; font-size:1.05rem;">Total no Ano: ${stats.totalBoletos} | Em Aberto: ${stats.boletosAbertos}</div>
+                    ${boletosHtml}
                 </div>
                 <i class="material-icons">monetization_on</i>
             </div>
@@ -2066,11 +2229,9 @@ window.renderToolsetMoradores = function (list) {
 };
 
 // 0.1 Renderizar Veículos da Unidade (Design Centralizado com Cores por Tipo + Vagas)
-window.renderToolsetVeiculos = function (list, vagas) {
+window.renderToolsetVeiculos = function (list, vagas, isVdsLoading) {
     list = list || [];
     vagas = vagas || (window.globalToolsetResponse ? window.globalToolsetResponse.vagas : []) || [];
-
-    $('#badgeCountVeiculos').text(list.length);
 
     let vagasTexto = 'Nenhuma vaga vinculada';
     if (vagas && vagas.length > 0) {
@@ -2086,6 +2247,27 @@ window.renderToolsetVeiculos = function (list, vagas) {
             </div>
         </div>
     `;
+
+    if (isVdsLoading) {
+        $('#badgeCountVeiculos').html('<i class="material-icons tiny spinning" style="font-size:11px;">sync</i>');
+        $('#conteudoVeiculos').html(vagasBannerHtml + `
+            <div class="vds-sync-placeholder center-align grey-text" style="padding:24px;">
+                <div class="preloader-wrapper small active">
+                    <div class="spinner-layer spinner-blue-grey-only">
+                        <div class="circle-clipper left"><div class="circle"></div></div>
+                        <div class="gap-patch"><div class="circle"></div></div>
+                        <div class="circle-clipper right"><div class="circle"></div></div>
+                    </div>
+                </div>
+                <p style="margin-top:10px; font-size:0.85rem; font-weight:500; color:#455a64;">
+                    <i class="material-icons tiny spinning" style="vertical-align:middle;">sync</i> Consultando veículos cadastrados na VDS...
+                </p>
+            </div>
+        `);
+        return;
+    }
+
+    $('#badgeCountVeiculos').text(list.length);
 
     if (list.length === 0) {
         $('#conteudoVeiculos').html(vagasBannerHtml + '<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">directions_car</i> Nenhum veículo cadastrado para esta unidade.</div>');

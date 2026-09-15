@@ -100,62 +100,66 @@ $isDebugUser = ($userIdDebug === 5);
         </div>
     </div>
 
-    <!-- Card de Filtros (Unidade, Bloco e Período) -->
-    <div class="card-panel white z-depth-1" style="border-radius: 12px; padding: 18px 24px; margin-bottom: 20px;">
-        <div class="row valign-wrapper flex-responsive" style="margin-bottom: 0;">
-            <div class="input-field col s12 m2" style="margin-top: 0;">
-                <i class="material-icons prefix">business</i>
-                <input type="number" id="unidade" name="unidade" class="validate" placeholder="Ex: 101">
-                <label for="unidade" class="active">Unidade</label>
-            </div>
-            <div class="input-field col s12 m2" style="margin-top: 0;">
-                <i class="material-icons prefix">location_city</i>
-                <select id="bloco" name="bloco">
-                    <option value="" disabled selected>Escolha o Bloco</option>
-                    <option value="A">Bloco A</option>
-                    <option value="B">Bloco B</option>
-                    <option value="C">Bloco C</option>
-                    <option value="D">Bloco D</option>
-                    <option value="E">Bloco E</option>
-                    <option value="F">Bloco F</option>
-                </select>
-                <label class="active">Bloco / Torre</label>
-            </div>
-            <div class="input-field col s12 m2" style="margin-top: 0;">
-                <i class="material-icons prefix">directions_car</i>
-                <input type="number" id="vagaFiltro" name="vaga" class="validate" placeholder="Ex: 105">
-                <label for="vagaFiltro" class="active">OU Vaga</label>
+    <!-- Card de Filtros Responsivo (Unidade, Bloco e Período) -->
+    <div class="card-panel white z-depth-1 card-filtros-historico" id="cardFiltrosHistorico">
+        <div class="filtros-container-flex">
+            <!-- Grupo 1: Unidade e Bloco lado a lado -->
+            <div class="filtros-grupo-unidade-bloco">
+                <div class="input-field campo-unidade">
+                    <i class="material-icons prefix">business</i>
+                    <input type="number" id="unidade" name="unidade" class="validate" placeholder="Ex: 101">
+                    <label for="unidade" class="active">Unidade</label>
+                </div>
+                <div class="input-field campo-bloco">
+                    <i class="material-icons prefix">location_city</i>
+                    <select id="bloco" name="bloco">
+                        <option value="" disabled selected>Bloco</option>
+                        <option value="A">Bloco A</option>
+                        <option value="B">Bloco B</option>
+                        <option value="C">Bloco C</option>
+                        <option value="D">Bloco D</option>
+                        <option value="E">Bloco E</option>
+                        <option value="F">Bloco F</option>
+                    </select>
+                    <label class="active">Bloco / Torre</label>
+                </div>
             </div>
 
+            <!-- Grupo 2: Busca alternativa por vaga -->
+            <div class="filtros-grupo-vaga">
+                <div class="input-field campo-vaga">
+                    <i class="material-icons prefix">directions_car</i>
+                    <input type="number" id="vagaFiltro" name="vaga" class="validate" placeholder="Ex: 105">
+                    <label for="vagaFiltro" class="active">OU Vaga</label>
+                </div>
+            </div>
 
-            <!-- Seletor de Mês e Navegação Temporal -->
-            <div class="col s12 m4" style="margin-top: 0;">
-                <label class="grey-text text-darken-2"
-                    style="font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 4px;">
-                    <i class="material-icons tiny">date_range</i> MÊS DE ABRANGÊNCIA (ACELERADORES)
+            <!-- Grupo 3: Seletor de Mês e Navegação Temporal -->
+            <div class="filtros-grupo-periodo">
+                <label class="label-periodo grey-text text-darken-2">
+                    <i class="material-icons tiny">date_range</i> MÊS DE ABRANGÊNCIA
                 </label>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnMesAnterior"
+                <div class="mes-controles-wrapper">
+                    <button type="button" class="btn-flat waves-effect grey lighten-3 btn-nav-mes" id="btnMesAnterior"
                         title="Mês Anterior">
                         <i class="material-icons">chevron_left</i>
                     </button>
                     <input type="month" id="mesAnoFiltro" value="<?php echo $mesAtualDefault; ?>"
-                        class="browser-default custom-month-input"
-                        style="height: 36px; padding: 0 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; font-weight: 500;">
-                    <button type="button" class="btn-flat btn-small waves-effect grey lighten-3" id="btnProximoMes"
+                        class="browser-default custom-month-input">
+                    <button type="button" class="btn-flat waves-effect grey lighten-3 btn-nav-mes" id="btnProximoMes"
                         title="Próximo Mês">
                         <i class="material-icons">chevron_right</i>
                     </button>
-                    <button type="button" class="btn-flat btn-small waves-effect blue lighten-5 blue-text text-darken-3"
-                        id="btnMesAtual" title="Ir para o Mês Atual" style="font-weight: bold;">
+                    <button type="button" class="btn-flat waves-effect blue lighten-5 blue-text text-darken-3 btn-nav-hoje"
+                        id="btnMesAtual" title="Ir para o Mês Atual">
                         Hoje
                     </button>
                 </div>
             </div>
 
-            <div class="col s12 m2 center-align" style="margin-top: 0;">
-                <button class="btn waves-effect waves-light blue darken-2 style-btn-search" id="buscaHistoricoUnidade"
-                    style="width: 100%; height: 42px; line-height: 42px; border-radius: 6px;">
+            <!-- Grupo 4: Ação de Carregamento -->
+            <div class="filtros-grupo-acao">
+                <button class="btn waves-effect waves-light blue darken-2 btn-carregar-historico" id="buscaHistoricoUnidade">
                     <i class="material-icons left">search</i> CARREGAR
                 </button>
             </div>
@@ -1063,6 +1067,190 @@ $isDebugUser = ($userIdDebug === 5);
 
 
 <style>
+    /* Card de Filtros Responsivo */
+    .card-filtros-historico {
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+    }
+
+    .filtros-container-flex {
+        display: flex;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .filtros-grupo-unidade-bloco {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex: 2.2;
+        min-width: 260px;
+    }
+
+    .filtros-grupo-unidade-bloco .campo-unidade {
+        flex: 1;
+        margin: 0;
+    }
+
+    .filtros-grupo-unidade-bloco .campo-bloco {
+        flex: 1.1;
+        margin: 0;
+    }
+
+    .filtros-grupo-vaga {
+        flex: 1.1;
+        min-width: 120px;
+    }
+
+    .filtros-grupo-vaga .campo-vaga {
+        margin: 0;
+    }
+
+    .filtros-grupo-periodo {
+        flex: 2.3;
+        min-width: 280px;
+    }
+
+    .filtros-grupo-periodo .label-periodo {
+        font-size: 0.8rem;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 6px;
+        white-space: nowrap;
+    }
+
+    .mes-controles-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .mes-controles-wrapper .custom-month-input {
+        height: 40px;
+        padding: 0 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        flex: 1;
+        font-weight: 500;
+        min-width: 105px;
+    }
+
+    .btn-nav-mes {
+        height: 40px;
+        line-height: 40px;
+        padding: 0 10px;
+        border-radius: 4px;
+    }
+
+    .btn-nav-hoje {
+        height: 40px;
+        line-height: 40px;
+        padding: 0 12px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .filtros-grupo-acao {
+        flex: 1.2;
+        min-width: 140px;
+    }
+
+    .btn-carregar-historico {
+        width: 100%;
+        height: 42px;
+        line-height: 42px;
+        border-radius: 6px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    /* Regras Mobile e Telas Curtas */
+    @media (max-width: 768px) {
+        .card-filtros-historico {
+            padding: 14px 14px;
+        }
+
+        .filtros-container-flex {
+            gap: 12px;
+        }
+
+        .filtros-grupo-unidade-bloco {
+            width: 100%;
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+
+        .filtros-grupo-vaga {
+            width: 100%;
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+
+        .filtros-grupo-periodo {
+            width: 100%;
+            flex: 1 1 100%;
+            min-width: 100%;
+            margin-top: 4px;
+        }
+
+        .filtros-grupo-acao {
+            width: 100%;
+            flex: 1 1 100%;
+            min-width: 100%;
+            margin-top: 4px;
+        }
+
+        .btn-carregar-historico {
+            height: 44px;
+            line-height: 44px;
+        }
+
+        .style-header-toolset h4 {
+            font-size: 1.4rem !important;
+        }
+
+        .style-header-toolset .right-align {
+            text-align: left !important;
+        }
+
+        #btnAbrirBuscaVDS {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* Animações e Estados Assíncronos da VDS */
+    @keyframes vds-pulse {
+        0% { opacity: 0.55; }
+        50% { opacity: 1; }
+        100% { opacity: 0.55; }
+    }
+
+    .vds-skeleton-loading {
+        animation: vds-pulse 1.4s infinite ease-in-out;
+    }
+
+    .spinning {
+        animation: spin 1s infinite linear;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .badge-vds-sync {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+
     .flex-header-collapsible {
         display: flex !important;
         align-items: center;

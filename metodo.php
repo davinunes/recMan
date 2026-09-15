@@ -774,10 +774,19 @@ switch ($_GET['metodo']) {
         echo json_encode($response);
         break;
 
+    case "toolsetUnidadeLocal":
+    case "toolsetUnidadeVds":
     case "toolsetUnidade":
         header('Content-Type: application/json; charset=utf-8');
         session_start();
-        require_once __DIR__ . "/classes/vds_acesso_service.php";
+        $usuarioId = $_SESSION['user_id'] ?? null;
+        session_write_close(); // Libera trava de sessão PHP imediatamente para concorrência de requests
+
+        $reqMetodo = $_GET['metodo'] ?? ($_POST['metodo'] ?? '');
+        $modo = $_GET['modo'] ?? ($_POST['modo'] ?? '');
+        if ($reqMetodo === 'toolsetUnidadeLocal') $modo = 'local';
+        if ($reqMetodo === 'toolsetUnidadeVds') $modo = 'vds';
+        if (empty($modo)) $modo = 'todos';
 
         $unidade = $_GET['unidade'] ?? ($_POST['unidade'] ?? '');
         $torre = $_GET['torre'] ?? ($_GET['bloco'] ?? ($_POST['torre'] ?? ($_POST['bloco'] ?? '')));
@@ -788,32 +797,85 @@ switch ($_GET['metodo']) {
             break;
         }
 
-        // 1. Notificações da Unidade (Histórico Completo sem filtro de mês)
-        $notificacoes = getNotificacoes($unidade, $torre);
-        if (!is_array($notificacoes)) $notificacoes = [];
+        $torreClean = strtoupper(trim(str_replace(['bloco', 'bl.', 'bl'], '', strtolower($torre))));
+        $unidadeClean = trim($unidade);
 
-        // 2. Definir período para aceleradores baseados no mês
+        // MODO LOCAL: Executa consultas no MySQL local (resposta em milissegundos)
+        if ($modo === 'local') {
+            $notificacoes = getNotificacoes($unidade, $torre);
+            if (!is_array($notificacoes)) $notificacoes = [];
+
+            $vagasLocais = getEstacionamento($torre, $unidade);
+            if (!is_array($vagasLocais)) $vagasLocais = [];
+
+            $totalNotif = count($notificacoes);
+            $totalMultas = 0;
+            $totalAdvertencias = 0;
+            $totalRecursos = 0;
+            $recursosMantidos = 0;
+            $recursosRevogados = 0;
+            $recursosConvertidos = 0;
+
+            foreach ($notificacoes as $n) {
+                $nf = strtolower($n['notificacao'] ?? '');
+                if (strpos($nf, 'multa') !== false) $totalMultas++;
+                else $totalAdvertencias++;
+
+                $stRec = trim($n['status_recurso'] ?? '');
+                if (!empty($stRec)) {
+                    $totalRecursos++;
+                    $p = strtoupper($n['parecer_conselho'] ?? '');
+                    if (strpos($p, 'MANTER') !== false) $recursosMantidos++;
+                    elseif (strpos($p, 'REVOGAR') !== false) $recursosRevogados++;
+                    elseif (strpos($p, 'CONVERTER') !== false) $recursosConvertidos++;
+                }
+            }
+
+            $estatisticasLocais = [
+                'unidade' => $unidadeClean,
+                'bloco' => $torreClean,
+                'mesAno' => $mesAno,
+                'totalNotificacoes' => $totalNotif,
+                'totalMultas' => $totalMultas,
+                'totalAdvertencias' => $totalAdvertencias,
+                'totalRecursos' => $totalRecursos,
+                'recursosMantidos' => $recursosMantidos,
+                'recursosRevogados' => $recursosRevogados,
+                'recursosConvertidos' => $recursosConvertidos,
+                'totalVagas' => count($vagasLocais)
+            ];
+
+            echo json_encode([
+                'success' => true,
+                'modo' => 'local',
+                'estatisticas' => $estatisticasLocais,
+                'notificacoes' => $notificacoes,
+                'vagas' => $vagasLocais
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        // MODO VDS OU TODOS: Consultas remotas à API V8 do Vida de Síndico
+        require_once __DIR__ . "/classes/vds_acesso_service.php";
+
         $ano = substr($mesAno, 0, 4);
         $mes = substr($mesAno, 5, 2);
         $dtInicio = "{$mesAno}-01";
         $dtFim = date("Y-m-t", strtotime($dtInicio));
 
-        // 3. Encomendas do Mês
+        // Encomendas do Mês
         $entregas = vds_get_entregas_unidade($torre, $unidade, $dtInicio, $dtFim);
 
-        // 4. Autorizações de Acesso do Mês
+        // Autorizações de Acesso do Mês
         $autorizacoes = vds_get_autorizacoes_acesso($torre, $unidade, $dtInicio, $dtFim);
 
-        // 5. Reservas de Área Comum do Mês
+        // Reservas de Área Comum do Mês
         $reservas = vds_get_reservas_unidade($torre, $unidade, $dtInicio, $dtFim);
 
-        // 6. Chamados / Ocorrências (Autoria vs Tag)
+        // Chamados / Ocorrências (Autoria vs Tag)
         $chamadosTodos = vds_get_chamados_unidade($torre, $unidade);
         $ocorrenciasAutoria = [];
         $ocorrenciasTag = [];
-
-        $torreClean = strtoupper(trim(str_replace(['bloco', 'bl.', 'bl'], '', strtolower($torre))));
-        $unidadeClean = trim($unidade);
 
         foreach ($chamadosTodos as $ch) {
             $chBloco = strtoupper(trim($ch['bloco'] ?? ''));
@@ -826,33 +888,93 @@ switch ($_GET['metodo']) {
             }
         }
 
-        // 7. Lista de Boletos do Ano
+        // Lista de Boletos do Ano
         $boletos = vds_get_boletos_unidade($torre, $unidade, $ano);
 
-        // 8. Moradores da Unidade e Verificação de Inadimplência
+        // Moradores da Unidade e Verificação de Inadimplência
         $resMoradores = vds_get_moradores_unidade($torre, $unidade);
         $moradores = $resMoradores['moradores'] ?? [];
         $inadimplente = $resMoradores['inadimplente'] ?? false;
 
-        // 9. Veículos Cadastrados na Unidade e Vagas de Garagem do Banco Local
+        // Veículos Cadastrados na Unidade
         $veiculos = vds_get_veiculos_unidade($torre, $unidade);
-        $vagasLocais = getEstacionamento($torre, $unidade);
-        if (!is_array($vagasLocais)) $vagasLocais = [];
 
-        // 9.1 Visitantes e Prestadores da Portaria
+        // Visitantes e Prestadores da Portaria
         $visitantes = vds_get_visitantes_unidade($torre, $unidade);
 
-        // 9.2 Liberações da Portaria (Caixa 9 VDS)
+        // Liberações da Portaria (Caixa 9 VDS)
         $liberacoesPortaria = vds_get_liberacoes_portaria_unidade($torre, $unidade, $dtInicio, $dtFim);
 
-        // 9.3 Eventos de Acesso da Unidade (Catracas, Portões, Biometria/Facial/Tags)
-        $usuarioId = $_SESSION['user_id'] ?? null;
+        // Eventos de Acesso da Unidade
         $dtInicioAcesso = "{$mesAno}-01T00:00";
         $dtFimAcesso = date("Y-m-t\T23:59", strtotime("{$mesAno}-01"));
         $acessos = vds_get_eventos_acesso($torre, $unidade, $dtInicioAcesso, $dtFimAcesso, $usuarioId);
         if (!is_array($acessos)) $acessos = [];
 
-        // 10. Cálculo da Dashboard Estatística (KPI)
+        $entregasPendentes = 0;
+        foreach ($entregas as $e) {
+            $st = strtolower($e['status'] ?? '');
+            if ($st !== 'entregue' && $st !== 'retirado') {
+                $entregasPendentes++;
+            }
+        }
+
+        $boletosAbertos = 0;
+        foreach ($boletos as $b) {
+            $stB = strtolower(vds_extract_string_value($b['status'] ?? null, ''));
+            if ($stB !== 'liquidado' && $stB !== 'pago') {
+                $boletosAbertos++;
+            }
+        }
+
+        $estatisticasVds = [
+            'unidade' => $unidadeClean,
+            'bloco' => $torreClean,
+            'mesAno' => $mesAno,
+            'periodoExtenso' => date('m/Y', strtotime($dtInicio)),
+            'inadimplente' => $inadimplente,
+            'totalMoradores' => count($moradores),
+            'totalVeiculos' => count($veiculos),
+            'totalVisitantes' => count($visitantes),
+            'totalEntregas' => count($entregas),
+            'entregasPendentes' => $entregasPendentes,
+            'totalAutorizacoes' => count($autorizacoes),
+            'totalReservas' => count($reservas),
+            'totalChamadosAutoria' => count($ocorrenciasAutoria),
+            'totalChamadosTag' => count($ocorrenciasTag),
+            'totalBoletos' => count($boletos),
+            'boletosAbertos' => $boletosAbertos,
+            'totalLiberacoesPortaria' => count($liberacoesPortaria),
+            'totalAcessos' => count($acessos)
+        ];
+
+        if ($modo === 'vds') {
+            echo json_encode([
+                'success' => true,
+                'modo' => 'vds',
+                'estatisticas' => $estatisticasVds,
+                'inadimplente' => $inadimplente,
+                'moradores' => $moradores,
+                'veiculos' => $veiculos,
+                'visitantes' => $visitantes,
+                'entregas' => $entregas,
+                'autorizacoes' => $autorizacoes,
+                'acessos' => $acessos,
+                'reservas' => $reservas,
+                'ocorrenciasAutoria' => $ocorrenciasAutoria,
+                'ocorrenciasTag' => $ocorrenciasTag,
+                'boletos' => $boletos,
+                'liberacoesPortaria' => $liberacoesPortaria
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        // MODO TODOS (compatibilidade legada)
+        $notificacoes = getNotificacoes($unidade, $torre);
+        if (!is_array($notificacoes)) $notificacoes = [];
+        $vagasLocais = getEstacionamento($torre, $unidade);
+        if (!is_array($vagasLocais)) $vagasLocais = [];
+
         $totalNotif = count($notificacoes);
         $totalMultas = 0;
         $totalAdvertencias = 0;
@@ -876,53 +998,20 @@ switch ($_GET['metodo']) {
             }
         }
 
-        $entregasPendentes = 0;
-        foreach ($entregas as $e) {
-            $st = strtolower($e['status'] ?? '');
-            if ($st !== 'entregue' && $st !== 'retirado') {
-                $entregasPendentes++;
-            }
-        }
-
-        $boletosAbertos = 0;
-        foreach ($boletos as $b) {
-            $stB = strtolower(vds_extract_string_value($b['status'] ?? null, ''));
-            if ($stB !== 'liquidado' && $stB !== 'pago') {
-                $boletosAbertos++;
-            }
-        }
-
-        $estatisticas = [
-            'unidade' => $unidadeClean,
-            'bloco' => $torreClean,
-            'mesAno' => $mesAno,
-            'periodoExtenso' => date('m/Y', strtotime($dtInicio)),
-            'inadimplente' => $inadimplente,
-            'totalMoradores' => count($moradores),
-            'totalVeiculos' => count($veiculos),
+        $estatisticas = array_merge($estatisticasVds, [
             'totalVagas' => count($vagasLocais),
-            'totalVisitantes' => count($visitantes),
             'totalNotificacoes' => $totalNotif,
             'totalMultas' => $totalMultas,
             'totalAdvertencias' => $totalAdvertencias,
             'totalRecursos' => $totalRecursos,
             'recursosMantidos' => $recursosMantidos,
             'recursosRevogados' => $recursosRevogados,
-            'recursosConvertidos' => $recursosConvertidos,
-            'totalEntregas' => count($entregas),
-            'entregasPendentes' => $entregasPendentes,
-            'totalAutorizacoes' => count($autorizacoes),
-            'totalReservas' => count($reservas),
-            'totalChamadosAutoria' => count($ocorrenciasAutoria),
-            'totalChamadosTag' => count($ocorrenciasTag),
-            'totalBoletos' => count($boletos),
-            'boletosAbertos' => $boletosAbertos,
-            'totalLiberacoesPortaria' => count($liberacoesPortaria),
-            'totalAcessos' => count($acessos)
-        ];
+            'recursosConvertidos' => $recursosConvertidos
+        ]);
 
         echo json_encode([
             'success' => true,
+            'modo' => 'todos',
             'estatisticas' => $estatisticas,
             'inadimplente' => $inadimplente,
             'moradores' => $moradores,
