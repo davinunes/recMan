@@ -117,17 +117,16 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                 </button>
             </div>
 
+            <!-- Marcar/Desmarcar Auditoria / Pendente via AJAX (Ícone Rápido com Tooltip) -->
+            <?php $isAuditoria = !empty($local['auditoria']); ?>
+            <button type="button" id="btn-ajax-auditoria" class="btn-small waves-effect waves-light <?= $isAuditoria ? 'amber darken-2 white-text' : 'white grey-text text-darken-3' ?>" style="height:30px; line-height:30px; width:34px; padding:0; display:inline-flex; align-items:center; justify-content:center; border:1px solid <?= $isAuditoria ? '#f57c00' : '#dadce0' ?>; box-shadow:none;" title="<?= $isAuditoria ? 'Em Auditoria / Pendência marcada (Clique para desmarcar)' : 'Marcar chamado em Auditoria / Pendente' ?>" onclick="executarAcaoAjaxAuditoria(<?= (int)$local['id'] ?>, <?= $isAuditoria ? 0 : 1 ?>)">
+                <i class="material-icons tiny" id="icon-ajax-auditoria" style="color:<?= $isAuditoria ? '#fff' : '#f57c00' ?>; font-size:1.15rem; margin:0;">rate_review</i>
+            </button>
+
             <!-- Marcar/Desmarcar Resolvido (Local) via AJAX -->
             <button type="button" id="btn-ajax-resolvido" class="btn-small waves-effect waves-light <?= $local['resolvido'] ? 'grey' : 'green darken-1' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $local['resolvido'] ? 'Reabrir Chamado (Local)' : 'Marcar como Resolvido (Local)' ?>" onclick="executarAcaoAjaxResolvido(<?= $local['id'] ?>, <?= $local['resolvido'] ? 0 : 1 ?>)">
                 <i class="material-icons left tiny" id="icon-ajax-resolvido"><?= $local['resolvido'] ? 'undo' : 'check_circle' ?></i>
                 <span id="lbl-ajax-resolvido"><?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?></span>
-            </button>
-
-            <!-- Marcar/Desmarcar Auditoria / Pendente via AJAX -->
-            <?php $isAuditoria = !empty($local['auditoria']); ?>
-            <button type="button" id="btn-ajax-auditoria" class="btn-small waves-effect waves-light <?= $isAuditoria ? 'amber darken-2 white-text' : 'white grey-text text-darken-3' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem; border:1px solid <?= $isAuditoria ? '#f57c00' : '#dadce0' ?>; box-shadow:none;" title="<?= $isAuditoria ? 'Em Auditoria / Pendência marcada (Clique para desmarcar)' : 'Marcar chamado em Auditoria / Pendente' ?>" onclick="executarAcaoAjaxAuditoria(<?= (int)$local['id'] ?>, <?= $isAuditoria ? 0 : 1 ?>)">
-                <i class="material-icons left tiny" id="icon-ajax-auditoria" style="margin-right:4px; color:<?= $isAuditoria ? '#fff' : '#f57c00' ?>;">rate_review</i>
-                <span id="lbl-ajax-auditoria"><?= $isAuditoria ? 'Em Auditoria' : 'Auditoria' ?></span>
             </button>
 
             <!-- Marcar como Lido / Não Lido (VDS Remoto - Icon Button Sugestivo via AJAX) -->
@@ -1823,7 +1822,6 @@ function executarAcaoAjaxResponsabilidade(ocorrenciaId, respVal) {
 function executarAcaoAjaxAuditoria(ocorrenciaId, novoAuditoriaVal) {
     const $btn = $('#btn-ajax-auditoria');
     const $icon = $('#icon-ajax-auditoria');
-    const $lbl = $('#lbl-ajax-auditoria');
 
     $btn.css('opacity', '0.7');
     $icon.text('sync').addClass('spin-icon');
@@ -1851,7 +1849,6 @@ function executarAcaoAjaxAuditoria(ocorrenciaId, novoAuditoriaVal) {
                         .attr('title', 'Em Auditoria / Pendência marcada (Clique para desmarcar)')
                         .attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 0)');
                     $icon.css('color', '#fff').text('rate_review');
-                    $lbl.text('Em Auditoria');
 
                     if ($badgeSide.length) {
                         $badgeSide.show();
@@ -1873,7 +1870,6 @@ function executarAcaoAjaxAuditoria(ocorrenciaId, novoAuditoriaVal) {
                         .attr('title', 'Marcar chamado em Auditoria / Pendente')
                         .attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 1)');
                     $icon.css('color', '#f57c00').text('rate_review');
-                    $lbl.text('Auditoria');
 
                     if ($badgeSide.length) {
                         $badgeSide.hide();
