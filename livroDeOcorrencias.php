@@ -123,6 +123,13 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                 <span id="lbl-ajax-resolvido"><?= $local['resolvido'] ? 'Reabrir (Local)' : 'Marcar Resolvido (Local)' ?></span>
             </button>
 
+            <!-- Marcar/Desmarcar Auditoria / Pendente via AJAX -->
+            <?php $isAuditoria = !empty($local['auditoria']); ?>
+            <button type="button" id="btn-ajax-auditoria" class="btn-small waves-effect waves-light <?= $isAuditoria ? 'amber darken-2 white-text' : 'white grey-text text-darken-3' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem; border:1px solid <?= $isAuditoria ? '#f57c00' : '#dadce0' ?>; box-shadow:none;" title="<?= $isAuditoria ? 'Em Auditoria / Pendência marcada (Clique para desmarcar)' : 'Marcar chamado em Auditoria / Pendente' ?>" onclick="executarAcaoAjaxAuditoria(<?= (int)$local['id'] ?>, <?= $isAuditoria ? 0 : 1 ?>)">
+                <i class="material-icons left tiny" id="icon-ajax-auditoria" style="margin-right:4px; color:<?= $isAuditoria ? '#fff' : '#f57c00' ?>;">rate_review</i>
+                <span id="lbl-ajax-auditoria"><?= $isAuditoria ? 'Em Auditoria' : 'Auditoria' ?></span>
+            </button>
+
             <!-- Marcar como Lido / Não Lido (VDS Remoto - Icon Button Sugestivo via AJAX) -->
             <button type="button" id="btn-ajax-lido" class="btn-small waves-effect waves-light <?= $isLidaVds ? 'orange darken-3' : 'teal' ?>" style="height:30px; line-height:30px; padding:0 10px; font-size:0.8rem;" title="<?= $isLidaVds ? 'Marcar como NÃO Lido na VDS' : 'Marcar como LIDO na VDS' ?>" onclick="executarAcaoAjaxLido(<?= $local['id'] ?>, '<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= $isLidaVds ? 0 : 1 ?>)">
                 <i class="material-icons left tiny" id="icon-ajax-lido"><?= $isLidaVds ? 'mark_email_unread' : 'mark_email_read' ?></i>
@@ -168,11 +175,11 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
     </div>
 
     <?php
-    // Identificar protocolo para busca no Gmail (se for Monitoramento ou tiver protocolo disponível)
-    $protocoloBusca = trim((string)($local['protocolo_vds'] ?? ''));
+    // Identificar protocolo para busca no Gmail (habilitado para todos os tipos com protocolo)
+    $protocoloBusca = trim((string)($local['protocolo_vds'] ?? $local['id'] ?? ''));
     $isMonitoramento = ($tipoId === 247 || stripos($infoTipo['nome'] ?? '', 'Monitoramento') !== false);
     ?>
-    <!-- Container Dinâmico para Card de E-mail do Gmail (Monitoramento) -->
+    <!-- Container Dinâmico para Card de E-mail do Gmail -->
     <div id="gmail-card-container" data-protocolo="<?= htmlspecialchars($protocoloBusca) ?>" data-is-monitoramento="<?= $isMonitoramento ? '1' : '0' ?>" style="display:none;"></div>
 
     <!-- Feed do Chat WhatsApp -->
@@ -561,6 +568,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $msg = $resolvidoVal ? "Chamado marcado como RESOLVIDO no Conselho!" : "Chamado reaberto no Conselho!";
         $msgType = "success";
+    } elseif ($action === 'marcar_auditoria') {
+        $ocorrenciaId = (int)$_POST['ocorrencia_id'];
+        $auditoriaVal = (int)($_POST['auditoria_val'] ?? 1);
+
+        $link = DBConnect();
+        $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET auditoria = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, "ii", $auditoriaVal, $ocorrenciaId);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        DBClose($link);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'action' => 'marcar_auditoria',
+                'ocorrencia_id' => $ocorrenciaId,
+                'auditoria' => $auditoriaVal,
+                'message' => $auditoriaVal ? "Chamado marcado em Auditoria / Pendente!" : "Marcação de Auditoria / Pendente removida."
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $msg = $auditoriaVal ? "Chamado marcado em Auditoria / Pendente!" : "Marcação de Auditoria / Pendente removida.";
+        $msgType = "success";
     } elseif ($action === 'marcar_como_lido') {
         $ocorrenciaId = (int)($_POST['ocorrencia_id'] ?? 0);
         $uuidRemoto = $_POST['uuid_remoto'] ?? null;
@@ -644,6 +677,7 @@ $protoFiltro = $_GET['protocolo'] ?? '';
 $respFiltro = $_GET['responsabilidade'] ?? '';
 $statusFiltro = $_GET['status'] ?? 'abertas';
 $tipoFiltro = $_GET['oco_tipo'] ?? '';
+$auditoriaFiltro = $_GET['auditoria'] ?? '';
 
 $listaBlocos = [];
 $ocorrenciasAgrupadas = [];
@@ -701,6 +735,11 @@ if ($visao === 'pratico') {
     if ($protoFiltro !== '') { $sqlWhere .= " AND (protocolo_vds = ? OR id = ?)"; $params[] = $protoFiltro; $params[] = (int)$protoFiltro; $types .= "si"; }
     if ($respFiltro !== '') { $sqlWhere .= " AND responsabilidade = ?"; $params[] = $respFiltro; $types .= "s"; }
     if ($tipoFiltro !== '') { $sqlWhere .= " AND oco_tipo = ?"; $params[] = (int)$tipoFiltro; $types .= "i"; }
+    if ($auditoriaFiltro === '1') {
+        $sqlWhere .= " AND auditoria = 1";
+    } elseif ($auditoriaFiltro === '0') {
+        $sqlWhere .= " AND (auditoria IS NULL OR auditoria = 0)";
+    }
 
     $sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
     $stmtList = mysqli_prepare($link, $sqlList);
@@ -935,6 +974,16 @@ if (!$detalheSel && $selId) {
                         </select>
                     </div>
 
+                    <!-- Filtro por Auditoria / Pendência -->
+                    <div style="flex: 1.1; min-width: 140px;">
+                        <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">AUDITORIA / PENDÊNCIA</label>
+                        <select name="auditoria" class="browser-default" onchange="this.form.submit()" style="height:32px; padding:2px 8px; font-size:0.82rem; border:1px solid #ced4da; border-radius:6px; background:#fff; width:100%;">
+                            <option value="">Todas</option>
+                            <option value="1" <?= $auditoriaFiltro === '1' ? 'selected' : '' ?>>🔍 Em Auditoria</option>
+                            <option value="0" <?= $auditoriaFiltro === '0' ? 'selected' : '' ?>>Sem Auditoria</option>
+                        </select>
+                    </div>
+
                     <!-- Busca Rápida no Cliente -->
                     <div style="flex: 1.8; min-width: 180px;">
                         <label style="font-weight:bold; font-size:0.75rem; color:#495057; display:block; margin-bottom:2px;">BUSCA RÁPIDA (TEXTO)</label>
@@ -1047,16 +1096,23 @@ if (!$detalheSel && $selId) {
                             <?php
                             $isSel = ($selId == $oco['id']);
                             $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
-                            $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
+                            $isAuditoriaItem = !empty($oco['auditoria']);
+                            $searchAuditoria = $isAuditoriaItem ? ' auditoria pendente' : '';
+                            $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . $searchAuditoria . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
                             ?>
                             <div class="item-oco <?= $isSel ? 'active' : '' ?>" id="item-oco-<?= $oco['id'] ?>" data-id="<?= $oco['id'] ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="selecionarOcorrencia(<?= $oco['id'] ?>, this, event)">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <span class="badge-tipo" style="background-color: <?= $infoTipo['bg'] ?>; color: <?= $infoTipo['color'] ?>;">
                                         <?= htmlspecialchars($infoTipo['nome']) ?>
                                     </span>
-                                    <span style="font-size: 0.75rem; color: #888;">
-                                        Prot: <?= htmlspecialchars($oco['protocolo_vds'] ?? $oco['id']) ?>
-                                    </span>
+                                    <div style="display:flex; align-items:center; gap:4px;">
+                                        <span class="badge-auditoria-sidebar" style="display:<?= $isAuditoriaItem ? 'inline-block' : 'none' ?>; background:#fff3cd; color:#856404; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffeeba;" title="Chamado sob Auditoria / Pendência">
+                                            🔍 AUDITORIA
+                                        </span>
+                                        <span style="font-size: 0.75rem; color: #888;">
+                                            Prot: <?= htmlspecialchars($oco['protocolo_vds'] ?? $oco['id']) ?>
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div style="font-weight: 600; font-size: 0.95rem; color: #333;">
@@ -1417,16 +1473,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const resolvidoText = oco.resolvido ? '✓ Resolvido' : '• Aberto';
             const resolvidoColor = oco.resolvido ? '#28a745' : '#dc3545';
             const protText = oco.protocolo_vds || oco.id;
+            const isAuditoria = parseInt(oco.auditoria || 0) === 1;
+            const searchAuditoria = isAuditoria ? ' auditoria pendente' : '';
+            const searchStr = `${oco.bloco} ${oco.unidade} ${protText} ${oco.responsabilidade || ''}${searchAuditoria}`.toLowerCase();
 
             const itemHtml = `
-                <div class="item-oco" id="item-oco-${oco.id}" data-id="${oco.id}" onclick="selecionarOcorrencia(${oco.id}, this, event)">
+                <div class="item-oco" id="item-oco-${oco.id}" data-id="${oco.id}" data-search="${searchStr}" onclick="selecionarOcorrencia(${oco.id}, this, event)">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span class="badge-tipo" style="background-color: ${infoTipo.bg}; color: ${infoTipo.color};">
                             ${infoTipo.nome}
                         </span>
-                        <span style="font-size: 0.75rem; color: #888;">
-                            Prot: ${protText}
-                        </span>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <span class="badge-auditoria-sidebar" style="display:${isAuditoria ? 'inline-block' : 'none'}; background:#fff3cd; color:#856404; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffeeba;" title="Chamado sob Auditoria / Pendência">
+                                🔍 AUDITORIA
+                            </span>
+                            <span style="font-size: 0.75rem; color: #888;">
+                                Prot: ${protText}
+                            </span>
+                        </div>
                     </div>
 
                     <div style="font-weight: 600; font-size: 0.95rem; color: #333;">
@@ -1756,6 +1820,80 @@ function executarAcaoAjaxResponsabilidade(ocorrenciaId, respVal) {
     });
 }
 
+function executarAcaoAjaxAuditoria(ocorrenciaId, novoAuditoriaVal) {
+    const $btn = $('#btn-ajax-auditoria');
+    const $icon = $('#icon-ajax-auditoria');
+    const $lbl = $('#lbl-ajax-auditoria');
+
+    $btn.css('opacity', '0.7');
+    $icon.text('sync').addClass('spin-icon');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'marcar_auditoria',
+            ocorrencia_id: ocorrenciaId,
+            auditoria_val: novoAuditoriaVal
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success) {
+                const isAud = !!res.auditoria;
+                const $sideItem = $('#item-oco-' + ocorrenciaId);
+                let $badgeSide = $sideItem.find('.badge-auditoria-sidebar');
+
+                if (isAud) {
+                    $btn.removeClass('white grey-text text-darken-3')
+                        .addClass('amber darken-2 white-text')
+                        .css('border-color', '#f57c00')
+                        .attr('title', 'Em Auditoria / Pendência marcada (Clique para desmarcar)')
+                        .attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 0)');
+                    $icon.css('color', '#fff').text('rate_review');
+                    $lbl.text('Em Auditoria');
+
+                    if ($badgeSide.length) {
+                        $badgeSide.show();
+                    } else {
+                        const $protSpan = $sideItem.find('span:contains("Prot:")');
+                        if ($protSpan.length) {
+                            $('<span class="badge-auditoria-sidebar" style="background:#fff3cd; color:#856404; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffeeba; margin-right:4px;" title="Chamado sob Auditoria / Pendência">🔍 AUDITORIA</span>').insertBefore($protSpan);
+                        }
+                    }
+
+                    let currentSearch = ($sideItem.attr('data-search') || '');
+                    if (currentSearch.indexOf('auditoria') === -1) {
+                        $sideItem.attr('data-search', currentSearch + ' auditoria pendente');
+                    }
+                } else {
+                    $btn.removeClass('amber darken-2 white-text')
+                        .addClass('white grey-text text-darken-3')
+                        .css('border-color', '#dadce0')
+                        .attr('title', 'Marcar chamado em Auditoria / Pendente')
+                        .attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 1)');
+                    $icon.css('color', '#f57c00').text('rate_review');
+                    $lbl.text('Auditoria');
+
+                    if ($badgeSide.length) {
+                        $badgeSide.hide();
+                    }
+
+                    let currentSearch = ($sideItem.attr('data-search') || '');
+                    $sideItem.attr('data-search', currentSearch.replace(/\bauditoria\b|\bpendente\b/g, '').replace(/\s+/g, ' ').trim());
+                }
+            }
+        },
+        error: function(err) {
+            console.error('[AJAX Auditoria] Erro ao atualizar', err);
+        },
+        complete: function() {
+            $btn.css('opacity', '1');
+            $icon.removeClass('spin-icon');
+        }
+    });
+}
+
 function executarAcaoAjaxResolvido(ocorrenciaId, novoResolvidoVal) {
     const $btn = $('#btn-ajax-resolvido');
     const $icon = $('#icon-ajax-resolvido');
@@ -2001,8 +2139,8 @@ function verificarEIniciarBuscaGmail() {
     const protocolo = ($container.data('protocolo') || '').toString().trim();
     const isMonitoramento = parseInt($container.data('is-monitoramento')) === 1;
 
-    // Apenas dispara a busca se for ocorrência de Monitoramento ou tiver protocolo válido
-    if (!protocolo || !isMonitoramento) return;
+    // Dispara a busca assíncrona para qualquer ocorrência que possua protocolo válido
+    if (!protocolo) return;
 
     $container.hide().html('');
 
@@ -2022,6 +2160,9 @@ function verificarEIniciarBuscaGmail() {
                 const date = res.date || '';
                 const mailId = res.id || '';
                 const webLink = res.webLink || ('https://mail.google.com/mail/#inbox/' + mailId);
+                const badgeTitulo = isMonitoramento 
+                    ? 'E-mail do Alarme / Monitoramento' 
+                    : ('E-mail Vinculado ao Chamado (Protocolo ' + escapeHtmlGmail(protocolo) + ')');
 
                 const cardHtml = `
                     <div class="gmail-monitoramento-card" style="background:#fff9f8; border:1px solid #ffccba; border-left:4px solid #ea4335; border-radius:6px; padding:10px 16px; margin:10px 20px 0 20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -2031,7 +2172,7 @@ function verificarEIniciarBuscaGmail() {
                             </div>
                             <div style="line-height:1.35; overflow:hidden;">
                                 <div style="font-size:0.75rem; font-weight:700; color:#d93025; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
-                                    <span>E-mail do Alarme / Monitoramento</span>
+                                    <span>${badgeTitulo}</span>
                                 </div>
                                 <div style="font-size:0.88rem; font-weight:600; color:#202124; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtmlGmail(subject)}">
                                     ${escapeHtmlGmail(subject)}
