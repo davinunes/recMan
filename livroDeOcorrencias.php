@@ -77,8 +77,8 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
     <!-- Header do Chat -->
     <div class="chat-header">
         <div style="display:flex; align-items:center; gap:10px;">
-            <a href="javascript:void(0)" onclick="voltarParaListaMobile()" class="btn-flat btn-small hide-on-large-only" style="padding:0 8px;" title="Voltar à lista">
-                <i class="material-icons">arrow_back</i>
+            <a href="javascript:void(0)" onclick="voltarParaListaMobile()" class="btn-flat btn-small hide-on-large-only" style="padding:0 10px; height:36px; line-height:36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #dadce0; border-radius:4px; margin-right:2px;" title="Voltar à lista">
+                <i class="material-icons" style="font-size:1.4rem;">arrow_back</i>
             </a>
 
             <div>
@@ -808,17 +808,29 @@ if (!$detalheSel && $selId) {
     .item-oco:hover, .item-oco.active { background: #e8f0fe; }
     .badge-tipo { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 500; display: inline-block; }
 
-    /* Responsividade Mobile (Telas até 992px) */
+    /* Responsividade Mobile (Telas até 992px) - Controle Dinâmico por Classe de Estado */
     @media (max-width: 992px) {
         .sidebar-feed {
-            display: <?= ($selId || $detalheSel) ? 'none' : 'block' ?> !important;
             width: 100% !important;
             height: auto !important;
         }
         .chat-container {
-            display: <?= ($selId || $detalheSel) ? 'flex' : 'none' ?> !important;
             width: 100% !important;
             height: calc(100vh - 120px) !important;
+        }
+        /* Quando no modo lista: exibe sidebar e esconde chat */
+        .vds-main-row.show-list .sidebar-feed {
+            display: block !important;
+        }
+        .vds-main-row.show-list .chat-container {
+            display: none !important;
+        }
+        /* Quando no modo chat: esconde sidebar e exibe chat */
+        .vds-main-row.show-chat .sidebar-feed {
+            display: none !important;
+        }
+        .vds-main-row.show-chat .chat-container {
+            display: flex !important;
         }
     }
 
@@ -1038,7 +1050,8 @@ if (!$detalheSel && $selId) {
     <?php endif; ?>
 </div>
 
-<div class="row" style="margin: 0;">
+<?php $mobileInitialClass = (!empty($selId) || !empty($detalheSel)) ? 'show-chat' : 'show-list'; ?>
+<div class="row vds-main-row <?= $mobileInitialClass ?>" style="margin: 0;">
     <!-- Sidebar Left: Feed de Ocorrências Agrupadas por Categoria/Tipo -->
     <div class="col s12 m4 l3 sidebar-feed">
         <!-- Subcabeçalho de Contexto da Lista com Master Toggle -->
@@ -1571,11 +1584,9 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
     $('.item-oco').removeClass('active');
     $('#item-oco-' + ocorrenciaId).addClass('active');
 
-    // 2. Em visualização mobile, alternar da lista para o chat
-    if ($(window).width() <= 992) {
-        $('.sidebar-feed').hide();
-        $('.chat-container').css('display', 'flex');
-    }
+    // 2. Em visualização mobile, alternar da lista para o chat via classe de estado
+    $('.vds-main-row').removeClass('show-list').addClass('show-chat');
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
     // 3. Exibir skeleton shimmer de carregamento apenas no chat da direita
     triggerVdsSkeleton(true);
@@ -1605,7 +1616,7 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
                     $('#chat-real-content .materialboxed').materialbox();
                 }
 
-                // Iniciar verificação assíncrona de e-mail no Gmail (se for ocorrência de Monitoramento)
+                // Iniciar verificação assíncrona de e-mail no Gmail
                 verificarEIniciarBuscaGmail();
 
                 // Finalizar barra de progresso no topo
@@ -1637,18 +1648,28 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
     });
 };
 
-// Voltar para a lista no mobile
+// Voltar para a lista no mobile (com remoção do id da URL e sincronização de histórico)
 window.voltarParaListaMobile = function() {
-    $('.chat-container').hide();
-    $('.sidebar-feed').show();
+    $('.vds-main-row').removeClass('show-chat').addClass('show-list');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    const visaoJS = <?= json_encode($visao) ?>;
+    if (window.history && window.history.pushState) {
+        const urlAtual = new URL(window.location.href);
+        urlAtual.searchParams.delete('id');
+        window.history.pushState({ id: null, visao: visaoJS }, '', urlAtual.toString());
+    }
 };
 
-// Sincronizar botões Voltar / Avançar do navegador
+// Sincronizar botões Voltar / Avançar do navegador (Mobile Back / Popstate)
 window.addEventListener('popstate', function(e) {
     const urlParams = new URLSearchParams(window.location.search);
     const idParam = urlParams.get('id');
     if (idParam) {
         selecionarOcorrencia(idParam, null, null, false);
+    } else {
+        $('.vds-main-row').removeClass('show-chat').addClass('show-list');
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }
 });
 
