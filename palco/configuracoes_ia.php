@@ -24,10 +24,20 @@ require_once "classes/repositorio.php";
                     
                     <form id="formConfigGemini">
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 m7">
                                 <input type="password" id="geminiApiKeyInput" value="<?php echo htmlspecialchars(getConfigSistema('gemini_api_key') ?? ''); ?>" placeholder="AIzaSy...">
                                 <label for="geminiApiKeyInput">Chave de API do Gemini (GEMINI_API_KEY)</label>
                                 <span class="helper-text">Deixe em branco para usar o valor definido no arquivo .env</span>
+                            </div>
+                            <div class="input-field col s12 m5">
+                                <?php $geminiModel = getConfigSistema('gemini_modelo') ?: 'gemini-2.5-flash'; ?>
+                                <select id="geminiModelInput">
+                                    <option value="gemini-2.5-flash" <?php echo ($geminiModel === 'gemini-2.5-flash') ? 'selected' : ''; ?>>Gemini 2.5 Flash (Recomendado)</option>
+                                    <option value="gemini-2.0-flash" <?php echo ($geminiModel === 'gemini-2.0-flash') ? 'selected' : ''; ?>>Gemini 2.0 Flash</option>
+                                    <option value="gemini-1.5-flash" <?php echo ($geminiModel === 'gemini-1.5-flash') ? 'selected' : ''; ?>>Gemini 1.5 Flash (Estável)</option>
+                                </select>
+                                <label for="geminiModelInput">Modelo do Gemini</label>
+                                <span class="helper-text">Fallback automático para 1.5 em caso de instabilidade</span>
                             </div>
                         </div>
                         
@@ -134,6 +144,9 @@ require_once "classes/repositorio.php";
 
 <script>
 $(document).ready(function(){
+    // Inicializar select do Materialize
+    $('select').formSelect();
+
     // Garantir o auto-resize das textareas do Materialize
     setTimeout(function() {
         M.textareaAutoResize($('#geminiPromptMainInput'));
@@ -146,6 +159,7 @@ $(document).ready(function(){
 
     $('#btnSaveConfigGemini').click(function(){
         const apiKey = $('#geminiApiKeyInput').val();
+        const geminiModel = $('#geminiModelInput').val();
         const promptMain = $('#geminiPromptMainInput').val();
         const descAssunto = $('#geminiDescAssuntoInput').val();
         const descNotificacao = $('#geminiDescNotificacaoInput').val();
@@ -158,6 +172,7 @@ $(document).ready(function(){
 
         const configs = {
             gemini_api_key: apiKey,
+            gemini_modelo: geminiModel,
             gemini_prompt_main: promptMain,
             gemini_desc_assunto: descAssunto,
             gemini_desc_notificacao: descNotificacao,

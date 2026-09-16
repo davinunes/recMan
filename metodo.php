@@ -537,18 +537,25 @@ switch ($_GET['metodo']) {
         $prompt .= "- Comentários/Debates dos Conselheiros:\n{$comentariosStr}\n\n";
         $prompt .= "Retorne apenas o JSON correspondente ao schema solicitado, sem marcações markdown de bloco de código.";
 
-        // 7. Fazer a requisição HTTP para a API do Gemini
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $geminiKey;
+        // 7. Configuração do modelo e requisição HTTP para a API do Gemini
+        $modelConfig = getConfigSistema('gemini_modelo');
+        if (empty($modelConfig)) {
+            $modelConfig = 'gemini-2.5-flash';
+        }
 
-        $payload = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
-            'generationConfig' => [
+        // Lista de modelos a tentar (modelo primário + fallback de alta estabilidade se diferente)
+        $modelsToTry = [$modelConfig];
+        if ($modelConfig !== 'gemini-1.5-flash') {
+            $modelsToTry[] = 'gemini-1.5-flash';
+        }
+
+        $lastError = 'Erro desconhecido ao consultar a API do Gemini.';
+        $suggestions = null;
+
+        foreach ($modelsToTry as $currentModel) {
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:generateContent?key=" . $geminiKey;
+
+            $generationConfig = [
                 'responseMimeType' => 'application/json',
                 'responseSchema' => [
                     'type' => 'object',
@@ -576,39 +583,80 @@ switch ($_GET['metodo']) {
                     ],
                     'required' => ['assunto', 'notificacao', 'analise', 'resultado', 'conclusao']
                 ]
-            ]
-        ];
+            ];
 
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            // Para modelos da família 2.5, desativa o thinking excessivo para respostas ultra rápidas (~2 a 4s)
+            if (strpos($currentModel, '2.5') !== false) {
+                $generationConfig['thinkingConfig'] = [
+                    'thinkingBudget' => 0
+                ];
+            }
 
-        if ($httpCode !== 200) {
-            $errData = json_decode($response, true);
-            $errMsg = isset($errData['error']['message']) ? $errData['error']['message'] : 'Erro desconhecido na API do Gemini.';
-            echo json_encode(['success' => false, 'error' => "API Gemini retornou código HTTP $httpCode: $errMsg"]);
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => $generationConfig
+            ];
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErrno = curl_errno($ch);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            // Se houve erro de transporte do cURL (HTTP 0)
+            if ($response === false || $httpCode === 0) {
+                if ($curlErrno === 28) { // CURLE_OPERATION_TIMEDOUT
+                    $lastError = "Tempo limite esgotado (timeout de 60s) aguardando resposta da IA no modelo {$currentModel}.";
+                } else {
+                    $lastError = "Falha de conexão cURL no modelo {$currentModel} (código {$curlErrno}): {$curlError}";
+                }
+                continue; // Tenta o próximo modelo no fallback
+            }
+
+            // Se o Google retornou erro HTTP (ex: 429 quota, 503 indisponível, 404 modelo)
+            if ($httpCode !== 200) {
+                $errData = json_decode($response, true);
+                $errMsg = isset($errData['error']['message']) ? $errData['error']['message'] : 'Erro desconhecido na API do Gemini.';
+                $lastError = "API Gemini ({$currentModel}) retornou código HTTP {$httpCode}: {$errMsg}";
+                continue; // Tenta o próximo modelo no fallback
+            }
+
+            $resData = json_decode($response, true);
+            $jsonText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+            if (empty($jsonText)) {
+                $lastError = "Nenhum texto retornado pela IA ({$currentModel}).";
+                continue;
+            }
+
+            $decodedSuggestions = json_decode(trim($jsonText), true);
+            if (!$decodedSuggestions) {
+                $lastError = "Resposta da IA ({$currentModel}) não pôde ser decodificada como JSON: " . $jsonText;
+                continue;
+            }
+
+            // Sucesso!
+            $suggestions = $decodedSuggestions;
             break;
         }
 
-        $resData = json_decode($response, true);
-        $jsonText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-        
-        if (empty($jsonText)) {
-            echo json_encode(['success' => false, 'error' => 'Nenhum text retornado pela IA.']);
-            break;
-        }
-
-        $suggestions = json_decode(trim($jsonText), true);
         if (!$suggestions) {
-            echo json_encode(['success' => false, 'error' => 'Resposta da IA não pôde ser decodificada como JSON: ' . $jsonText]);
+            echo json_encode(['success' => false, 'error' => $lastError]);
             break;
         }
 
