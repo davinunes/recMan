@@ -40,7 +40,32 @@ require_once "classes/repositorio.php";
                                 <span class="helper-text">Fallback automático para 1.5 em caso de instabilidade</span>
                             </div>
                         </div>
-                        
+                        <div class="row" style="margin-top: -5px; margin-bottom: 25px;">
+                            <div class="col s12">
+                                <button type="button" class="btn-small purple lighten-1 waves-effect waves-light" id="btnProbeGemini">
+                                    <i class="material-icons left">sensors</i>Testar Chave e Sondar Modelos (Probe)
+                                </button>
+                                <span class="grey-text text-darken-1" style="font-size: 0.85rem; margin-left: 12px;">
+                                    Consulta o endpoint oficial <code>models?key=...</code> para listar modelos ativos e latência da sua chave.
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card de Resultado da Probe -->
+                        <div id="probeContainer" style="display: none; margin-bottom: 25px;">
+                            <div class="card grey lighten-5 z-depth-1" style="border-left: 4px solid #7b1fa2; border-radius: 4px;">
+                                <div class="card-content" style="padding: 16px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                        <span style="font-weight: 600; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                                            <i class="material-icons purple-text">wifi_tethering</i>
+                                            Diagnóstico da Chave e Modelos Disponíveis
+                                        </span>
+                                        <div id="probeBadges" style="display: flex; gap: 8px;"></div>
+                                    </div>
+                                    <div id="probeContent"></div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="input-field col s12">
                                 <textarea id="geminiPromptMainInput" class="materialize-textarea" style="min-height: 100px; font-family: monospace; font-size: 0.9rem;"><?php 
@@ -189,6 +214,77 @@ $(document).ready(function(){
                 M.toast({html: 'Erro ao salvar as configurações: ' + res, classes: 'red rounded'});
             }
         });
+    });
+
+    // Probe da API do Gemini
+    $('#btnProbeGemini').click(function(){
+        const btn = $(this);
+        const apiKey = $('#geminiApiKeyInput').val();
+        
+        btn.addClass('disabled').html('<i class="material-icons left">hourglass_empty</i>Sondando...');
+        $('#probeContainer').slideDown();
+        $('#probeBadges').empty();
+        $('#probeContent').html('<div class="center-align" style="padding: 20px;"><div class="preloader-wrapper small active"><div class="spinner-layer spinner-purple-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p class="grey-text" style="margin-top: 10px;">Consultando endpoint models da API Gemini...</p></div>');
+
+        $.post('metodo.php?metodo=probeModelosGemini', { api_key: apiKey }, function(res){
+            btn.removeClass('disabled').html('<i class="material-icons left">sensors</i>Testar Chave e Sondar Modelos (Probe)');
+            
+            if (!res.success) {
+                $('#probeBadges').html('<span class="new badge red" data-badge-caption="Falha"></span>');
+                let errHtml = '<div class="card-panel red lighten-4 red-text text-darken-4" style="padding: 12px; margin: 0; border-radius: 4px;">';
+                errHtml += '<strong>Erro na sonda da API:</strong> ' + (res.error || 'Erro desconhecido');
+                if (res.httpCode) errHtml += ' (HTTP ' + res.httpCode + ')';
+                if (res.latencyMs) errHtml += ' <span class="grey-text text-darken-2">| Latência: ' + res.latencyMs + 'ms</span>';
+                errHtml += '</div>';
+                $('#probeContent').html(errHtml);
+                return;
+            }
+
+            $('#probeBadges').html(
+                '<span class="new badge green" data-badge-caption="Conectado (' + res.latencyMs + 'ms)"></span>' +
+                '<span class="new badge purple" data-badge-caption="' + res.total + ' modelos"></span>'
+            );
+
+            let html = '<div style="max-height: 380px; overflow-y: auto;">';
+            html += '<table class="highlight compact responsive-table" style="font-size: 0.88rem;">';
+            html += '<thead><tr><th>Modelo (ID)</th><th>Nome de Exibição</th><th>Tokens (Entrada / Saída)</th><th>Ação</th></tr></thead>';
+            html += '<tbody>';
+
+            res.models.forEach(function(m){
+                const isSelected = ($('#geminiModelInput').val() === m.id);
+                const rowClass = isSelected ? 'style="background-color: #f3e5f5; font-weight: 500;"' : '';
+                const btnAction = '<button type="button" class="btn-flat waves-effect btn-selecionar-modelo" data-model="' + m.id + '" style="font-size: 0.78rem; text-transform: none; color: #7b1fa2; padding: 0 8px;">' + (isSelected ? '✓ Selecionado' : 'Selecionar') + '</button>';
+
+                html += '<tr ' + rowClass + '>';
+                html += '<td><code>' + m.id + '</code></td>';
+                html += '<td>' + (m.displayName || m.id) + '</td>';
+                html += '<td class="grey-text text-darken-1">' + (m.inputTokenLimit ? Number(m.inputTokenLimit).toLocaleString('pt-BR') : '-') + ' / ' + (m.outputTokenLimit ? Number(m.outputTokenLimit).toLocaleString('pt-BR') : '-') + '</td>';
+                html += '<td>' + btnAction + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            $('#probeContent').html(html);
+        }, 'json').fail(function(xhr, status, error){
+            btn.removeClass('disabled').html('<i class="material-icons left">sensors</i>Testar Chave e Sondar Modelos (Probe)');
+            $('#probeBadges').html('<span class="new badge red" data-badge-caption="Erro de Rede"></span>');
+            $('#probeContent').html('<div class="card-panel red lighten-4 red-text text-darken-4" style="padding: 12px; margin: 0; border-radius: 4px;">Falha de comunicação com o servidor local ao executar a sonda. ' + error + '</div>');
+        });
+    });
+
+    $(document).on('click', '.btn-selecionar-modelo', function(){
+        const modelId = $(this).data('model');
+        let select = $('#geminiModelInput');
+        
+        if (select.find('option[value="' + modelId + '"]').length === 0) {
+            select.append('<option value="' + modelId + '">' + modelId + '</option>');
+        }
+        select.val(modelId).formSelect();
+        
+        $('.btn-selecionar-modelo').text('Selecionar').closest('tr').removeAttr('style');
+        $(this).text('✓ Selecionado').closest('tr').attr('style', 'background-color: #f3e5f5; font-weight: 500;');
+        
+        M.toast({html: 'Modelo ' + modelId + ' selecionado!', classes: 'purple rounded'});
     });
 });
 </script>

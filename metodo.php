@@ -415,6 +415,96 @@ switch ($_GET['metodo']) {
         }
         echo $success ? "ok" : "erro";
         break;
+    case "probeModelosGemini":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $geminiKey = trim($_POST['api_key'] ?? '');
+        if (empty($geminiKey)) {
+            $geminiKey = getConfigSistema('gemini_api_key');
+        }
+        if (empty($geminiKey)) {
+            $envPath = __DIR__ . '/magnacom-sistema/.env';
+            if (file_exists($envPath)) {
+                $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    $parts = explode('=', $line, 2);
+                    if (count($parts) === 2 && trim($parts[0]) === 'GEMINI_API_KEY') {
+                        $geminiKey = trim($parts[1]);
+                        if (preg_match('/^"([^"]*)"$/', $geminiKey, $matches) || preg_match('/^\'([^\']*)\'$/', $geminiKey, $matches)) {
+                            $geminiKey = $matches[1];
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (empty($geminiKey)) {
+            echo json_encode(['success' => false, 'error' => 'Chave de API não informada e não encontrada no sistema (.env ou banco).']);
+            break;
+        }
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models?key=" . urlencode($geminiKey);
+
+        $t0 = microtime(true);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPGET, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErrno = curl_errno($ch);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        $latencyMs = round((microtime(true) - $t0) * 1000);
+
+        if ($response === false || $httpCode === 0) {
+            $msg = ($curlErrno === 28) ? "Timeout na conexão (20s) com a API do Gemini." : "Falha cURL ({$curlErrno}): {$curlError}";
+            echo json_encode(['success' => false, 'error' => $msg, 'latencyMs' => $latencyMs]);
+            break;
+        }
+
+        $resData = json_decode($response, true);
+        if ($httpCode !== 200) {
+            $errMsg = $resData['error']['message'] ?? "Código HTTP {$httpCode} retornado pelo Google.";
+            echo json_encode(['success' => false, 'httpCode' => $httpCode, 'error' => $errMsg, 'latencyMs' => $latencyMs]);
+            break;
+        }
+
+        $rawModels = $resData['models'] ?? [];
+        $modelList = [];
+
+        foreach ($rawModels as $m) {
+            $rawName = $m['name'] ?? '';
+            $cleanName = str_replace('models/', '', $rawName);
+            $methods = $m['supportedGenerationMethods'] ?? [];
+
+            $modelList[] = [
+                'id' => $cleanName,
+                'name' => $rawName,
+                'displayName' => $m['displayName'] ?? $cleanName,
+                'description' => $m['description'] ?? '',
+                'inputTokenLimit' => $m['inputTokenLimit'] ?? null,
+                'outputTokenLimit' => $m['outputTokenLimit'] ?? null,
+                'supportedMethods' => $methods,
+                'supportsGenerateContent' => in_array('generateContent', $methods)
+            ];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'total' => count($modelList),
+            'latencyMs' => $latencyMs,
+            'keyPrefix' => substr($geminiKey, 0, 8) . '...',
+            'models' => $modelList
+        ], JSON_UNESCAPED_UNICODE);
+        break;
     case "sugerirParecerIA":
         session_start();
         header('Content-Type: application/json; charset=utf-8');

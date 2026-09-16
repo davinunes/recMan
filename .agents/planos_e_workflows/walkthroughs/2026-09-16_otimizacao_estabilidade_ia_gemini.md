@@ -33,6 +33,11 @@
   - `gemini-2.0-flash`
   - `gemini-1.5-flash` *(Estável)*
 - **Persistência Dinâmica**: Campo integrado ao salvamento em lote (`upsertMultipleConfigSistema`) sob a chave `gemini_modelo`.
+- **Probe Interativa de Modelos e Latência (`probeModelosGemini`)**:
+  - Adicionado botão **"Testar Chave e Sondar Modelos (Probe)"**.
+  - Executa requisição assíncrona para `GET https://generativelanguage.googleapis.com/v1beta/models?key=...`.
+  - Exibe status de conexão, latência da requisição em milissegundos, total de modelos e tabela detalhada com ID, nome e limites de tokens.
+  - Permite selecionar qualquer modelo retornado com 1 clique diretamente para o select da interface.
 
 ---
 
@@ -41,3 +46,4 @@
 - [`palco/configuracoes_ia.php`](file:///e:/DEV/recMan/palco/configuracoes_ia.php)
 - [`.agents/raciocinios/2026-09-16_diagnostico_erro_ia_gemini_http_0.md`](file:///e:/DEV/recMan/.agents/raciocinios/2026-09-16_diagnostico_erro_ia_gemini_http_0.md)
 - [`.agents/planos_e_workflows/planos/2026-09-16_otimizacao_estabilidade_ia_gemini.md`](file:///e:/DEV/recMan/.agents/planos_e_workflows/planos/2026-09-16_otimizacao_estabilidade_ia_gemini.md)
+
