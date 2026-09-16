@@ -33,11 +33,12 @@ require_once "classes/repositorio.php";
                                 <?php $geminiModel = getConfigSistema('gemini_modelo') ?: 'gemini-2.5-flash'; ?>
                                 <select id="geminiModelInput">
                                     <option value="gemini-2.5-flash" <?php echo ($geminiModel === 'gemini-2.5-flash') ? 'selected' : ''; ?>>Gemini 2.5 Flash (Recomendado)</option>
-                                    <option value="gemini-2.0-flash" <?php echo ($geminiModel === 'gemini-2.0-flash') ? 'selected' : ''; ?>>Gemini 2.0 Flash</option>
-                                    <option value="gemini-1.5-flash" <?php echo ($geminiModel === 'gemini-1.5-flash') ? 'selected' : ''; ?>>Gemini 1.5 Flash (Estável)</option>
+                                    <option value="gemini-2.5-flash-lite" <?php echo ($geminiModel === 'gemini-2.5-flash-lite') ? 'selected' : ''; ?>>Gemini 2.5 Flash-Lite (Econômico)</option>
+                                    <option value="gemini-flash-latest" <?php echo ($geminiModel === 'gemini-flash-latest') ? 'selected' : ''; ?>>Gemini Flash Latest (Estável)</option>
+                                    <option value="gemini-3.5-flash" <?php echo ($geminiModel === 'gemini-3.5-flash') ? 'selected' : ''; ?>>Gemini 3.5 Flash (Nova Geração)</option>
                                 </select>
                                 <label for="geminiModelInput">Modelo do Gemini</label>
-                                <span class="helper-text">Fallback automático para 1.5 em caso de instabilidade</span>
+                                <span class="helper-text">Fallback automático para 2.5 Flash-Lite em caso de instabilidade</span>
                             </div>
                         </div>
                         <div class="row" style="margin-top: -5px; margin-bottom: 25px;">

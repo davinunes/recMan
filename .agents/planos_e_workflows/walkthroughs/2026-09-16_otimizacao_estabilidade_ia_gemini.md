@@ -28,10 +28,12 @@
   - Se a requisição ao modelo primário configurado falhar por timeout, instabilidade de rede ou erro HTTP (429, 503, 404), o backend tenta automaticamente o modelo estável `gemini-1.5-flash` antes de reportar erro ao usuário.
 
 ### 2.2 Frontend / Admin: [`palco/configuracoes_ia.php`](file:///e:/DEV/recMan/palco/configuracoes_ia.php)
-- **Seletor de Modelo Gemini**: Adicionado campo visual `<select>` com suporte ao Materialize para escolha entre:
+- **Seletor de Modelo Gemini**: Adicionado campo visual `<select>` com suporte ao Materialize para escolha entre os modelos ativos identificados na probe:
   - `gemini-2.5-flash` *(Recomendado)*
-  - `gemini-2.0-flash`
-  - `gemini-1.5-flash` *(Estável)*
+  - `gemini-2.5-flash-lite` *(Econômico / Fallback ativo)*
+  - `gemini-flash-latest` *(Estável)*
+  - `gemini-3.5-flash` *(Nova Geração)*
+- **Fallback Resiliente**: Fallback configurado para `gemini-2.5-flash-lite` (ou `gemini-flash-latest`), modelos confirmados como disponíveis e ativos na conta.
 - **Persistência Dinâmica**: Campo integrado ao salvamento em lote (`upsertMultipleConfigSistema`) sob a chave `gemini_modelo`.
 - **Probe Interativa de Modelos e Latência (`probeModelosGemini`)**:
   - Adicionado botão **"Testar Chave e Sondar Modelos (Probe)"**.

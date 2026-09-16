@@ -633,10 +633,11 @@ switch ($_GET['metodo']) {
             $modelConfig = 'gemini-2.5-flash';
         }
 
-        // Lista de modelos a tentar (modelo primário + fallback de alta estabilidade se diferente)
+        // Lista de modelos a tentar (modelo primário + fallback leve e estável ativo na conta)
         $modelsToTry = [$modelConfig];
-        if ($modelConfig !== 'gemini-1.5-flash') {
-            $modelsToTry[] = 'gemini-1.5-flash';
+        $fallbackModel = ($modelConfig === 'gemini-2.5-flash-lite') ? 'gemini-flash-latest' : 'gemini-2.5-flash-lite';
+        if (!in_array($fallbackModel, $modelsToTry)) {
+            $modelsToTry[] = $fallbackModel;
         }
 
         $lastError = 'Erro desconhecido ao consultar a API do Gemini.';
