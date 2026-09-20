@@ -11,12 +11,14 @@ $statusHealth = TypstPdfService::checkHealth();
 $resultPdf = null;
 $errorMsg = null;
 $elapsedMs = null;
+$selectedVariant = $_POST['variant'] ?? 'modern';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'test_regimento') {
         $regimentoFile = __DIR__ . '/../regimento/database.json';
         if (file_exists($regimentoFile)) {
             $jsonData = json_decode(file_get_contents($regimentoFile), true);
+            $jsonData['variant'] = $selectedVariant;
             $res = TypstPdfService::gerarRegimento($jsonData, true);
             if ($res['status'] === 'success' && !empty($res['pdf_base64'])) {
                 $resultPdf = $res['pdf_base64'];
@@ -36,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'parecer'      => trim($_POST['parecer'] ?? 'Favorável ao Recurso'),
             'relator'      => trim($_POST['relator'] ?? 'Conselho Consultivo e Fiscal'),
             'data_emissao' => date('d/m/Y'),
+            'variant'      => $selectedVariant,
             'fundamentacao'=> trim($_POST['fundamentacao'] ?? 'O Conselho verificou que o tempo de permanência foi inferior a 10 minutos, sem prejuízo aos demais condôminos.')
         ];
         $res = TypstPdfService::gerarParecer($dadosParecer, true);
@@ -182,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php if ($elapsedMs !== null): ?>
         <div class="alert alert-success">
-            <strong>Sucesso!</strong> PDF compilado com Typst em <strong><?= $elapsedMs ?> ms</strong>.
+            <strong>Sucesso!</strong> PDF compilado com Typst (Variante: <code><?= htmlspecialchars($selectedVariant) ?></code>) em <strong><?= $elapsedMs ?> ms</strong>.
         </div>
     <?php endif; ?>
 
@@ -194,11 +197,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card">
                 <h2><span class="material-icons">auto_stories</span> Regimento Interno (JSON Completo)</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Compila o arquivo <code>regimento/database.json</code> (33 capítulos) em PDF usando o template <code>typst_templates/regimento.typ</code>.
+                    Compila o arquivo <code>regimento/database.json</code> (33 capítulos) em PDF com sumário interativo (links clicáveis) usando Typst.
                 </p>
                 <form method="POST" action="test_typst.php?action=test_regimento">
+                    <div class="form-group">
+                        <label>Variante de Layout Visual</label>
+                        <select name="variant">
+                            <option value="modern" <?= $selectedVariant === 'modern' ? 'selected' : '' ?>>Moderno (com Banner LayoutMiami.jpg e Capa Escura)</option>
+                            <option value="classic" <?= $selectedVariant === 'classic' ? 'selected' : '' ?>>Clássico / Notarial (Sem Banner, Borda Azul)</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-green">
-                        <span class="material-icons">picture_as_pdf</span> Gerar PDF do Regimento (33 Capítulos)
+                        <span class="material-icons">picture_as_pdf</span> Gerar PDF do Regimento
                     </button>
                 </form>
             </div>
@@ -210,6 +220,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Testa a geração de parecer com o template <code>typst_templates/parecer.typ</code>.
                 </p>
                 <form method="POST" action="test_typst.php?action=test_parecer">
+                    <div class="form-group">
+                        <label>Variante de Layout Visual</label>
+                        <select name="variant">
+                            <option value="modern" <?= $selectedVariant === 'modern' ? 'selected' : '' ?>>Moderno (Com Banner Topo LayoutMiami.jpg)</option>
+                            <option value="classic" <?= $selectedVariant === 'classic' ? 'selected' : '' ?>>Clássico / Oficial (Borda Notarial e Cabeçalho Simples)</option>
+                            <option value="compact" <?= $selectedVariant === 'compact' ? 'selected' : '' ?>>Compacto / Executivo (Tabela Densa e Sem Banner)</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Notificação</label>
                         <input type="text" name="notificacao" value="186/2023" required>
@@ -231,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-group">
                         <label>Relato do Fato</label>
-                        <textarea name="fato" rows="2">Veículo posicionado temporariamente para descarregamento de objetos pesados.</textarea>
+                        <textarea name="fato" rows="2">Veículo posicionado temporariamente na área de circulação para descarregamento de pertences.</textarea>
                     </div>
                     <div class="form-group">
                         <label>Fundamentação</label>
@@ -249,13 +267,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
                     Para rodar o microserviço no servidor remoto:
                 </p>
-                <pre style="background: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; overflow-x: auto; color: #a5f3fc;">python py/typst_server.py</pre>
+                <pre style="background: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; overflow-x: auto; color: #a5f3fc;">python3 py/typst_server.py</pre>
             </div>
         </div>
 
         <!-- Coluna Direita: Visualização do PDF -->
         <div class="card">
-            <h2><span class="material-icons">visibility</span> Visualizador de PDF</h2>
+            <h2><span class="material-icons">visibility</span> Visualizador de PDF Interativo</h2>
             <?php if ($resultPdf): ?>
                 <iframe class="pdf-preview" src="data:application/pdf;base64,<?= $resultPdf ?>"></iframe>
             <?php else: ?>

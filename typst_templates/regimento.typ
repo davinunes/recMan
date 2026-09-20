@@ -51,6 +51,8 @@
   let titulo = if "titulo" in data { data.titulo } else { "REGIMENTO INTERNO - CONDOMÍNIO TOP LIFE MIAMI BEACH" }
   let capitulos = if "capitulos" in data { data.capitulos } else { (:) }
   let artigos = if "artigos" in data { data.artigos } else { (:) }
+  let variant = if "variant" in data { data.variant } else { "modern" }
+  let banner_path = if "banner_path" in data and data.banner_path != "" { data.banner_path } else { "addons/api-pdf/LayoutMiami.jpg" }
 
   set document(title: titulo, author: "Condomínio Residencial Top Life Miami Beach")
 
@@ -58,7 +60,8 @@
     paper: "a4",
     margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
     header: context {
-      if counter(page).get().first() > 1 [
+      let current_page = counter(page).get().first()
+      if current_page > 1 [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8pt, fill: rgb("475569"), weight: "bold")[REGIMENTO INTERNO - TOP LIFE MIAMI BEACH]],
@@ -81,37 +84,56 @@
   set text(lang: "pt", size: 10pt)
   set par(justify: true, leading: 0.65em)
 
-  // Capa / Título principal
-  align(center + horizon)[
-    #v(-2cm)
-    #rect(width: 100%, inset: 20pt, radius: 4pt, fill: rgb("0f172a"))[
-      #text(fill: white, weight: "bold", size: 16pt)[#titulo]
+  // CAPA
+  if variant == "modern" [
+    #align(center)[
+      #v(-1cm)
+      #image(banner_path, width: 100%)
+      #v(2cm)
+      #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
+        #text(fill: white, weight: "bold", size: 16pt)[#titulo]
+      ]
+      #v(1.5cm)
+      #text(size: 12pt, style: "italic", fill: rgb("334155"))[
+        Normas de Funcionamento, Convivência e Administração
+      ]
+      #v(3cm)
+      #text(size: 10pt, fill: rgb("64748b"))[
+        Taguatinga / DF • Versão Digital Interativa
+      ]
     ]
-    #v(1.5cm)
-    #text(size: 12pt, style: "italic", fill: rgb("334155"))[
-      Normas de Funcionamento, Convivência e Administração
+    #pagebreak()
+  ] else if variant == "classic" [
+    #align(center + horizon)[
+      #v(-2cm)
+      #rect(width: 100%, inset: 24pt, radius: 0pt, stroke: 2pt + rgb("1e3a8a"))[
+        #text(fill: rgb("1e3a8a"), weight: "bold", size: 16pt)[#titulo]
+      ]
+      #v(1.5cm)
+      #text(size: 12pt, style: "italic", fill: rgb("334155"))[
+        Documento Normativo do Condomínio
+      ]
+      #v(2cm)
+      #text(size: 10pt, fill: rgb("64748b"))[
+        Taguatinga / DF
+      ]
     ]
-    #v(2cm)
-    #text(size: 10pt, fill: rgb("64748b"))[
-      Taguatinga / DF
-    ]
+    #pagebreak()
   ]
 
-  pagebreak()
+  // SUMÁRIO INTERATIVO (COM LINKS CLICÁVEIS PARA AS PÁGINAS)
+  #heading(level: 1, numbering: none, outlined: false)[Sumário dos Capítulos]
+  #v(0.3cm)
 
-  // Sumário dos Capítulos
-  heading(level: 1, numbering: none)[Sumário dos Capítulos]
-  v(0.5cm)
+  #outline(
+    title: none,
+    indent: 1.2em,
+    target: heading.where(level: 1)
+  )
 
-  for (cap_id, cap_nome) in capitulos {
-    box(width: 100%, inset: (y: 3pt))[
-      #text(weight: "medium", fill: rgb("1e293b"))[#cap_nome]
-    ]
-  }
+  #pagebreak()
 
-  pagebreak()
-
-  // Exibição dos Capítulos e Artigos
+  // EXIBIÇÃO DOS CAPÍTULOS E ARTIGOS
   let current_cap = ""
 
   for (art_id, art_data) in artigos {
@@ -119,10 +141,8 @@
     if cap_num in capitulos and capitulos.at(cap_num) != current_cap {
       current_cap = capitulos.at(cap_num)
       v(0.8cm)
-      rect(width: 100%, fill: rgb("f1f5f9"), inset: 8pt, radius: 3pt, stroke: 0.5pt + rgb("cbd5e1"))[
-        #text(weight: "bold", fill: rgb("0f172a"), size: 11.5pt)[#current_cap]
-      ]
-      v(0.3cm)
+      heading(level: 1, numbering: none)[#current_cap]
+      v(0.2cm)
     }
 
     let art_texto = if "texto" in art_data { art_data.texto } else { "" }
