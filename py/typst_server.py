@@ -48,7 +48,7 @@ def find_typst_binary():
 
 
 def find_banner_image():
-    """Localiza a imagem do banner LayoutMiami.jpg no servidor remoto ou ambiente local."""
+    """Localiza a imagem do banner LayoutMiami.jpg e retorna o caminho relativo adequado para o Typst."""
     candidates = [
         '/var/www/reportPDFpython/LayoutMiami.jpg',
         os.path.join(ROOT_DIR, 'addons', 'api-pdf', 'LayoutMiami.jpg'),
@@ -58,8 +58,12 @@ def find_banner_image():
     ]
     for c in candidates:
         if os.path.exists(c):
-            return c.replace('\\', '/')
-    return '/var/www/reportPDFpython/LayoutMiami.jpg'
+            try:
+                rel = os.path.relpath(c, ROOT_DIR).replace('\\', '/')
+                return rel
+            except Exception:
+                return c.replace('\\', '/')
+    return '../reportPDFpython/LayoutMiami.jpg'
 
 
 TYPST_BIN = find_typst_binary()
@@ -97,9 +101,17 @@ def run_typst(template_name, input_data=None):
     if input_data is None:
         input_data = {}
 
-    # Define automaticamente o caminho correto da imagem LayoutMiami.jpg
+    # Define automaticamente o caminho relativo correto da imagem LayoutMiami.jpg
     if 'banner_path' not in input_data or not input_data['banner_path']:
         input_data['banner_path'] = find_banner_image()
+    else:
+        # Se um caminho for passado, garante que seja convertido para relativo caso exista no disco
+        bp = input_data['banner_path']
+        if os.path.isabs(bp) and os.path.exists(bp):
+            try:
+                input_data['banner_path'] = os.path.relpath(bp, ROOT_DIR).replace('\\', '/')
+            except Exception:
+                pass
 
     func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
 
@@ -241,7 +253,7 @@ class TypstHandler(BaseHTTPRequestHandler):
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
     print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO'}")
-    print(f"Banner de Topo: {find_banner_image()}")
+    print(f"Banner de Topo (Relativo): {find_banner_image()}")
     print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
