@@ -52,7 +52,7 @@
   let capitulos = if "capitulos" in data { data.capitulos } else { (:) }
   let artigos = if "artigos" in data { data.artigos } else { (:) }
   let variant = if "variant" in data { data.variant } else { "modern" }
-  let banner_path = if "banner_path" in data and data.banner_path != "" { data.banner_path } else { "/var/www/reportPDFpython/LayoutMiami.jpg" }
+  let banner_path = if "banner_path" in data and data.banner_path != "" { data.banner_path } else { "LayoutMiami.jpg" }
 
   set document(title: titulo, author: "Condomínio Residencial Top Life Miami Beach")
 
