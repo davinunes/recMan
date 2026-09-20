@@ -79,7 +79,7 @@
     let art_texto = if "texto" in art_data { art_data.texto } else { "" }
 
     block(width: 100%, margin: (bottom: 8pt))[
-      #text(weight: "bold", fill: rgb("1e3a8a"))[Art. #art_idº] #art_texto
+      #text(weight: "bold", fill: rgb("1e3a8a"))[Art. #art_id]º #art_texto
 
       #if "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
         #for (p_key, p_val) in art_data.paragrafos [
@@ -87,7 +87,7 @@
           #pad(left: 12pt)[
             #text(style: "italic", fill: rgb("334155"))[
               #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else { str(p_val) }
-              #if p_key == "unico" [*Parágrafo único.*] else [*§ #p_keyº*] #p_txt
+              #if p_key == "unico" [*Parágrafo único.*] else [*§ #p_key*º] #p_txt
             ]
           ]
         ]
