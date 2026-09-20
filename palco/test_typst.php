@@ -21,7 +21,12 @@ $errorMsg = null;
 $elapsedMs = null;
 $selectedVariant = $_POST['variant'] ?? 'modern';
 
-// Buscar pareceres reais no banco de dados do sistema
+$searchNum = trim($_POST['search_numero'] ?? '');
+$searchAno = trim($_POST['search_ano'] ?? '');
+$searchStatus = null;
+$searchMsg = null;
+
+// Buscar pareceres reais no banco de dados do sistema para lista de atalhos
 $listaPareceresReais = [];
 if (function_exists('DBConnect')) {
     try {
@@ -52,7 +57,84 @@ $parecerVal      = $_POST['parecer'] ?? 'Favorável ao Recurso';
 $modeloVal       = $_POST['modelo'] ?? 'estatico';
 $dataEmissaoVal  = $_POST['data_emissao'] ?? date('d/m/Y');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Processar busca por número e ano do recurso se solicitada
+if ($action === 'buscar_parecer' && ($searchNum !== '' || $searchAno !== '')) {
+    if (function_exists('DBConnect')) {
+        $searchAno2 = strlen($searchAno) === 4 ? substr($searchAno, 2) : $searchAno;
+        $searchAno4 = strlen($searchAno) === 2 ? '20' . $searchAno : $searchAno;
+
+        $possibilidades = [];
+        if ($searchNum !== '' && $searchAno !== '') {
+            $possibilidades[] = "{$searchNum}/{$searchAno4}";
+            $possibilidades[] = "{$searchNum}/{$searchAno2}";
+        }
+        if ($searchNum !== '') {
+            $possibilidades[] = $searchNum;
+        }
+
+        $parecerEncontrado = null;
+        foreach ($possibilidades as $pId) {
+            $escapedId = DBEscape($pId);
+            $sql = "SELECT id, unidade, assunto, notificacao, analise, resultado, conclusao, modelo, data FROM parecer WHERE id = '$escapedId' LIMIT 1";
+            $res = @DBExecute($sql);
+            if (!$res) {
+                $sql = "SELECT id, unidade, assunto, notificacao, analise, resultado, conclusao, modelo, data FROM conselho.parecer WHERE id = '$escapedId' LIMIT 1";
+                $res = @DBExecute($sql);
+            }
+            if ($res && mysqli_num_rows($res) > 0) {
+                $parecerEncontrado = mysqli_fetch_assoc($res);
+                break;
+            }
+        }
+
+        if ($parecerEncontrado) {
+            $notificacaoVal = $parecerEncontrado['id'] ?: $parecerEncontrado['notificacao'];
+            $unidadeVal     = $parecerEncontrado['unidade'] ?: $unidadeVal;
+            $assuntoVal     = $parecerEncontrado['assunto'] ?: $assuntoVal;
+            $fatoVal        = $parecerEncontrado['notificacao'] ?: $fatoVal;
+            $analiseVal     = $parecerEncontrado['analise'] ?: $analiseVal;
+            $resultadoVal   = $parecerEncontrado['resultado'] ?: $resultadoVal;
+            $parecerVal     = $parecerEncontrado['conclusao'] ?: $parecerVal;
+            $modeloVal      = $parecerEncontrado['modelo'] ?: 'estatico';
+            if (!empty($parecerEncontrado['data'])) {
+                $parts = explode(' ', $parecerEncontrado['data'])[0];
+                $dParts = explode('-', $parts);
+                if (count($dParts) === 3) {
+                    $dataEmissaoVal = "{$dParts[2]}/{$dParts[1]}/{$dParts[0]}";
+                }
+            }
+            $searchStatus = 'success';
+            $searchMsg = "Parecer do Recurso " . htmlspecialchars($notificacaoVal) . " localizado com sucesso no banco de dados!";
+
+            // Compila o PDF do parecer localizado automaticamente
+            $dadosParecer = [
+                'notificacao'  => trim($notificacaoVal),
+                'unidade'      => trim($unidadeVal),
+                'assunto'      => trim($assuntoVal),
+                'fato'         => trim($fatoVal),
+                'analise'      => trim($analiseVal),
+                'resultado'    => trim($resultadoVal),
+                'parecer'      => trim($parecerVal),
+                'modelo'       => trim($modeloVal),
+                'relator'      => 'Conselho Consultivo e Fiscal',
+                'data_emissao' => trim($dataEmissaoVal),
+                'variant'      => $selectedVariant,
+            ];
+            $resPdf = TypstPdfService::gerarParecer($dadosParecer, true);
+            if ($resPdf['status'] === 'success' && !empty($resPdf['pdf_base64'])) {
+                $resultPdf = $resPdf['pdf_base64'];
+                $elapsedMs = $resPdf['elapsed_ms'] ?? null;
+            }
+        } else {
+            $searchStatus = 'warning';
+            $termosStr = trim("{$searchNum}/{$searchAno}", "/");
+            $searchMsg = "Parecer do Recurso '{$termosStr}' não foi localizado no banco de dados.";
+        }
+    } else {
+        $searchStatus = 'error';
+        $searchMsg = "Banco de dados MySQL não está disponível para validar.";
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'test_regimento') {
         $regimentoFile = __DIR__ . '/../regimento/database.json';
         if (file_exists($regimentoFile)) {
@@ -201,6 +283,7 @@ $variantesDisponiveis = [
         }
         .alert-error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid var(--accent-red); }
         .alert-success { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid var(--accent-green); }
+        .alert-warning { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid #eab308; }
 
         .pdf-preview {
             width: 100%;
@@ -228,6 +311,22 @@ $variantesDisponiveis = [
             <?php endif; ?>
         </div>
     </div>
+
+    <?php if ($searchMsg): ?>
+        <?php if ($searchStatus === 'success'): ?>
+            <div class="alert alert-success">
+                <span class="material-icons" style="vertical-align: middle; font-size: 18px;">check_circle</span> <strong>Encontrado!</strong> <?= $searchMsg ?>
+            </div>
+        <?php elseif ($searchStatus === 'warning'): ?>
+            <div class="alert alert-warning">
+                <span class="material-icons" style="vertical-align: middle; font-size: 18px;">warning</span> <strong>Atenção:</strong> <?= $searchMsg ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-error">
+                <strong>Erro:</strong> <?= htmlspecialchars($searchMsg) ?>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
 
     <?php if ($errorMsg): ?>
         <div class="alert alert-error">
@@ -268,26 +367,42 @@ $variantesDisponiveis = [
                 </form>
             </div>
 
-            <!-- Card 2: Testar Parecer de Recurso com Dados Reais do Sistema -->
+            <!-- Card 2: Testar Parecer de Recurso com Validação no Banco de Dados -->
             <div class="card">
                 <h2><span class="material-icons">gavel</span> Parecer do Conselho Consultivo e Fiscal</h2>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
-                    Selecione um parecer real do banco de dados para carregar no formulário ou preencha manualmente.
-                </p>
-
-                <?php if (!empty($listaPareceresReais)): ?>
-                    <div class="form-group" style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--accent);">
-                        <label style="color: #93c5fd; font-weight: 600;">📥 Puxar Parecer Real do Banco de Dados (30 Recentes)</label>
-                        <select id="selectParecerDb" onchange="carregarParecerDb(this.value)">
-                            <option value="">-- Selecione um Parecer do Sistema --</option>
-                            <?php foreach ($listaPareceresReais as $pItem): ?>
-                                <option value="<?= htmlspecialchars($pItem['id']) ?>">
-                                    Recurso nº <?= htmlspecialchars($pItem['id']) ?> | Unidade <?= htmlspecialchars($pItem['unidade']) ?> - <?= htmlspecialchars($pItem['assunto']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                <?php endif; ?>
+                
+                <!-- Bloco de Busca por Número e Ano -->
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 14px; border-radius: 8px; border: 1px solid var(--accent); margin-bottom: 18px;">
+                    <label style="color: #93c5fd; font-weight: 600; display: block; margin-bottom: 8px;">
+                        <span class="material-icons" style="font-size: 18px; vertical-align: middle;">search</span> Digite o Número e Ano do Recurso para Validar no Sistema
+                    </label>
+                    <form method="POST" action="test_typst.php?action=buscar_parecer" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <input type="hidden" name="variant" value="<?= htmlspecialchars($selectedVariant) ?>">
+                        <div style="flex: 1; min-width: 110px;">
+                            <input type="text" name="search_numero" placeholder="Nº Recurso (ex: 186)" value="<?= htmlspecialchars($searchNum) ?>" style="width: 100%;" required>
+                        </div>
+                        <div style="width: 100px;">
+                            <input type="text" name="search_ano" placeholder="Ano (ex: 2023)" value="<?= htmlspecialchars($searchAno) ?>" style="width: 100%;">
+                        </div>
+                        <button type="submit" class="btn" style="padding: 10px 14px; background: #2563eb;">
+                            <span class="material-icons" style="font-size: 18px;">find_in_page</span> Validar e Carregar
+                        </button>
+                    </form>
+                    
+                    <?php if (!empty($listaPareceresReais)): ?>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+                            <span>Ou escolha um dos pareceres recentemente cadastrados:</span>
+                            <select id="selectParecerDb" onchange="carregarParecerDb(this.value)" style="margin-top: 4px; padding: 6px; font-size: 0.85rem;">
+                                <option value="">-- Selecionar dos Recentes --</option>
+                                <?php foreach ($listaPareceresReais as $pItem): ?>
+                                    <option value="<?= htmlspecialchars($pItem['id']) ?>">
+                                        Recurso <?= htmlspecialchars($pItem['id']) ?> | Unidade <?= htmlspecialchars($pItem['unidade']) ?> - <?= htmlspecialchars($pItem['assunto']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+                </div>
 
                 <form method="POST" action="test_typst.php?action=test_parecer" id="formParecer">
                     <div class="form-group">
