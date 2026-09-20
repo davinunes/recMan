@@ -16,8 +16,11 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 PORT = 5050
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEMPLATES_DIR = os.path.join(BASE_DIR, 'typst_templates')
+
+# Descobre os diretórios do projeto
+PY_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(PY_DIR, '..'))
+TEMPLATES_DIR = os.path.join(ROOT_DIR, 'typst_templates')
 
 
 def find_typst_binary():
@@ -43,25 +46,38 @@ def run_typst(template_name, input_data=None):
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template Typst não encontrado: {template_path}")
 
+    # Se for regimento e não tiver dados enviados, carrega o regimento/database.json por padrão
+    if template_name == 'regimento.typ' and (not input_data or not isinstance(input_data, dict) or len(input_data) == 0):
+        reg_json_path = os.path.join(ROOT_DIR, 'regimento', 'database.json')
+        if os.path.exists(reg_json_path):
+            with open(reg_json_path, 'r', encoding='utf-8') as f:
+                input_data = json.load(f)
+
+    if input_data is None:
+        input_data = {}
+
+    func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
+    json_payload = json.dumps(input_data, ensure_ascii=False)
+    clean_template_path = template_path.replace('\\', '/')
+
+    # Cria arquivo de entrada .typ temporário compatível com qualquer versão do Typst
+    with tempfile.NamedTemporaryFile(suffix='.typ', mode='w', encoding='utf-8', delete=False) as tmp_entry:
+        entry_path = tmp_entry.name
+        tmp_entry.write(f'#import "{clean_template_path}": {func_name}\n')
+        tmp_entry.write(f'#let raw_json = ```{json_payload}```.text\n')
+        tmp_entry.write(f'#{func_name}(json.decode(raw_json))\n')
+
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
         output_pdf_path = tmp_pdf.name
 
     try:
-        cmd = [TYPST_BIN, 'compile']
-        
-        # Se houver dados JSON de entrada, passa via --input data="..."
-        if input_data:
-            json_str = json.dumps(input_data, ensure_ascii=False)
-            cmd.extend(['--input', f'data={json_str}'])
-            
-        cmd.extend([template_path, output_pdf_path])
-
-        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+        cmd = [TYPST_BIN, 'compile', entry_path, output_pdf_path]
+        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT_DIR)
         elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
         if proc.returncode != 0:
             stderr_msg = proc.stderr or proc.stdout or "Erro desconhecido na compilação do Typst"
-            raise RuntimeError(f"Erro na compilação Typst: {stderr_msg}")
+            raise RuntimeError(f"Erro no Typst (código {proc.returncode}): {stderr_msg.strip()}")
 
         with open(output_pdf_path, 'rb') as f:
             pdf_bytes = f.read()
@@ -69,11 +85,12 @@ def run_typst(template_name, input_data=None):
         return pdf_bytes, elapsed_ms
 
     finally:
-        if os.path.exists(output_pdf_path):
-            try:
-                os.remove(output_pdf_path)
-            except Exception:
-                pass
+        for p in [entry_path, output_pdf_path]:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                except Exception:
+                    pass
 
 
 class TypstHandler(BaseHTTPRequestHandler):
@@ -109,6 +126,7 @@ class TypstHandler(BaseHTTPRequestHandler):
                 'service': 'typst-pdf-api',
                 'port': PORT,
                 'typst_binary': TYPST_BIN,
+                'root_dir': ROOT_DIR,
                 'templates': os.listdir(TEMPLATES_DIR) if os.path.exists(TEMPLATES_DIR) else []
             })
         else:
@@ -132,13 +150,11 @@ class TypstHandler(BaseHTTPRequestHandler):
 
         try:
             if parsed_path.path == '/gerar_pdf':
-                # Compila parecer
                 pdf_bytes, elapsed_ms = run_typst('parecer.typ', post_data)
-                filename = f"parecer_{post_data.get('notificacao', 'teste').replace('/', '_')}.pdf"
+                filename = f"parecer_{str(post_data.get('notificacao', 'teste')).replace('/', '_')}.pdf"
 
             elif parsed_path.path == '/gerar_regimento':
-                # Compila regimento interno
-                pdf_bytes, elapsed_ms = run_typst('regimento.typ', post_data if post_data else None)
+                pdf_bytes, elapsed_ms = run_typst('regimento.typ', post_data)
                 filename = "regimento_interno.pdf"
             else:
                 self._send_json(404, {'status': 'error', 'message': 'Endpoint desconhecido'})
@@ -157,9 +173,12 @@ class TypstHandler(BaseHTTPRequestHandler):
                 self._send_pdf(pdf_bytes, filename=filename)
 
         except Exception as err:
+            err_msg = str(err)
+            sys.stderr.write(f"[TYPST ERROR] {err_msg}\n")
+            sys.stderr.flush()
             self._send_json(500, {
                 'status': 'error',
-                'message': str(err),
+                'message': err_msg,
                 'engine': 'Typst CLI (Porta 5050)'
             })
 
@@ -167,6 +186,7 @@ class TypstHandler(BaseHTTPRequestHandler):
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
     print(f"Usando binário Typst: {TYPST_BIN}")
+    print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
     try:

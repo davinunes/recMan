@@ -115,6 +115,26 @@ class TypstPdfService {
 
         $elapsedMs = round((microtime(true) - $start) * 1000, 2);
 
+        // Se houve erro HTTP, tenta extrair a mensagem JSON detalhada do servidor
+        if ($response !== false && !empty($response)) {
+            $jsonResult = json_decode($response, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($jsonResult)) {
+                if ($httpCode === 200 && ($jsonResult['status'] ?? '') === 'success') {
+                    $jsonResult['elapsed_ms'] = $elapsedMs;
+                    return $jsonResult;
+                }
+                if (!empty($jsonResult['message'])) {
+                    return [
+                        'status' => 'error',
+                        'http_code' => $httpCode,
+                        'message' => 'Erro na API Typst (Porta 5050): ' . $jsonResult['message'],
+                        'elapsed_ms' => $elapsedMs,
+                        'pdf_base64' => ''
+                    ];
+                }
+            }
+        }
+
         if ($response === false || $httpCode !== 200) {
             return [
                 'status' => 'error',
@@ -125,12 +145,6 @@ class TypstPdfService {
             ];
         }
 
-        $jsonResult = json_decode($response, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($jsonResult)) {
-            return $jsonResult;
-        }
-
-        // Se o retorno foi o binário bruto do PDF (caso base64=false)
         return [
             'status' => 'success',
             'elapsed_ms' => $elapsedMs,
