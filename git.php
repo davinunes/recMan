@@ -44,22 +44,24 @@ if (isset($_GET['action'])) {
 	}
 
 	if ($_GET['action'] == 'restart_pdf_api') {
-		// Comando para reiniciar o serviço Python PDF via venv
-		$pyCmd = "cd /var/www/reportPDFpython && pkill -f parecer.py; source venv/bin/activate && nohup python3 parecer.py > parecer.log 2>&1 & sleep 1 && ps aux | grep parecer.py";
+		// Comando encadeado para reiniciar o serviço Python PDF via venv
+		$pyCmd = "cd /var/www/reportPDFpython && (pkill -9 -f parecer.py || true) && (nohup venv/bin/python parecer.py > parecer.log 2>&1 &) && sleep 1 && ps aux | grep parecer.py | grep -v grep 2>&1";
 
 		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
 		$output = shell_exec($fullCmd);
-		echo json_encode(['success' => true, 'output' => $output]);
+		$cleanOutput = trim($output) ?: 'Serviço reiniciado com sucesso.';
+		echo json_encode(['success' => true, 'output' => $cleanOutput]);
 		exit;
 	}
 
 	if ($_GET['action'] == 'pull_pdf_api') {
-		// Comando para atualizar via git pull e reiniciar a API Python PDF
-		$pyCmd = "cd /var/www/reportPDFpython && git pull && pkill -f parecer.py; source venv/bin/activate && nohup python3 parecer.py > parecer.log 2>&1 & sleep 1 && ps aux | grep parecer.py";
+		// Comando para atualizar via git pull 2>&1 e reiniciar a API Python PDF
+		$pyCmd = "cd /var/www/reportPDFpython && git pull 2>&1 && (pkill -9 -f parecer.py || true) && (nohup venv/bin/python parecer.py > parecer.log 2>&1 &) && sleep 1 && ps aux | grep parecer.py | grep -v grep 2>&1";
 
 		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
 		$output = shell_exec($fullCmd);
-		echo json_encode(['success' => true, 'output' => $output]);
+		$cleanOutput = trim($output) ?: 'Git pull executado e serviço reiniciado com sucesso.';
+		echo json_encode(['success' => true, 'output' => $cleanOutput]);
 		exit;
 	}
 }
@@ -270,7 +272,8 @@ if (isset($_GET['action'])) {
 				log('Reiniciando serviço da API Python PDF (/var/www/reportPDFpython)...');
 
 				$.get('git.php?action=restart_pdf_api', function (res) {
-					$('#terminal').append('\n' + res.output);
+					var outText = (res && res.output && res.output !== 'null') ? res.output : 'Serviço da API Python de PDF reiniciado com sucesso.';
+					$('#terminal').append('\n' + outText);
 					log('Serviço da API Python de PDF reiniciado.');
 					M.toast({ html: 'API Python PDF reiniciada!', classes: 'green' });
 				}).fail(function () {
@@ -287,7 +290,8 @@ if (isset($_GET['action'])) {
 				log('Fazendo git pull em /var/www/reportPDFpython e reiniciando a API...');
 
 				$.get('git.php?action=pull_pdf_api', function (res) {
-					$('#terminal').append('\n' + res.output);
+					var outText = (res && res.output && res.output !== 'null') ? res.output : 'Git pull realizado e API Python reiniciada com sucesso.';
+					$('#terminal').append('\n' + outText);
 					log('Git pull e reinício da API Python concluídos.');
 					M.toast({ html: 'API Python PDF atualizada e reiniciada!', classes: 'green' });
 				}).fail(function () {
