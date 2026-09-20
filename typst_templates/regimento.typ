@@ -78,7 +78,7 @@
 
     let art_texto = if "texto" in art_data { art_data.texto } else { "" }
 
-    block(width: 100%, margin: (bottom: 8pt))[
+    block(width: 100%, below: 8pt)[
       #text(weight: "bold", fill: rgb("1e3a8a"))[Art. #art_id º] #art_texto
 
       #if "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
