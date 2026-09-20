@@ -16,7 +16,7 @@
   let data_emissao = get("data_emissao", "20/09/2026")
   let fundamentacao = get("fundamentacao", "Após análise das alegações e documentos apresentados pelo recorrente, o Conselho deliberou pelo provimento do recurso.")
   let variant = get("variant", "modern")
-  let banner_path = get("banner_path", "addons/api-pdf/LayoutMiami.jpg")
+  let banner_path = get("banner_path", "/var/www/reportPDFpython/LayoutMiami.jpg")
 
   set document(title: [Parecer Notificação #notificacao], author: "Conselho Consultivo")
 

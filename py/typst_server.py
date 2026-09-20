@@ -47,6 +47,21 @@ def find_typst_binary():
     return None
 
 
+def find_banner_image():
+    """Localiza a imagem do banner LayoutMiami.jpg no servidor remoto ou ambiente local."""
+    candidates = [
+        '/var/www/reportPDFpython/LayoutMiami.jpg',
+        os.path.join(ROOT_DIR, 'addons', 'api-pdf', 'LayoutMiami.jpg'),
+        os.path.join(ROOT_DIR, 'reportPDFpython', 'LayoutMiami.jpg'),
+        os.path.join(TEMPLATES_DIR, 'LayoutMiami.jpg'),
+        os.path.join(PY_DIR, 'LayoutMiami.jpg')
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c.replace('\\', '/')
+    return '/var/www/reportPDFpython/LayoutMiami.jpg'
+
+
 TYPST_BIN = find_typst_binary()
 
 
@@ -82,6 +97,10 @@ def run_typst(template_name, input_data=None):
     if input_data is None:
         input_data = {}
 
+    # Define automaticamente o caminho correto da imagem LayoutMiami.jpg
+    if 'banner_path' not in input_data or not input_data['banner_path']:
+        input_data['banner_path'] = find_banner_image()
+
     func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
 
     # Cria arquivos temporários dentro do ROOT_DIR para garantir caminhos relativos perfeitos no Typst
@@ -90,7 +109,6 @@ def run_typst(template_name, input_data=None):
     pdf_tmp_file = None
 
     try:
-        # 1. Escreve os dados JSON temporários
         json_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_data_', suffix='.json', mode='w', encoding='utf-8', delete=False)
         json.dump(input_data, json_tmp_file, ensure_ascii=False)
         json_tmp_file.close()
@@ -98,13 +116,11 @@ def run_typst(template_name, input_data=None):
         rel_json_path = os.path.relpath(json_tmp_file.name, ROOT_DIR).replace('\\', '/')
         rel_template_path = os.path.relpath(template_path, ROOT_DIR).replace('\\', '/')
 
-        # 2. Cria o arquivo de entrada .typ temporário
         entry_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_entry_', suffix='.typ', mode='w', encoding='utf-8', delete=False)
         entry_tmp_file.write(f'#import "{rel_template_path}": {func_name}\n')
         entry_tmp_file.write(f'#{func_name}(json("{rel_json_path}"))\n')
         entry_tmp_file.close()
 
-        # 3. Cria arquivo de saída PDF temporário
         pdf_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_out_', suffix='.pdf', delete=False)
         pdf_tmp_file.close()
 
@@ -122,7 +138,6 @@ def run_typst(template_name, input_data=None):
         return pdf_bytes, elapsed_ms
 
     finally:
-        # Limpa todos os arquivos temporários criados
         for f_tmp in [json_tmp_file, entry_tmp_file, pdf_tmp_file]:
             if f_tmp and os.path.exists(f_tmp.name):
                 try:
@@ -165,6 +180,7 @@ class TypstHandler(BaseHTTPRequestHandler):
                 'service': 'typst-pdf-api',
                 'port': PORT,
                 'typst_binary': bin_status,
+                'banner_image': find_banner_image(),
                 'root_dir': ROOT_DIR,
                 'templates': os.listdir(TEMPLATES_DIR) if os.path.exists(TEMPLATES_DIR) else []
             })
@@ -224,7 +240,8 @@ class TypstHandler(BaseHTTPRequestHandler):
 
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
-    print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO (Instalação necessária)'}")
+    print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO'}")
+    print(f"Banner de Topo: {find_banner_image()}")
     print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
