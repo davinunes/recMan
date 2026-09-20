@@ -146,13 +146,15 @@ function updateParecer($dados)
     $notificacao = DBEscape($dados['notificacao']);
     $analise = DBEscape($dados['analise']);
     $conclusao = DBEscape($dados['conclusao']);
+    $modelo = isset($dados['modelo']) ? DBEscape($dados['modelo']) : 'estatico';
 
     $sql = "UPDATE conselho.parecer
             SET resultado = '$resultado',
                 assunto = '$assunto',
                 notificacao = '$notificacao',
                 analise = '$analise',
-                conclusao = '$conclusao'
+                conclusao = '$conclusao',
+                modelo = '$modelo'
             WHERE id = '$id'";
 
     if (DBExecute($sql)) {

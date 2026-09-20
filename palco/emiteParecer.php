@@ -63,6 +63,7 @@ $pdf['fato'] = $parecer["notificacao"];
 $pdf['analise'] = $parecer["analise"];
 $pdf['resultado'] = $parecer["resultado"];
 $pdf['parecer'] = $parecer["conclusao"];
+$pdf['modelo'] = $parecer["modelo"] ?? "estatico";
 $pdf['data_emissao'] = date('Y-m-d', strtotime($parecer['data']));
 
 // dump($pdf);
@@ -179,6 +180,14 @@ Content-Disposition: attachment; filename="' . "$nomeAnexo" . '"' . "\n" . "\n";
 
       <!-- Formulário de Edição -->
       <form action="processa_edicao_parecer.php" method="post">
+        <div class="input-field" style="margin-bottom: 25px;">
+          <label style="transform: translateY(-14px) scale(0.85); transform-origin: 0 0; color: #1a237e; font-weight: bold;">Modelo do Parecer / Layout no PDF:</label>
+          <select id="selectModeloParecer" name="modelo" class="browser-default" style="display: block; margin-top: 8px; border: 1px solid #7986cb; border-radius: 6px; padding: 10px; background-color: #f5f5f5; font-weight: 500;">
+            <option value="estatico" <?php echo (!isset($parecer['modelo']) || $parecer['modelo'] == 'estatico') ? 'selected' : ''; ?>>📄 Modelo Padrão Seccionado (5 Caixas Estáticas)</option>
+            <option value="full_dinamico" <?php echo (isset($parecer['modelo']) && $parecer['modelo'] == 'full_dinamico') ? 'selected' : ''; ?>>📑 Modelo Full Dinâmico (Texto Livre / Seções Personalizadas I, II, III...)</option>
+          </select>
+        </div>
+
         <div class="input-field">
           <textarea id="assunto" name="assunto"
             class="materialize-textarea"><?php echo $parecer["assunto"]; ?></textarea>
