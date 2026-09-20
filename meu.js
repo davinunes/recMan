@@ -1292,14 +1292,14 @@ $(document).on('keyup', '#numero', function (event) {
     }
 });
 
-$(document).on('keyup', '.fato', function (event) {
-    var entrada = $(this).val();
-
-    // Remover quebras de linha e manter apenas um espaço entre palavras
-    entrada = entrada.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
-
-    // Agora, você pode usar a variável 'entrada' conforme necessário
-    $(this).val(entrada);
+$(document).on('paste', '.fato', function (e) {
+    var self = this;
+    setTimeout(function () {
+        var entrada = $(self).val();
+        // Remover apenas quebras de linha excessivas ao colar
+        entrada = entrada.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+        $(self).val(entrada);
+    }, 100);
 });
 
 

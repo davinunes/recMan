@@ -12,3 +12,5 @@ storage/*.log
 .idea/
 .vscode/
 *.swp
+
+addons/
