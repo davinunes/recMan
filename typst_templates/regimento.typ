@@ -1,0 +1,96 @@
+#let data = if "data" in sys.inputs {
+  json.decode(sys.inputs.data)
+} else {
+  json("../regimento/database.json")
+}
+
+#set document(title: data.titulo, author: "Condomínio Residencial Top Life Miami Beach")
+
+#set page(
+  paper: "a4",
+  margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
+  header: locate(loc => {
+    if loc.page() > 1 [
+      #grid(
+        columns: (1fr, auto),
+        align(left)[#text(size: 8pt, fill: rgb("#475569"), weight: "bold")[REGIMENTO INTERNO - TOP LIFE MIAMI BEACH]],
+        align(right)[#text(size: 8pt, fill: rgb("#64748b"))[Documento Oficial]]
+      )
+      #line(length: 100%, stroke: 0.5pt + rgb("#cbd5e1"))
+    ]
+  }),
+  footer: locate(loc => {
+    let page_number = counter(page).at(loc).first()
+    let total_pages = counter(page).final(loc).first()
+    align(center)[
+      #text(size: 8.5pt, fill: rgb("#64748b"))[
+        Página #page_number de #total_pages
+      ]
+    ]
+  })
+)
+
+#set text(font: ("Liberation Sans", "DejaVu Sans", "Arial"), lang: "pt", size: 10pt)
+#set par(justify: true, leading: 0.65em)
+
+// Capa / Título principal
+#align(center + horizon)[
+  #v(-2cm)
+  #rect(width: 100%, inset: 20pt, radius: 4pt, fill: rgb("#0f172a"))[
+    #text(fill: white, weight: "bold", size: 16pt)[#data.titulo]
+  ]
+  #v(1.5cm)
+  #text(size: 12pt, style: "italic", fill: rgb("#334155"))[
+    Normas de Funcionamento, Convivência e Administração
+  ]
+  #v(2cm)
+  #text(size: 10pt, fill: rgb("#64748b"))[
+    Taguatinga / DF
+  ]
+]
+
+#pagebreak()
+
+// Sumário dos Capítulos
+#heading(level: 1, numbering: none)[Sumário dos Capítulos]
+#v(0.5cm)
+
+#let capitulos = data.capitulos
+#for (cap_id, cap_nome) in capitulos [
+  #box(width: 100%, inset: (y: 3pt))[
+    #text(weight: "medium", fill: rgb("#1e293b"))[#cap_nome]
+  ]
+]
+
+#pagebreak()
+
+// Exibição dos Capítulos e Artigos
+#let artigos = data.artigos
+#let current_cap = ""
+
+#for (art_id, art_data) in artigos [
+  #let cap_num = str(art_data.capitulo)
+  #if cap_num in capitulos and capitulos.at(cap_num) != current_cap [
+    #current_cap = capitulos.at(cap_num)
+    #v(0.8cm)
+    #rect(width: 100%, fill: rgb("#f1f5f9"), inset: 8pt, radius: 3pt, stroke: 0.5pt + rgb("#cbd5e1"))[
+      #text(weight: "bold", fill: rgb("#0f172a"), size: 11.5pt)[#current_cap]
+    ]
+    #v(0.3cm)
+  ]
+
+  #block(width: 100%, margin: (bottom: 8pt))[
+    #text(weight: "bold", fill: rgb("#1e3a8a"))[Art. #art_idº] #art_data.texto
+
+    #if "paragrafos" in art_data and art_data.paragrafos != none [
+      #for (p_key, p_val) in art_data.paragrafos [
+        #v(3pt)
+        #pad(left: 12pt)[
+          #text(style: "italic", fill: rgb("#334155"))[
+            #if p_key == "unico" [*Parágrafo único.*] else [*§ #p_keyº*] #p_val.texto
+          ]
+        ]
+      ]
+    ]
+  ]
+]
