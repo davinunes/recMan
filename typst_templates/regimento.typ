@@ -247,11 +247,15 @@
       v(0.8cm)
       if variant == "dark" {
         rect(width: 100%, fill: bg_cap, inset: 8pt, radius: 4pt, stroke: 0.5pt + rgb("0284c7"))[
-          #text(weight: "bold", fill: rgb("38bdf8"), size: 11.5pt)[#current_cap]
+          #heading(level: 1, numbering: none, outlined: true)[
+            #text(weight: "bold", fill: rgb("38bdf8"), size: 11.5pt)[#current_cap]
+          ]
         ]
       } else {
         rect(width: 100%, fill: bg_cap, inset: 8pt, radius: 3pt, stroke: 0.5pt + main_color)[
-          #text(weight: "bold", fill: main_color, size: 11.5pt)[#current_cap]
+          #heading(level: 1, numbering: none, outlined: true)[
+            #text(weight: "bold", fill: main_color, size: 11.5pt)[#current_cap]
+          ]
         ]
       }
       v(0.3cm)
