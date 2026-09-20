@@ -194,29 +194,52 @@ Content-Disposition: attachment; filename="' . "$nomeAnexo" . '"' . "\n" . "\n";
           <label for="assunto">Assunto</label>
         </div>
 
-        <div class="input-field">
+        <div class="input-field campo-estatico">
           <textarea id="notificacao" name="notificacao"
             class="materialize-textarea fato"><?php echo $parecer["notificacao"]; ?></textarea>
           <label for="notificacao">Fato que gerou a notificação</label>
         </div>
 
         <div class="input-field">
-          <textarea id="analise" name="analise"
+          <textarea id="analise" name="analise" style="min-height: 120px;"
             class="materialize-textarea"><?php echo $parecer["analise"]; ?></textarea>
-          <label for="analise">Da análise do Conselho:</label>
+          <label for="analise" id="labelAnalise">Da análise do Conselho:</label>
         </div>
 
-        <div class="input-field">
+        <div class="input-field campo-estatico">
           <textarea id="resultado" name="resultado"
             class="materialize-textarea"><?php echo $parecer["resultado"]; ?></textarea>
           <label for="resultado">Considerações finais:</label>
         </div>
 
-        <div class="input-field">
+        <div class="input-field campo-estatico">
           <textarea id="conclusao" name="conclusao"
             class="materialize-textarea"><?php echo $parecer["conclusao"]; ?></textarea>
           <label for="conclusao">Parecer ou veredito do Conselho:</label>
         </div>
+
+        <script>
+          function atualizarExibicaoCamposModelo() {
+            var modelo = $('#selectModeloParecer').val();
+            if (modelo === 'full_dinamico') {
+              $('.campo-estatico').slideUp(200);
+              $('#labelAnalise').text('Texto Integral do Parecer (Modelo Full Dinâmico):').css('font-weight', 'bold').css('color', '#1a237e');
+              $('#analise').css('min-height', '240px');
+            } else {
+              $('.campo-estatico').slideDown(200);
+              $('#labelAnalise').text('Da análise do Conselho:').css('font-weight', 'normal').css('color', '');
+              $('#analise').css('min-height', '120px');
+            }
+            if (window.M && M.updateTextFields) { M.updateTextFields(); }
+          }
+
+          $(document).ready(function() {
+            atualizarExibicaoCamposModelo();
+            $(document).on('change', '#selectModeloParecer', function() {
+              atualizarExibicaoCamposModelo();
+            });
+          });
+        </script>
 
         <div class="input-field hide">
           <textarea id="id_parecer" name="id_parecer"

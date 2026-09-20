@@ -42,6 +42,26 @@ if (isset($_GET['action'])) {
 		echo json_encode(['success' => true, 'output' => $output]);
 		exit;
 	}
+
+	if ($_GET['action'] == 'restart_pdf_api') {
+		// Comando para reiniciar o serviço Python PDF via venv
+		$pyCmd = "cd /var/www/reportPDFpython && pkill -f parecer.py; source venv/bin/activate && nohup python3 parecer.py > parecer.log 2>&1 & sleep 1 && ps aux | grep parecer.py";
+
+		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
+		$output = shell_exec($fullCmd);
+		echo json_encode(['success' => true, 'output' => $output]);
+		exit;
+	}
+
+	if ($_GET['action'] == 'pull_pdf_api') {
+		// Comando para atualizar via git pull e reiniciar a API Python PDF
+		$pyCmd = "cd /var/www/reportPDFpython && git pull && pkill -f parecer.py; source venv/bin/activate && nohup python3 parecer.py > parecer.log 2>&1 & sleep 1 && ps aux | grep parecer.py";
+
+		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
+		$output = shell_exec($fullCmd);
+		echo json_encode(['success' => true, 'output' => $output]);
+		exit;
+	}
 }
 ?>
 
@@ -131,6 +151,21 @@ if (isset($_GET['action'])) {
 					</div>
 				</div>
 
+				<div class="card indigo darken-3 white-text">
+					<div class="card-content">
+						<span class="card-title"><i class="material-icons left">picture_as_pdf</i>API Python PDF (/var/www/reportPDFpython)</span>
+						<p style="font-size:0.9rem; opacity:0.9;">Gerencia o processo do serviço Flask em Python na porta 5000.</p>
+
+						<button id="btnRestartPdf" class="btn btn-small waves-effect waves-light amber darken-3 btn-deploy" style="margin-top:15px;">
+							<i class="material-icons left">autorenew</i> Reiniciar Serviço PDF
+						</button>
+
+						<button id="btnPullPdf" class="btn btn-small waves-effect waves-light deep-purple darken-1 btn-deploy">
+							<i class="material-icons left">cloud_download</i> Git Pull + Reiniciar PDF
+						</button>
+					</div>
+				</div>
+
 				<div class="card blue-grey darken-4 white-text">
 					<div class="card-content">
 						<h6>Dicas Rápidas</h6>
@@ -138,6 +173,7 @@ if (isset($_GET['action'])) {
 							<li>• Sempre verifique o <b>status</b> antes do push.</li>
 							<li>• Commits claros ajudam no histórico.</li>
 							<li>• O processo usa o script <code>ssh.py</code> interno.</li>
+							<li>• Use o botão <b>Reiniciar Serviço PDF</b> após atualizar scripts Python.</li>
 						</ul>
 					</div>
 				</div>
@@ -225,6 +261,40 @@ if (isset($_GET['action'])) {
 				}).always(() => {
 					$('#loader').hide();
 					$('#btnPush').removeClass('disabled');
+				});
+			});
+
+			$('#btnRestartPdf').click(function () {
+				$('#loader').show();
+				$('#btnRestartPdf').addClass('disabled');
+				log('Reiniciando serviço da API Python PDF (/var/www/reportPDFpython)...');
+
+				$.get('git.php?action=restart_pdf_api', function (res) {
+					$('#terminal').append('\n' + res.output);
+					log('Serviço da API Python de PDF reiniciado.');
+					M.toast({ html: 'API Python PDF reiniciada!', classes: 'green' });
+				}).fail(function () {
+					log('ERRO: Falha na comunicação com o servidor.');
+				}).always(() => {
+					$('#loader').hide();
+					$('#btnRestartPdf').removeClass('disabled');
+				});
+			});
+
+			$('#btnPullPdf').click(function () {
+				$('#loader').show();
+				$('#btnPullPdf').addClass('disabled');
+				log('Fazendo git pull em /var/www/reportPDFpython e reiniciando a API...');
+
+				$.get('git.php?action=pull_pdf_api', function (res) {
+					$('#terminal').append('\n' + res.output);
+					log('Git pull e reinício da API Python concluídos.');
+					M.toast({ html: 'API Python PDF atualizada e reiniciada!', classes: 'green' });
+				}).fail(function () {
+					log('ERRO: Falha na comunicação com o servidor.');
+				}).always(() => {
+					$('#loader').hide();
+					$('#btnPullPdf').removeClass('disabled');
 				});
 			});
 		});
