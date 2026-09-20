@@ -11,14 +11,16 @@
   let unidade = get("unidade", "A1305")
   let assunto = get("assunto", "ESTACIONAMENTO INDEVIDO")
   let fato = get("fato", "Veículo posicionado temporariamente para descarregamento.")
-  let parecer = get("parecer", "Favorável ao Recurso")
-  let relator = get("relator", "Conselho Consultivo e Fiscal")
-  let data_emissao = get("data_emissao", "20/09/2026")
-  let fundamentacao = get("fundamentacao", "Após análise das alegações e documentos apresentados pelo recorrente, o Conselho deliberou pelo provimento do recurso.")
+  let analise = get("analise", "")
+  let resultado = get("resultado", "")
+  let parecer = get("parecer", get("conclusao", "Favorável ao Recurso"))
+  let data_emissao = get("data_emissao", "20 de Setembro de 2026")
   let variant = get("variant", "modern")
   let banner_path = get("banner_path", "LayoutMiami.jpg")
+  let modelo = get("modelo", "estatico")
+  let corpo = get("corpo", "")
 
-  // Cores dinâmicas
+  // Cores dinâmicas por variante
   let text_primary = rgb("0f172a")
   let text_secondary = rgb("475569")
   let bg_card = rgb("f8fafc")
@@ -49,7 +51,7 @@
     stroke_card = rgb("059669")
   }
 
-  set document(title: [Parecer Notificação #notificacao], author: "Conselho Consultivo")
+  set document(title: [Parecer do Conselho - Notificação #notificacao], author: "Conselho Consultivo e Fiscal")
 
   set page(
     paper: "a4",
@@ -61,7 +63,7 @@
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8.5pt, fill: text_secondary, weight: "bold")[CONDOMÍNIO RESIDENCIAL TOP LIFE MIAMI BEACH]],
-          align(right)[#text(size: 8.5pt, fill: text_secondary)[COMISSÃO DE RECURSOS]]
+          align(right)[#text(size: 8.5pt, fill: text_secondary)[CONSELHO CONSULTIVO E FISCAL]]
         )
         #line(length: 100%, stroke: 0.5pt + stroke_card)
       ]
@@ -86,19 +88,24 @@
     #align(center)[
       #image(banner_path, width: 100%)
     ]
-    #v(0.5cm)
+    #v(0.3cm)
+  ]
+
+  // Data alinhada à direita
+  align(right)[
+    #text(size: 9pt, style: "italic", fill: text_secondary)[Taguatinga, #data_emissao]
   ]
 
   // Título Principal
   align(center)[
     #v(0.2cm)
-    #text(size: 14pt, weight: "bold", fill: title_color)[PARECER DA COMISSÃO DE RECURSOS]
+    #text(size: 15pt, weight: "bold", fill: title_color)[PARECER DO CONSELHO]
     #v(2pt)
-    #text(size: 10pt, weight: "medium", fill: text_secondary)[Referente à Notificação nº #notificacao]
+    #text(size: 10pt, weight: "medium", fill: text_secondary)[Notificação nº #notificacao]
     #v(0.4cm)
   ]
 
-  // Tabela de Resumo do Parecer por Variante
+  // Tabela de Resumo dos Dados por Variante
   if variant == "compact" [
     #rect(width: 100%, inset: 8pt, radius: 2pt, fill: bg_card, stroke: 0.5pt + stroke_card)[
       #grid(
@@ -123,7 +130,7 @@
           #v(2pt)
           #line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))
           #v(4pt)
-          *Resultado:* #parecer
+          *Conclusão:* #parecer
         ]
       )
     ]
@@ -135,12 +142,12 @@
         [ *UNIDADE:* #unidade ],
         [ *NOTIFICAÇÃO:* #notificacao ],
         [ *ASSUNTO:* #assunto ],
-        [ *DATA DE EMISSÃO:* #data_emissao ],
+        [ *DATA:* #data_emissao ],
         grid.cell(colspan: 2)[
           #v(4pt)
           #line(length: 100%, stroke: 1pt + rgb("1e3a8a"))
           #v(6pt)
-          *DECISÃO DO CONSELHO:* #parecer
+          *DECISÃO DO CONSELHO CONSULTIVO E FISCAL:* #parecer
         ]
       )
     ]
@@ -152,47 +159,82 @@
         [ *Unidade Recorrente:* #unidade ],
         [ *Notificação:* #notificacao ],
         [ *Assunto:* #assunto ],
-        [ *Data de Emissão:* #data_emissao ],
+        [ *Data:* #data_emissao ],
         grid.cell(colspan: 2)[
           #v(3pt)
           #line(length: 100%, stroke: 0.5pt + stroke_card)
           #v(6pt)
           *Conclusão do Parecer:* 
-          #if parecer == "Favorável" or parecer == "Favorável ao Recurso" [
-            #text(weight: "bold", fill: rgb("15803d"))[#parecer (DEFERIDO)]
+          #if parecer == "REVOGAR" or parecer == "REVOGAR A PENALIDADE" or parecer == "Favorável" or parecer == "Favorável ao Recurso" [
+            #text(weight: "bold", fill: rgb("15803d"))[#parecer (RECURSO DEFERIDO)]
+          ] else if parecer == "CONVERTER" or parecer == "CONVERTER EM ADVERTÊNCIA" [
+            #text(weight: "bold", fill: rgb("d97706"))[#parecer]
           ] else [
-            #text(weight: "bold", fill: rgb("b91c1c"))[#parecer (INDEFERIDO)]
+            #text(weight: "bold", fill: rgb("b91c1c"))[#parecer (RECURSO INDEFERIDO)]
           ]
         ]
       )
     ]
   ]
 
-  v(0.6cm)
+  v(0.5cm)
 
-  // Seção 1: Relato do Fato
-  heading(level: 2, numbering: none)[1. Relato dos Fatos]
-  v(0.2cm)
-  rect(width: 100%, inset: 10pt, fill: bg_card, stroke: 0.5pt + stroke_card, radius: 3pt)[
-    #fato
+  // CORPO DO PARECER (Modelo Dinâmico vs Estático Padrão)
+  if modelo == "full_dinamico" and corpo != "" [
+    #corpo
+  ] else [
+    #text(style: "italic", fill: text_secondary)[
+      Prezados,
+      
+      O Conselho Consultivo e Fiscal foi convocado para prestar parecer concernente a recurso contra a notificação supracitada referente à infração prevista no Regimento Interno, pautada sobre os artigos acima relacionados.
+    ]
+
+    #v(0.4cm)
+
+    #heading(level: 2, numbering: none)[1. Notificação]
+    #v(0.1cm)
+    #rect(width: 100%, inset: 8pt, fill: if variant == "dark" { rgb("1e293b") } else { white }, stroke: 0.5pt + stroke_card, radius: 3pt)[
+      O Condomínio, no uso de suas atribuições administrativas, buscando o cumprimento regimental, notificou a unidade em decorrência de: #fato
+    ]
+
+    #if analise != "" [
+      #v(0.4cm)
+      #heading(level: 2, numbering: none)[2. Análise]
+      #v(0.1cm)
+      #analise
+    ]
+
+    #if resultado != "" [
+      #v(0.4cm)
+      #heading(level: 2, numbering: none)[3. Concluímos]
+      #v(0.1cm)
+      #resultado
+    ]
+
+    #v(0.5cm)
+    #rect(width: 100%, inset: 10pt, radius: 4pt, fill: bg_card, stroke: 0.5pt + stroke_card)[
+      #text(weight: "bold", fill: title_color)[
+        Somos favoráveis, portanto, em #parecer a aplicação da penalidade.
+      ]
+    ]
   ]
 
-  v(0.6cm)
+  v(1.2cm)
 
-  // Seção 2: Análise e Fundamentação
-  heading(level: 2, numbering: none)[2. Análise e Fundamentação]
-  v(0.2cm)
-  fundamentacao
-
-  v(2cm)
-
-  // Bloco de Assinatura
+  // LAVRADO DIGITALMENTE (Substitui campo de assinatura)
   align(center)[
-    #block(width: 65%)[
-      #line(length: 100%, stroke: 0.5pt + text_secondary)
-      #v(4pt)
-      #text(weight: "bold", fill: text_primary)[#relator] \
-      #text(size: 8.5pt, fill: text_secondary)[Conselho Consultivo e Fiscal]
+    #rect(width: 85%, inset: 10pt, radius: 4pt, fill: if variant == "dark" { rgb("1e293b") } else { rgb("f1f5f9") }, stroke: 0.5pt + stroke_card)[
+      #grid(
+        columns: (auto, 1fr),
+        gutter: 10pt,
+        align: (center + horizon, left + horizon),
+        [ #text(size: 16pt)[✒️] ],
+        [
+          #text(size: 8.5pt, weight: "medium", fill: text_secondary)[
+            Documento lavrado digitalmente em Taguatinga, #data_emissao pelo *Conselho Consultivo e Fiscal*.
+          ]
+        ]
+      )
     ]
   ]
 }

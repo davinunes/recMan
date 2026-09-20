@@ -6,12 +6,51 @@
 
 require_once __DIR__ . "/../classes/typstPdfService.php";
 
+// Incluir banco de dados se disponível para consultar pareceres reais
+if (file_exists(__DIR__ . "/../classes/database.php")) {
+    @include_once __DIR__ . "/../classes/database.php";
+}
+if (file_exists(__DIR__ . "/../classes/repositorio.php")) {
+    @include_once __DIR__ . "/../classes/repositorio.php";
+}
+
 $action = $_GET['action'] ?? 'index';
 $statusHealth = TypstPdfService::checkHealth();
 $resultPdf = null;
 $errorMsg = null;
 $elapsedMs = null;
 $selectedVariant = $_POST['variant'] ?? 'modern';
+
+// Buscar pareceres reais no banco de dados do sistema
+$listaPareceresReais = [];
+if (function_exists('DBConnect')) {
+    try {
+        $sql = "SELECT id, unidade, assunto, notificacao, analise, resultado, conclusao, modelo, data FROM parecer ORDER BY id DESC LIMIT 30";
+        $res = @DBExecute($sql);
+        if (!$res) {
+            $sql = "SELECT id, unidade, assunto, notificacao, analise, resultado, conclusao, modelo, data FROM conselho.parecer ORDER BY id DESC LIMIT 30";
+            $res = @DBExecute($sql);
+        }
+        if ($res && mysqli_num_rows($res) > 0) {
+            while ($row = mysqli_fetch_assoc($res)) {
+                $listaPareceresReais[] = $row;
+            }
+        }
+    } catch (Throwable $t) {
+        // Silencioso se sem conexão com DB no momento
+    }
+}
+
+// Valores padrão ou POST
+$notificacaoVal  = $_POST['notificacao'] ?? '186/2023';
+$unidadeVal      = $_POST['unidade'] ?? 'A1305';
+$assuntoVal      = $_POST['assunto'] ?? 'ESTACIONAMENTO INDEVIDO';
+$fatoVal         = $_POST['fato'] ?? 'Veículo posicionado temporariamente na área de circulação para descarregamento de pertences.';
+$analiseVal      = $_POST['analise'] ?? 'Após verificação, atestou-se o tempo reduzido de permanência e a ausência de prejuízo aos demais condôminos.';
+$resultadoVal    = $_POST['resultado'] ?? 'Diante das atenuantes apuradas, o parecer conclui pelo provimento do recurso com revogação da penalidade.';
+$parecerVal      = $_POST['parecer'] ?? 'Favorável ao Recurso';
+$modeloVal       = $_POST['modelo'] ?? 'estatico';
+$dataEmissaoVal  = $_POST['data_emissao'] ?? date('d/m/Y');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'test_regimento') {
@@ -31,15 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'test_parecer') {
         $dadosParecer = [
-            'notificacao'  => trim($_POST['notificacao'] ?? '186/2023'),
-            'unidade'      => trim($_POST['unidade'] ?? 'A1305'),
-            'assunto'      => trim($_POST['assunto'] ?? 'ESTACIONAMENTO INDEVIDO'),
-            'fato'         => trim($_POST['fato'] ?? 'Veículo posicionado temporariamente na área de circulação para descarregamento de pertences.'),
-            'parecer'      => trim($_POST['parecer'] ?? 'Favorável ao Recurso'),
-            'relator'      => trim($_POST['relator'] ?? 'Conselho Consultivo e Fiscal'),
-            'data_emissao' => date('d/m/Y'),
+            'notificacao'  => trim($notificacaoVal),
+            'unidade'      => trim($unidadeVal),
+            'assunto'      => trim($assuntoVal),
+            'fato'         => trim($fatoVal),
+            'analise'      => trim($analiseVal),
+            'resultado'    => trim($resultadoVal),
+            'parecer'      => trim($parecerVal),
+            'modelo'       => trim($modeloVal),
+            'relator'      => 'Conselho Consultivo e Fiscal',
+            'data_emissao' => trim($dataEmissaoVal),
             'variant'      => $selectedVariant,
-            'fundamentacao'=> trim($_POST['fundamentacao'] ?? 'O Conselho verificou que o tempo de permanência foi inferior a 10 minutos, sem prejuízo aos demais condôminos.')
         ];
         $res = TypstPdfService::gerarParecer($dadosParecer, true);
         if ($res['status'] === 'success' && !empty($res['pdf_base64'])) {
@@ -163,7 +204,7 @@ $variantesDisponiveis = [
 
         .pdf-preview {
             width: 100%;
-            height: 650px;
+            height: 700px;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: #000;
@@ -227,13 +268,28 @@ $variantesDisponiveis = [
                 </form>
             </div>
 
-            <!-- Card 2: Testar Parecer de Recurso -->
+            <!-- Card 2: Testar Parecer de Recurso com Dados Reais do Sistema -->
             <div class="card">
-                <h2><span class="material-icons">gavel</span> Parecer de Recurso Notificação</h2>
+                <h2><span class="material-icons">gavel</span> Parecer do Conselho Consultivo e Fiscal</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
-                    Testa a geração de parecer com 8 opções de layout visual.
+                    Selecione um parecer real do banco de dados para carregar no formulário ou preencha manualmente.
                 </p>
-                <form method="POST" action="test_typst.php?action=test_parecer">
+
+                <?php if (!empty($listaPareceresReais)): ?>
+                    <div class="form-group" style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--accent);">
+                        <label style="color: #93c5fd; font-weight: 600;">📥 Puxar Parecer Real do Banco de Dados (30 Recentes)</label>
+                        <select id="selectParecerDb" onchange="carregarParecerDb(this.value)">
+                            <option value="">-- Selecione um Parecer do Sistema --</option>
+                            <?php foreach ($listaPareceresReais as $pItem): ?>
+                                <option value="<?= htmlspecialchars($pItem['id']) ?>">
+                                    Recurso nº <?= htmlspecialchars($pItem['id']) ?> | Unidade <?= htmlspecialchars($pItem['unidade']) ?> - <?= htmlspecialchars($pItem['assunto']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" action="test_typst.php?action=test_parecer" id="formParecer">
                     <div class="form-group">
                         <label>Variante de Layout Visual (8 Opções)</label>
                         <select name="variant">
@@ -245,43 +301,60 @@ $variantesDisponiveis = [
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Notificação</label>
-                        <input type="text" name="notificacao" value="186/2023" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Unidade</label>
-                        <input type="text" name="unidade" value="A1305" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Assunto</label>
-                        <input type="text" name="assunto" value="ESTACIONAMENTO INDEVIDO" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Parecer / Conclusão</label>
-                        <select name="parecer">
-                            <option value="Favorável ao Recurso">Favorável ao Recurso (DEFERIDO)</option>
-                            <option value="Desfavorável ao Recurso">Desfavorável ao Recurso (INDEFERIDO)</option>
+                        <label>Modelo de Parecer</label>
+                        <select name="modelo" id="inputModelo">
+                            <option value="estatico" <?= $modeloVal === 'estatico' ? 'selected' : '' ?>>Modelo Padrão Seccionado (Notificação, Análise e Conclusão)</option>
+                            <option value="full_dinamico" <?= $modeloVal === 'full_dinamico' ? 'selected' : '' ?>>Modelo Full Dinâmico (Corpo Único Corrido)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Relato do Fato</label>
-                        <textarea name="fato" rows="2">Veículo posicionado temporariamente na área de circulação para descarregamento de pertences.</textarea>
+                        <label>Notificação / Nº Recurso</label>
+                        <input type="text" name="notificacao" id="inputNotificacao" value="<?= htmlspecialchars($notificacaoVal) ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Fundamentação</label>
-                        <textarea name="fundamentacao" rows="3">Analisadas as atenuantes e o tempo reduzido de permanência, o Conselho deliberou pelo provimento.</textarea>
+                        <label>Unidade</label>
+                        <input type="text" name="unidade" id="inputUnidade" value="<?= htmlspecialchars($unidadeVal) ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Assunto</label>
+                        <input type="text" name="assunto" id="inputAssunto" value="<?= htmlspecialchars($assuntoVal) ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Emissão</label>
+                        <input type="text" name="data_emissao" id="inputDataEmissao" value="<?= htmlspecialchars($dataEmissaoVal) ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Parecer / Conclusão</label>
+                        <select name="parecer" id="inputParecer">
+                            <option value="Favorável ao Recurso" <?= $parecerVal === 'Favorável ao Recurso' ? 'selected' : '' ?>>Favorável ao Recurso (DEFERIDO)</option>
+                            <option value="Desfavorável ao Recurso" <?= $parecerVal === 'Desfavorável ao Recurso' ? 'selected' : '' ?>>Desfavorável ao Recurso (INDEFERIDO)</option>
+                            <option value="REVOGAR A PENALIDADE" <?= $parecerVal === 'REVOGAR A PENALIDADE' ? 'selected' : '' ?>>Revogar a Penalidade</option>
+                            <option value="CONVERTER EM ADVERTÊNCIA" <?= $parecerVal === 'CONVERTER EM ADVERTÊNCIA' ? 'selected' : '' ?>>Converter em Advertência</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Relato da Notificação / Fato</label>
+                        <textarea name="fato" id="inputFato" rows="2"><?= htmlspecialchars($fatoVal) ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Análise do Conselho</label>
+                        <textarea name="analise" id="inputAnalise" rows="3"><?= htmlspecialchars($analiseVal) ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Conclusão / Resultado</label>
+                        <textarea name="resultado" id="inputResultado" rows="2"><?= htmlspecialchars($resultadoVal) ?></textarea>
                     </div>
                     <button type="submit" class="btn">
-                        <span class="material-icons">bolt</span> Compilar Parecer com Typst
+                        <span class="material-icons">bolt</span> Compilar Parecer do Conselho com Typst
                     </button>
                 </form>
             </div>
 
-            <!-- Card 3: Como Iniciar a API no Servidor -->
+            <!-- Card 3: Instruções do Servidor -->
             <div class="card">
-                <h2><span class="material-icons">terminal</span> Instrução do Servidor (Porta 5050)</h2>
+                <h2><span class="material-icons">terminal</span> Execução da API no Servidor</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
-                    Para rodar o microserviço no servidor remoto:
+                    Microserviço Python/Typst operando na porta 5050:
                 </p>
                 <pre style="background: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; overflow-x: auto; color: #a5f3fc;">python3 py/typst_server.py</pre>
             </div>
@@ -293,13 +366,57 @@ $variantesDisponiveis = [
             <?php if ($resultPdf): ?>
                 <iframe class="pdf-preview" src="data:application/pdf;base64,<?= $resultPdf ?>"></iframe>
             <?php else: ?>
-                <div style="height: 650px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 8px;">
+                <div style="height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 8px;">
                     <span class="material-icons" style="font-size: 48px; margin-bottom: 12px; color: var(--border);">picture_as_pdf</span>
-                    <p>Clique em um dos botões à esquerda para compilar e visualizar o PDF aqui.</p>
+                    <p>Escolha um parecer e clique no botão para compilar e visualizar em tempo real.</p>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
+    <script>
+        const pareceresReais = <?= json_encode($listaPareceresReais, JSON_UNESCAPED_UNICODE) ?>;
+        
+        function carregarParecerDb(id) {
+            if (!id) return;
+            const p = pareceresReais.find(item => item.id == id);
+            if (!p) return;
+
+            document.getElementById('inputNotificacao').value = p.id || p.notificacao || '';
+            document.getElementById('inputUnidade').value = p.unidade || '';
+            document.getElementById('inputAssunto').value = p.assunto || '';
+            document.getElementById('inputFato').value = p.notificacao || p.fato || '';
+            document.getElementById('inputAnalise').value = p.analise || '';
+            document.getElementById('inputResultado').value = p.resultado || '';
+            
+            if (p.conclusao) {
+                const sel = document.getElementById('inputParecer');
+                let found = false;
+                for (let i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].value.toLowerCase().includes(p.conclusao.toLowerCase())) {
+                        sel.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    const opt = new Option(p.conclusao, p.conclusao, true, true);
+                    sel.add(opt);
+                }
+            }
+
+            if (p.modelo && document.getElementById('inputModelo')) {
+                document.getElementById('inputModelo').value = p.modelo;
+            }
+
+            if (p.data) {
+                const parts = p.data.split(' ')[0].split('-');
+                if (parts.length === 3) {
+                    document.getElementById('inputDataEmissao').value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+        }
+    </script>
 </body>
 </html>
+
