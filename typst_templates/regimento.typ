@@ -8,8 +8,8 @@
   set page(
     paper: "a4",
     margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
-    header: locate(loc => {
-      if loc.page() > 1 [
+    header: context {
+      if counter(page).get().first() > 1 [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8pt, fill: rgb("#475569"), weight: "bold")[REGIMENTO INTERNO - TOP LIFE MIAMI BEACH]],
@@ -17,16 +17,16 @@
         )
         #line(length: 100%, stroke: 0.5pt + rgb("#cbd5e1"))
       ]
-    }),
-    footer: locate(loc => {
-      let page_number = counter(page).at(loc).first()
-      let total_pages = counter(page).final(loc).first()
+    },
+    footer: context {
+      let page_number = counter(page).get().first()
+      let total_pages = counter(page).final().first()
       align(center)[
         #text(size: 8.5pt, fill: rgb("#64748b"))[
           Página #page_number de #total_pages
         ]
       ]
-    })
+    }
   )
 
   set text(font: ("Liberation Sans", "DejaVu Sans", "Arial"), lang: "pt", size: 10pt)
