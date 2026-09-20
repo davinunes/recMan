@@ -1,6 +1,6 @@
 ---
 name: geracao_pdf_typst
-description: Arquitetura, templates e microserviço Python/PHP para geração ultra-rápida de PDFs com Typst CLI (Porta 5050), suporte a JSON, numeração de páginas dinâmicas, sumário interativo clicável, imagens e variantes de layout visual (modern, classic, compact).
+description: Arquitetura, templates e microserviço Python/PHP para geração ultra-rápida de PDFs com Typst CLI (Porta 5050), suporte a JSON, numeração de páginas dinâmicas, sumário interativo clicável, imagens e variantes de layout visual (modern, classic, compact, corporate, minimal, juridico, dark, editorial).
 ---
 
 # Skill: Geração de PDFs de Alta Performance com Typst CLI
@@ -26,7 +26,24 @@ graph TD
 
 ---
 
-## 2. Instalação e Bootstrapping do Typst CLI no Linux
+## 2. Catálogo de 8 Variantes Visuais de Layout
+
+O sistema suporta 8 variantes de design através do parâmetro `variant` no payload JSON:
+
+| Variante | Nome Visual | Estilo e Destaques |
+| :--- | :--- | :--- |
+| `modern` | Moderno (Padrão) | Imagem de topo `LayoutMiami.jpg`, capa noturna elegante (`#0f172a`), bordas arredondadas e tabelas modernas. |
+| `classic` | Clássico / Notarial | Estilo tradicional sóbrio sem imagens, molduras azuis (`#1e3a8a`), ótimo para atos normativos clássicos. |
+| `compact` | Compacto / Executivo | Layout denso focado em economia de páginas, sem capa separada, ideal para pareceres curtos. |
+| `corporate` | Corporativo | Estilo institucional empresarial com destaques e faixas em Azul Royal (`#1e40af`). |
+| `minimal` | Minimalista / Clean | Design nórdico ultra-limpo em tons de cinza suave (`#475569`), linhas ultrafinas e visual leve. |
+| `juridico` | Jurídico Solene | Formatação solene de cartório/tribunal com moldura dupla pesada e cabeçalhos formais. |
+| `dark` | Dark Mode | Fundo escuro premium (`#0f172a`), texto claro e detalhes visuais em Ciano Neon (`#0284c7`). |
+| `editorial` | Editorial / Boletim | Estilo publicação oficial / boletim informativo condominial com capa em Verde Esmeralda (`#065f46`). |
+
+---
+
+## 3. Instalação e Bootstrapping do Typst CLI no Linux
 
 O Typst é distribuído como um único arquivo executável estático em Rust (sem dependências de pacotes GTK, Python ou Node).
 
@@ -42,7 +59,7 @@ typst --version
 
 ---
 
-## 3. Principais Desafios & Soluções de Sintaxe (Gotcha Reference)
+## 4. Principais Desafios & Soluções de Sintaxe (Gotcha Reference)
 
 Ao desenvolver templates `.typ` para Typst (especialmente v0.11+), atente-se às seguintes regras essenciais:
 
@@ -58,7 +75,7 @@ Ao desenvolver templates `.typ` para Typst (especialmente v0.11+), atente-se às
 
 ---
 
-## 4. Servidor Microserviço em Python (`py/typst_server.py`)
+## 5. Servidor Microserviço em Python (`py/typst_server.py`)
 
 Servidor HTTP nativo em Python 3 na porta **5050** (usando apenas a biblioteca padrão `http.server`):
 
@@ -166,7 +183,7 @@ if __name__ == '__main__':
 
 ---
 
-## 5. Wrapper em PHP (`classes/TypstPdfService.php`)
+## 6. Wrapper em PHP (`classes/TypstPdfService.php`)
 
 ```php
 <?php
@@ -203,79 +220,6 @@ class TypstPdfService {
             'message' => $json['message'] ?? "Erro na comunicação com a API Typst (HTTP $code)"
         ];
     }
-}
-```
-
----
-
-## 6. Template Typst Padrão (`typst_templates/parecer.typ`)
-
-Template modelo com suporte a imagem de topo, sumário e controle de variantes visuais (`modern`, `classic`, `compact`):
-
-```typst
-#let parecer-doc(data) = {
-  let get(k, def) = if k in data and data.at(k) != none { data.at(k) } else { def }
-
-  let notificacao = get("notificacao", "000/2026")
-  let unidade = get("unidade", "A101")
-  let assunto = get("assunto", "ASSUNTO DO RECURSO")
-  let fato = get("fato", "Relato dos fatos...")
-  let parecer = get("parecer", "Favorável ao Recurso")
-  let relator = get("relator", "Conselho Consultivo")
-  let variant = get("variant", "modern")
-  let banner_path = get("banner_path", "LayoutMiami.jpg")
-
-  set page(
-    paper: "a4",
-    margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
-    header: context {
-      if counter(page).get().first() > 1 [
-        #grid(columns: (1fr, auto), align(left)[#text(size: 8pt, weight: "bold")[DOCUMENTO OFICIAL]], align(right)[#text(size: 8pt)[COMISSÃO DE RECURSOS]])
-        #line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))
-      ]
-    },
-    footer: context {
-      let pg = counter(page).get().first()
-      let total = counter(page).final().first()
-      align(center)[#text(size: 8pt, fill: rgb("64748b"))[Página #pg de #total]]
-    }
-  )
-
-  set text(lang: "pt", size: 10pt)
-  set par(justify: true, leading: 0.65em)
-
-  if variant == "modern" [
-    #v(-1cm)
-    #align(center)[#image(banner_path, width: 100%)]
-    #v(0.5cm)
-  ]
-
-  align(center)[
-    #text(size: 14pt, weight: "bold", fill: rgb("0f172a"))[PARECER DA COMISSÃO DE RECURSOS] \
-    #text(size: 10pt, fill: rgb("475569"))[Notificação nº #notificacao]
-  ]
-
-  rect(width: 100%, inset: 12pt, radius: 4pt, fill: rgb("f8fafc"), stroke: 0.5pt + rgb("cbd5e1"))[
-    #grid(
-      columns: (1fr, 1fr), row-gutter: 8pt,
-      [ *Unidade:* #unidade ], [ *Notificação:* #notificacao ],
-      [ *Assunto:* #assunto ], [ *Resultado:* *#parecer* ]
-    )
-  ]
-
-  v(0.5cm)
-  heading(level: 2, numbering: none)[1. Relato dos Fatos]
-  v(0.2cm)
-  rect(width: 100%, inset: 8pt, fill: white, stroke: 0.5pt + rgb("e2e8f0"))[#fato]
-
-  v(1.5cm)
-  align(center)[
-    #block(width: 60%)[
-      #line(length: 100%, stroke: 0.5pt + rgb("475569"))
-      #v(3pt)
-      #text(weight: "bold")[#relator]
-    ]
-  ]
 }
 ```
 

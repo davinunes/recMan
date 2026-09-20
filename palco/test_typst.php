@@ -50,6 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$variantesDisponiveis = [
+    'modern'    => 'Moderno (com Banner LayoutMiami.jpg e Capa Escura)',
+    'classic'   => 'Clássico / Notarial (Sem Banner, Moldura Azul)',
+    'compact'   => 'Compacto / Executivo (Tabela Densa, Sem Capa Extra)',
+    'corporate' => 'Corporativo (Azul Royal Institucional)',
+    'minimal'   => 'Minimalista / Clean (Design Nórdico em Tons Cinza)',
+    'juridico'  => 'Jurídico Solene (Borda Dupla Cartório e Selo Verde)',
+    'dark'      => 'Dark Mode (Fundo Escuro Premium e Detalhes Ciano)',
+    'editorial' => 'Editorial / Boletim (Capa Verde Esmeralda)'
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -197,14 +208,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card">
                 <h2><span class="material-icons">auto_stories</span> Regimento Interno (JSON Completo)</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Compila o arquivo <code>regimento/database.json</code> (33 capítulos) em PDF com sumário interativo (links clicáveis) usando Typst.
+                    Compila o <code>regimento/database.json</code> (33 capítulos) em PDF com sumário interativo escolhendo entre as 8 variantes visuais.
                 </p>
                 <form method="POST" action="test_typst.php?action=test_regimento">
                     <div class="form-group">
-                        <label>Variante de Layout Visual</label>
+                        <label>Variante de Layout Visual (8 Opções)</label>
                         <select name="variant">
-                            <option value="modern" <?= $selectedVariant === 'modern' ? 'selected' : '' ?>>Moderno (com Banner LayoutMiami.jpg e Capa Escura)</option>
-                            <option value="classic" <?= $selectedVariant === 'classic' ? 'selected' : '' ?>>Clássico / Notarial (Sem Banner, Borda Azul)</option>
+                            <?php foreach ($variantesDisponiveis as $varKey => $varLabel): ?>
+                                <option value="<?= $varKey ?>" <?= $selectedVariant === $varKey ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($varLabel) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-green">
@@ -217,15 +231,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card">
                 <h2><span class="material-icons">gavel</span> Parecer de Recurso Notificação</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
-                    Testa a geração de parecer com o template <code>typst_templates/parecer.typ</code>.
+                    Testa a geração de parecer com 8 opções de layout visual.
                 </p>
                 <form method="POST" action="test_typst.php?action=test_parecer">
                     <div class="form-group">
-                        <label>Variante de Layout Visual</label>
+                        <label>Variante de Layout Visual (8 Opções)</label>
                         <select name="variant">
-                            <option value="modern" <?= $selectedVariant === 'modern' ? 'selected' : '' ?>>Moderno (Com Banner Topo LayoutMiami.jpg)</option>
-                            <option value="classic" <?= $selectedVariant === 'classic' ? 'selected' : '' ?>>Clássico / Oficial (Borda Notarial e Cabeçalho Simples)</option>
-                            <option value="compact" <?= $selectedVariant === 'compact' ? 'selected' : '' ?>>Compacto / Executivo (Tabela Densa e Sem Banner)</option>
+                            <?php foreach ($variantesDisponiveis as $varKey => $varLabel): ?>
+                                <option value="<?= $varKey ?>" <?= $selectedVariant === $varKey ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($varLabel) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="form-group">
