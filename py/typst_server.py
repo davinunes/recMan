@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import time
+import shutil
 import base64
 import subprocess
 import tempfile
@@ -47,23 +48,43 @@ def find_typst_binary():
     return None
 
 
-def find_banner_image():
-    """Localiza a imagem do banner LayoutMiami.jpg e retorna o caminho relativo adequado para o Typst."""
+def prepare_banner_image(input_data):
+    """Localiza e garante que a imagem do banner LayoutMiami.jpg esteja no escopo acessível do Typst."""
+    requested_path = input_data.get('banner_path', '')
     candidates = [
+        requested_path,
         '/var/www/reportPDFpython/LayoutMiami.jpg',
         os.path.join(ROOT_DIR, 'addons', 'api-pdf', 'LayoutMiami.jpg'),
         os.path.join(ROOT_DIR, 'reportPDFpython', 'LayoutMiami.jpg'),
         os.path.join(TEMPLATES_DIR, 'LayoutMiami.jpg'),
         os.path.join(PY_DIR, 'LayoutMiami.jpg')
     ]
+
+    found_file = None
     for c in candidates:
-        if os.path.exists(c):
-            try:
-                rel = os.path.relpath(c, ROOT_DIR).replace('\\', '/')
-                return rel
-            except Exception:
-                return c.replace('\\', '/')
-    return '../reportPDFpython/LayoutMiami.jpg'
+        if c and os.path.exists(c):
+            found_file = c
+            break
+
+    if not found_file:
+        return 'addons/api-pdf/LayoutMiami.jpg'
+
+    # Se a imagem estiver dentro do ROOT_DIR, usa o caminho relativo interno
+    try:
+        rel = os.path.relpath(found_file, ROOT_DIR)
+        if not rel.startswith('..'):
+            return rel.replace('\\', '/')
+    except Exception:
+        pass
+
+    # Se estiver fora do ROOT_DIR (ex: /var/www/reportPDFpython/LayoutMiami.jpg),
+    # copia para ROOT_DIR/tmp_banner_miami.jpg para respeitar o sandbox do Typst
+    dest = os.path.join(ROOT_DIR, 'tmp_banner_miami.jpg')
+    try:
+        shutil.copy2(found_file, dest)
+        return 'tmp_banner_miami.jpg'
+    except Exception:
+        return found_file.replace('\\', '/')
 
 
 TYPST_BIN = find_typst_binary()
@@ -101,21 +122,12 @@ def run_typst(template_name, input_data=None):
     if input_data is None:
         input_data = {}
 
-    # Define automaticamente o caminho relativo correto da imagem LayoutMiami.jpg
-    if 'banner_path' not in input_data or not input_data['banner_path']:
-        input_data['banner_path'] = find_banner_image()
-    else:
-        # Se um caminho for passado, garante que seja convertido para relativo caso exista no disco
-        bp = input_data['banner_path']
-        if os.path.isabs(bp) and os.path.exists(bp):
-            try:
-                input_data['banner_path'] = os.path.relpath(bp, ROOT_DIR).replace('\\', '/')
-            except Exception:
-                pass
+    # Garante o mapeamento do banner LayoutMiami.jpg
+    input_data['banner_path'] = prepare_banner_image(input_data)
 
     func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
 
-    # Cria arquivos temporários dentro do ROOT_DIR para garantir caminhos relativos perfeitos no Typst
+    # Cria arquivos temporários dentro do ROOT_DIR para compilação isolada
     json_tmp_file = None
     entry_tmp_file = None
     pdf_tmp_file = None
@@ -136,7 +148,7 @@ def run_typst(template_name, input_data=None):
         pdf_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_out_', suffix='.pdf', delete=False)
         pdf_tmp_file.close()
 
-        cmd = [TYPST_BIN, 'compile', os.path.basename(entry_tmp_file.name), os.path.basename(pdf_tmp_file.name)]
+        cmd = [TYPST_BIN, 'compile', '--root', '/', os.path.basename(entry_tmp_file.name), os.path.basename(pdf_tmp_file.name)]
         proc = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT_DIR)
         elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
@@ -156,6 +168,14 @@ def run_typst(template_name, input_data=None):
                     os.remove(f_tmp.name)
                 except Exception:
                     pass
+
+        # Remove cópia temporária do banner se tiver sido criada na raiz do projeto
+        tmp_banner = os.path.join(ROOT_DIR, 'tmp_banner_miami.jpg')
+        if os.path.exists(tmp_banner):
+            try:
+                os.remove(tmp_banner)
+            except Exception:
+                pass
 
 
 class TypstHandler(BaseHTTPRequestHandler):
@@ -192,7 +212,7 @@ class TypstHandler(BaseHTTPRequestHandler):
                 'service': 'typst-pdf-api',
                 'port': PORT,
                 'typst_binary': bin_status,
-                'banner_image': find_banner_image(),
+                'banner_image': prepare_banner_image({}),
                 'root_dir': ROOT_DIR,
                 'templates': os.listdir(TEMPLATES_DIR) if os.path.exists(TEMPLATES_DIR) else []
             })
@@ -253,7 +273,7 @@ class TypstHandler(BaseHTTPRequestHandler):
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
     print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO'}")
-    print(f"Banner de Topo (Relativo): {find_banner_image()}")
+    print(f"Banner de Topo: {prepare_banner_image({})}")
     print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
