@@ -225,16 +225,16 @@
 
   // SUMÁRIO INTERATIVO (COM LINKS CLICÁVEIS PARA AS PÁGINAS)
   if variant != "compact" [
-    heading(level: 1, numbering: none, outlined: false)[Sumário dos Capítulos]
-    v(0.3cm)
+    #heading(level: 1, numbering: none, outlined: false)[Sumário dos Capítulos]
+    #v(0.3cm)
 
-    outline(
+    #outline(
       title: none,
       indent: 1.2em,
       target: heading.where(level: 1)
     )
 
-    pagebreak()
+    #pagebreak()
   ]
 
   // EXIBIÇÃO DOS CAPÍTULOS E ARTIGOS
