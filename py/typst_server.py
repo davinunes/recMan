@@ -24,15 +24,27 @@ TEMPLATES_DIR = os.path.join(ROOT_DIR, 'typst_templates')
 
 
 def find_typst_binary():
-    """Tenta localizar o binário do typst no sistema ou PATH."""
-    for path in ['typst', 'typst.exe', '/usr/local/bin/typst', '/usr/bin/typst']:
+    """Tenta localizar o binário do typst no sistema, pasta local do projeto ou PATH."""
+    candidates = [
+        os.path.join(ROOT_DIR, 'bin', 'typst'),
+        os.path.join(PY_DIR, 'typst'),
+        '/usr/local/bin/typst',
+        '/usr/bin/typst',
+        '/root/.cargo/bin/typst',
+        os.path.expanduser('~/.cargo/bin/typst'),
+        '/snap/bin/typst',
+        'typst'
+    ]
+
+    for path in candidates:
         try:
             res = subprocess.run([path, '--version'], capture_output=True, text=True)
             if res.returncode == 0:
                 return path
         except Exception:
             continue
-    return 'typst'
+
+    return None
 
 
 TYPST_BIN = find_typst_binary()
@@ -40,6 +52,20 @@ TYPST_BIN = find_typst_binary()
 
 def run_typst(template_name, input_data=None):
     """Compila um template Typst e retorna os bytes do PDF gerado e tempo em ms."""
+    global TYPST_BIN
+    
+    if not TYPST_BIN:
+        TYPST_BIN = find_typst_binary()
+
+    if not TYPST_BIN:
+        err_msg = (
+            "Binário do 'typst' não encontrado no servidor!\n"
+            "Para instalar rapidamente no Linux:\n"
+            "curl -L https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ\n"
+            "cp typst-x86_64-unknown-linux-musl/typst /usr/local/bin/"
+        )
+        raise FileNotFoundError(err_msg)
+
     start_time = time.time()
     template_path = os.path.join(TEMPLATES_DIR, template_name)
     
@@ -57,21 +83,32 @@ def run_typst(template_name, input_data=None):
         input_data = {}
 
     func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
-    json_payload = json.dumps(input_data, ensure_ascii=False)
-    clean_template_path = template_path.replace('\\', '/')
 
-    # Cria arquivo de entrada .typ temporário compatível com qualquer versão do Typst
-    with tempfile.NamedTemporaryFile(suffix='.typ', mode='w', encoding='utf-8', delete=False) as tmp_entry:
-        entry_path = tmp_entry.name
-        tmp_entry.write(f'#import "{clean_template_path}": {func_name}\n')
-        tmp_entry.write(f'#let raw_json = ```{json_payload}```.text\n')
-        tmp_entry.write(f'#{func_name}(json.decode(raw_json))\n')
-
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-        output_pdf_path = tmp_pdf.name
+    # Cria arquivos temporários dentro do ROOT_DIR para garantir caminhos relativos perfeitos no Typst
+    json_tmp_file = None
+    entry_tmp_file = None
+    pdf_tmp_file = None
 
     try:
-        cmd = [TYPST_BIN, 'compile', entry_path, output_pdf_path]
+        # 1. Escreve os dados JSON temporários
+        json_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_data_', suffix='.json', mode='w', encoding='utf-8', delete=False)
+        json.dump(input_data, json_tmp_file, ensure_ascii=False)
+        json_tmp_file.close()
+
+        rel_json_path = os.path.relpath(json_tmp_file.name, ROOT_DIR).replace('\\', '/')
+        rel_template_path = os.path.relpath(template_path, ROOT_DIR).replace('\\', '/')
+
+        # 2. Cria o arquivo de entrada .typ temporário
+        entry_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_entry_', suffix='.typ', mode='w', encoding='utf-8', delete=False)
+        entry_tmp_file.write(f'#import "{rel_template_path}": {func_name}\n')
+        entry_tmp_file.write(f'#{func_name}(json("{rel_json_path}"))\n')
+        entry_tmp_file.close()
+
+        # 3. Cria arquivo de saída PDF temporário
+        pdf_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_out_', suffix='.pdf', delete=False)
+        pdf_tmp_file.close()
+
+        cmd = [TYPST_BIN, 'compile', os.path.basename(entry_tmp_file.name), os.path.basename(pdf_tmp_file.name)]
         proc = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT_DIR)
         elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
@@ -79,16 +116,17 @@ def run_typst(template_name, input_data=None):
             stderr_msg = proc.stderr or proc.stdout or "Erro desconhecido na compilação do Typst"
             raise RuntimeError(f"Erro no Typst (código {proc.returncode}): {stderr_msg.strip()}")
 
-        with open(output_pdf_path, 'rb') as f:
+        with open(pdf_tmp_file.name, 'rb') as f:
             pdf_bytes = f.read()
 
         return pdf_bytes, elapsed_ms
 
     finally:
-        for p in [entry_path, output_pdf_path]:
-            if os.path.exists(p):
+        # Limpa todos os arquivos temporários criados
+        for f_tmp in [json_tmp_file, entry_tmp_file, pdf_tmp_file]:
+            if f_tmp and os.path.exists(f_tmp.name):
                 try:
-                    os.remove(p)
+                    os.remove(f_tmp.name)
                 except Exception:
                     pass
 
@@ -121,11 +159,12 @@ class TypstHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
         if parsed_path.path in ['/health', '/status']:
+            bin_status = TYPST_BIN if TYPST_BIN else "NÃO INSTALADO / NÃO ENCONTRADO"
             self._send_json(200, {
-                'status': 'ok',
+                'status': 'ok' if TYPST_BIN else 'warning_no_typst_binary',
                 'service': 'typst-pdf-api',
                 'port': PORT,
-                'typst_binary': TYPST_BIN,
+                'typst_binary': bin_status,
                 'root_dir': ROOT_DIR,
                 'templates': os.listdir(TEMPLATES_DIR) if os.path.exists(TEMPLATES_DIR) else []
             })
@@ -185,7 +224,7 @@ class TypstHandler(BaseHTTPRequestHandler):
 
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
-    print(f"Usando binário Typst: {TYPST_BIN}")
+    print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO (Instalação necessária)'}")
     print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
