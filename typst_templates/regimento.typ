@@ -54,27 +54,27 @@
   heading(level: 1, numbering: none)[Sumário dos Capítulos]
   v(0.5cm)
 
-  for (cap_id, cap_nome) in capitulos [
-    #box(width: 100%, inset: (y: 3pt))[
+  for (cap_id, cap_nome) in capitulos {
+    box(width: 100%, inset: (y: 3pt))[
       #text(weight: "medium", fill: rgb("1e293b"))[#cap_nome]
     ]
-  ]
+  }
 
   pagebreak()
 
   // Exibição dos Capítulos e Artigos
   let current_cap = ""
 
-  for (art_id, art_data) in artigos [
+  for (art_id, art_data) in artigos {
     let cap_num = str(art_data.capitulo)
-    if cap_num in capitulos and capitulos.at(cap_num) != current_cap [
+    if cap_num in capitulos and capitulos.at(cap_num) != current_cap {
       current_cap = capitulos.at(cap_num)
       v(0.8cm)
       rect(width: 100%, fill: rgb("f1f5f9"), inset: 8pt, radius: 3pt, stroke: 0.5pt + rgb("cbd5e1"))[
         #text(weight: "bold", fill: rgb("0f172a"), size: 11.5pt)[#current_cap]
       ]
       v(0.3cm)
-    ]
+    }
 
     let art_texto = if "texto" in art_data { art_data.texto } else { "" }
 
@@ -82,11 +82,11 @@
       #text(weight: "bold", fill: rgb("1e3a8a"))[Art. #art_id º] #art_texto
 
       #if "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
-        #for (p_key, p_val) in art_data.paragrafos [
-          #v(3pt)
-          #pad(left: 12pt)[
+        #for (p_key, p_val) in art_data.paragrafos {
+          let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else { str(p_val) }
+          v(3pt)
+          pad(left: 12pt)[
             #text(style: "italic", fill: rgb("334155"))[
-              #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else { str(p_val) }
               #if p_key == "unico" [
                 #text(weight: "bold")[Parágrafo único.] #p_txt
               ] else [
@@ -94,8 +94,8 @@
               ]
             ]
           ]
-        ]
+        }
       ]
     ]
-  ]
+  }
 }
