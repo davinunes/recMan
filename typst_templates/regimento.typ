@@ -15,6 +15,22 @@
   }
 }
 
+#let render-tracos(tracos-dict, indent_left: 24pt, text_color: rgb("334155")) = {
+  if tracos-dict != none and type(tracos-dict) == dictionary {
+    for (t_key, t_val) in tracos-dict {
+      let t_txt = if type(t_val) == dictionary and "texto" in t_val { t_val.texto } else if type(t_val) == dictionary { "" } else { str(t_val) }
+      if t_txt != "" [
+        #v(2pt)
+        #pad(left: indent_left)[
+          #text(fill: text_color)[
+            #text(weight: "bold")[- ] #t_txt
+          ]
+        ]
+      ]
+    }
+  }
+}
+
 #let render-itens(itens-dict, indent_left: 36pt, text_color: rgb("334155")) = {
   if itens-dict != none and type(itens-dict) == dictionary {
     for (it_key, it_val) in itens-dict {
@@ -49,6 +65,9 @@
       if type(a_val) == dictionary and "incisos" in a_val and a_val.incisos != none {
         render-incisos(a_val.incisos, indent_left: indent_left + 12pt, text_color: text_color)
       }
+      if type(a_val) == dictionary and "tracos" in a_val and a_val.tracos != none {
+        render-tracos(a_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
+      }
     }
   }
 }
@@ -75,6 +94,9 @@
       if type(i_val) == dictionary and "itens" in i_val and i_val.itens != none {
         render-itens(i_val.itens, indent_left: indent_left + 12pt, text_color: text_color)
       }
+      if type(i_val) == dictionary and "tracos" in i_val and i_val.tracos != none {
+        render-tracos(i_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
+      }
     }
   }
 }
@@ -100,6 +122,10 @@
 
       if type(it_val) == dictionary and "alineas" in it_val and it_val.alineas != none {
         render-alineas(it_val.alineas, indent_left: indent_left + 12pt, text_color: text_color)
+      }
+
+      if type(it_val) == dictionary and "tracos" in it_val and it_val.tracos != none {
+        render-tracos(it_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
       }
     }
   }
@@ -343,6 +369,10 @@
         render-alineas(art_data.alineas, indent_left: 12pt, text_color: text_secondary)
       }
 
+      #if type(art_data) == dictionary and "tracos" in art_data and art_data.tracos != none {
+        render-tracos(art_data.tracos, indent_left: 12pt, text_color: text_secondary)
+      }
+
       #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
         #for (p_key, p_val) in art_data.paragrafos [
           #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
@@ -361,6 +391,9 @@
           }
           #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
             render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
+          }
+          #if type(p_val) == dictionary and "tracos" in p_val and p_val.tracos != none {
+            render-tracos(p_val.tracos, indent_left: 24pt, text_color: text_secondary)
           }
         ]
       ]

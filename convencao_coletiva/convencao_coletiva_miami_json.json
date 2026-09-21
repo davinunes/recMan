@@ -652,7 +652,7 @@
                 "texto": "Os moradores poderão usar e gozar das partes comuns até onde não impeçam idêntico uso por parte dos demais moradores."
               },
               "2": {
-                "texto": "Não será permitido no Edifício, a entrada de pedintes, propagandistas, vendedores ambulantes, etc., salvo se vierem a chamado de algum morador, sendo que neste caso, a permanência dessas pessoas ficará limitada ao apartamento do morador interessado, o qual, deverá acompanhá-lo até a saída na portaria, sob pena do morador que autorizou a entrada responsabilizar-se por qualquer ato desta decorrente."
+                "texto": "Não será permitido no Edifício, a entrada de pedintes, propagandistas, vendedores ambulantes, etc., salvo se vierem a chamado de algum morador, sendo que neste caso, a permanência dessas pessoas ficará limitada ao apartamento do morador interessado, o qual, deverá acompanhá-lo até a saída na portaria, sob pena do morador que autorizou a entrada responsabilizer-se por qualquer ato desta decorrente."
               },
               "3": {
                 "texto": "Não será permitido o acesso ao edifício de entregadores de encomendas de pequeno e médio porte (pizzas, flores, remédios, etc.), devendo o condômino retirá-las na portaria."
@@ -781,7 +781,7 @@
         "itens": {
           "1": {
             "texto": "Geral",
-            "itens": {
+            "tracos": {
               "1": {
                 "texto": "Os apartamentos destinam-se exclusivamente ao uso residencial e são estritamente familiares, devendo ser guardados o recato a dignidade compatível com a moralidade e o renome dos moradores."
               }
@@ -862,14 +862,14 @@
             "itens": {
               "1": {
                 "texto": "Para a segurança geral do edifício, todos os moradores deverão estar atentos para os seguintes cuidados:",
-                "alineas": {
-                  "a": {
+                "tracos": {
+                  "1": {
                     "texto": "observarem, ao sair ou entrar na garagem, se o portão ficou fechado;"
                   },
-                  "b": {
+                  "2": {
                     "texto": "as portas das entradas principais do Condomínio não podem ficar abertas em hipótese alguma; e"
                   },
-                  "c": {
+                  "3": {
                     "texto": "ao receberem visitas, entregadores, etc., se possível, acompanhem os mesmos até a portaria, ou orientá-los a fechar a porta;"
                   }
                 }
@@ -966,7 +966,7 @@
       "10": {
         "itens": {
           "1": {
-            "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja."
+            "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privileged que seja."
           }
         }
       }
