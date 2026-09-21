@@ -20,8 +20,8 @@
     for (a_key, a_val) in alineas-dict {
       let a_txt = if type(a_val) == dictionary and "texto" in a_val { a_val.texto } else if type(a_val) == dictionary { "" } else { str(a_val) }
       if a_txt != "" [
-        v(2pt)
-        pad(left: indent_left)[
+        #v(2pt)
+        #pad(left: indent_left)[
           #text(fill: text_color)[
             #text(weight: "bold")[#a_key\)] #a_txt
           ]
@@ -37,8 +37,8 @@
       let i_txt = if type(i_val) == dictionary and "texto" in i_val { i_val.texto } else if type(i_val) == dictionary { "" } else { str(i_val) }
       let i_num = to-roman(i_key)
       if i_txt != "" [
-        v(3pt)
-        pad(left: indent_left)[
+        #v(3pt)
+        #pad(left: indent_left)[
           #text(fill: text_color)[
             #text(weight: "bold")[#i_num -] #i_txt
           ]
@@ -278,14 +278,14 @@
       }
 
       #if type(art_data) == dictionary and "alineas" in art_data and art_data.alineas != none {
-        render-alineas(art_data.alineas, indent_left: 12pt, text-color: text_secondary)
+        render-alineas(art_data.alineas, indent_left: 12pt, text_color: text_secondary)
       }
 
       #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
-        #for (p_key, p_val) in art_data.paragrafos {
-          let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
-          v(3pt)
-          pad(left: 12pt)[
+        #for (p_key, p_val) in art_data.paragrafos [
+          #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
+          #v(3pt)
+          #pad(left: 12pt)[
             #text(style: "italic", fill: text_secondary)[
               #if p_key == "unico" [
                 #text(weight: "bold")[Parágrafo único.] #p_txt
@@ -294,13 +294,13 @@
               ]
             ]
           ]
-          if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
+          #if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
             render-incisos(p_val.incisos, indent_left: 24pt, text_color: text_secondary)
           }
-          if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
-            render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
+          #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
+            render-alineas(p_val.alineas, indent_left: 24pt, text-color: text_secondary)
           }
-        }
+        ]
       ]
     ]
   }
@@ -330,14 +330,14 @@
         }
 
         #if type(art_data) == dictionary and "alineas" in art_data and art_data.alineas != none {
-          render-alineas(art_data.alineas, indent_left: 12pt, text-color: text_secondary)
+          render-alineas(art_data.alineas, indent_left: 12pt, text_color: text_secondary)
         }
 
         #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
-          #for (p_key, p_val) in art_data.paragrafos {
-            let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
-            v(3pt)
-            pad(left: 12pt)[
+          #for (p_key, p_val) in art_data.paragrafos [
+            #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
+            #v(3pt)
+            #pad(left: 12pt)[
               #text(style: "italic", fill: text_secondary)[
                 #if p_key == "unico" [
                   #text(weight: "bold")[Parágrafo único.] #p_txt
@@ -346,16 +346,15 @@
                 ]
               ]
             ]
-            if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
-              render-incisos(p_val.incisos, indent_left: 24pt, text-color: text_secondary)
+            #if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
+              render-incisos(p_val.incisos, indent_left: 24pt, text_color: text_secondary)
             }
-            if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
-              render-alineas(p_val.alineas, indent_left: 24pt, text-color: text_secondary)
+            #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
+              render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
             }
-          }
+          ]
         ]
       ]
     ]
   ]
 }
-
