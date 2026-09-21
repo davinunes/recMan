@@ -572,9 +572,21 @@
   "anexo1": {
     "cabecalho": "ANEXO I INTEGRANTE E COMPLEMENTAR DA CONVENÇÃO DE CONDOMÍNIO DO RESIDENCIAL TOP LIFE TAGUATINGA I – MIAMI BEACH",
     "titulo": "REGIMENTO INTERNO DO CONDOMÍNIO",
-    "artigos": {
+    "secoes": {
+      "1": "1 - Disposições Gerais",
+      "2": "2 - Horário",
+      "3": "3 - Uso das Coisas Comuns",
+      "4": "4 - Empregados",
+      "5": "5 - Uso privativo do condômino e/ou morador",
+      "6": "6 - Taxa de Condomínio",
+      "7": "7 - Mudanças",
+      "8": "8 - Penalidades",
+      "9": "9 - Disposições Finais",
+      "10": "10 - Foto"
+    },
+    "itens": {
       "1": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "Este Regimento interno refere-se ao Condomínio Geral, mantido para comodidade, tranquilidade, segurança e moralidade da habitação, no interesse dos moradores, proprietários, inquilinos, seus empregados e dependentes, deve ser rigorosamente cumprido pelos mesmos."
           },
@@ -594,7 +606,7 @@
           },
           "3": {
             "texto": "As unidades autónomas destinam-se exclusivamente ao uso residencial e são estritamente familiares, devendo ser guardados o recato e dignidade compatível com a moralidade e o renome dos moradores.",
-            "incisos": {
+            "itens": {
               "1": {
                 "texto": "Fica terminantemente proibida a locação para estudantes, que venham a constituir repúblicas, a instalação de atividades profissionais, recreativas, religiosas e/ou sociais, que venham a causar qualquer incômodo aos demais condôminos."
               }
@@ -602,7 +614,7 @@
           },
           "4": {
             "texto": "O Condomínio não será responsabilizado por qualquer dano ou extravio causado por terceiros à propriedade ou bens materiais e/ou pessoais que estejam dentro das unidades autônomas dos moradores, cabendo a cada um o dever de zelar e vigiar o que lhe pertence.",
-            "incisos": {
+            "itens": {
               "1": {
                 "texto": "Em casos específicos de roubo em unidade, o Condomínio reserva-se o direito, através da Convenção, com fulcro na legislação pátria, analisar e tomar as medidas cabíveis em cada caso."
               }
@@ -610,7 +622,7 @@
           },
           "5": {
             "texto": "Os moradores são civilmente e/ou criminalmente responsáveis pelos atos praticados no interior do Condomínio (áreas comuns e garagens).",
-            "incisos": {
+            "itens": {
               "1": {
                 "texto": "Qualquer dano ou extravio causado pelos seus familiares, dependentes, empregados ou visitantes deverá ser prontamente indenizado por quem o causou ou pelo responsável pelo apartamento."
               },
@@ -619,24 +631,23 @@
               }
             }
           }
-        },
-        "titulo": "DAS DISPOSIÇÕES GERAIS E FINALIDADES"
+        }
       },
       "2": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "Respeitar, de qualquer forma, a lei do silêncio, evitando a produção de ruídos que possam perturbar o sossego e o bem estar dos demais moradores no período das 22:00 hs às 7:00 hs, e, em qualquer horário, utilizar aparelhos que produzem som de forma moderada de modo a não perturbar os vizinhos."
           },
           "2": {
             "texto": "As atividades sociais como festas, não devem ultrapassar as 24:00 hs. A festa estará restrita as dependências internas do salão, se houver, e a partir das 22:00 horas o som deverá estar em volume reduzido. Ficam ressalvadas as festas promovidas pelo Condomínio ou autorizadas pela Assembleia que poderão ter seu horário estendido para depois das 24:00 hs, conforme previamente combinado entre a Comissão Organizadora e os demais moradores do Edifício."
           }
-        },
-        "titulo": "DO SILÊNCIO E DAS FESTAS"
+        }
       },
       "3": {
-        "incisos": {
+        "itens": {
           "1": {
-            "incisos": {
+            "texto": "Do Uso Geral das Partes Comuns",
+            "itens": {
               "1": {
                 "texto": "Os moradores poderão usar e gozar das partes comuns até onde não impeçam idêntico uso por parte dos demais moradores."
               },
@@ -649,11 +660,11 @@
               "4": {
                 "texto": "Não é permitida a permanência de volumes de qualquer espécie nos halls, áreas de acesso ou demais partes comuns, exceto quando em trânsito para os apartamentos."
               }
-            },
-            "texto": "Do Uso Geral das Partes Comuns"
+            }
           },
           "2": {
-            "incisos": {
+            "texto": "Do Uso das Garagens e Estacionamento",
+            "itens": {
               "1": {
                 "texto": "Cada condômino terá direito ao uso de vagas no espaço de estacionamento de acordo com o projeto arquitetônico e com esta convenção de condomínio, o que deverá ser rigorosamente obedecido visando maior facilidade de movimentação na entrada e saída de veículos."
               },
@@ -699,11 +710,11 @@
               "15": {
                 "texto": "Não será permitida a permanência de carros/utilitários de terceiros nas garagens do condomínio, nem mesmo enquanto realizam serviços de conserto, manutenção e instalação, etc."
               }
-            },
-            "texto": "Do Uso das Garagens e Estacionamento"
+            }
           },
           "3": {
-            "incisos": {
+            "texto": "Da Segurança Geral, Ordem e Limpeza",
+            "itens": {
               "1": {
                 "texto": "Não é permitido guardar ou depositar em qualquer parte do Condomínio, explosivos, inflamáveis ou quaisquer agentes químicos suscetíveis de afetar a segurança ou tranquilidade dos moradores."
               },
@@ -716,30 +727,30 @@
               "4": {
                 "texto": "A permanência de bicicletas, velocípedes, skates, patins, patinetes ou similares assim como praticas com bola, nas áreas comuns do Condomínio só será eventualmente permitida em lugar previamente determinado para este fim, não sendo de responsabilidade do Condomínio, qualquer dano eventualmente causado aos mesmos ou que causarem a terceiros. Também não é de responsabilidade do Condomínio o desaparecimento de qualquer objeto."
               }
-            },
-            "texto": "Da Segurança Geral, Ordem e Limpeza"
+            }
           },
           "4": {
-            "incisos": {
+            "texto": "Do Acondicionamento do Lixo",
+            "itens": {
               "1": {
                 "texto": "O lixo e detritos deverão ser devidamente acondicionados em sacos plásticos apropriados e colocados nos tambores coletores, separando o lixo reciclável, tomando precauções necessárias para evitar vazamentos, depositando-os nas lixeiras próximas a portaria nos dias e horários determinados pelo síndico."
               }
-            },
-            "texto": "Do Acondicionamento do Lixo"
+            }
           },
           "5": {
-            "incisos": {
+            "texto": "Dos Danos às Áreas Comuns",
+            "itens": {
               "1": {
                 "texto": "Todo e qualquer dano ou estrago provocado por um morador, ou seus empregados particulares em qualquer área comum do Condomínio deverá ser inteiramente indenizado pelo condômino implicado na ocorrência."
               },
               "2": {
                 "texto": "É proibido danificar plantas, colher flores, cortar galhos ou árvores e usar o jardim para o plantio de plantas diferentes das estabelecidas pelo Condomínio."
               }
-            },
-            "texto": "Dos Danos às Áreas Comuns"
+            }
           },
           "6": {
-            "incisos": {
+            "texto": "Das Reformas e Obras nas Unidades",
+            "itens": {
               "1": {
                 "texto": "Toda e qualquer reforma a ser realizada nas unidades deverá ser precedida de consulta aos respectivos projetos e comunicada ao Síndico, e à Construtora Prime/MRV, através de formulário próprio, por motivo de segurança estrutural (hidráulica, elétrica, gás, alvenaria, etc.), sendo que o início das obras só será permitido após autorização do síndico."
               },
@@ -749,14 +760,12 @@
               "3": {
                 "texto": "Os entulhos provenientes das obras de reformas deverá ser retirado pelo condômino, não podendo ser deixados nas dependências comuns, sob pena de ser feito pelo síndico às custas do responsável, sendo devido o reembolso."
               }
-            },
-            "texto": "Das Reformas e Obras nas Unidades"
+            }
           }
-        },
-        "titulo": "DO USO DAS ÁREAS COMUNS E GARAGENS"
+        }
       },
       "4": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "Compete ao Síndico fiscalizar e chefiar os empregados do Condomínio, fazendo com que os serviços a eles afetos sejam executados de maneira satisfatória."
           },
@@ -766,16 +775,16 @@
           "3": {
             "texto": "Não é permitido que pessoas que não os próprios empregados do Condomínio trabalhem nas partes de uso comum, a não ser mediante autorização por escrito do Síndico, salvo funcionários da construtora em serviço de manutenção."
           }
-        },
-        "titulo": "DOS EMPREGADOS DO CONDOMÍNIO"
+        }
       },
       "5": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "Da Destinação Exclusiva Residencial"
           },
           "2": {
-            "incisos": {
+            "texto": "Das Alterações de Fachada e Proibições Específicas",
+            "itens": {
               "1": {
                 "texto": "É proibido mudar a forma externa das fachadas e das partes de uso comum, acrescentar cômodos que influenciem diretamente na volumetria da edificação, decorar as paredes e esquadrias externas, usar vidros e toldos ou pintar em cores ou tonalidades diferentes das usadas no conjunto do condomínio. É permitido o uso de telas de proteção na cor branca nas sacadas e janelas."
               },
@@ -841,11 +850,11 @@
                   }
                 }
               }
-            },
-            "texto": "Das Alterações de Fachada e Proibições Específicas"
+            }
           },
           "3": {
-            "incisos": {
+            "texto": "Dos Procedimentos de Segurança e Estrutura",
+            "itens": {
               "1": {
                 "texto": "Para a segurança geral do edifício, todos os moradores deverão estar atentos para os seguintes cuidados:",
                 "alineas": {
@@ -867,19 +876,17 @@
                 "texto": "Os moradores deverão manter fechadas as portas das respectivas unidades autônomas sendo que o Condomínio não poderá ser responsabilizado por furtos, tanto nas unidades quanto nas áreas de garagens e comuns."
               },
               "4": {
-                "texto": "Por motivos de segurança estrutural, qualquer modificação a ser feita na distribuição interia do espaço de um apartamento só poderá ser executada após solicitação por escrito e autorização, também por escrito, do Síndico com el aval de pessoal técnico competente da Construtora MRV/PRIME."
+                "texto": "Por motivos de segurança estrutural, qualquer modificação a ser feita na distribuição interia do espaço de um apartamento só poderá ser executada após solicitação por escrito e autorização, também por escrito, do Síndico com o aval de pessoal técnico competente da Construtora MRV/PRIME."
               },
               "5": {
                 "texto": "Por motivos de segurança das instalações e do próprio edifício como um todo, fica expressamente vedada a execução nos apartamentos, de qualquer instalação que resulte sobrecarga mecânica e/ou elétrica para o Edifício."
               }
-            },
-            "texto": "Dos Procedimentos de Segurança e Estrutura"
+            }
           }
-        },
-        "titulo": "DAS NORMAS DAS UNIDADES, FACHADAS E SEGURANÇA"
+        }
       },
       "6": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "A taxa de Condomínio será calculada mensalmente, através do rateio das despesas comuns do Condomínio, conforme a Convenção de Condomínio, cujas despesas pagas serão apresentadas no balanço do mês subsequente."
           },
@@ -895,11 +902,10 @@
           "5": {
             "texto": "Os condôminos em atraso com o pagamento das respectivas contribuições pagarão multa de 2% (dois por cento) sobre o débito, e juros moratórios, pro-rata-die, de 1% (um por cento) ao mês, computados desde a data do vencimento até o dia de seu efetivo pagamento, independente de qualquer aviso, notificação ou interpelação, sujeitando-se, ainda, ao pagamento das custas e honorários de advogado, se houver procedimento judicial."
           }
-        },
-        "titulo": "DA TAXA DE CONDOMÍNIO E VENCIMENTOS"
+        }
       },
       "7": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "As mudanças, externas e internas, deverão ser feitas de segunda feira à sábado, exceto feriados das 8:00 hs as 18:00 hs."
           },
@@ -909,11 +915,10 @@
           "3": {
             "texto": "A mudança em feriados e domingos será permitida apenas excepcionalmente e mediante autorização do Síndico."
           }
-        },
-        "titulo": "DAS MUDANÇAS E HORÁRIOS"
+        }
       },
       "8": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "O disciplinamento estatutário é decorrência de interesse comum, que neste caso se sobrepõe ao particular, em tudo quanto não violente o direito básico da propriedade. Portanto, a Administração do Condomínio (Síndico, Subsíndico e Conselheiros) tem, não só a faculdade, como o dever de aplicar sanções previstas na Convenção e Regulamento Interno, e as aplicará em prol dos interesses da coletividade condominial."
           },
@@ -929,11 +934,10 @@
           "5": {
             "texto": "O pedido de reconsideração, não tem efeito suspensivo sobre as multas, que devem ser pagas normalmente, quando cobradas. Caso o Conselho Fiscal considere uma multa improcedente, o valor da mesma será devolvido ao responsável."
           }
-        },
-        "titulo": "DAS PENALIDADES E SANÇÕES"
+        }
       },
       "9": {
-        "incisos": {
+        "itens": {
           "1": {
             "texto": "Compete a todos os Condôminos, Moradores e Empregados do Condomínio fazer cumprir o presente Regulamento Interno, levando ao conhecimento do Sindico, Subsíndicos e Conselheiros, qualquer transgressão havida."
           },
@@ -952,12 +956,14 @@
           "6": {
             "texto": "O Regimento Interno poderá ser acrescido a critério da Assembleia, por maioria (50%+1) dos condôminos de outras disposições e deverá ser fixado em partes de propriedade e uso comum do mesmo."
           }
-        },
-        "titulo": "DAS RECLAMAÇÕES E RECURSOS"
+        }
       },
       "10": {
-        "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja.",
-        "titulo": "DO FORO"
+        "itens": {
+          "1": {
+            "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja."
+          }
+        }
       }
     }
   }

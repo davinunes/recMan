@@ -79,6 +79,32 @@
   }
 }
 
+#let render-anexo1-itens(itens-dict, prefix: "", indent_left: 6pt, text_color: rgb("334155")) = {
+  if itens-dict != none and type(itens-dict) == dictionary {
+    for (it_key, it_val) in itens-dict {
+      let code_num = if prefix == "" { str(it_key) } else { prefix + "." + str(it_key) }
+      let it_txt = if type(it_val) == dictionary and "texto" in it_val { it_val.texto } else if type(it_val) == dictionary { "" } else { str(it_val) }
+
+      if it_txt != "" [
+        #v(3pt)
+        #pad(left: indent_left)[
+          #text(fill: text_color)[
+            #text(weight: "bold")[#code_num] #it_txt
+          ]
+        ]
+      ]
+
+      if type(it_val) == dictionary and "itens" in it_val and it_val.itens != none {
+        render-anexo1-itens(it_val.itens, prefix: code_num, indent_left: indent_left + 10pt, text_color: text_color)
+      }
+
+      if type(it_val) == dictionary and "alineas" in it_val and it_val.alineas != none {
+        render-alineas(it_val.alineas, indent_left: indent_left + 12pt, text_color: text_color)
+      }
+    }
+  }
+}
+
 #let regimento-doc(data) = {
   let titulo = if "titulo" in data { data.titulo } else { "REGIMENTO INTERNO - CONDOMÍNIO TOP LIFE MIAMI BEACH" }
   let capitulos = if "capitulos" in data { data.capitulos } else { (:) }
@@ -236,7 +262,7 @@
       #v(1.5cm)
       #rect(width: 80%, fill: rgb("ecfdf5"), inset: 12pt, radius: 4pt, stroke: 0.5pt + rgb("047857"))[
         #text(size: 10pt, fill: rgb("065f46"))[
-          Documento consolidado contendo os 33 capítulos do Regimento Interno.
+          Documento consolidado contendo as seções do Regimento Interno.
         ]
       ]
     ]
@@ -280,7 +306,7 @@
     #v(0.5cm)
   ]
 
-  // EXIBIÇÃO DOS CAPÍTULOS E ARTIGOS
+  // EXIBIÇÃO DOS CAPÍTULOS E ARTIGOS DA CONVENÇÃO
   let current_cap = ""
 
   for (art_id, art_data) in artigos {
@@ -359,42 +385,21 @@
       ]
     ]
     #v(0.5cm)
-    #let anexo_artigos = if "artigos" in data.anexo1 { data.anexo1.artigos } else { (:) }
 
-    #for (art_id, art_data) in anexo_artigos [
-      #let art_texto = if type(art_data) == dictionary and "texto" in art_data { art_data.texto } else { "" }
-      #block(width: 100%, below: 8pt)[
-        #text(weight: "bold", fill: accent_color)[Artigo #art_id] #art_texto
+    #let anexo_secoes = if "secoes" in data.anexo1 { data.anexo1.secoes } else { (:) }
+    #let anexo_itens = if "itens" in data.anexo1 { data.anexo1.itens } else { (:) }
 
-        #if type(art_data) == dictionary and "incisos" in art_data and art_data.incisos != none {
-          render-incisos(art_data.incisos, indent_left: 12pt, text_color: text_secondary)
-        }
-
-        #if type(art_data) == dictionary and "alineas" in art_data and art_data.alineas != none {
-          render-alineas(art_data.alineas, indent_left: 12pt, text_color: text_secondary)
-        }
-
-        #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
-          #for (p_key, p_val) in art_data.paragrafos [
-            #let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else if type(p_val) == dictionary { "" } else { str(p_val) }
-            #v(3pt)
-            #pad(left: 12pt)[
-              #text(style: "italic", fill: text_secondary)[
-                #if p_key == "unico" [
-                  #text(weight: "bold")[Parágrafo único.] #p_txt
-                ] else [
-                  #text(weight: "bold")[§ #p_key º] #p_txt
-                ]
-              ]
-            ]
-            #if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
-              render-incisos(p_val.incisos, indent_left: 24pt, text_color: text_secondary)
-            }
-            #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
-              render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
-            }
-          ]
+    #for (sec_id, sec_nome) in anexo_secoes [
+      #v(0.6cm)
+      #rect(width: 100%, fill: bg_cap, inset: 6pt, radius: 3pt, stroke: 0.5pt + main_color)[
+        #heading(level: 2, numbering: none, outlined: true)[
+          #text(weight: "bold", fill: main_color, size: 11pt)[#sec_nome]
         ]
+      ]
+      #v(0.3cm)
+
+      #if sec_id in anexo_itens and type(anexo_itens.at(sec_id)) == dictionary and "itens" in anexo_itens.at(sec_id) [
+        #render-anexo1-itens(anexo_itens.at(sec_id).itens, prefix: sec_id, indent_left: 6pt, text_color: text_secondary)
       ]
     ]
   ]
