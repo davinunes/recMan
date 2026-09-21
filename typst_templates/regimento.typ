@@ -15,6 +15,22 @@
   }
 }
 
+#let render-itens(itens-dict, indent_left: 36pt, text_color: rgb("334155")) = {
+  if itens-dict != none and type(itens-dict) == dictionary {
+    for (it_key, it_val) in itens-dict {
+      let it_txt = if type(it_val) == dictionary and "texto" in it_val { it_val.texto } else if type(it_val) == dictionary { "" } else { str(it_val) }
+      if it_txt != "" [
+        #v(2pt)
+        #pad(left: indent_left)[
+          #text(fill: text_color)[
+            #text(weight: "bold")[#it_key\)] #it_txt
+          ]
+        ]
+      ]
+    }
+  }
+}
+
 #let render-alineas(alineas-dict, indent_left: 24pt, text_color: rgb("334155")) = {
   if alineas-dict != none and type(alineas-dict) == dictionary {
     for (a_key, a_val) in alineas-dict {
@@ -27,6 +43,12 @@
           ]
         ]
       ]
+      if type(a_val) == dictionary and "itens" in a_val and a_val.itens != none {
+        render-itens(a_val.itens, indent_left: indent_left + 12pt, text_color: text_color)
+      }
+      if type(a_val) == dictionary and "incisos" in a_val and a_val.incisos != none {
+        render-incisos(a_val.incisos, indent_left: indent_left + 12pt, text_color: text_color)
+      }
     }
   }
 }
@@ -49,6 +71,9 @@
       }
       if type(i_val) == dictionary and "alineas" in i_val and i_val.alineas != none {
         render-alineas(i_val.alineas, indent_left: indent_left + 12pt, text_color: text_color)
+      }
+      if type(i_val) == dictionary and "itens" in i_val and i_val.itens != none {
+        render-itens(i_val.itens, indent_left: indent_left + 12pt, text_color: text_color)
       }
     }
   }
@@ -244,6 +269,17 @@
     #pagebreak()
   ]
 
+  // EXIBIÇÃO DO PRÓLOGO / PREÂMBULO (SE HOUVER)
+  if "prologo" in data and data.prologo != none and str(data.prologo).trim() != "" [
+    #v(0.5cm)
+    #rect(width: 100%, fill: bg_cap, inset: 12pt, radius: 4pt, stroke: 0.5pt + accent_color)[
+      #text(weight: "bold", fill: main_color, size: 9.5pt)[PREÂMBULO]
+      #v(4pt)
+      #text(style: "italic", fill: text_secondary, size: 9.5pt)[#data.prologo]
+    ]
+    #v(0.5cm)
+  ]
+
   // EXIBIÇÃO DOS CAPÍTULOS E ARTIGOS
   let current_cap = ""
 
@@ -309,9 +345,14 @@
   if "anexo1" in data and data.anexo1 != none and type(data.anexo1) == dictionary [
     #v(1cm)
     #pagebreak()
+    #let anexo_cabecalho = if "cabecalho" in data.anexo1 { data.anexo1.cabecalho } else { "" }
     #let anexo_titulo = if "titulo" in data.anexo1 { data.anexo1.titulo } else { "ANEXO I - REGIMENTO INTERNO DO CONDOMÍNIO" }
-    #rect(width: 100%, fill: bg_cap, inset: 10pt, radius: 4pt, stroke: 1pt + main_color)[
+    #rect(width: 100%, fill: bg_cap, inset: 12pt, radius: 4pt, stroke: 1pt + main_color)[
       #align(center)[
+        #if anexo_cabecalho != "" [
+          #text(weight: "bold", fill: accent_color, size: 9.5pt)[#anexo_cabecalho]
+          #v(4pt)
+        ]
         #heading(level: 1, numbering: none, outlined: true)[
           #text(weight: "bold", fill: main_color, size: 13pt)[#anexo_titulo]
         ]
