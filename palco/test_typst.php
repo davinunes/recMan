@@ -20,6 +20,8 @@ $resultPdf = null;
 $errorMsg = null;
 $elapsedMs = null;
 $selectedVariant = $_POST['variant'] ?? 'modern';
+$selectedDocType = $_POST['doc_type'] ?? 'regimento';
+
 
 $searchNum = trim($_POST['search_numero'] ?? '');
 $searchAno = trim($_POST['search_ano'] ?? '');
@@ -136,21 +138,30 @@ if ($action === 'buscar_parecer' && ($searchNum !== '' || $searchAno !== '')) {
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'test_regimento') {
-        $regimentoFile = __DIR__ . '/../regimento/database.json';
-        if (file_exists($regimentoFile)) {
-            $jsonData = json_decode(file_get_contents($regimentoFile), true);
+        if ($selectedDocType === 'convencao') {
+
+            $normativoFile = __DIR__ . '/../convencao_coletiva/convencao_coletiva_miami_json.json';
+            $docNome = 'Convenção de Condomínio & Anexo I';
+        } else {
+            $normativoFile = __DIR__ . '/../regimento/database.json';
+            $docNome = 'Regimento Interno';
+        }
+
+        if (file_exists($normativoFile)) {
+            $jsonData = json_decode(file_get_contents($normativoFile), true);
             $jsonData['variant'] = $selectedVariant;
             $res = TypstPdfService::gerarRegimento($jsonData, true);
             if ($res['status'] === 'success' && !empty($res['pdf_base64'])) {
                 $resultPdf = $res['pdf_base64'];
                 $elapsedMs = $res['elapsed_ms'] ?? null;
             } else {
-                $errorMsg = $res['message'] ?? 'Falha ao gerar o PDF do Regimento Interno via Typst.';
+                $errorMsg = $res['message'] ?? "Falha ao gerar o PDF do {$docNome} via Typst.";
             }
         } else {
-            $errorMsg = 'Arquivo regimento/database.json não encontrado.';
+            $errorMsg = "Arquivo do {$docNome} não encontrado.";
         }
-    } elseif ($action === 'test_parecer') {
+    }
+ elseif ($action === 'test_parecer') {
         $dadosParecer = [
             'notificacao'  => trim($notificacaoVal),
             'unidade'      => trim($unidadeVal),
@@ -344,13 +355,24 @@ $variantesDisponiveis = [
         <!-- Coluna Esquerda: Controles -->
         <div style="display: flex; flex-direction: column; gap: 20px;">
 
-            <!-- Card 1: Testar Regimento Interno -->
+            <!-- Card 1: Testar Regimento Interno / Convenção de Condomínio -->
             <div class="card">
-                <h2><span class="material-icons">auto_stories</span> Regimento Interno (JSON Completo)</h2>
+                <h2><span class="material-icons">auto_stories</span> Documentos Normativos (Regimento & Convenção)</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Compila o <code>regimento/database.json</code> (33 capítulos) em PDF com sumário interativo escolhendo entre as 8 variantes visuais.
+                    Compila o <code>Regimento Interno</code> ou a <code>Convenção de Condomínio & Anexo I</code> em PDF oficial com sumário interativo escolhendo entre as 8 variantes visuais.
                 </p>
                 <form method="POST" action="test_typst.php?action=test_regimento">
+                    <div class="form-group">
+                        <label>Documento Normativo</label>
+                        <select name="doc_type" id="selectDocType">
+                            <option value="regimento" <?= ($selectedDocType ?? 'regimento') === 'regimento' ? 'selected' : '' ?>>
+                                Regimento Interno (33 Capítulos - database.json)
+                            </option>
+                            <option value="convencao" <?= ($selectedDocType ?? 'regimento') === 'convencao' ? 'selected' : '' ?>>
+                                Convenção de Condomínio & Anexo I (convencao_coletiva_miami_json.json)
+                            </option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Variante de Layout Visual (8 Opções)</label>
                         <select name="variant">
@@ -362,7 +384,7 @@ $variantesDisponiveis = [
                         </select>
                     </div>
                     <button type="submit" class="btn btn-green">
-                        <span class="material-icons">picture_as_pdf</span> Gerar PDF do Regimento
+                        <span class="material-icons">picture_as_pdf</span> Gerar PDF do Documento Selecionado
                     </button>
                 </form>
             </div>

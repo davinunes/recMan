@@ -241,8 +241,8 @@
   let current_cap = ""
 
   for (art_id, art_data) in artigos {
-    let cap_num = str(art_data.capitulo)
-    if cap_num in capitulos and capitulos.at(cap_num) != current_cap {
+    let cap_num = if type(art_data) == dictionary and "capitulo" in art_data { str(art_data.capitulo) } else { "" }
+    if cap_num != "" and cap_num in capitulos and capitulos.at(cap_num) != current_cap {
       current_cap = capitulos.at(cap_num)
       v(0.8cm)
       if variant == "dark" {
@@ -261,20 +261,20 @@
       v(0.3cm)
     }
 
-    let art_texto = if "texto" in art_data { art_data.texto } else { "" }
+    let art_texto = if type(art_data) == dictionary and "texto" in art_data { art_data.texto } else { "" }
 
     block(width: 100%, below: 8pt)[
       #text(weight: "bold", fill: accent_color)[Art. #art_id º] #art_texto
 
-      #if "incisos" in art_data and art_data.incisos != none {
+      #if type(art_data) == dictionary and "incisos" in art_data and art_data.incisos != none {
         render-incisos(art_data.incisos, indent-left: 12pt, text-color: text_secondary)
       }
 
-      #if "alineas" in art_data and art_data.alineas != none {
+      #if type(art_data) == dictionary and "alineas" in art_data and art_data.alineas != none {
         render-alineas(art_data.alineas, indent-left: 12pt, text-color: text_secondary)
       }
 
-      #if "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
+      #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
         #for (p_key, p_val) in art_data.paragrafos {
           let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else { str(p_val) }
           v(3pt)
@@ -297,4 +297,58 @@
       ]
     ]
   }
+
+  // EXIBIÇÃO DO ANEXO I (REGIMENTO INTERNO VINCULADO À CONVENÇÃO)
+  if "anexo1" in data and data.anexo1 != none and type(data.anexo1) == dictionary [
+    #v(1cm)
+    #pagebreak()
+    #let anexo_titulo = if "titulo" in data.anexo1 { data.anexo1.titulo } else { "ANEXO I - REGIMENTO INTERNO DO CONDOMÍNIO" }
+    #rect(width: 100%, fill: bg_cap, inset: 10pt, radius: 4pt, stroke: 1pt + main_color)[
+      #align(center)[
+        #heading(level: 1, numbering: none, outlined: true)[
+          #text(weight: "bold", fill: main_color, size: 13pt)[#anexo_titulo]
+        ]
+      ]
+    ]
+    #v(0.5cm)
+    #let anexo_artigos = if "artigos" in data.anexo1 { data.anexo1.artigos } else { (:) }
+
+    #for (art_id, art_data) in anexo_artigos [
+      #let art_texto = if type(art_data) == dictionary and "texto" in art_data { art_data.texto } else { "" }
+      #block(width: 100%, below: 8pt)[
+        #text(weight: "bold", fill: accent_color)[Artigo #art_id] #art_texto
+
+        #if type(art_data) == dictionary and "incisos" in art_data and art_data.incisos != none {
+          render-incisos(art_data.incisos, indent-left: 12pt, text-color: text_secondary)
+        }
+
+        #if type(art_data) == dictionary and "alineas" in art_data and art_data.alineas != none {
+          render-alineas(art_data.alineas, indent-left: 12pt, text-color: text_secondary)
+        }
+
+        #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
+          #for (p_key, p_val) in art_data.paragrafos {
+            let p_txt = if type(p_val) == dictionary and "texto" in p_val { p_val.texto } else { str(p_val) }
+            v(3pt)
+            pad(left: 12pt)[
+              #text(style: "italic", fill: text_secondary)[
+                #if p_key == "unico" [
+                  #text(weight: "bold")[Parágrafo único.] #p_txt
+                ] else [
+                  #text(weight: "bold")[§ #p_key º] #p_txt
+                ]
+              ]
+            ]
+            if type(p_val) == dictionary and "incisos" in p_val and p_val.incisos != none {
+              render-incisos(p_val.incisos, indent-left: 24pt, text-color: text_secondary)
+            }
+            if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
+              render-alineas(p_val.alineas, indent-left: 24pt, text-color: text_secondary)
+            }
+          }
+        ]
+      ]
+    ]
+  ]
 }
+

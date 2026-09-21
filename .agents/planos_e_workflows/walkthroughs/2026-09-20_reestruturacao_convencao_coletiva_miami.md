@@ -1,7 +1,10 @@
-# Walkthrough - Reestruturação da Convenção Coletiva e Anexo I (Regimento)
+# Walkthrough - Reestruturação da Convenção Coletiva, Anexo I e Integração no Painel Typst
 
 - **Data**: 2026-09-20
-- **Arquivo Alvo**: [`convencao_coletiva/convencao_coletiva_miami_json.json`](file:///e:/DEV/recMan/convencao_coletiva/convencao_coletiva_miami_json.json)
+- **Arquivos Envolvidos**:
+  - [`convencao_coletiva/convencao_coletiva_miami_json.json`](file:///e:/DEV/recMan/convencao_coletiva/convencao_coletiva_miami_json.json)
+  - [`palco/test_typst.php`](file:///e:/DEV/recMan/palco/test_typst.php)
+  - [`typst_templates/regimento.typ`](file:///e:/DEV/recMan/typst_templates/regimento.typ)
 
 ## 1. O que foi realizado
 
@@ -16,15 +19,23 @@
      - Extração de `alineas` (linhas ou blocos inline `a)`, `b)`, `c)`...).
      - Tratamento especial para o Artigo 6 (sub-itens 6.1 a 6.5, alíneas e parágrafos de garagem).
      - Tratamento especial para os Parágrafos do Artigo 19 (desdobramento das alíneas inline `a` a `n` no §3º e `a` a `d` no §4º).
-   
+
 3. **Adequação do Regimento Interno (`anexo1`)**:
    - Remoção do prefixo `"rcc "` de todas as chaves.
    - Aninhamento sob `"anexo1"` contendo `titulo` ("ANEXO I - REGIMENTO INTERNO DO CONDOMÍNIO") e `artigos` (1 a 10).
-   - Explosão hierárquica completa dos sub-itens (ex: `1.2.a`, `3.2.15`, `5.2.17.a`, `5.3.1.a`) em nós `incisos`, `paragrafos` e `alineas`, garantindo 100% de compatibilidade com a mecânica de consulta de notações do backend PHP (`trecho.php`) e skill `regimento_notacao_busca`.
+   - Explosão hierárquica completa dos sub-itens em nós `incisos`, `paragrafos` e `alineas`.
+
+4. **Adaptação do Painel Typst (`palco/test_typst.php`) & Template (`typst_templates/regimento.typ`)**:
+   - **`palco/test_typst.php`**: O Card 1 foi transformado para suportar seleção de documento normativo:
+     - `Regimento Interno (33 Capítulos - database.json)`
+     - `Convenção de Condomínio & Anexo I (convencao_coletiva_miami_json.json)`
+   - **`typst_templates/regimento.typ`**:
+     - Adicionada verificação segura para documentos sem a propriedade `capitulo` em cada artigo.
+     - Adicionada rotina de renderização automática para o bloco `anexo1` (Regimento Interno vinculado à Convenção) com formatação visual e quebra de página dedicada.
 
 ---
 
 ## 2. Validação
 
-- Leitura e verificação do JSON final em `convencao_coletiva/convencao_coletiva_miami_json.json`.
-- Confirmação de integridade textual e ausência de perda de caracteres ou itens normativos.
+- Verificação de sintaxe e código PHP em `palco/test_typst.php`.
+- Teste de estruturação e renderização dos templates Typst.
