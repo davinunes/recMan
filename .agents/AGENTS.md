@@ -111,6 +111,8 @@ As skills abaixo estão em `.agents/skills/` e devem ser **invocadas PROATIVAMEN
 | Criando ou editando uma skill nova                                       | `skill_creation_guidelines`                      | [`.agents/skills/skill_creation_guidelines/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/skill_creation_guidelines/SKILL.md) |
 | Gerando PDFs com Typst, ajustando templates .typ ou API Python (Porta 5050) | `geracao_pdf_typst`                             | [`.agents/skills/geracao_pdf_typst/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/geracao_pdf_typst/SKILL.md) |
 | Iniciando em projeto novo ou sem `.agents/` (instalar regras + skills globais) | `inicializar_estrutura_agents`              | [`.agents/skills/inicializar_estrutura_agents/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/inicializar_estrutura_agents/SKILL.md) |
+| Consultando, notando ou formatando trechos do Regimento Interno | `regimento_notacao_busca` | [`.agents/skills/regimento_notacao_busca/SKILL.md`](file:///e:/DEV/recMan/.agents/skills/regimento_notacao_busca/SKILL.md) |
+
 
 ---
 
