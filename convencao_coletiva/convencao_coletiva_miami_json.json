@@ -780,7 +780,12 @@
       "5": {
         "itens": {
           "1": {
-            "texto": "Da Destinação Exclusiva Residencial"
+            "texto": "Geral",
+            "itens": {
+              "1": {
+                "texto": "Os apartamentos destinam-se exclusivamente ao uso residencial e são estritamente familiares, devendo ser guardados o recato a dignidade compatível com a moralidade e o renome dos moradores."
+              }
+            }
           },
           "2": {
             "texto": "Das Alterações de Fachada e Proibições Específicas",
