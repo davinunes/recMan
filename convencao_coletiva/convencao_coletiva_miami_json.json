@@ -518,7 +518,8 @@
               }
             }
           }
-        }
+        },
+        "titulo": "DAS DISPOSIÇÕES GERAIS E FINALIDADES"
       },
       "2": {
         "incisos": {
@@ -528,7 +529,8 @@
           "2": {
             "texto": "As atividades sociais como festas, não devem ultrapassar as 24:00 hs. A festa estará restrita as dependências internas do salão, se houver, e a partir das 22:00 horas o som deverá estar em volume reduzido. Ficam ressalvadas as festas promovidas pelo Condomínio ou autorizadas pela Assembleia que poderão ter seu horário estendido para depois das 24:00 hs, conforme previamente combinado entre a Comissão Organizadora e os demais moradores do Edifício."
           }
-        }
+        },
+        "titulo": "DO SILÊNCIO E DAS FESTAS"
       },
       "3": {
         "incisos": {
@@ -546,7 +548,8 @@
               "4": {
                 "texto": "Não é permitida a permanência de volumes de qualquer espécie nos halls, áreas de acesso ou demais partes comuns, exceto quando em trânsito para os apartamentos."
               }
-            }
+            },
+            "texto": "Do Uso Geral das Partes Comuns"
           },
           "2": {
             "incisos": {
@@ -595,7 +598,8 @@
               "15": {
                 "texto": "Não será permitida a permanência de carros/utilitários de terceiros nas garagens do condomínio, nem mesmo enquanto realizam serviços de conserto, manutenção e instalação, etc."
               }
-            }
+            },
+            "texto": "Do Uso das Garagens e Estacionamento"
           },
           "3": {
             "incisos": {
@@ -611,14 +615,16 @@
               "4": {
                 "texto": "A permanência de bicicletas, velocípedes, skates, patins, patinetes ou similares assim como praticas com bola, nas áreas comuns do Condomínio só será eventualmente permitida em lugar previamente determinado para este fim, não sendo de responsabilidade do Condomínio, qualquer dano eventualmente causado aos mesmos ou que causarem a terceiros. Também não é de responsabilidade do Condomínio o desaparecimento de qualquer objeto."
               }
-            }
+            },
+            "texto": "Da Segurança Geral, Ordem e Limpeza"
           },
           "4": {
             "incisos": {
               "1": {
                 "texto": "O lixo e detritos deverão ser devidamente acondicionados em sacos plásticos apropriados e colocados nos tambores coletores, separando o lixo reciclável, tomando precauções necessárias para evitar vazamentos, depositando-os nas lixeiras próximas a portaria nos dias e horários determinados pelo síndico."
               }
-            }
+            },
+            "texto": "Do Acondicionamento do Lixo"
           },
           "5": {
             "incisos": {
@@ -628,7 +634,8 @@
               "2": {
                 "texto": "É proibido danificar plantas, colher flores, cortar galhos ou árvores e usar o jardim para o plantio de plantas diferentes das estabelecidas pelo Condomínio."
               }
-            }
+            },
+            "texto": "Dos Danos às Áreas Comuns"
           },
           "6": {
             "incisos": {
@@ -641,9 +648,11 @@
               "3": {
                 "texto": "Os entulhos provenientes das obras de reformas deverá ser retirado pelo condômino, não podendo ser deixados nas dependências comuns, sob pena de ser feito pelo síndico às custas do responsável, sendo devido o reembolso."
               }
-            }
+            },
+            "texto": "Das Reformas e Obras nas Unidades"
           }
-        }
+        },
+        "titulo": "DO USO DAS ÁREAS COMUNS E GARAGENS"
       },
       "4": {
         "incisos": {
@@ -656,12 +665,13 @@
           "3": {
             "texto": "Não é permitido que pessoas que não os próprios empregados do Condomínio trabalhem nas partes de uso comum, a não ser mediante autorização por escrito do Síndico, salvo funcionários da construtora em serviço de manutenção."
           }
-        }
+        },
+        "titulo": "DOS EMPREGADOS DO CONDOMÍNIO"
       },
       "5": {
         "incisos": {
           "1": {
-            "texto": "Os apartamentos destinam-se exclusivamente ao uso residencial e são estritamente familiares, devendo ser guardados o recato a dignidade compatível com a moralidade e o renome dos moradores."
+            "texto": "Da Destinação Exclusiva Residencial"
           },
           "2": {
             "incisos": {
@@ -730,7 +740,8 @@
                   }
                 }
               }
-            }
+            },
+            "texto": "Das Alterações de Fachada e Proibições Específicas"
           },
           "3": {
             "incisos": {
@@ -760,9 +771,11 @@
               "5": {
                 "texto": "Por motivos de segurança das instalações e do próprio edifício como um todo, fica expressamente vedada a execução nos apartamentos, de qualquer instalação que resulte sobrecarga mecânica e/ou elétrica para o Edifício."
               }
-            }
+            },
+            "texto": "Dos Procedimentos de Segurança e Estrutura"
           }
-        }
+        },
+        "titulo": "DAS NORMAS DAS UNIDADES, FACHADAS E SEGURANÇA"
       },
       "6": {
         "incisos": {
@@ -781,7 +794,8 @@
           "5": {
             "texto": "Os condôminos em atraso com o pagamento das respectivas contribuições pagarão multa de 2% (dois por cento) sobre o débito, e juros moratórios, pro-rata-die, de 1% (um por cento) ao mês, computados desde a data do vencimento até o dia de seu efetivo pagamento, independente de qualquer aviso, notificação ou interpelação, sujeitando-se, ainda, ao pagamento das custas e honorários de advogado, se houver procedimento judicial."
           }
-        }
+        },
+        "titulo": "DA TAXA DE CONDOMÍNIO E VENCIMENTOS"
       },
       "7": {
         "incisos": {
@@ -794,7 +808,8 @@
           "3": {
             "texto": "A mudança em feriados e domingos será permitida apenas excepcionalmente e mediante autorização do Síndico."
           }
-        }
+        },
+        "titulo": "DAS MUDANÇAS E HORÁRIOS"
       },
       "8": {
         "incisos": {
@@ -813,7 +828,8 @@
           "5": {
             "texto": "O pedido de reconsideração, não tem efeito suspensivo sobre as multas, que devem ser pagas normalmente, quando cobradas. Caso o Conselho Fiscal considere uma multa improcedente, o valor da mesma será devolvido ao responsável."
           }
-        }
+        },
+        "titulo": "DAS PENALIDADES E SANÇÕES"
       },
       "9": {
         "incisos": {
@@ -835,10 +851,12 @@
           "6": {
             "texto": "O Regimento Interno poderá ser acrescido a critério da Assembleia, por maioria (50%+1) dos condôminos de outras disposições e deverá ser fixado em partes de propriedade e uso comum do mesmo."
           }
-        }
+        },
+        "titulo": "DAS RECLAMAÇÕES E RECURSOS"
       },
       "10": {
-        "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja."
+        "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja.",
+        "titulo": "DO FORO"
       }
     }
   }
