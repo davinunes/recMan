@@ -298,7 +298,7 @@
             render-incisos(p_val.incisos, indent_left: 24pt, text_color: text_secondary)
           }
           #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
-            render-alineas(p_val.alineas, indent_left: 24pt, text-color: text_secondary)
+            render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
           }
         ]
       ]
