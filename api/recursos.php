@@ -175,7 +175,7 @@ if ($method === 'GET') {
                     'analise' => $parecerRow['analise'] ?? 'Foram apreciadas as provas apresentadas pela administração e confrontadas com a argumentação e demais fatos descritos no recurso',
                     'resultado' => $parecerRow['resultado'] ?? 'Considerações finais a serem realizadas',
                     'parecer' => $parecerRow['conclusao'] ?? '',
-                    'data_emissao' => (!empty($parecerRow['data']) && ($parecerRow['concluido'] ?? 0) == 1) ? date('Y-m-d', strtotime($parecerRow['data'])) : date('Y-m-d')
+                    'data_emissao' => (!empty($parecerRow['data']) && ($parecerRow['concluido'] ?? 0) == 1) ? date('d/m/Y', strtotime($parecerRow['data'])) : date('d/m/Y')
                 ];
                 
                 $pdfBase64 = null;

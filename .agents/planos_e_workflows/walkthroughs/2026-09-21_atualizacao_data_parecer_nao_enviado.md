@@ -1,27 +1,29 @@
-# Walkthrough / Resumo de Entrega: Atualização de Data para Pareceres Não Enviados
+# Walkthrough / Resumo de Entrega: Atualização e Formatação de Data para Pareceres (Padrão BR)
 
 **Data**: 2026-09-21
-**Solicitação**: Atualizar a data dos pareceres não enviados para a data corrente, preservando a data de envio original para pareceres já concluídos/enviados.
+**Solicitação**: Atualizar a data dos pareceres não enviados para a data corrente e formatar todas as datas no padrão brasileiro (`DD/MM/AAAA`).
 
 ---
 
 ## Alterações Efetuadas
 
-1. **[`palco/emiteParecer.php`](file:///e:/DEV/recMan/palco/emiteParecer.php)**:
+1. **[`typst_templates/parecer.typ`](file:///e:/DEV/recMan/typst_templates/parecer.typ)**:
+   - Adicionada a função helper `formatar-data-br(d-str)` para converter datas no formato ISO (`YYYY-MM-DD`) diretamente no Typst para o padrão nacional `DD/MM/AAAA`.
+   - Ajustado o fallback do valor de `data_emissao` para `21/09/2026`.
+
+2. **[`palco/emiteParecer.php`](file:///e:/DEV/recMan/palco/emiteParecer.php)**:
    - Adicionada verificação ao carregar o parecer. Se `$parecerJaFoiEnviado` for `false` (`concluido != 1`), a data no banco de dados (`conselho.parecer.data`) e a variável em memória `$parecer['data']` são atualizadas para a data atual (`date('Y-m-d')` / `CURDATE()`).
-   - Se o parecer já foi enviado (`concluido == 1`), nenhuma alteração de data é feita.
+   - Formatado o campo `$pdf['data_emissao']` para o padrão `date('d/m/Y', ...)`.
 
-2. **[`classes/repositorio.php`](file:///e:/DEV/recMan/classes/repositorio.php)**:
-   - Na função `updateParecer($dados)`, ajustada a instrução `UPDATE` para incluir:
-     `data = IF(concluido = 1, data, CURDATE())`
-   - Garante que edições manuais em pareceres não concluídos também renovem a data para a data atual de salvamento.
+3. **[`classes/repositorio.php`](file:///e:/DEV/recMan/classes/repositorio.php)**:
+   - Na função `updateParecer($dados)`, ajustada a instrução `UPDATE` para incluir `data = IF(concluido = 1, data, CURDATE())`.
 
-3. **[`api/recursos.php`](file:///e:/DEV/recMan/api/recursos.php)**:
-   - Ajustada a propriedade `data_emissao` para usar a data atual `date('Y-m-d')` quando o parecer não estiver concluído (`concluido != 1`).
+4. **[`api/recursos.php`](file:///e:/DEV/recMan/api/recursos.php) e [`portal/api.php`](file:///e:/DEV/recMan/portal/api.php)**:
+   - Ajustada a propriedade `data_emissao` para formatar com `date('d/m/Y', ...)`.
 
 ---
 
 ## Validação e Verificação
 
-- **Sintaxe e Estrutura**: Verificada a compatibilidade do código com o ecossistema PHP do projeto.
-- **Proteção de Pareceres Enviados**: A cláusula `concluido = 1` e `WHERE (concluido IS NULL OR concluido = 0)` garantem 100% de isolamento para pareceres já finalizados.
+- Datas no PDF e no e-mail agora aparecem consistentemente como `DD/MM/AAAA` (ex: `Taguatinga, 21/09/2026`).
+- Pareceres não concluídos continuam sendo atualizados para o dia corrente no salvamento e visualização, mantendo pareceres finalizados inalterados.

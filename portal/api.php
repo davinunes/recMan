@@ -785,7 +785,7 @@ if (
                 'analise' => $parecer['analise'],
                 'resultado' => $parecer['resultado'],
                 'parecer' => $parecer['conclusao'],
-                'data_emissao' => date('Y-m-d', strtotime($parecer['data']))
+                'data_emissao' => date('d/m/Y', strtotime($parecer['data']))
             ];
 
             $resp = json_decode(getParecerPdf($pdfData), true);

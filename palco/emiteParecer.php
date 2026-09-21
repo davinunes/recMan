@@ -73,7 +73,7 @@ $pdf['analise'] = $parecer["analise"];
 $pdf['resultado'] = $parecer["resultado"];
 $pdf['parecer'] = $parecer["conclusao"];
 $pdf['modelo'] = $parecer["modelo"] ?? "estatico";
-$pdf['data_emissao'] = date('Y-m-d', strtotime($parecer['data']));
+$pdf['data_emissao'] = date('d/m/Y', strtotime($parecer['data']));
 
 // dump($pdf);
 //Dados do e-mail a ser enviado:

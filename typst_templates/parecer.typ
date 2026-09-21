@@ -7,6 +7,22 @@
     }
   }
 
+  let formatar-data-br(d-str) = {
+    let s = str(d-str).trim()
+    if s.contains("-") {
+      let parts = s.split("-")
+      if parts.len() == 3 and parts.at(0).len() == 4 {
+        return parts.at(2) + "/" + parts.at(1) + "/" + parts.at(0)
+      }
+    } else if s.contains("/") {
+      let parts = s.split("/")
+      if parts.len() == 3 and parts.at(0).len() == 4 {
+        return parts.at(2) + "/" + parts.at(1) + "/" + parts.at(0)
+      }
+    }
+    return s
+  }
+
   let notificacao = get("notificacao", "186/2023")
   let unidade = get("unidade", "A1305")
   let assunto = get("assunto", "ESTACIONAMENTO INDEVIDO")
@@ -14,7 +30,8 @@
   let analise = get("analise", "")
   let resultado = get("resultado", "")
   let parecer = get("parecer", get("conclusao", "Favorável ao Recurso"))
-  let data_emissao = get("data_emissao", "20 de Setembro de 2026")
+  let data_emissao_raw = get("data_emissao", "21/09/2026")
+  let data_emissao = formatar-data-br(data_emissao_raw)
   let variant = get("variant", "modern")
   let banner_path = get("banner_path", "LayoutMiami.jpg")
   let modelo = get("modelo", "estatico")
