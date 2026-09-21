@@ -19,6 +19,8 @@
   let banner_path = get("banner_path", "LayoutMiami.jpg")
   let modelo = get("modelo", "estatico")
   let corpo = get("corpo", "")
+  let exibir_banner_raw = get("exibir_banner", get("exibir_banner_topo", "1"))
+  let exibir_banner = str(exibir_banner_raw) != "0" and str(exibir_banner_raw) != "false"
 
   // Cores dinâmicas por variante
   let text_primary = rgb("0f172a")
@@ -59,7 +61,7 @@
     fill: if variant == "dark" { rgb("0f172a") } else { white },
     header: context {
       let current_page = counter(page).get().first()
-      if variant != "modern" or current_page > 1 [
+      if (variant != "modern" or not exibir_banner) or current_page > 1 [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8.5pt, fill: text_secondary, weight: "bold")[CONDOMÍNIO RESIDENCIAL TOP LIFE MIAMI BEACH]],
@@ -82,8 +84,8 @@
   set text(lang: "pt", size: 10pt, fill: text_primary)
   set par(justify: true, leading: 0.65em)
 
-  // BANNER DE TOPO (Apenas para variante 'modern')
-  if variant == "modern" [
+  // BANNER DE TOPO (Apenas para variante 'modern' se exibir_banner estiver ativo)
+  if variant == "modern" and exibir_banner [
     #v(-1cm)
     #align(center)[
       #image(banner_path, width: 100%)

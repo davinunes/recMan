@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "/repositorio.php";
+require_once __DIR__ . "/typstPdfService.php";
 
 function sanitizarTextoParaPdf($val) {
     if (is_array($val)) {
@@ -49,6 +51,28 @@ function sanitizarTextoParaPdf($val) {
 function getParecerPdf($data) {
     $dataClean = sanitizarTextoParaPdf($data);
 
+    // Consultar configurações do sistema
+    $engine = function_exists('getConfigSistema') ? (getConfigSistema('pdf_engine') ?: 'typst') : 'typst';
+    $template = function_exists('getConfigSistema') ? (getConfigSistema('pdf_typst_template') ?: 'modern') : 'modern';
+    $exibirBanner = function_exists('getConfigSistema') ? getConfigSistema('pdf_exibir_banner') : '1';
+    if ($exibirBanner === null || $exibirBanner === '') {
+        $exibirBanner = '1';
+    }
+
+    // Se a engine configurada for Typst (Moderna - Porta 5050)
+    if ($engine === 'typst') {
+        if (!isset($dataClean['variant'])) {
+            $dataClean['variant'] = $template;
+        }
+        if (!isset($dataClean['exibir_banner'])) {
+            $dataClean['exibir_banner'] = $exibirBanner;
+        }
+
+        $resTypst = TypstPdfService::gerarParecer($dataClean, true);
+        return json_encode($resTypst, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    // Engine Legada (Python FPDF na Porta 5000)
     $curl = curl_init();
 
     curl_setopt_array($curl, array(
@@ -73,30 +97,15 @@ function getParecerPdf($data) {
     curl_close($curl);
 
     if ($response === false || $httpCode !== 200) {
-        // Fallback em formato JSON de erro amigável se a API Python falhar
+        // Fallback em formato JSON de erro amigável se a API Python legada falhar
         return json_encode([
             'status' => 'error',
             'http_code' => $httpCode,
-            'message' => 'Erro ao comunicar com o servidor de PDF Python: ' . ($curlError ?: "Status $httpCode"),
+            'message' => 'Erro ao comunicar com o servidor de PDF Python Legado (Porta 5000): ' . ($curlError ?: "Status $httpCode"),
             'pdf_base64' => ''
         ]);
     }
 
     return $response;
 }
-
-// Exemplo de uso com os dados fornecidos no seu exemplo
-// $dados = array(
-    // "notificacao" => "186/2023",
-    // "unidade" => "A1305",
-    // "assunto" => "ESTACIONAMENTO INDEVIDO",
-    // "fato" => "Descrição do fato...",
-    // "resultado" => "Conclusão...",
-    // "parecer" => "Favorável"
-// );
-
-// $respostaCurl = fazerRequisicaoCurl($dados);
-
-// echo $respostaCurl;
-
-?>
+?>
