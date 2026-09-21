@@ -154,7 +154,8 @@ function updateParecer($dados)
                 notificacao = '$notificacao',
                 analise = '$analise',
                 conclusao = '$conclusao',
-                modelo = '$modelo'
+                modelo = '$modelo',
+                data = IF(concluido = 1, data, CURDATE())
             WHERE id = '$id'";
 
     if (DBExecute($sql)) {

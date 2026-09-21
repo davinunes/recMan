@@ -55,6 +55,15 @@ if (!$temParecer) { //Se não tem Parecer
 $parecer = getParecer($_GET['rec']);
 $parecerJaFoiEnviado = $parecer["concluido"] == 1 ? true : false;
 
+if (!$parecerJaFoiEnviado) {
+    $hoje = date('Y-m-d');
+    if (empty($parecer['data']) || date('Y-m-d', strtotime($parecer['data'])) !== $hoje) {
+        $idParecer = DBEscape($parecer['id']);
+        DBExecute("UPDATE conselho.parecer SET data = CURDATE() WHERE id = '$idParecer' AND (concluido IS NULL OR concluido = 0)");
+        $parecer['data'] = $hoje;
+    }
+}
+
 
 $pdf['notificacao'] = $parecer["id"];
 $pdf['unidade'] = $parecer["unidade"];
