@@ -39,7 +39,7 @@
       if i_txt != "" [
         v(3pt)
         pad(left: indent_left)[
-          #text(fill: text-color)[
+          #text(fill: text_color)[
             #text(weight: "bold")[#i_num -] #i_txt
           ]
         ]
