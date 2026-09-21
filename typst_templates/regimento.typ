@@ -15,15 +15,15 @@
   }
 }
 
-#let render-tracos(tracos-dict, indent_left: 24pt, text_color: rgb("334155")) = {
-  if tracos-dict != none and type(tracos-dict) == dictionary {
-    for (t_key, t_val) in tracos-dict {
-      let t_txt = if type(t_val) == dictionary and "texto" in t_val { t_val.texto } else if type(t_val) == dictionary { "" } else { str(t_val) }
-      if t_txt != "" [
+#let render-lista(lista-dict, indent_left: 24pt, text_color: rgb("334155"), marker: "- ") = {
+  if lista-dict != none and type(lista-dict) == dictionary {
+    for (l_key, l_val) in lista-dict {
+      let l_txt = if type(l_val) == dictionary and "texto" in l_val { l_val.texto } else if type(l_val) == dictionary { "" } else { str(l_val) }
+      if l_txt != "" [
         #v(2pt)
         #pad(left: indent_left)[
           #text(fill: text_color)[
-            #text(weight: "bold")[- ] #t_txt
+            #text(weight: "bold")[#marker] #l_txt
           ]
         ]
       ]
@@ -65,8 +65,10 @@
       if type(a_val) == dictionary and "incisos" in a_val and a_val.incisos != none {
         render-incisos(a_val.incisos, indent_left: indent_left + 12pt, text_color: text_color)
       }
-      if type(a_val) == dictionary and "tracos" in a_val and a_val.tracos != none {
-        render-tracos(a_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
+      if type(a_val) == dictionary and "lista" in a_val and a_val.lista != none {
+        render-lista(a_val.lista, indent_left: indent_left + 12pt, text_color: text_color)
+      } else if type(a_val) == dictionary and "tracos" in a_val and a_val.tracos != none {
+        render-lista(a_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
       }
     }
   }
@@ -94,8 +96,10 @@
       if type(i_val) == dictionary and "itens" in i_val and i_val.itens != none {
         render-itens(i_val.itens, indent_left: indent_left + 12pt, text_color: text_color)
       }
-      if type(i_val) == dictionary and "tracos" in i_val and i_val.tracos != none {
-        render-tracos(i_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
+      if type(i_val) == dictionary and "lista" in i_val and i_val.lista != none {
+        render-lista(i_val.lista, indent_left: indent_left + 12pt, text_color: text_color)
+      } else if type(i_val) == dictionary and "tracos" in i_val and i_val.tracos != none {
+        render-lista(i_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
       }
     }
   }
@@ -124,8 +128,10 @@
         render-alineas(it_val.alineas, indent_left: indent_left + 12pt, text_color: text_color)
       }
 
-      if type(it_val) == dictionary and "tracos" in it_val and it_val.tracos != none {
-        render-tracos(it_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
+      if type(it_val) == dictionary and "lista" in it_val and it_val.lista != none {
+        render-lista(it_val.lista, indent_left: indent_left + 12pt, text_color: text_color)
+      } else if type(it_val) == dictionary and "tracos" in it_val and it_val.tracos != none {
+        render-lista(it_val.tracos, indent_left: indent_left + 12pt, text_color: text_color)
       }
     }
   }
@@ -369,8 +375,10 @@
         render-alineas(art_data.alineas, indent_left: 12pt, text_color: text_secondary)
       }
 
-      #if type(art_data) == dictionary and "tracos" in art_data and art_data.tracos != none {
-        render-tracos(art_data.tracos, indent_left: 12pt, text_color: text_secondary)
+      #if type(art_data) == dictionary and "lista" in art_data and art_data.lista != none {
+        render-lista(art_data.lista, indent_left: 12pt, text_color: text_secondary)
+      } else if type(art_data) == dictionary and "tracos" in art_data and art_data.tracos != none {
+        render-lista(art_data.tracos, indent_left: 12pt, text_color: text_secondary)
       }
 
       #if type(art_data) == dictionary and "paragrafos" in art_data and art_data.paragrafos != none and type(art_data.paragrafos) == dictionary [
@@ -392,8 +400,10 @@
           #if type(p_val) == dictionary and "alineas" in p_val and p_val.alineas != none {
             render-alineas(p_val.alineas, indent_left: 24pt, text_color: text_secondary)
           }
-          #if type(p_val) == dictionary and "tracos" in p_val and p_val.tracos != none {
-            render-tracos(p_val.tracos, indent_left: 24pt, text_color: text_secondary)
+          #if type(p_val) == dictionary and "lista" in p_val and p_val.lista != none {
+            render-lista(p_val.lista, indent_left: 24pt, text_color: text_secondary)
+          } else if type(p_val) == dictionary and "tracos" in p_val and p_val.tracos != none {
+            render-lista(p_val.tracos, indent_left: 24pt, text_color: text_secondary)
           }
         ]
       ]

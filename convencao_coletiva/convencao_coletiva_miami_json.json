@@ -591,7 +591,7 @@
             "texto": "Este Regimento interno refere-se ao Condomínio Geral, mantido para comodidade, tranquilidade, segurança e moralidade da habitação, no interesse dos moradores, proprietários, inquilinos, seus empregados e dependentes, deve ser rigorosamente cumprido pelos mesmos."
           },
           "2": {
-            "texto": "Fica estabelecido que os proprietários das unidades autônomas deverão dar ciência das normas estabelecidas nesse regulamento aos seus locatários ou possuidores do imóvel a qualquer título para se valerem todos os direitos e deveres descritos, sendo obrigação dos proprietários:",
+            "texto": "Fica established que os proprietários das unidades autônomas deverão dar ciência das normas estabelecidas nesse regulamento aos seus locatários ou possuidores do imóvel a qualquer título para se valerem todos os direitos e deveres descritos, sendo obrigação dos proprietários:",
             "alineas": {
               "a": {
                 "texto": "Fornecer ao locatário ou possuidores do imóvel a qualquer título o nome e o número do apartamento do síndico;"
@@ -652,7 +652,7 @@
                 "texto": "Os moradores poderão usar e gozar das partes comuns até onde não impeçam idêntico uso por parte dos demais moradores."
               },
               "2": {
-                "texto": "Não será permitido no Edifício, a entrada de pedintes, propagandistas, vendedores ambulantes, etc., salvo se vierem a chamado de algum morador, sendo que neste caso, a permanência dessas pessoas ficará limitada ao apartamento do morador interessado, o qual, deverá acompanhá-lo até a saída na portaria, sob pena do morador que autorizou a entrada responsabilizer-se por qualquer ato desta decorrente."
+                "texto": "Não será permitido no Edifício, a entrada de pedintes, propagandistas, vendedores ambulantes, etc., salvo se vierem a chamado de algum morador, sendo que neste caso, a permanência dessas pessoas ficará limitada ao apartamento do morador interessado, o qual, deverá acompanhá-lo até a saída na portaria, sob pena do morador que autorizou a entrada responsabilizar-se por qualquer ato desta decorrente."
               },
               "3": {
                 "texto": "Não será permitido o acesso ao edifício de entregadores de encomendas de pequeno e médio porte (pizzas, flores, remédios, etc.), devendo o condômino retirá-las na portaria."
@@ -781,7 +781,7 @@
         "itens": {
           "1": {
             "texto": "Geral",
-            "tracos": {
+            "lista": {
               "1": {
                 "texto": "Os apartamentos destinam-se exclusivamente ao uso residencial e são estritamente familiares, devendo ser guardados o recato a dignidade compatível com a moralidade e o renome dos moradores."
               }
@@ -862,7 +862,7 @@
             "itens": {
               "1": {
                 "texto": "Para a segurança geral do edifício, todos os moradores deverão estar atentos para os seguintes cuidados:",
-                "tracos": {
+                "lista": {
                   "1": {
                     "texto": "observarem, ao sair ou entrar na garagem, se o portão ficou fechado;"
                   },
@@ -966,7 +966,7 @@
       "10": {
         "itens": {
           "1": {
-            "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privileged que seja."
+            "texto": "Fica eleito o foro local para qualquer ação decorrente da aplicação das disposições aqui estabelecidas, com expressa renúncia a qualquer outro, por mais privilegiado que seja."
           }
         }
       }

@@ -1,4 +1,4 @@
-# Walkthrough - Suporte a Itens Não Numerados (Traços) no JSON e Typst
+# Walkthrough - Padronização Semântica de Listas Não Numeradas (`lista`) no JSON e Typst
 
 - **Data**: 2026-09-21
 - **Arquivos Modificados**:
@@ -7,17 +7,14 @@
 
 ## Resumo das Modificações Realizadas
 
-### 1. Template Typst (`typst_templates/regimento.typ`)
-- **Nova Função `render-tracos`**:
-  - Implementada a função `#let render-tracos(tracos-dict, indent_left: 24pt, text_color: rgb("334155"))` para formatar itens não numerados com o marcador de traço (`- `).
-- **Integração**:
-  - Conectada a `render-anexo1-itens()`, `render-alineas()`, `render-incisos()` e ao laço principal de artigos.
+### 1. Refatoração Semântica do JSON (`convencao_coletiva_miami_json.json`)
+- Adotada a sub-chave **`"lista"`** para identificar nós contendo listas não numeradas (substituindo o nome específico de marcador).
+- Aplicada a sub-chave `"lista"` no item `5.1` ("Geral") e no item `5.3.1` (cuidados de segurança).
 
-### 2. JSON da Convenção Coletiva (`convencao_coletiva_miami_json.json`)
-- **Item 5.1 ("Geral")**:
-  - Configurado para utilizar a sub-chave `"tracos"` no conteúdo de destinação residencial, evitando numeração decimal desnecessária.
-- **Item 5.3.1 (Cuidados de Segurança)**:
-  - Substituída a sub-chave `"alineas"` por `"tracos"` para exibir os 3 itens de cuidados com o marcador de traço (`- `).
+### 2. Template Typst (`typst_templates/regimento.typ`)
+- Implementada a função `#let render-lista(lista-dict, indent_left: 24pt, text_color: rgb("334155"), marker: "- ")`.
+- A função aceita o parâmetro opcional `marker`, desvinculando a estrutura de dados do símbolo visual (permitindo usar traço `-`, bullet `•`, etc.).
+- Mantida a retrocompatibilidade com a chave `"tracos"`.
 
 ## Validação Realizada
-- Validação estática de sintaxe Typst e JSON executada com sucesso.
+- Validação estática de sintaxe Typst e JSON executada com êxito.
