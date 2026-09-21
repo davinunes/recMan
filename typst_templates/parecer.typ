@@ -105,74 +105,41 @@
     #v(0.4cm)
   ]
 
-  // Tabela de Resumo dos Dados por Variante
+  // Tabela de Resumo dos Dados por Variante (Unidade e Assunto apenas)
   if variant == "compact" [
     #rect(width: 100%, inset: 8pt, radius: 2pt, fill: bg_card, stroke: 0.5pt + stroke_card)[
       #grid(
-        columns: (1fr, 1fr),
-        row-gutter: 6pt,
+        columns: (auto, 1fr),
+        gutter: 12pt,
         [ *Unidade:* #unidade ],
-        [ *Notificação:* #notificacao ],
-        [ *Assunto:* #assunto ],
-        [ *Resultado:* *#parecer* ]
+        [ *Assunto:* #assunto ]
       )
     ]
   ] else if variant == "minimal" [
     #pad(x: 10pt)[
       #grid(
-        columns: (1fr, 1fr),
-        row-gutter: 8pt,
+        columns: (auto, 1fr),
+        gutter: 12pt,
         [ *Unidade:* #unidade ],
-        [ *Notificação:* #notificacao ],
-        [ *Assunto:* #assunto ],
-        [ *Data:* #data_emissao ],
-        grid.cell(colspan: 2)[
-          #v(2pt)
-          #line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))
-          #v(4pt)
-          *Conclusão:* #parecer
-        ]
+        [ *Assunto:* #assunto ]
       )
     ]
   ] else if variant == "juridico" [
-    #rect(width: 100%, inset: 12pt, radius: 0pt, stroke: 2pt + rgb("1e3a8a"), fill: bg_card)[
+    #rect(width: 100%, inset: 10pt, radius: 0pt, stroke: 2pt + rgb("1e3a8a"), fill: bg_card)[
       #grid(
-        columns: (1fr, 1fr),
-        row-gutter: 8pt,
+        columns: (auto, 1fr),
+        gutter: 12pt,
         [ *UNIDADE:* #unidade ],
-        [ *NOTIFICAÇÃO:* #notificacao ],
-        [ *ASSUNTO:* #assunto ],
-        [ *DATA:* #data_emissao ],
-        grid.cell(colspan: 2)[
-          #v(4pt)
-          #line(length: 100%, stroke: 1pt + rgb("1e3a8a"))
-          #v(6pt)
-          *DECISÃO DO CONSELHO CONSULTIVO E FISCAL:* #parecer
-        ]
+        [ *ASSUNTO:* #assunto ]
       )
     ]
   ] else [
-    #rect(width: 100%, inset: 12pt, radius: 6pt, fill: bg_card, stroke: 0.5pt + stroke_card)[
+    #rect(width: 100%, inset: 10pt, radius: 6pt, fill: bg_card, stroke: 0.5pt + stroke_card)[
       #grid(
-        columns: (1fr, 1fr),
-        row-gutter: 9pt,
+        columns: (auto, 1fr),
+        gutter: 16pt,
         [ *Unidade Recorrente:* #unidade ],
-        [ *Notificação:* #notificacao ],
-        [ *Assunto:* #assunto ],
-        [ *Data:* #data_emissao ],
-        grid.cell(colspan: 2)[
-          #v(3pt)
-          #line(length: 100%, stroke: 0.5pt + stroke_card)
-          #v(6pt)
-          *Conclusão do Parecer:* 
-          #if parecer == "REVOGAR" or parecer == "REVOGAR A PENALIDADE" or parecer == "Favorável" or parecer == "Favorável ao Recurso" [
-            #text(weight: "bold", fill: rgb("15803d"))[#parecer (RECURSO DEFERIDO)]
-          ] else if parecer == "CONVERTER" or parecer == "CONVERTER EM ADVERTÊNCIA" [
-            #text(weight: "bold", fill: rgb("d97706"))[#parecer]
-          ] else [
-            #text(weight: "bold", fill: rgb("b91c1c"))[#parecer (RECURSO INDEFERIDO)]
-          ]
-        ]
+        [ *Assunto:* #assunto ]
       )
     ]
   ]
@@ -180,13 +147,19 @@
   v(0.5cm)
 
   // CORPO DO PARECER (Modelo Dinâmico vs Estático Padrão)
-  if modelo == "full_dinamico" and corpo != "" [
-    #corpo
+  if modelo == "full_dinamico" [
+    #if analise != "" [
+      #analise
+    ] else if corpo != "" [
+      #corpo
+    ] else [
+      #fato
+    ]
   ] else [
     #text(style: "italic", fill: text_secondary)[
       Prezados,
       
-      O Conselho Consultivo e Fiscal foi convocado para prestar parecer concernente a recurso contra a notificação supracitada referente à infração prevista no Regimento Interno, pautada sobre os artigos acima relacionados.
+      O Conselho Consultivo e Fiscal foi convocado para prestar parecer concernente a recurso contra a notificação supracitada referente à infração prevista no Regimento Interno.
     ]
 
     #v(0.4cm)
