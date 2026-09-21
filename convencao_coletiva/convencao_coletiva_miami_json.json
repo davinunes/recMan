@@ -646,7 +646,7 @@
       "3": {
         "itens": {
           "1": {
-            "texto": "Do Uso Geral das Partes Comuns",
+            "texto": "Geral",
             "itens": {
               "1": {
                 "texto": "Os moradores poderão usar e gozar das partes comuns até onde não impeçam idêntico uso por parte dos demais moradores."
@@ -663,7 +663,7 @@
             }
           },
           "2": {
-            "texto": "Do Uso das Garagens e Estacionamento",
+            "texto": "Garagem/Estacionamento",
             "itens": {
               "1": {
                 "texto": "Cada condômino terá direito ao uso de vagas no espaço de estacionamento de acordo com o projeto arquitetônico e com esta convenção de condomínio, o que deverá ser rigorosamente obedecido visando maior facilidade de movimentação na entrada e saída de veículos."
@@ -713,7 +713,7 @@
             }
           },
           "3": {
-            "texto": "Da Segurança Geral, Ordem e Limpeza",
+            "texto": "Segurança Geral",
             "itens": {
               "1": {
                 "texto": "Não é permitido guardar ou depositar em qualquer parte do Condomínio, explosivos, inflamáveis ou quaisquer agentes químicos suscetíveis de afetar a segurança ou tranquilidade dos moradores."
@@ -730,7 +730,7 @@
             }
           },
           "4": {
-            "texto": "Do Acondicionamento do Lixo",
+            "texto": "Lixo",
             "itens": {
               "1": {
                 "texto": "O lixo e detritos deverão ser devidamente acondicionados em sacos plásticos apropriados e colocados nos tambores coletores, separando o lixo reciclável, tomando precauções necessárias para evitar vazamentos, depositando-os nas lixeiras próximas a portaria nos dias e horários determinados pelo síndico."
@@ -738,7 +738,7 @@
             }
           },
           "5": {
-            "texto": "Dos Danos às Áreas Comuns",
+            "texto": "Indenização por danos causados",
             "itens": {
               "1": {
                 "texto": "Todo e qualquer dano ou estrago provocado por um morador, ou seus empregados particulares em qualquer área comum do Condomínio deverá ser inteiramente indenizado pelo condômino implicado na ocorrência."
@@ -749,7 +749,7 @@
             }
           },
           "6": {
-            "texto": "Das Reformas e Obras nas Unidades",
+            "texto": "Reformas e Obras",
             "itens": {
               "1": {
                 "texto": "Toda e qualquer reforma a ser realizada nas unidades deverá ser precedida de consulta aos respectivos projetos e comunicada ao Síndico, e à Construtora Prime/MRV, através de formulário próprio, por motivo de segurança estrutural (hidráulica, elétrica, gás, alvenaria, etc.), sendo que o início das obras só será permitido após autorização do síndico."
@@ -788,7 +788,7 @@
             }
           },
           "2": {
-            "texto": "Das Alterações de Fachada e Proibições Específicas",
+            "texto": "Utilização dos apartamentos",
             "itens": {
               "1": {
                 "texto": "É proibido mudar a forma externa das fachadas e das partes de uso comum, acrescentar cômodos que influenciem diretamente na volumetria da edificação, decorar as paredes e esquadrias externas, usar vidros e toldos ou pintar em cores ou tonalidades diferentes das usadas no conjunto do condomínio. É permitido o uso de telas de proteção na cor branca nas sacadas e janelas."
@@ -858,7 +858,7 @@
             }
           },
           "3": {
-            "texto": "Dos Procedimentos de Segurança e Estrutura",
+            "texto": "Segurança",
             "itens": {
               "1": {
                 "texto": "Para a segurança geral do edifício, todos os moradores deverão estar atentos para os seguintes cuidados:",
