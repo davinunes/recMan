@@ -86,45 +86,47 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                             <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
                                 class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                         </div>
-                        <div x-show="notificacaoNaoEncontrada" x-transition
-                            class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
-                            <div class="flex">
-                                <i class="material-icons mr-2 text-orange-500">warning</i>
-                                <div>
-                                    <p class="font-bold">Notificação não localizada!</p>
-                                    <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
-                                        corretos em seu documento físico, clique em "Continuar" para prosseguir com a
-                                        validação manual.</p>
-                                </div>
+                    </div>
+
+                    <div x-show="notificacaoNaoEncontrada" x-transition
+                        class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
+                        <div class="flex">
+                            <i class="material-icons mr-2 text-orange-500">warning</i>
+                            <div>
+                                <p class="font-bold">Notificação não localizada!</p>
+                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
+                                    corretos em seu documento físico, clique em "Continuar" para prosseguir com a
+                                    validação manual.</p>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) -->
-                        <div class="mb-6 p-4 bg-blue-50 text-blue-900 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                            <div class="flex items-start">
-                                <span class="text-xl mr-2.5 shrink-0">📌</span>
-                                <div class="text-xs leading-relaxed">
-                                    <p class="font-bold text-sm text-blue-950 mb-1">ATENÇÃO AO ELABORAR SEU RECURSO</p>
-                                    <p>As imagens (prints) anexadas à notificação servem apenas para comprovar a
-                                        existência do registro do fato. Para garantir o seu direito à ampla defesa, o
-                                        morador tem o direito de agendar a visualização do vídeo completo
-                                        presencialmente na Sala de Operações de CFTV, acompanhado pela Administração,
-                                        nos termos do Artigo 181 do Regimento Interno. Evite fundamentar sua defesa
-                                        apenas na imagem estática impressa: conheça o contexto integral das filmagens
-                                        antes de enviar seu recurso.</p>
-                                </div>
+                    <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) -->
+                    <div class="mb-6 p-4 bg-blue-50 text-blue-900 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                        <div class="flex items-start">
+                            <span class="text-xl mr-2.5 shrink-0">📌</span>
+                            <div class="text-xs leading-relaxed">
+                                <p class="font-bold text-sm text-blue-950 mb-1">ATENÇÃO AO ELABORAR SEU RECURSO</p>
+                                <p>As imagens (prints) anexadas à notificação servem apenas para comprovar a
+                                    existência do registro do fato. Para garantir o seu direito à ampla defesa, o
+                                    morador tem o direito de agendar a visualização do vídeo completo
+                                    presencialmente na Sala de Operações de CFTV, acompanhado pela Administração,
+                                    nos termos do Artigo 181 do Regimento Interno. Evite fundamentar sua defesa
+                                    apenas na imagem estática impressa: conheça o contexto integral das filmagens
+                                    antes de enviar seu recurso.</p>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="flex justify-between items-center mt-8">
-                            <button type="button" @click="etapa = 0"
-                                class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
-                            <button type="submit" :disabled="carregando"
-                                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
-                                <span x-show="!carregando">Continuar</span>
-                                <span x-show="carregando">Processando...</span>
-                            </button>
-                        </div>
+                    <div class="flex justify-between items-center mt-8">
+                        <button type="button" @click="etapa = 0"
+                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                        <button type="submit" :disabled="carregando"
+                            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
+                            <span x-show="!carregando">Continuar</span>
+                            <span x-show="carregando">Processando...</span>
+                        </button>
+                    </div>
                 </form>
             </div>
 
