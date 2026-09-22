@@ -266,22 +266,22 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <!-- Sessão Crítica: Uploads -->
                     <div class="mb-6 p-4 border border-dashed border-gray-400 rounded-lg bg-gray-50 relative">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Anexar Documentos e Provas</label>
-                        <p class="text-xs text-gray-500 mb-3">Tamanho máximo total: 15MB. Formatos comuns aceitos: PDF,
+                        <p class="text-xs text-gray-500">Tamanho máximo total: 15MB. Formatos comuns aceitos: PDF,
                             JPEG, PNG. <b>(Selecione vários arquivos de uma vez segurando no celular ou PC)</b></p>
 
                         <input type="file" id="anexosInput" name="anexos[]" multiple="multiple"
                             accept="image/*,application/pdf"
-                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                            class="mt-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    </div>
 
-                        <div
-                            class="mt-3 p-3 bg-amber-50 text-amber-900 text-xs rounded border border-amber-200 leading-relaxed shadow-sm">
-                            <p>
-                                💡 <b>DICA DE AMPLA DEFESA:</b> As fotos no PDF são apenas um indicativo de prova. Nos
-                                termos do Art. 181 do Regimento Interno, você pode agendar uma visita à Sala de CFTV
-                                junto à Administração para assistir à gravação completa antes de protocolar sua defesa.
-                                Não baseie seu recurso apenas no quadro impresso.
-                            </p>
-                        </div>
+                    <!-- Card Informativo: Dica de Ampla Defesa -->
+                    <div class="mb-6 p-3.5 bg-amber-50 text-amber-900 text-xs rounded-lg border border-amber-200 leading-relaxed shadow-sm">
+                        <p>
+                            💡 <b>DICA DE AMPLA DEFESA:</b> As fotos no PDF são apenas um indicativo de prova. Nos
+                            termos do Art. 181 do Regimento Interno, você pode agendar uma visita à Sala de CFTV
+                            junto à Administração para assistir à gravação completa antes de protocolar sua defesa.
+                            Não baseie seu recurso apenas no quadro impresso.
+                        </p>
                     </div>
 
                     <div class="mb-6 p-3.5 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
