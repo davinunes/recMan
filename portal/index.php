@@ -86,30 +86,45 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                             <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
                                 class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                         </div>
-                    </div>
-
-                    <div x-show="notificacaoNaoEncontrada" x-transition
-                        class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
-                        <div class="flex">
-                            <i class="material-icons mr-2 text-orange-500">warning</i>
-                            <div>
-                                <p class="font-bold">Notificação não localizada!</p>
-                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
-                                    corretos em seu documento físico, clique em "Continuar" para prosseguir com a
-                                    validação manual.</p>
+                        <div x-show="notificacaoNaoEncontrada" x-transition
+                            class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
+                            <div class="flex">
+                                <i class="material-icons mr-2 text-orange-500">warning</i>
+                                <div>
+                                    <p class="font-bold">Notificação não localizada!</p>
+                                    <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
+                                        corretos em seu documento físico, clique em "Continuar" para prosseguir com a
+                                        validação manual.</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="flex justify-between items-center mt-8">
-                        <button type="button" @click="etapa = 0"
-                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
-                        <button type="submit" :disabled="carregando"
-                            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
-                            <span x-show="!carregando">Continuar</span>
-                            <span x-show="carregando">Processando...</span>
-                        </button>
-                    </div>
+                        <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) -->
+                        <div class="mb-6 p-4 bg-blue-50 text-blue-900 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                            <div class="flex items-start">
+                                <span class="text-xl mr-2.5 shrink-0">📌</span>
+                                <div class="text-xs leading-relaxed">
+                                    <p class="font-bold text-sm text-blue-950 mb-1">ATENÇÃO AO ELABORAR SEU RECURSO</p>
+                                    <p>As imagens (prints) anexadas à notificação servem apenas para comprovar a
+                                        existência do registro do fato. Para garantir o seu direito à ampla defesa, o
+                                        morador tem o direito de agendar a visualização do vídeo completo
+                                        presencialmente na Sala de Operações de CFTV, acompanhado pela Administração,
+                                        nos termos do Artigo 181 do Regimento Interno. Evite fundamentar sua defesa
+                                        apenas na imagem estática impressa: conheça o contexto integral das filmagens
+                                        antes de enviar seu recurso.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-8">
+                            <button type="button" @click="etapa = 0"
+                                class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                            <button type="submit" :disabled="carregando"
+                                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
+                                <span x-show="!carregando">Continuar</span>
+                                <span x-show="carregando">Processando...</span>
+                            </button>
+                        </div>
                 </form>
             </div>
 
@@ -256,22 +271,29 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                             accept="image/*,application/pdf"
                             class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
 
-                        <div class="mt-3 p-3 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
-                            <b>⚠️ ATENÇÃO E PRÉ-REQUISITO:</b><br>
-                            Você DEVE anexar uma foto ou scan da Cópia da Notificação recebida.<br>
-                            O Conselho <b>não tem acesso aos documentos originais retidos pelo Síndico</b>, logo, é
-                            recomendado instruir seu recurso com essas cópias.
+                        <div
+                            class="mt-3 p-3 bg-amber-50 text-amber-900 text-xs rounded border border-amber-200 leading-relaxed shadow-sm">
+                            <p>
+                                💡 <b>DICA DE AMPLA DEFESA:</b> As fotos no PDF são apenas um indicativo de prova. Nos
+                                termos do Art. 181 do Regimento Interno, você pode agendar uma visita à Sala de CFTV
+                                junto à Administração para assistir à gravação completa antes de protocolar sua defesa.
+                                Não baseie seu recurso apenas no quadro impresso.
+                            </p>
                         </div>
                     </div>
 
-                    <div class="mb-6">
-                        <label class="flex items-start">
+                    <div class="mb-6 p-3.5 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                        <label class="flex items-start cursor-pointer">
                             <input type="checkbox" required
-                                class="mt-1 mr-2 cursor-pointer h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <span class="text-xs text-gray-600">Compreendo que o Conselho apenas avalia. Declaro
-                                ter ciência de que posso agendar com o subsíndico do meu bloco ou com a administração,
-                                o acesso a sala de CFTV para visualizar as imagens que por ventura tenham sido
-                                vinculadas a minha notificação.</span>
+                                class="mt-1 mr-2.5 cursor-pointer h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded shrink-0">
+                            <span class="text-xs text-gray-700 leading-relaxed">
+                                Declaro ter ciência de que o Conselho atua estritamente na análise e julgamento do
+                                recurso, não sendo este o responsável pela aplicação da penalidade. Confirmo estar
+                                ciente do meu direito de agendar a visualização prévia da gravação completa na Sala de
+                                CFTV junto à Administração (nos termos do Art. 181 do Regimento Interno) para a plena
+                                elaboração da minha defesa antes da decisão final, ciente de que o Conselho entenderá
+                                que por intermédio deste pedido, já visualizei as imagens ou DECIDI não visualiza-las.
+                            </span>
                         </label>
                     </div>
 
@@ -781,9 +803,9 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     fd.append('assunto', this.notificacaoData ? this.notificacaoData.assunto : '');
 
                     // Se não tiver notificacao oficial puxada no preenchimento, deixa msg fallback pro FATO:
-                    const fatoOficial = (this.notificacaoData && this.notificacaoData.fato && this.notificacaoData.fato !== 'undefined') 
-                                        ? this.notificacaoData.fato 
-                                        : 'Fato descrito em epígrafe.';
+                    const fatoOficial = (this.notificacaoData && this.notificacaoData.fato && this.notificacaoData.fato !== 'undefined')
+                        ? this.notificacaoData.fato
+                        : 'Fato descrito em epígrafe.';
                     fd.append('fato', fatoOficial);
 
                     // Upload files logic
