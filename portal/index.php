@@ -10,11 +10,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistente de Recursos - Conselho</title>
     <!-- Favicon -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="fav_portal_recurso_conselho/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="fav_portal_recurso_conselho/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="fav_portal_recurso_conselho/favicon-16x16.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="manifest" href="fav_portal_recurso_conselho/site.webmanifest">
     <!-- Tailwind CSS (via CDN para módulo independente) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -26,10 +26,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <div x-data="assistenteData()"
         class="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[90vh]">
         <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold text-blue-900 border-b-4 border-orange-500 inline-block pb-2">Central de
+        <div class="text-center mb-8 flex flex-col items-center">
+            <img src="fav_portal_recurso_conselho/android-chrome-192x192.png" alt="Logo Conselho" class="w-16 h-16 mb-3 rounded-xl shadow-md border border-gray-100 object-contain">
+            <h1 class="text-3xl font-extrabold text-blue-900 border-b-4 border-orange-500 pb-2 inline-block">Central de
                 Recursos</h1>
-            <p class="text-gray-600 mt-2 text-lg">Conselho Miami Beach</p>
+            <p class="text-gray-600 mt-2 text-lg font-medium">Conselho Miami Beach</p>
         </div>
 
         <!-- Feedback Messages -->
