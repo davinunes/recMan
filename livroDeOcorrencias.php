@@ -97,6 +97,12 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
 
         <!-- Botões Práticos com Ações AJAX Silenciosas (Sem Reload e Sem Skeleton) -->
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <!-- Botão Encaminhar (VDS Remoto) - Discreto antes dos botões de responsabilidade -->
+            <button type="button" id="btn-encaminhar-vds" class="btn-small waves-effect waves-light white grey-text text-darken-3" style="height:30px; line-height:30px; padding:0 8px; font-size:0.8rem; border:1px solid #dadce0; box-shadow:none; display:inline-flex; align-items:center; gap:4px;" title="Encaminhar Ocorrência para Grupo ou Funcionário na VDS" onclick="abrirModalEncaminharVds('<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= (int)$local['id'] ?>)">
+                <i class="material-icons tiny indigo-text text-darken-2" style="font-size:1.1rem; margin:0;">shortcut</i>
+                <span>Encaminhar</span>
+            </button>
+
             <!-- Grupo de Ícones para Classificação de Responsabilidade -->
             <div style="display:flex; align-items:center; gap:4px; background:#f8f9fa; padding:2px 6px; border-radius:6px; border:1px solid #dee2e6;">
                 <span style="font-weight:600; font-size:0.75rem; color:#555; margin-right:2px;">Resp:</span>
@@ -666,6 +672,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $msg = $resRem['success'] ? $resRem['message'] : ($resRem['message'] ?? 'Falha ao remover a tag.');
         $msgType = $resRem['success'] ? "success" : "danger";
+    } elseif ($action === 'get_destinos_encaminhamento') {
+        $uuidRemoto = trim($_POST['uuid_remoto'] ?? '');
+        $destinoTipo = trim($_POST['destino_tipo'] ?? 'G');
+
+        $resDest = ['success' => false, 'message' => 'UUID remoto ou tipo de destino inválido.'];
+        if (!empty($uuidRemoto)) {
+            if ($destinoTipo === 'F') {
+                $resDest = vds_get_encaminhar_funcionarios($uuidRemoto, null, $usuarioIdConselho);
+            } else {
+                $resDest = vds_get_encaminhar_grupos($uuidRemoto, null, $usuarioIdConselho);
+            }
+        }
+
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($resDest, JSON_UNESCAPED_UNICODE);
+        exit;
+    } elseif ($action === 'encaminhar_ocorrencia_vds') {
+        $uuidRemoto = trim($_POST['uuid_remoto'] ?? '');
+        $destinoTipo = trim($_POST['destino_tipo'] ?? 'G');
+        $destinoIdOrUuid = trim($_POST['destino_id_or_uuid'] ?? '');
+        $comentario = trim($_POST['comentario'] ?? '');
+        $dataPrevista = trim($_POST['data_prevista'] ?? '');
+
+        if (empty($comentario)) $comentario = null;
+        if (empty($dataPrevista)) $dataPrevista = null;
+
+        $resEnc = ['success' => false, 'message' => 'Selecione um destino válido para encaminhar.'];
+        if (!empty($uuidRemoto) && !empty($destinoIdOrUuid)) {
+            $resEnc = vds_encaminhar_ocorrencia($uuidRemoto, $destinoTipo, $destinoIdOrUuid, $comentario, $dataPrevista, null, $usuarioIdConselho);
+        }
+
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($resEnc, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 
@@ -1564,9 +1606,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(carregarProximaPaginaPratico, 1500);
     }
 
-    // Inicializar Modal de E-mail do Gmail
+    // Inicializar Modais
     if ($.fn.modal) {
         $('#modal-visualizar-email-gmail').modal();
+        $('#modal-encaminhar-vds').modal();
     }
 
     // Disparar busca de e-mail no Gmail se já houver ocorrência carregada inicialmente
@@ -2317,6 +2360,214 @@ function abrirModalVisualizarEmailGmail(messageId) {
         <button type="button" class="modal-close btn-flat waves-effect">Fechar</button>
     </div>
 </div>
+
+<!-- Modal de Encaminhamento VDS -->
+<div id="modal-encaminhar-vds" class="modal" style="max-width:540px; border-radius:10px; overflow:visible;">
+    <div class="modal-content" style="padding:20px 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:16px;">
+            <h5 style="margin:0; font-size:1.15rem; font-weight:600; color:#1a73e8; display:flex; align-items:center; gap:8px;">
+                <i class="material-icons">shortcut</i>
+                <span>Encaminhar Ocorrência (VDS)</span>
+            </h5>
+            <button type="button" class="modal-close btn-flat circle waves-effect" style="padding:4px; margin:0;"><i class="material-icons">close</i></button>
+        </div>
+
+        <input type="hidden" id="encaminhar-oco-uuid" value="" />
+        <input type="hidden" id="encaminhar-oco-id" value="" />
+
+        <!-- Seleção do Tipo de Destino (Grupo vs Funcionário) -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:6px;">Encaminhar para:</label>
+            <div style="display:flex; gap:20px; align-items:center;">
+                <label style="margin:0; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                    <input name="destino_tipo" type="radio" value="G" checked onclick="alternarTipoDestinoVds('G')" />
+                    <span style="font-size:0.9rem; color:#333;">Grupo / Setor</span>
+                </label>
+                <label style="margin:0; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                    <input name="destino_tipo" type="radio" value="F" onclick="alternarTipoDestinoVds('F')" />
+                    <span style="font-size:0.9rem; color:#333;">Funcionário</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Seletor de Destino (Dropdown Dinâmico) -->
+        <div style="margin-bottom:16px;">
+            <label id="lbl-destino-select" style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:4px;">Selecione o Grupo / Setor:</label>
+            <div id="wrapper-destino-loading" style="display:none; padding:8px 0; color:#666; font-size:0.85rem;">
+                <i class="material-icons tiny spin-icon left">sync</i> Carregando lista da VDS...
+            </div>
+            <select id="select-destino-id" class="browser-default" style="width:100%; height:38px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.9rem; background:#fff;">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+
+        <!-- Comentário / Orientação -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:4px;">Comentário / Orientação (Opcional):</label>
+            <textarea id="txt-encaminhar-comentario" class="materialize-textarea" placeholder="Digite uma observação para o encaminhamento..." style="min-height:65px; padding:8px; border:1px solid #ced4da; border-radius:6px; font-size:0.88rem; width:100%; box-sizing:border-box; margin:0;"></textarea>
+        </div>
+
+        <!-- Data Prevista -->
+        <div style="margin-bottom:8px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:4px;">Data Prevista para Conclusão (Opcional):</label>
+            <input type="date" id="date-encaminhar-prevista" style="height:36px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff;" />
+        </div>
+    </div>
+
+    <div class="modal-footer" style="padding:12px 24px; background:#f8f9fa; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="modal-close btn-flat waves-effect" style="color:#666;">Cancelar</button>
+        <button type="button" id="btn-executar-encaminhar" class="btn waves-effect waves-light indigo darken-1" style="border-radius:6px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;" onclick="submeterEncaminharVds()">
+            <i class="material-icons tiny">send</i>
+            <span>Encaminhar Chamado</span>
+        </button>
+    </div>
+</div>
+
+<script>
+// Abrir Modal de Encaminhamento VDS
+window.abrirModalEncaminharVds = function(uuidRemoto, ocorrenciaId) {
+    if (!uuidRemoto) {
+        M.toast({ html: 'Ocorrência ainda não sincronizada com a VDS remota.', classes: 'orange' });
+        return;
+    }
+
+    $('#encaminhar-oco-uuid').val(uuidRemoto);
+    $('#encaminhar-oco-id').val(ocorrenciaId);
+    $('#txt-encaminhar-comentario').val('');
+    $('#date-encaminhar-prevista').val('');
+
+    // Garantir Grupo marcado como padrão
+    $('input[name="destino_tipo"][value="G"]').prop('checked', true);
+
+    const $modal = $('#modal-encaminhar-vds');
+    if ($modal.length) {
+        const instance = M.Modal.getInstance($modal[0]) || M.Modal.init($modal[0]);
+        instance.open();
+        carregarDestinosVds('G', uuidRemoto);
+    }
+};
+
+// Alternar tipo de destino entre Grupo (G) e Funcionário (F)
+window.alternarTipoDestinoVds = function(tipo) {
+    const uuidRemoto = $('#encaminhar-oco-uuid').val();
+    if (tipo === 'F') {
+        $('#lbl-destino-select').text('Selecione o Funcionário:');
+    } else {
+        $('#lbl-destino-select').text('Selecione o Grupo / Setor:');
+    }
+    carregarDestinosVds(tipo, uuidRemoto);
+};
+
+// Carregar destinos via AJAX
+window.carregarDestinosVds = function(tipo, uuidRemoto) {
+    const $select = $('#select-destino-id');
+    const $loading = $('#wrapper-destino-loading');
+
+    $select.hide().html('<option value="">Carregando...</option>');
+    $loading.show();
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'get_destinos_encaminhamento',
+            uuid_remoto: uuidRemoto,
+            destino_tipo: tipo
+        },
+        dataType: 'json',
+        success: function(res) {
+            $loading.hide();
+            $select.show().html('<option value="">Selecione...</option>');
+
+            if (res && res.success) {
+                if (tipo === 'G') {
+                    const grupos = res.data || [];
+                    if (grupos.length === 0) {
+                        $select.append('<option value="" disabled>Nenhum grupo encontrado</option>');
+                    } else {
+                        grupos.forEach(function(g) {
+                            const desc = g.descricao ? ` (${g.descricao})` : '';
+                            $select.append(`<option value="${g.ocoTipo}">${g.nome}${desc}</option>`);
+                        });
+                    }
+                } else {
+                    const funcs = res.regs || res.data || [];
+                    if (funcs.length === 0) {
+                        $select.append('<option value="" disabled>Nenhum funcionário encontrado</option>');
+                    } else {
+                        funcs.forEach(function(f) {
+                            const cargo = (f.tipo && f.tipo.nome) ? ` - ${f.tipo.nome}` : '';
+                            $select.append(`<option value="${f.uuid}">${f.nome}${cargo}</option>`);
+                        });
+                    }
+                }
+            } else {
+                M.toast({ html: res.message || 'Erro ao carregar destinos da VDS.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            $loading.hide();
+            $select.show().html('<option value="">Erro ao carregar</option>');
+            M.toast({ html: 'Erro de conexão ao consultar VDS.', classes: 'red' });
+        }
+    });
+};
+
+// Executar Encaminhamento via AJAX
+window.submeterEncaminharVds = function() {
+    const uuidRemoto = $('#encaminhar-oco-uuid').val();
+    const ocorrenciaId = $('#encaminhar-oco-id').val();
+    const destinoTipo = $('input[name="destino_tipo"]:checked').val() || 'G';
+    const destinoIdOrUuid = $('#select-destino-id').val();
+    const comentario = $('#txt-encaminhar-comentario').val();
+    const dataPrevista = $('#date-encaminhar-prevista').val();
+    const $btn = $('#btn-executar-encaminhar');
+
+    if (!destinoIdOrUuid) {
+        M.toast({ html: 'Por favor, selecione o grupo ou funcionário de destino.', classes: 'orange' });
+        return;
+    }
+
+    $btn.prop('disabled', true).css('opacity', '0.7').html('<i class="material-icons tiny spin-icon left">sync</i> Encaminhando...');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'encaminhar_ocorrencia_vds',
+            uuid_remoto: uuidRemoto,
+            destino_tipo: destinoTipo,
+            destino_id_or_uuid: destinoIdOrUuid,
+            comentario: comentario,
+            data_prevista: dataPrevista
+        },
+        dataType: 'json',
+        success: function(res) {
+            $btn.prop('disabled', false).css('opacity', '1').html('<i class="material-icons tiny">send</i> <span>Encaminhar Chamado</span>');
+
+            if (res && res.success) {
+                M.toast({ html: res.msg || 'Encaminhado com sucesso!', classes: 'green' });
+                const $modal = $('#modal-encaminhar-vds');
+                if ($modal.length) {
+                    const instance = M.Modal.getInstance($modal[0]);
+                    if (instance) instance.close();
+                }
+                if (typeof selecionarOcorrencia === 'function' && ocorrenciaId) {
+                    selecionarOcorrencia(ocorrenciaId, null, null, false);
+                }
+            } else {
+                M.toast({ html: res.message || 'Falha ao encaminhar ocorrência.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            $btn.prop('disabled', false).css('opacity', '1').html('<i class="material-icons tiny">send</i> <span>Encaminhar Chamado</span>');
+            M.toast({ html: 'Erro de conexão ao encaminhar ocorrência.', classes: 'red' });
+        }
+    });
+};
+</script>
 
 <style>
 .tag-badge {
