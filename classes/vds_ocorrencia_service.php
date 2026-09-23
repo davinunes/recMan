@@ -1447,3 +1447,331 @@ function vds_enrich_legacy_ocorrencias($usuarioIdConselho = null) {
     return ['success' => true, 'updated' => $count, 'total' => $total];
 }
 
+/**
+ * Recupera o UUID padrão do condomínio VDS cadastrado no cache local ou fallback fixo.
+ */
+function vds_get_default_condominio_uuid() {
+    $link = DBConnect();
+    $res = mysqli_query($link, "SELECT uuid_remoto FROM vds_uuid_mapping WHERE entidade_tipo = 'condominio' AND uuid_remoto IS NOT NULL AND uuid_remoto != '' LIMIT 1");
+    if ($res && $row = mysqli_fetch_assoc($res)) {
+        DBClose($link);
+        return $row['uuid_remoto'];
+    }
+    DBClose($link);
+    return '7AD5A317-7494-429C-9A9C-BBA69BA1A6BD';
+}
+
+/**
+ * Consulta a lista de funcionários elegíveis para encaminhamento de uma ocorrência.
+ * GET /ocorrencia/encaminhar/funcionarios?condominioUuid={condominioUuid}&ocorrenciaUuid={ocorrenciaUuid}
+ */
+function vds_get_encaminhar_funcionarios($ocorrenciaUuid, $condominioUuid = null, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $condominioUuid = $condominioUuid ?: vds_get_default_condominio_uuid();
+    $url = VDS_BASE_URL . '/ocorrencia/encaminhar/funcionarios?condominioUuid=' . urlencode($condominioUuid) . '&ocorrenciaUuid=' . urlencode($ocorrenciaUuid);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao consultar funcionários para encaminhamento.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar funcionários elegíveis na VDS.'];
+    }
+
+    $data = json_decode($response, true);
+    return [
+        'success' => true,
+        'totalRegs' => $data['totalRegs'] ?? 0,
+        'page' => $data['page'] ?? 1,
+        'limit' => $data['limit'] ?? 0,
+        'regs' => $data['regs'] ?? (is_array($data) ? $data : [])
+    ];
+}
+
+/**
+ * Consulta a lista de grupos elegíveis para encaminhamento de uma ocorrência.
+ * GET /ocorrencia/encaminhar/grupos?condominioUuid={condominioUuid}&ocorrenciaUuid={ocorrenciaUuid}
+ */
+function vds_get_encaminhar_grupos($ocorrenciaUuid, $condominioUuid = null, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $condominioUuid = $condominioUuid ?: vds_get_default_condominio_uuid();
+    $url = VDS_BASE_URL . '/ocorrencia/encaminhar/grupos?condominioUuid=' . urlencode($condominioUuid) . '&ocorrenciaUuid=' . urlencode($ocorrenciaUuid);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao consultar grupos para encaminhamento.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar grupos elegíveis na VDS.'];
+    }
+
+    $data = json_decode($response, true);
+    return [
+        'success' => true,
+        'data' => is_array($data) ? $data : []
+    ];
+}
+
+/**
+ * Realiza o encaminhamento de uma ocorrência para um Grupo (G) ou Funcionário (F).
+ * POST /ocorrencia/encaminhar
+ */
+function vds_encaminhar_ocorrencia($ocorrenciaUuid, $destinoTipo, $destinoIdOrUuid, $comentario = null, $dataPrevista = null, $condominioUuid = null, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $condominioUuid = $condominioUuid ?: vds_get_default_condominio_uuid();
+    $destinoTipoClean = strtoupper(trim($destinoTipo)); // 'G' ou 'F'
+
+    $payload = [
+        'uuid' => $ocorrenciaUuid,
+        'condominioUuid' => $condominioUuid,
+        'tipo' => 'E',
+        'destinoTipo' => $destinoTipoClean,
+        'dataPrevista' => $dataPrevista,
+        'comentario' => $comentario
+    ];
+
+    if ($destinoTipoClean === 'G') {
+        $payload['destinoId'] = (int)$destinoIdOrUuid;
+    } else {
+        $payload['destinoId'] = 0;
+        $payload['destinoUuid'] = (string)$destinoIdOrUuid;
+    }
+
+    $ch = curl_init(VDS_BASE_URL . '/ocorrencia/encaminhar');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao encaminhar ocorrência.'];
+    }
+
+    if (($httpCode !== 200 && $httpCode !== 201) || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao encaminhar ocorrência na VDS.'];
+    }
+
+    $data = json_decode($response, true);
+    return [
+        'success' => true,
+        'ocorrenciaId' => $data['ocorrenciaId'] ?? null,
+        'msg' => $data['msg'] ?? 'Encaminhado com sucesso!',
+        'raw' => $data
+    ];
+}
+
+/**
+ * Listar tipos/subtipos de classificação de ocorrência.
+ * GET /ocorrencia_tipo?Ativo=true&OcoTipo={grupoId}&OcoPai={grupoId}
+ */
+function vds_get_ocorrencia_tipos_classificacao($ocoTipo = null, $ocoPai = null, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $url = VDS_BASE_URL . '/ocorrencia_tipo?Ativo=true';
+    if ($ocoTipo !== null) {
+        $url .= '&OcoTipo=' . urlencode($ocoTipo);
+    }
+    if ($ocoPai !== null) {
+        $url .= '&OcoPai=' . urlencode($ocoPai);
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao consultar tipos de ocorrência.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar tipos de ocorrência na VDS.'];
+    }
+
+    $data = json_decode($response, true);
+    return [
+        'success' => true,
+        'data' => is_array($data) ? $data : []
+    ];
+}
+
+/**
+ * Consulta os status possíveis de ocorrência para um determinado grupo.
+ * GET /ocorrencia/status?grupo={grupoId}
+ */
+function vds_get_ocorrencia_status_possiveis($grupoId, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $url = VDS_BASE_URL . '/ocorrencia/status?grupo=' . urlencode($grupoId);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao consultar status na VDS.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao consultar status possíveis na VDS.'];
+    }
+
+    $data = json_decode($response, true);
+    return [
+        'success' => true,
+        'data' => is_array($data) ? $data : []
+    ];
+}
+
+/**
+ * Altera a classificação ou status de uma ocorrência remota na VDS (ex: Fechar chamado com statusId = 25).
+ * PUT /ocorrencia/{ocorrenciaUuid}/classificacao?condominioUuid={condominioUuid}
+ */
+function vds_alterar_status_classificacao($ocorrenciaUuid, $statusId, $classificacaoTipo = null, $prioridade = null, $condominioUuid = null, $usuarioIdConselho = null) {
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token ativo disponível para VDS.'];
+    }
+
+    $condominioUuid = $condominioUuid ?: vds_get_default_condominio_uuid();
+    $url = VDS_BASE_URL . '/ocorrencia/' . urlencode($ocorrenciaUuid) . '/classificacao?condominioUuid=' . urlencode($condominioUuid);
+
+    $payload = [
+        'classificacaoTipo' => $classificacaoTipo !== null ? (int)$classificacaoTipo : null,
+        'statusId' => $statusId !== null ? (int)$statusId : null,
+        'prioridade' => $prioridade !== null ? (int)$prioridade : null
+    ];
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST => 'PUT',
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+            'Accept: application/json, text/plain, */*',
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado ao alterar status da ocorrência.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao alterar status/classificação na VDS.'];
+    }
+
+    $jsonDec = json_decode($response, true);
+    return [
+        'success' => true,
+        'response' => $jsonDec ?? true
+    ];
+}
+
+

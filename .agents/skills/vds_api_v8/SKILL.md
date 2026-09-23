@@ -36,6 +36,15 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 - **Detalhes da Ocorrência:** `GET /ocorrencia/{ocorrenciaUuid}`
 - **Alternar Estado de Leitura (Toggle Lido/Não Lido):** `PUT /ocorrencia/leitura/{ocorrenciaUuid}`
 - **Marcar Ocorrência como Visualizada:** `PUT /ocorrencia/visualizar/{ocorrenciaUuid}`
+- **Listar Funcionários Elegíveis para Encaminhamento:** `GET /ocorrencia/encaminhar/funcionarios?condominioUuid={condominioUuid}&ocorrenciaUuid={ocorrenciaUuid}`
+- **Listar Grupos Elegíveis para Encaminhamento:** `GET /ocorrencia/encaminhar/grupos?condominioUuid={condominioUuid}&ocorrenciaUuid={ocorrenciaUuid}`
+- **Encaminhar Ocorrência (para Grupo ou Funcionário):** `POST /ocorrencia/encaminhar`
+  - Body Grupo (`destinoTipo = "G"`): `{"uuid": "{ocorrenciaUuid}", "condominioUuid": "{condominioUuid}", "tipo": "E", "destinoTipo": "G", "destinoId": 114, "dataPrevista": null, "comentario": "..."}`
+  - Body Funcionário (`destinoTipo = "F"`): `{"uuid": "{ocorrenciaUuid}", "condominioUuid": "{condominioUuid}", "tipo": "E", "destinoTipo": "F", "destinoId": 0, "destinoUuid": "{funcionarioUuid}", "dataPrevista": null, "comentario": null}`
+- **Listar Tipos / Categorias de Ocorrência:** `GET /ocorrencia_tipo?Ativo=true&OcoTipo={grupoId}&OcoPai={grupoId}`
+- **Listar Status Possíveis de um Grupo:** `GET /ocorrencia/status?grupo={grupoId}`
+- **Classificar / Alterar Status da Ocorrência (Fechar Chamado):** `PUT /ocorrencia/{ocorrenciaUuid}/classificacao?condominioUuid={condominioUuid}`
+  - Body: `{"classificacaoTipo": 230, "statusId": 25, "prioridade": 0}` (para apenas fechar chamado: `{"classificacaoTipo": null, "statusId": 25, "prioridade": null}`)
 
 #### 📌 Fluxo Completo de Anexo de Arquivos em Ocorrências (3 Etapas Sequenciais):
 
