@@ -1,44 +1,36 @@
-# Walkthrough: Correção do Vínculo e Exibição de Tags de Ocorrências VDS no Recurso
+# Walkthrough: Correção do Vínculo de Ocorrências por Tags de Unidade (ex: B1803) e Notificação (ex: 352/2026)
 
 **Data:** 2026-09-25  
 **Recurso Testado / Referência:** `index.php?pag=recurso&rec=352/2026`  
 
 ---
 
-## 🎯 Resumo da Correção
+## 🎯 Resumo da Solução
 
-A tela do recurso não exibia ocorrências vinculadas via tags (ex: `352/2026`) porque a função de busca legada `getOcorrenciasVinculadas` consultava estritamente a tabela `recurso_ocorrencia` por ID numérico.
+Expandimos o motor de busca de ocorrências vinculadas (`getOcorrenciasVinculadas`) para que ele localize e exiba automaticamente a ocorrência na página do recurso em **TODOS os cenários de tagging**:
 
-Com as correções efetuadas:
-1. **Busca Unificada em 3 Fontes de Dados**:
-   - `recurso_ocorrencia` (ID numérico do recurso).
-   - `ocorrencia_recurso_link` (Número do recurso, ex: `352/2026`).
-   - `ocorrencia_unidade_tag` (Tag de notificação/recurso, ex: `NOTIF` / `352/2026`).
-2. **Compatibilidade Flexível de Ano**:
-   - Trata automaticamente tanto `352/2026` (4 dígitos) quanto `352/26` (2 dígitos).
-3. **Auto-Healing de Vínculos**:
-   - Se uma ocorrência foi vinculada por tag antes do recurso existir localmente, ela é recuperada e gravada automaticamente em `recurso_ocorrencia`.
-4. **Interface Visual Aprimorada**:
-   - Exibe os badges/chips coloridos das tags de cada ocorrência (`Notificação 352/2026`, `Bloco/Unidade`, etc.).
-   - Oferece o botão **Chat Local** (para abrir diretamente no componente de chat em `index.php?pag=livroDeOcorrencias&id=...`) e o botão **Abrir VDS Remoto**.
+1. **Tag por Número/Ano do Recurso** (ex: `352/2026`, `352/26`):
+   - Localiza por `ocorrencia_recurso_link` ou `ocorrencia_unidade_tag` (tipo `notificacao`/`NOTIF`).
+2. **Tag por Unidade** (ex: `B1803`, `1803`, `B/1803`):
+   - Localiza por `ocorrencia_unidade_tag` onde `bloco` e `unidade` da tag batem com a unidade do recurso (ex: Bloco B, Apt 1803).
+3. **Autoria de Chamado pela Unidade**:
+   - Localiza ocorrências abertas diretamente para/pela unidade do recurso (`bloco` e `unidade`).
+4. **Vínculo Direto por ID**:
+   - Tabela `recurso_ocorrencia`.
 
 ---
 
-## 📁 Arquivos Alterados
+## 📁 Arquivos Atualizados
 
-- [`classes/repositorio.php`](file:///e:/DEV/recMan/classes/repositorio.php)
-  - Reescreveu `getOcorrenciasVinculadas($id_recurso, $numero_recurso = null)` com suporte às 3 fontes de vínculo e auto-healing.
-  - Adicionou `getTagsOcorrencia($ocorrenciaId)`.
-- [`classes/vds_ocorrencia_service.php`](file:///e:/DEV/recMan/classes/vds_ocorrencia_service.php)
-  - Aprimorou `vds_vincular_tag_recurso` para resolver o `recurso.id` aceitando variações de 4 dígitos e 2 dígitos de ano.
-- [`palco/detalheRecurso.php`](file:///e:/DEV/recMan/palco/detalheRecurso.php)
-  - Passou o número do recurso (`$result['numero']`) para `getOcorrenciasVinculadas`.
-  - Atualizou o layout da lista de ocorrências vinculadas para renderizar os badges de tags e atalhos de chat.
+- [`classes/repositorio.php`](file:///e:/DEV/recMan/classes/repositorio.php):
+  - `getOcorrenciasVinculadas($id_recurso, $numero_recurso, $bloco, $unidade)`: inclui cruzamento de `bloco` e `unidade` da tag (`b1803`, `B1803`, `B/1803`) com auto-healing.
+- [`palco/detalheRecurso.php`](file:///e:/DEV/recMan/palco/detalheRecurso.php):
+  - Passa `$result['bloco']` e `$result['unidade']` para a consulta de ocorrências vinculadas.
 
 ---
 
-## 🧪 Como Validar no Servidor Remoto
+## 🧪 Teste de Validação
 
-1. Acesse no navegador: `index.php?pag=recurso&rec=352/2026`.
-2. Vá até a seção **"Ocorrências Condomínio Digital Vinculadas"**.
-3. Verifique que as ocorrências cujas tags apontam para `352/2026` agora aparecem listadas, acompanhadas dos badges de tags e dos botões para abertura no Chat Local ou VDS.
+1. Abra qualquer ocorrência no Livro de Ocorrências e insira a tag `b1803`.
+2. Acesse o recurso correspondente ao **Bloco B Apt 1803** (`index.php?pag=recurso&rec=...`).
+3. A ocorrência aparecerá listada na área **"Ocorrências Condomínio Digital Vinculadas"** com o badge da tag de unidade e o botão de acesso rápido ao Chat Local.

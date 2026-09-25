@@ -561,7 +561,7 @@ if ($esseRecurso == null) {
 
 
     // Seção de Ocorrências Vinculadas
-    $ocorrenciasVinculadas = getOcorrenciasVinculadas($esseRecurso, $result['numero'] ?? null);
+    $ocorrenciasVinculadas = getOcorrenciasVinculadas($esseRecurso, $result['numero'] ?? null, $result['bloco'] ?? null, $result['unidade'] ?? null);
     echo "<h6><b>Ocorrências Condomínio Digital Vinculadas</b></h6>";
     echo '<div class="collection">';
     if (!empty($ocorrenciasVinculadas)) {

@@ -1427,19 +1427,21 @@ function linkRecursoOcorrencia($id_recurso, $id_ocorrencia)
     return $res;
 }
 
-function getOcorrenciasVinculadas($id_recurso, $numero_recurso = null)
+function getOcorrenciasVinculadas($id_recurso, $numero_recurso = null, $bloco = null, $unidade = null)
 {
     $link = DBConnect();
     $id_recurso = (int)$id_recurso;
 
-    if (empty($numero_recurso) && $id_recurso > 0) {
-        $stmtRec = mysqli_prepare($link, "SELECT numero FROM recurso WHERE id = ? LIMIT 1");
+    if ((empty($numero_recurso) || empty($bloco) || empty($unidade)) && $id_recurso > 0) {
+        $stmtRec = mysqli_prepare($link, "SELECT numero, bloco, unidade FROM recurso WHERE id = ? LIMIT 1");
         if ($stmtRec) {
             mysqli_stmt_bind_param($stmtRec, "i", $id_recurso);
             mysqli_stmt_execute($stmtRec);
             $resRec = mysqli_stmt_get_result($stmtRec);
             if ($rowRec = mysqli_fetch_assoc($resRec)) {
-                $numero_recurso = trim($rowRec['numero']);
+                if (empty($numero_recurso)) $numero_recurso = trim($rowRec['numero']);
+                if (empty($bloco)) $bloco = trim($rowRec['bloco']);
+                if (empty($unidade)) $unidade = trim($rowRec['unidade']);
             }
             mysqli_stmt_close($stmtRec);
         }
@@ -1455,6 +1457,11 @@ function getOcorrenciasVinculadas($id_recurso, $numero_recurso = null)
         }
     }
     $numVariants = array_values(array_unique(array_filter($numVariants)));
+
+    $blocoClean = strtoupper(trim(str_replace(['bloco', 'bl.', 'bl'], '', strtolower($bloco ?? ''))));
+    $unidadeClean = trim($unidade ?? '');
+    $tagComposta = ($blocoClean !== '' && $unidadeClean !== '') ? ($blocoClean . $unidadeClean) : '';
+    $tagCompostaBarra = ($blocoClean !== '' && $unidadeClean !== '') ? ($blocoClean . '/' . $unidadeClean) : '';
 
     if (empty($numVariants)) {
         $sql = "SELECT DISTINCT o.* 
@@ -1486,13 +1493,23 @@ function getOcorrenciasVinculadas($id_recurso, $numero_recurso = null)
             WHERE ro.id_recurso = ?
                OR l.numero_recurso IN ({$inPlaceholders})
                OR (t.unidade IN ({$inPlaceholders}) AND (t.tipo_vinculo IN ('notificacao', 'recurso') OR t.bloco = 'NOTIF'))
+               OR (? != '' AND ? != '' AND t.bloco = ? AND t.unidade = ?)
+               OR (? != '' AND (t.unidade = ? OR t.unidade = ?))
+               OR (? != '' AND ? != '' AND o.bloco = ? AND o.unidade = ?)
             ORDER BY o.abertura DESC";
 
     $stmt = mysqli_prepare($link, $sql);
     $dados = array();
     if ($stmt) {
-        $types = "i" . str_repeat("s", count($numVariants) * 2);
-        $params = array_merge([$id_recurso], $numVariants, $numVariants);
+        $types = "i" . str_repeat("s", count($numVariants) * 2 + 11);
+        $params = array_merge(
+            [$id_recurso],
+            $numVariants,
+            $numVariants,
+            [$blocoClean, $unidadeClean, $blocoClean, $unidadeClean],
+            [$tagComposta, $tagComposta, $tagCompostaBarra],
+            [$blocoClean, $unidadeClean, $blocoClean, $unidadeClean]
+        );
         mysqli_stmt_bind_param($stmt, $types, ...$params);
         mysqli_stmt_execute($stmt);
         $res = mysqli_stmt_get_result($stmt);
