@@ -1279,9 +1279,16 @@ function vds_vincular_tag_recurso($ocorrenciaId, $numeroRecurso) {
 
     // Resolve recurso pelo número composto (recurso.numero = notificacoes.numero_ano_virtual)
     $recursoId = null;
-    $stmtRec = mysqli_prepare($link, "SELECT id FROM recurso WHERE numero = ? LIMIT 1");
+    $numVar1 = $numeroRecurso;
+    $numVar2 = $numeroRecurso;
+    if (preg_match('/^(\d+)\/(\d{4})$/', $numeroRecurso, $mRec)) {
+        $numVar2 = $mRec[1] . '/' . substr($mRec[2], -2);
+    } elseif (preg_match('/^(\d+)\/(\d{2})$/', $numeroRecurso, $mRec)) {
+        $numVar2 = $mRec[1] . '/20' . $mRec[2];
+    }
+    $stmtRec = mysqli_prepare($link, "SELECT id FROM recurso WHERE numero = ? OR numero = ? LIMIT 1");
     if ($stmtRec) {
-        mysqli_stmt_bind_param($stmtRec, "s", $numeroRecurso);
+        mysqli_stmt_bind_param($stmtRec, "ss", $numVar1, $numVar2);
         mysqli_stmt_execute($stmtRec);
         $resRec = mysqli_stmt_get_result($stmtRec);
         if ($rowRec = mysqli_fetch_assoc($resRec)) {

@@ -561,19 +561,51 @@ if ($esseRecurso == null) {
 
 
     // Seção de Ocorrências Vinculadas
-    $ocorrenciasVinculadas = getOcorrenciasVinculadas($esseRecurso);
+    $ocorrenciasVinculadas = getOcorrenciasVinculadas($esseRecurso, $result['numero'] ?? null);
     echo "<h6><b>Ocorrências Condomínio Digital Vinculadas</b></h6>";
     echo '<div class="collection">';
     if (!empty($ocorrenciasVinculadas)) {
         foreach ($ocorrenciasVinculadas as $oc) {
-            echo '<a href="' . $oc['url'] . '" target="_blank" class="collection-item">
-                    <span class="new badge blue" data-badge-caption="">ID ' . $oc['id'] . '</span>
-                    <b>' . $oc['bloco'] . ' / ' . $oc['unidade'] . '</b> - ' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '
-                    <span class="secondary-content"><i class="material-icons">open_in_new</i></span>
-                  </a>';
+            $tags = getTagsOcorrencia($oc['id']);
+            $tagsHtml = '';
+            if (!empty($tags)) {
+                foreach ($tags as $tg) {
+                    $b = htmlspecialchars($tg['bloco']);
+                    $u = htmlspecialchars($tg['unidade']);
+                    if ($tg['tipo_vinculo'] === 'notificacao' || $b === 'NOTIF') {
+                        $tagsHtml .= ' <span class="chip teal white-text" style="height:22px; line-height:22px; font-size:0.75rem; padding:0 8px; margin:2px;"><i class="material-icons left" style="line-height:22px; font-size:14px; margin-right:4px;">assignment</i>Notificação ' . $u . '</span>';
+                    } elseif ($b === 'TAG') {
+                        $tagsHtml .= ' <span class="chip purple white-text" style="height:22px; line-height:22px; font-size:0.75rem; padding:0 8px; margin:2px;"><i class="material-icons left" style="line-height:22px; font-size:14px; margin-right:4px;">local_offer</i>' . $u . '</span>';
+                    } else {
+                        $tagsHtml .= ' <span class="chip blue-grey white-text" style="height:22px; line-height:22px; font-size:0.75rem; padding:0 8px; margin:2px;"><i class="material-icons left" style="line-height:22px; font-size:14px; margin-right:4px;">apartment</i>' . $b . '-' . $u . '</span>';
+                    }
+                }
+            }
+
+            $urlLocal = 'index.php?pag=livroDeOcorrencias&id=' . (int)$oc['id'];
+            $urlRemota = !empty($oc['url']) ? $oc['url'] : '#!';
+
+            echo '<div class="collection-item" style="display:flex; justify-space-between; align-items:center; flex-wrap:wrap; padding:10px 15px;">
+                    <div style="flex:1; min-width:250px;">
+                        <span class="new badge blue left" style="margin-right:10px;" data-badge-caption="">ID ' . (int)$oc['id'] . '</span>
+                        <b>' . htmlspecialchars($oc['bloco'] ?? '') . ' / ' . htmlspecialchars($oc['unidade'] ?? '') . '</b>
+                        <span class="grey-text text-darken-1" style="font-size:0.85rem; margin-left:8px;">' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '</span>
+                        <div style="margin-top:4px;">' . $tagsHtml . '</div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <a href="' . $urlLocal . '" class="btn-small blue waves-effect waves-light" style="padding:0 10px;" title="Abrir no Chat RecMan">
+                            <i class="material-icons left" style="margin-right:4px;">chat</i> Chat Local
+                        </a>';
+            if (!empty($oc['url'])) {
+                echo '   <a href="' . $urlRemota . '" target="_blank" class="btn-small grey waves-effect waves-light" style="padding:0 8px;" title="Abrir no VDS Remoto">
+                            <i class="material-icons">open_in_new</i>
+                        </a>';
+            }
+            echo '  </div>
+                  </div>';
         }
     } else {
-        echo '<p class="grey-text p-10" style="padding:10px">Nenhuma ocorrência vinculada.</p>';
+        echo '<p class="grey-text p-10" style="padding:10px">Nenhuma ocorrência vinculada por ID ou Tag.</p>';
     }
     echo '</div>';
 

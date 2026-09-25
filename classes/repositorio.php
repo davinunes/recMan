@@ -1427,22 +1427,111 @@ function linkRecursoOcorrencia($id_recurso, $id_ocorrencia)
     return $res;
 }
 
-function getOcorrenciasVinculadas($id_recurso)
+function getOcorrenciasVinculadas($id_recurso, $numero_recurso = null)
 {
-    $id_recurso = DBEscape($id_recurso);
-    $sql = "SELECT o.* 
-            FROM recurso_ocorrencia ro
-            JOIN ocorrencias o ON o.id = ro.id_ocorrencia
-            WHERE ro.id_recurso = '$id_recurso'";
-    $result = DBExecute($sql);
-    $dados = array();
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($retorno = mysqli_fetch_assoc($result)) {
-            $dados[] = $retorno;
+    $link = DBConnect();
+    $id_recurso = (int)$id_recurso;
+
+    if (empty($numero_recurso) && $id_recurso > 0) {
+        $stmtRec = mysqli_prepare($link, "SELECT numero FROM recurso WHERE id = ? LIMIT 1");
+        if ($stmtRec) {
+            mysqli_stmt_bind_param($stmtRec, "i", $id_recurso);
+            mysqli_stmt_execute($stmtRec);
+            $resRec = mysqli_stmt_get_result($stmtRec);
+            if ($rowRec = mysqli_fetch_assoc($resRec)) {
+                $numero_recurso = trim($rowRec['numero']);
+            }
+            mysqli_stmt_close($stmtRec);
         }
+    }
+
+    $numVariants = [];
+    if (!empty($numero_recurso)) {
+        $numVariants[] = $numero_recurso;
+        if (preg_match('/^(\d+)\/(\d{4})$/', $numero_recurso, $m)) {
+            $numVariants[] = $m[1] . '/' . substr($m[2], -2);
+        } elseif (preg_match('/^(\d+)\/(\d{2})$/', $numero_recurso, $m)) {
+            $numVariants[] = $m[1] . '/20' . $m[2];
+        }
+    }
+    $numVariants = array_values(array_unique(array_filter($numVariants)));
+
+    if (empty($numVariants)) {
+        $sql = "SELECT DISTINCT o.* 
+                FROM recurso_ocorrencia ro
+                JOIN ocorrencias o ON o.id = ro.id_ocorrencia
+                WHERE ro.id_recurso = ?
+                ORDER BY o.abertura DESC";
+        $stmt = mysqli_prepare($link, $sql);
+        $dados = array();
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "i", $id_recurso);
+            mysqli_stmt_execute($stmt);
+            $res = mysqli_stmt_get_result($stmt);
+            while ($row = mysqli_fetch_assoc($res)) {
+                $dados[] = $row;
+            }
+            mysqli_stmt_close($stmt);
+        }
+        return $dados;
+    }
+
+    $inPlaceholders = implode(',', array_fill(0, count($numVariants), '?'));
+
+    $sql = "SELECT DISTINCT o.* 
+            FROM ocorrencias o
+            LEFT JOIN recurso_ocorrencia ro ON ro.id_ocorrencia = o.id
+            LEFT JOIN ocorrencia_recurso_link l ON l.ocorrencia_id = o.id
+            LEFT JOIN ocorrencia_unidade_tag t ON t.ocorrencia_id = o.id
+            WHERE ro.id_recurso = ?
+               OR l.numero_recurso IN ({$inPlaceholders})
+               OR (t.unidade IN ({$inPlaceholders}) AND (t.tipo_vinculo IN ('notificacao', 'recurso') OR t.bloco = 'NOTIF'))
+            ORDER BY o.abertura DESC";
+
+    $stmt = mysqli_prepare($link, $sql);
+    $dados = array();
+    if ($stmt) {
+        $types = "i" . str_repeat("s", count($numVariants) * 2);
+        $params = array_merge([$id_recurso], $numVariants, $numVariants);
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+        mysqli_stmt_execute($stmt);
+        $res = mysqli_stmt_get_result($stmt);
+        while ($row = mysqli_fetch_assoc($res)) {
+            $dados[] = $row;
+
+            if ($id_recurso > 0) {
+                $ocId = (int)$row['id'];
+                $stmtSync = mysqli_prepare($link, "INSERT IGNORE INTO recurso_ocorrencia (id_recurso, id_ocorrencia) VALUES (?, ?)");
+                if ($stmtSync) {
+                    mysqli_stmt_bind_param($stmtSync, "ii", $id_recurso, $ocId);
+                    mysqli_stmt_execute($stmtSync);
+                    mysqli_stmt_close($stmtSync);
+                }
+            }
+        }
+        mysqli_stmt_close($stmt);
     }
     return $dados;
 }
+
+function getTagsOcorrencia($ocorrenciaId)
+{
+    $link = DBConnect();
+    $ocorrenciaId = (int)$ocorrenciaId;
+    $stmt = mysqli_prepare($link, "SELECT * FROM ocorrencia_unidade_tag WHERE ocorrencia_id = ? ORDER BY id ASC");
+    $tags = array();
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "i", $ocorrenciaId);
+        mysqli_stmt_execute($stmt);
+        $res = mysqli_stmt_get_result($stmt);
+        while ($row = mysqli_fetch_assoc($res)) {
+            $tags[] = $row;
+        }
+        mysqli_stmt_close($stmt);
+    }
+    return $tags;
+}
+
 
 function getDiligenciaAnexos($id_diligencia)
 {
