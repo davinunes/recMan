@@ -129,6 +129,12 @@ switch ($_GET['metodo']) {
     case "editaComentario":
         session_start();
 
+        if (empty($_POST['id_mensagem']) || !isset($_POST['messageText'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'ID da mensagem ou texto ausente']);
+            break;
+        }
+
         $dados = $_POST;
         $dados['id_comentario'] = $dados['id_mensagem']; // Ajuste para o repositório
         $dados['comentario'] = $dados['messageText'];    // Ajuste para o repositório

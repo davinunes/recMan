@@ -581,57 +581,6 @@ $(document).on('click', '#btnAjudaIA', function () {
     });
 });
 
-$(document).on('click', '.editComment', function () { // Enviar e-mail
-
-
-    function ajustarAlturaTextarea() {
-        let textarea = $("#messageTextComment")[0];
-        textarea.style.height = "auto"; // Redefinir a altura para auto
-        textarea.style.height = textarea.scrollHeight + "px"; // Definir a altura com base no conteúdo
-    }
-
-    let comentario = $(this).closest(".comment-card, li.collection-item").find(".mensagem-texto, p").html();
-    comentario = comentario ? comentario.trim().replace(/<br\s*\/?>/gi, "\n") : "";
-    console.log(comentario);
-    $("#messageTextComment").val(comentario);
-
-    ajustarAlturaTextarea();
-
-    $("#messageTextComment").attr("message_id", $(this).attr("comment"));
-
-
-});
-
-$(document).on('click', '#updateComment', function () { // Enviar e-mail
-    let comentario = $("#messageTextComment").val();
-    let id_comentario = $("#messageTextComment").attr("message_id");
-
-    const formData = {
-        id_comentario: id_comentario,
-        comentario: comentario
-    };
-    console.log(formData);
-    $.ajax({
-        url: "metodo.php?metodo=editaComentario",
-        method: "POST", // Defina o método como POST
-        data: formData,
-        dataType: 'json',
-        success: function (responseData) {
-            if (responseData.success) {
-                M.toast({ html: 'Comentário atualizado!', classes: 'rounded green' });
-                window.location.reload();
-            } else {
-                M.toast({ html: responseData.error || 'Erro ao editar comentário.', classes: 'rounded red' });
-            }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            console.log("Erro na solicitação AJAX: " + textStatus);
-            console.log("Detalhes do erro: " + errorThrown);
-        }
-    });
-
-
-});
 
 $(document).on('click', '#logon', function () { // Logar Usuario
     let metodo = "logon";
@@ -720,6 +669,12 @@ $(document).on('click', '.editComment', function () {
     
     $("#messageTextComment").val(comentario);
     $("#editMessageId").val(id);
+
+    let textarea = $("#messageTextComment")[0];
+    if (textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+    }
     
     // Buscar anexos existentes
     $("#existingAttachmentsComment").html('<p class="center">Carregando anexos...</p>');
@@ -798,17 +753,26 @@ $(document).on('click', '#updateComment', function () {
         data: formData,
         contentType: false,
         processData: false,
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
+            let isOk = false;
+            if (typeof responseData === 'object' && responseData !== null) {
+                isOk = responseData.success === true;
+            } else if (typeof responseData === 'string') {
+                isOk = responseData.trim() === "ok" || responseData.includes('"success":true');
+            }
+
+            if (isOk) {
                 M.toast({ html: "Comentário atualizado!", classes: 'rounded green' });
                 window.location.reload();
             } else {
-                // Se for um erro de SQL do die(), vai cair aqui
                 console.error("Erro do Servidor:", responseData);
-                M.toast({ html: 'Erro ao salvar. Verifique o console.', classes: 'rounded red' });
+                let err = (responseData && responseData.error) ? responseData.error : 'Erro ao salvar. Verifique o console.';
+                M.toast({ html: err, classes: 'rounded red' });
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
+            console.error("Erro AJAX:", textStatus, errorThrown);
             M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
         }
     });
