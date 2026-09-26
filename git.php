@@ -66,8 +66,8 @@ if (isset($_GET['action'])) {
 	}
 
 	if ($_GET['action'] == 'restart_typst_api') {
-		// Comando com estrutura idêntica ao restart_pdf_api que já funciona no sistema
-		$pyCmd = "cd /var/www/mini/py && (pkill -9 -f typst_server.py || true) && (nohup /usr/bin/python3 typst_server.py > typst_server.log 2>&1 &) && sleep 1 && ps aux | grep typst_server.py | grep -v grep 2>&1";
+		// Desacoplamento via Python POSIX setsid (start_new_session=True)
+		$pyCmd = "cd /var/www/mini/py && (pkill -9 -f typst_server.py || true) && sleep 1 && (python3 -c \"import subprocess; subprocess.Popen(['/usr/bin/python3', '/var/www/mini/py/typst_server.py'], start_new_session=True)\") && sleep 1 && ps aux | grep typst_server.py | grep -v grep";
 
 		$fullCmd = "$pythonPath -u $sshScript '$pyCmd' 2>&1";
 		$output = shell_exec($fullCmd);
