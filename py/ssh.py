@@ -24,10 +24,19 @@ class SSH:
 
     def exec_cmd(self, cmd):
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
-        if stderr.channel.recv_exit_status() != 0:
-            print(stderr.read().decode())  # Modificado para Python 3
-        else:
-            print(stdout.read().decode())  # Modificado para Python 3
+        exit_code = stderr.channel.recv_exit_status()
+        out_text = stdout.read().decode().strip()
+        err_text = stderr.read().decode().strip()
+        
+        result = []
+        if out_text:
+            result.append(out_text)
+        if err_text:
+            result.append("ERR: " + err_text)
+        if not result:
+            result.append(f"Comando concluído (exit code {exit_code}).")
+            
+        print("\n".join(result))
 
 if __name__ == '__main__':
     try:
