@@ -274,6 +274,57 @@ switch ($_GET['metodo']) {
             echo json_encode(['success' => false, 'error' => $response]);
         }
         break;
+    case "getProximoNumeroDocumentoOficial":
+        header('Content-Type: application/json; charset=utf-8');
+        $tipo = $_POST['tipo'] ?? 'orientacao_tecnica';
+        $ano = (int)($_POST['ano'] ?? date('Y'));
+        $proximo = getProximoNumeroDocumentoOficial($tipo, $ano);
+        echo json_encode(['success' => true, 'proximo_numero' => $proximo]);
+        break;
+    case "salvarDocumentoOficial":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $dados = $_POST;
+        $dados['id_usuario'] = $_SESSION['user_id'] ?? 0;
+        $res = upsertDocumentoOficial($dados);
+        if ($res) {
+            echo json_encode(['success' => true, 'id' => $res]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Erro ao salvar documento oficial']);
+        }
+        break;
+    case "deletarDocumentoOficial":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0 && deleteDocumentoOficial($id)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Erro ao excluir documento']);
+        }
+        break;
+    case "previewDocumentoOficial":
+        session_start();
+        require_once "classes/typstPdfService.php";
+        $dados = $_POST;
+        
+        $tiposRotulo = [
+            'orientacao_tecnica' => 'ORIENTAÇÃO TÉCNICA',
+            'parecer_opinativo'  => 'PARECER OPINATIVO',
+            'entendimento'       => 'ENTENDIMENTO DO CONSELHO',
+            'instrucao_normativa'=> 'INSTRUÇÃO NORMATIVA'
+        ];
+        $dados['tipo_rotulo'] = $tiposRotulo[$dados['tipo'] ?? ''] ?? strtoupper(str_replace('_', ' ', $dados['tipo'] ?? 'DOCUMENTO OFICIAL'));
+        if (!empty($dados['data_emissao'])) {
+            $parts = explode('-', $dados['data_emissao']);
+            if (count($parts) === 3) {
+                $dados['data_emissao'] = "{$parts[2]}/{$parts[1]}/{$parts[0]}";
+            }
+        }
+        $res = TypstPdfService::gerarDocumentoOficial($dados, true);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($res);
+        break;
     case "previaEmailDiligencia":
     case "notificarRequerente":
         session_start();

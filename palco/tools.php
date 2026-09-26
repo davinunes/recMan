@@ -4,6 +4,7 @@ require_once __DIR__ . "/../classes/repositorio.php";
 // Define as ferramentas e suas categorias para facilitar a manutenção
 $tools = [
     'Recursos e Pareceres' => [
+        ['label' => 'Documentos Oficiais', 'url' => 'index.php?pag=documentosOficiais', 'icon' => 'gavel', 'target' => '_self', 'color' => 'purple darken-2'],
         ['label' => 'Recursos Sem E-mail', 'url' => 'recursosSemEmail.php', 'icon' => 'warning', 'target' => '_self', 'color' => 'deep-orange'],
         ['label' => 'Sincronizar Enviados', 'url' => 'finalizarPareceresEnviados.php', 'icon' => 'done_all', 'target' => '_self', 'color' => 'green darken-2'],
         ['label' => 'Configurações de PDF', 'url' => 'index.php?pag=configuracoes_pdf', 'icon' => 'picture_as_pdf', 'target' => '_self', 'color' => 'blue darken-2'],

@@ -1814,4 +1814,139 @@ function deleteConfigSistema($chave)
     $chave = DBEscape($chave);
     $sql = "DELETE FROM config_sistema WHERE chave = '$chave'";
     return DBExecute($sql);
+}
+
+function getProximoNumeroDocumentoOficial($tipo, $ano)
+{
+    $tipo = DBEscape($tipo);
+    $ano = (int)$ano;
+    $sql = "SELECT MAX(numero) as max_num FROM conselho.documento_oficial WHERE tipo = '$tipo' AND ano = $ano";
+    $res = @DBExecute($sql);
+    if (!$res) {
+        $sql = "SELECT MAX(numero) as max_num FROM documento_oficial WHERE tipo = '$tipo' AND ano = $ano";
+        $res = @DBExecute($sql);
+    }
+    if ($res && mysqli_num_rows($res) > 0) {
+        $row = mysqli_fetch_assoc($res);
+        return ((int)($row['max_num'] ?? 0)) + 1;
+    }
+    return 1;
+}
+
+function upsertDocumentoOficial($dados)
+{
+    $id = isset($dados['id']) && is_numeric($dados['id']) ? (int)$dados['id'] : 0;
+    $tipo = DBEscape($dados['tipo'] ?? 'orientacao_tecnica');
+    $ano = isset($dados['ano']) && is_numeric($dados['ano']) ? (int)$dados['ano'] : (int)date('Y');
+    
+    if ($id <= 0 && (!isset($dados['numero']) || empty($dados['numero']))) {
+        $numero = getProximoNumeroDocumentoOficial($tipo, $ano);
+    } else {
+        $numero = (int)($dados['numero'] ?? 1);
+    }
+
+    $titulo = DBEscape($dados['titulo'] ?? '');
+    $ementa = DBEscape($dados['ementa'] ?? '');
+    $conteudo = DBEscape($dados['conteudo'] ?? '');
+    $modo_editor = DBEscape($dados['modo_editor'] ?? 'visual');
+    $modo_template = DBEscape($dados['modo_template'] ?? 'global');
+    $template_especifico = DBEscape($dados['template_especifico'] ?? '');
+    $variante_global = DBEscape($dados['variante_global'] ?? 'top_header');
+    $relator = DBEscape($dados['relator'] ?? 'Conselho Consultivo e Fiscal');
+    $id_usuario = isset($dados['id_usuario']) ? (int)$dados['id_usuario'] : (isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0);
+    $data_emissao = DBEscape($dados['data_emissao'] ?? date('Y-m-d'));
+
+    if ($id > 0) {
+        $sql = "UPDATE conselho.documento_oficial SET 
+                numero = $numero,
+                ano = $ano,
+                tipo = '$tipo',
+                titulo = '$titulo',
+                ementa = '$ementa',
+                conteudo = '$conteudo',
+                modo_editor = '$modo_editor',
+                modo_template = '$modo_template',
+                template_especifico = '$template_especifico',
+                variante_global = '$variante_global',
+                relator = '$relator',
+                data_emissao = '$data_emissao'
+                WHERE id = $id";
+        $res = @DBExecute($sql);
+        if (!$res) {
+            $sql = str_replace('conselho.', '', $sql);
+            $res = DBExecute($sql);
+        }
+        return $res ? $id : false;
+    } else {
+        $sql = "INSERT INTO conselho.documento_oficial 
+                (numero, ano, tipo, titulo, ementa, conteudo, modo_editor, modo_template, template_especifico, variante_global, relator, id_usuario, data_emissao)
+                VALUES 
+                ($numero, $ano, '$tipo', '$titulo', '$ementa', '$conteudo', '$modo_editor', '$modo_template', '$template_especifico', '$variante_global', '$relator', $id_usuario, '$data_emissao')";
+        $res = @DBExecute($sql, true);
+        if (!$res) {
+            $sql = str_replace('conselho.', '', $sql);
+            $res = DBExecute($sql, true);
+        }
+        return $res;
+    }
+}
+
+function getDocumentosOficiais($filtros = [])
+{
+    $where = [];
+    if (!empty($filtros['tipo'])) {
+        $tipo = DBEscape($filtros['tipo']);
+        $where[] = "tipo = '$tipo'";
+    }
+    if (!empty($filtros['ano'])) {
+        $ano = (int)$filtros['ano'];
+        $where[] = "ano = $ano";
+    }
+    if (!empty($filtros['busca'])) {
+        $b = DBEscape($filtros['busca']);
+        $where[] = "(titulo LIKE '%$b%' OR ementa LIKE '%$b%' OR conteudo LIKE '%$b%')";
+    }
+
+    $strWhere = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
+    $sql = "SELECT * FROM conselho.documento_oficial $strWhere ORDER BY ano DESC, numero DESC";
+    $res = @DBExecute($sql);
+    if (!$res) {
+        $sql = "SELECT * FROM documento_oficial $strWhere ORDER BY ano DESC, numero DESC";
+        $res = DBExecute($sql);
+    }
+
+    $out = [];
+    if ($res && mysqli_num_rows($res) > 0) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $out[] = $row;
+        }
+    }
+    return $out;
+}
+
+function getDocumentoOficialById($id)
+{
+    $id = (int)$id;
+    $sql = "SELECT * FROM conselho.documento_oficial WHERE id = $id LIMIT 1";
+    $res = @DBExecute($sql);
+    if (!$res) {
+        $sql = "SELECT * FROM documento_oficial WHERE id = $id LIMIT 1";
+        $res = DBExecute($sql);
+    }
+    if ($res && mysqli_num_rows($res) > 0) {
+        return mysqli_fetch_assoc($res);
+    }
+    return null;
+}
+
+function deleteDocumentoOficial($id)
+{
+    $id = (int)$id;
+    $sql = "DELETE FROM conselho.documento_oficial WHERE id = $id";
+    $res = @DBExecute($sql);
+    if (!$res) {
+        $sql = "DELETE FROM documento_oficial WHERE id = $id";
+        $res = DBExecute($sql);
+    }
+    return $res;
 }

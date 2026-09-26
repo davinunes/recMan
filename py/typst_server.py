@@ -115,7 +115,7 @@ def run_typst(template_name, input_data=None):
     # Garante que LayoutMiami.jpg esteja disponível na pasta dos templates
     input_data['banner_path'] = prepare_banner_image(input_data)
 
-    func_name = 'regimento-doc' if template_name == 'regimento.typ' else 'parecer-doc'
+    func_name = 'regimento-doc' if template_name == 'regimento.typ' else ('documento-oficial-doc' if template_name == 'documento_oficial.typ' else 'parecer-doc')
 
     # Cria arquivos temporários dentro do ROOT_DIR para compilação
     json_tmp_file = None
@@ -131,8 +131,15 @@ def run_typst(template_name, input_data=None):
         rel_template_path = os.path.relpath(template_path, ROOT_DIR).replace('\\', '/')
 
         entry_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_entry_', suffix='.typ', mode='w', encoding='utf-8', delete=False)
-        entry_tmp_file.write(f'#import "{rel_template_path}": {func_name}\n')
-        entry_tmp_file.write(f'#{func_name}(json("{rel_json_path}"))\n')
+        
+        # Se for modo_template == 'clear', compila o código Typst nativo puro diretamente sem wrapper
+        if input_data.get('modo_template') == 'clear':
+            raw_code = input_data.get('conteudo_typst', '') or input_data.get('conteudo', '')
+            entry_tmp_file.write(raw_code)
+        else:
+            entry_tmp_file.write(f'#import "{rel_template_path}": {func_name}\n')
+            entry_tmp_file.write(f'#{func_name}(json("{rel_json_path}"))\n')
+        
         entry_tmp_file.close()
 
         pdf_tmp_file = tempfile.NamedTemporaryFile(dir=ROOT_DIR, prefix='tmp_out_', suffix='.pdf', delete=False)
@@ -225,6 +232,10 @@ class TypstHandler(BaseHTTPRequestHandler):
             elif parsed_path.path == '/gerar_regimento':
                 pdf_bytes, elapsed_ms = run_typst('regimento.typ', post_data)
                 filename = "regimento_interno.pdf"
+
+            elif parsed_path.path == '/gerar_documento_oficial':
+                pdf_bytes, elapsed_ms = run_typst('documento_oficial.typ', post_data)
+                filename = f"documento_oficial_{str(post_data.get('numero', '001'))}.pdf"
             else:
                 self._send_json(404, {'status': 'error', 'message': 'Endpoint desconhecido'})
                 return

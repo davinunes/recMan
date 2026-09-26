@@ -68,6 +68,51 @@ class TypstPdfService {
     }
 
     /**
+     * Converte código HTML (do editor WYSIWYG) em marcação Typst limpa
+     */
+    public static function htmlToTypst($html) {
+        if (empty($html)) return "";
+        
+        $str = $html;
+        $str = preg_replace('/<h1[^>]*>(.*?)<\/h1>/is', "\n= $1\n", $str);
+        $str = preg_replace('/<h2[^>]*>(.*?)<\/h2>/is', "\n== $1\n", $str);
+        $str = preg_replace('/<h3[^>]*>(.*?)<\/h3>/is', "\n=== $1\n", $str);
+        $str = preg_replace('/<h4[^>]*>(.*?)<\/h4>/is', "\n==== $1\n", $str);
+
+        $str = preg_replace('/<strong[^>]*>(.*?)<\/strong>/is', '*$1*', $str);
+        $str = preg_replace('/<b[^>]*>(.*?)<\/b>/is', '*$1*', $str);
+        $str = preg_replace('/<em[^>]*>(.*?)<\/em>/is', '_$1_', $str);
+        $str = preg_replace('/<i[^>]*>(.*?)<\/i>/is', '_$1_', $str);
+        $str = preg_replace('/<u[^>]*>(.*?)<\/u>/is', '#underline[$1]', $str);
+
+        $str = preg_replace('/<li[^>]*>(.*?)<\/li>/is', "- $1\n", $str);
+        $str = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $str);
+        $str = preg_replace('/<br\s*\/?>/i', "\n", $str);
+        $str = preg_replace('/<blockquote[^>]*>(.*?)<\/blockquote>/is', "\n#pad(left: 14pt)[_$1_]\n", $str);
+
+        $str = strip_tags($str);
+        $str = html_entity_decode($str, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim($str);
+    }
+
+    /**
+     * Gera PDF de Documento Oficial do Conselho (Orientação Técnica, Parecer Opinativo, etc.)
+     */
+    public static function gerarDocumentoOficial($dadosArray, $retornarBase64 = true) {
+        $dadosClean = self::sanitizarTexto($dadosArray);
+        
+        if (($dadosClean['modo_editor'] ?? '') === 'visual' && !empty($dadosClean['conteudo'])) {
+            $dadosClean['conteudo_typst'] = self::htmlToTypst($dadosClean['conteudo']);
+        } else {
+            $dadosClean['conteudo_typst'] = $dadosClean['conteudo'] ?? '';
+        }
+
+        $endpoint = self::$apiUrl . '/gerar_documento_oficial' . ($retornarBase64 ? '?base64=true' : '');
+        return self::fazerRequisicaoHttp($endpoint, $dadosClean);
+    }
+
+    /**
      * Verifica a saúde da API na porta 5050
      */
     public static function checkHealth() {

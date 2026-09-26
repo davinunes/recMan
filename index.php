@@ -121,6 +121,9 @@ switch ($pag) {
 	case "configuracoes_pdf":
 		include "palco/configuracoes_pdf.php";
 		break;
+	case "documentosOficiais":
+		include "palco/documentosOficiais.php";
+		break;
 	case "livroDeOcorrencias":
 		include "livroDeOcorrencias.php";
 		break;
