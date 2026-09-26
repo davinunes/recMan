@@ -23,9 +23,9 @@ class SSH:
     def exec_cmd(self, cmd):
         print(f"[SSH CMD] Enviando comando: {cmd}", flush=True)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
-        exit_code = stderr.channel.recv_exit_status()
         out_text = stdout.read().decode().strip()
         err_text = stderr.read().decode().strip()
+        exit_code = stderr.channel.recv_exit_status()
         
         print(f"[SSH EXIT CODE] {exit_code}", flush=True)
         result = []
