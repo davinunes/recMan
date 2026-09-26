@@ -79,12 +79,12 @@
     background: context {
       let current_page = counter(page).get().first()
       if variant == "watermark_a4" [
-        #place(top + left, dx: -2cm, dy: -2.5cm)[
-          #image("lay-body-all-pages-1.png", width: 210mm, height: 297mm)
+        #place(top + left)[
+          #image("lay-body-all-pages-1.png", width: 100%, height: 100%)
         ]
       ] else if variant == "top_header" and current_page == 1 [
-        #place(top + left, dx: -2cm, dy: -2.5cm)[
-          #image("lay-top-fist-page-1.png", width: 210mm)
+        #place(top + left)[
+          #image("lay-top-fist-page-1.png", width: 100%)
         ]
       ]
     },

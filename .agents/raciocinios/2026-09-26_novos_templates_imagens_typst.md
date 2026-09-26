@@ -17,9 +17,10 @@ Solicitou a criação de duas novas variantes/templates visuais tanto para o **P
    - As imagens `lay-top-fist-page-1.png` e `lay-body-all-pages-1.png` foram copiadas para a pasta `typst_templates/`.
    - Atualizado o servidor Python (`py/typst_server.py`) na função `prepare_banner_image` para garantir a sincronização automática dessas imagens no ambiente de produção remoto.
 
-2. **Novas Variantes em `typst_templates/parecer.typ`**:
-   - `top_header`: Base Verde Esmeralda (`#065f46`), renderizando a imagem `lay-top-fist-page-1.png` no vértice `(0,0)` apenas na 1ª página via `#place(top + left, dx: -2cm, dy: -2.5cm)[#image("lay-top-fist-page-1.png", width: 210mm)]`.
-   - `watermark_a4`: Base Verde Esmeralda (`#065f46`), renderizando a imagem `lay-body-all-pages-1.png` no fundo de todas as páginas em A4 completo via `#place(top + left, dx: -2cm, dy: -2.5cm)[#image("lay-body-all-pages-1.png", width: 210mm, height: 297mm)]`.
+3. **Posicionamento e Vértices em Typst (`set page(background: ...)` )**:
+   - No Typst, o contêiner `background` dentro do `set page(...)` já possui a dimensão física integral da folha A4 e tem sua origem `(0,0)` no canto superior esquerdo da página física.
+   - Ao aplicar `dx: -2cm` e `dy: -2.5cm`, o Typst empurrava a imagem 2cm para a esquerda e 2.5cm para cima para fora da página.
+   - **Ajuste efetuado**: Removidos os offsets negativos e utilizado `#place(top + left)[#image(..., width: 100%, height: 100%)]` no `watermark_a4` e `width: 100%` no `top_header`. Dessa forma, os 4 vértices da imagem coincidem exatamente com os vértices da página física A4.
 
 3. **Novas Variantes em `typst_templates/regimento.typ`**:
    - `top_header`: Base Estilo Moderno (`#0f172a`), renderizando `lay-top-fist-page-1.png` no topo da 1ª página.
