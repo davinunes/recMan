@@ -25,14 +25,7 @@ class TypstPdfService {
         $mapa = [
             "\xE2\x80\x94" => "-",    // em dash
             "\xE2\x80\x93" => "-",    // en dash
-            "\xE2\x80\x9C" => '"',    // aspas duplas esq
-            "\xE2\x80\x9D" => '"',    // aspas duplas dir
-            "\xE2\x80\x98" => "'",    // aspas simples esq
-            "\xE2\x80\x99" => "'",    // aspas simples dir
-            "\xE2\x80\xA2" => "*",    // bullet
             "\xE2\x80\xA6" => "...",  // reticências
-            "«"            => '"',
-            "»"            => '"',
         ];
 
         $textoClean = strtr($val, $mapa);
