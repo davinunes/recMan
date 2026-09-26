@@ -195,7 +195,8 @@ $variantesDisponiveis = [
     'dark'         => 'Dark Mode (Fundo Escuro Premium e Detalhes Ciano)',
     'editorial'    => 'Editorial / Boletim (Capa Verde Esmeralda)',
     'top_header'   => 'Novo Topo 1ª Pág (lay-top-fist-page-1.png)',
-    'watermark_a4' => 'Nova Marca d\'Água A4 Full (lay-body-all-pages-1.png)'
+    'watermark_a4' => 'Nova Marca d\'Água A4 Full (lay-body-all-pages-1.png)',
+    'margem_moderna' => 'Marca d\'Água Margem Moderna (lay-body-all-pages-2.png)'
 ];
 ?>
 <!DOCTYPE html>
