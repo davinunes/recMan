@@ -24,10 +24,28 @@ class SSH:
         print(f"[SSH CMD] Enviando comando: {cmd}", flush=True)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
         stdin.close()
-        out_text = stdout.read().decode().strip()
-        err_text = stderr.read().decode().strip()
-        exit_code = stderr.channel.recv_exit_status()
         
+        # Define timeout de 3.0s no canal para evitar travamento na espera de EOF do background job
+        stdout.channel.settimeout(3.0)
+        stderr.channel.settimeout(3.0)
+        
+        out_text = ""
+        try:
+            out_text = stdout.read().decode().strip()
+        except Exception:
+            pass
+            
+        err_text = ""
+        try:
+            err_text = stderr.read().decode().strip()
+        except Exception:
+            pass
+            
+        try:
+            exit_code = stderr.channel.recv_exit_status()
+        except Exception:
+            exit_code = 0
+            
         print(f"[SSH EXIT CODE] {exit_code}", flush=True)
         result = []
         if out_text:
