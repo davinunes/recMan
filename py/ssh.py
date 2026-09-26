@@ -23,24 +23,28 @@ class SSH:
         self.ssh.connect(hostname='127.0.0.1', port='22', username='root', pkey=self.key)
 
     def exec_cmd(self, cmd):
+        print(f"[SSH CMD] Enviando comando: {cmd}")
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
         exit_code = stderr.channel.recv_exit_status()
         out_text = stdout.read().decode().strip()
         err_text = stderr.read().decode().strip()
         
+        print(f"[SSH EXIT CODE] {exit_code}")
         result = []
         if out_text:
-            result.append(out_text)
+            result.append("[SSH STDOUT]\n" + out_text)
         if err_text:
-            result.append("ERR: " + err_text)
+            result.append("[SSH STDERR]\n" + err_text)
         if not result:
-            result.append(f"Comando concluído (exit code {exit_code}).")
+            result.append(f"[SSH EMPTY] Nenhuma saída retornada (exit code {exit_code}).")
             
         print("\n".join(result))
 
 if __name__ == '__main__':
     try:
+        print(f"[SSH START] Iniciando conexão SSH no script py/ssh.py...")
         ssh = SSH()
+        print("[SSH CONNECTED] Conectado ao SSH 127.0.0.1 como root com sucesso.")
         ssh.exec_cmd(COMANDO)
     except Exception as e:
-        print(f"Erro de execução SSH (py/ssh.py): {str(e)}")
+        print(f"[SSH EXCEPTION] {type(e).__name__}: {str(e)}")
