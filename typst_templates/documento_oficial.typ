@@ -75,7 +75,7 @@
     },
     header: context {
       let current_page = counter(page).get().first()
-      if (!is_top_header or current_page > 1) [
+      if (not is_top_header or current_page > 1) [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8.5pt, fill: text_secondary, weight: "bold")[CONDOMÍNIO RESIDENCIAL TOP LIFE MIAMI BEACH]],
