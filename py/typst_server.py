@@ -29,6 +29,7 @@ def find_typst_binary():
     candidates = [
         os.path.join(ROOT_DIR, 'bin', 'typst'),
         os.path.join(PY_DIR, 'typst'),
+        '/tmp/typst-x86_64-unknown-linux-musl/typst',
         '/usr/local/bin/typst',
         '/usr/bin/typst',
         '/root/.cargo/bin/typst',
