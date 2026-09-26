@@ -291,6 +291,7 @@ $tiposCores = [
                     <select id="docVarianteGlobal" name="variante_global" class="browser-default" style="border-radius: 6px; border: 1px solid #cbd5e1; padding: 6px 10px; background: white;">
                         <option value="top_header" selected>Novo Topo 1ª Pág (lay-top-fist-page-1.png)</option>
                         <option value="watermark_a4">Nova Marca d'Água Full A4 (lay-body-all-pages-1.png)</option>
+                        <option value="margem_moderna">Marca d'Água Margem Moderna (lay-body-all-pages-2.png)</option>
                         <option value="editorial">Editorial / Boletim (Verde Esmeralda)</option>
                         <option value="modern">Moderno (com Banner Miami)</option>
                         <option value="classic">Clássico / Notarial (Moldura Azul)</option>

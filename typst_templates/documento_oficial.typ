@@ -16,8 +16,13 @@
   let relator = get("relator", "Conselho Consultivo e Fiscal")
   let data_emissao = get("data_emissao", "26/09/2026")
   let variant = get("variante_global", "top_header")
-  let top_image_path = get("top_image_path", "lay-top-fist-page-1.png")
-  let watermark_image_path = get("watermark_image_path", "lay-body-all-pages-1.png")
+  let tipo_imagem_layout = get("tipo_imagem_layout", "")
+  
+  let top_image_path = get("top_image_path", get("imagem_layout", "lay-top-fist-page-1.png"))
+  let watermark_image_path = get("watermark_image_path", get("imagem_layout", if variant == "margem_moderna" { "lay-body-all-pages-2.png" } else { "lay-body-all-pages-1.png" }))
+
+  let is_watermark = variant == "watermark_a4" or variant == "margem_moderna" or tipo_imagem_layout == "marca_dagua"
+  let is_top_header = variant == "top_header" or tipo_imagem_layout == "preambulo"
 
   // Cores dinâmicas por variante
   let text_primary = rgb("0f172a")
@@ -44,7 +49,7 @@
     title_color = rgb("38bdf8")
     bg_card = rgb("1e293b")
     stroke_card = rgb("0284c7")
-  } else if variant == "editorial" or variant == "top_header" or variant == "watermark_a4" {
+  } else if variant == "editorial" or variant == "top_header" or variant == "watermark_a4" or variant == "margem_moderna" {
     title_color = rgb("065f46")
     bg_card = rgb("ecfdf5")
     stroke_card = rgb("059669")
@@ -58,11 +63,11 @@
     fill: if variant == "dark" { rgb("0f172a") } else { white },
     background: context {
       let current_page = counter(page).get().first()
-      if variant == "watermark_a4" [
+      if is_watermark [
         #place(top + left)[
           #image(watermark_image_path, width: 100%, height: 100%)
         ]
-      ] else if variant == "top_header" and current_page == 1 [
+      ] else if is_top_header and current_page == 1 [
         #place(top + left)[
           #image(top_image_path, width: 100%)
         ]
@@ -70,7 +75,7 @@
     },
     header: context {
       let current_page = counter(page).get().first()
-      if (variant != "top_header" or current_page > 1) or current_page > 1 [
+      if (!is_top_header or current_page > 1) [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8.5pt, fill: text_secondary, weight: "bold")[CONDOMÍNIO RESIDENCIAL TOP LIFE MIAMI BEACH]],

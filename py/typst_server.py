@@ -54,7 +54,7 @@ def prepare_banner_image(input_data=None):
     if input_data is None:
         input_data = {}
 
-    images_to_sync = ['LayoutMiami.jpg', 'lay-top-fist-page-1.png', 'lay-body-all-pages-1.png']
+    images_to_sync = ['LayoutMiami.jpg', 'lay-top-fist-page-1.png', 'lay-body-all-pages-1.png', 'lay-body-all-pages-2.png']
     os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
     for img_name in images_to_sync:
