@@ -222,20 +222,15 @@ $tiposCores = [
                 <i class="material-icons left purple-text">edit_note</i>Redação de Documento Oficial
             </h4>
             
-            <!-- Alternador de Modo de Editor (WYSIWYG ↔ Split Code) -->
-            <div class="editor-btn-group" style="background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                <button type="button" class="btn-flat btn-small waves-effect active-mode" id="btnModeVisual" style="border-radius: 6px; font-weight: 600;">
-                    <i class="material-icons left tiny">draw</i>Modo Visual (WYSIWYG)
-                </button>
-                <button type="button" class="btn-flat btn-small waves-effect" id="btnModeSplit" style="border-radius: 6px; font-weight: 600;">
-                    <i class="material-icons left tiny">vertical_split</i>Modo Split (Code & Live PDF)
-                </button>
+            <!-- Badge do Redator Typst -->
+            <div style="background: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; border: 1px solid #bae6fd; display: flex; align-items: center;">
+                <i class="material-icons left tiny" style="margin-right: 4px;">code</i>Redator Typst Code & Live PDF
             </div>
         </div>
 
         <form id="formDocOficial">
             <input type="hidden" id="docId" name="id" value="0">
-            <input type="hidden" id="docModoEditor" name="modo_editor" value="visual">
+            <input type="hidden" id="docModoEditor" name="modo_editor" value="split_code">
 
             <!-- Linha 1: Tipo, Número, Ano, Relator e Data -->
             <div class="row" style="margin-bottom: 10px;">
@@ -307,26 +302,8 @@ $tiposCores = [
                 </div>
             </div>
 
-            <!-- CONTAINER DE EDITOR (MODO VISUAL vs MODO SPLIT) -->
-            <div id="wrapperEditorVisual" class="row">
-                <div class="col s12">
-                    <label style="font-weight: bold; color: #334155; display: block; margin-bottom: 6px;">Corpo do Documento (Editor Visual):</label>
-                    <div class="rich-toolbar" style="margin-bottom: 6px;">
-                        <button type="button" onclick="execEditorCmd('bold')"><b>B</b></button>
-                        <button type="button" onclick="execEditorCmd('italic')"><i>I</i></button>
-                        <button type="button" onclick="execEditorCmd('underline')"><u>U</u></button>
-                        <button type="button" onclick="execEditorCmd('formatBlock', 'h1')">H1</button>
-                        <button type="button" onclick="execEditorCmd('formatBlock', 'h2')">H2</button>
-                        <button type="button" onclick="execEditorCmd('insertUnorderedList')">• Lista</button>
-                        <button type="button" onclick="execEditorCmd('insertOrderedList')">1. Lista</button>
-                    </div>
-                    <div id="editorVisualDiv" contenteditable="true" style="min-height: 480px; max-height: 600px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; background: white; overflow-y: auto;">
-                        <p>Escreva o conteúdo do seu parecer ou orientação técnica aqui...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="wrapperEditorSplit" class="row hide">
+            <!-- EDITOR TYPST CODE & LIVE PREVIEW (PADRÃO ÚNICO) -->
+            <div id="wrapperEditorSplit" class="row">
                 <div class="col s12">
                     <div class="split-container" style="display: flex; gap: 15px; height: calc(100vh - 310px); min-height: 520px;">
                         <!-- Painel Código Left -->
@@ -337,7 +314,7 @@ $tiposCores = [
                                     <i class="material-icons left tiny">play_arrow</i>Atualizar PDF Preview
                                 </button>
                             </label>
-                            <textarea id="editorSplitCode" name="conteudo" style="width: 100%; height: 100%; font-family: monospace; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5; resize: none;"></textarea>
+                            <textarea id="editorSplitCode" name="conteudo" placeholder="Digite o código Typst ou texto do documento aqui..." style="width: 100%; height: 100%; font-family: monospace; font-size: 0.95rem; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5; resize: none;"></textarea>
                         </div>
                         <!-- Painel Live PDF Right -->
                         <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
@@ -442,12 +419,13 @@ $(document).ready(function() {
         $('#docId').val('0');
         $('#docTitulo').val('');
         $('#docEmenta').val('');
-        $('#editorVisualDiv').html('<p>Escreva o conteúdo do seu parecer ou orientação técnica aqui...</p>');
-        $('#editorSplitCode').val('');
+        $('#editorSplitCode').val('= Título da Seção\n\nTexto do parecer ou orientação técnica aqui...');
         $('#tmplModeGlobal').prop('checked', true).trigger('change');
         $('#docTipo').trigger('change');
-        $('#btnModeVisual').trigger('click');
         $('#modalDocumentoOficial').modal('open');
+        setTimeout(function() {
+            triggerLivePreview();
+        }, 300);
     });
 
     // Editar Documento
@@ -482,18 +460,11 @@ $(document).ready(function() {
                         $('#docVarianteGlobal').val(doc.variante_global);
                     }
 
-                    let modo = doc.modo_editor || 'visual';
-                    if (modo === 'split_code') {
-                        $('#btnModeSplit').trigger('click');
-                        $('#editorSplitCode').val(doc.conteudo || '');
-                        $('#editorVisualDiv').html('');
-                    } else {
-                        $('#btnModeVisual').trigger('click');
-                        $('#editorVisualDiv').html(doc.conteudo || '');
-                        $('#editorSplitCode').val('');
-                    }
-
+                    $('#editorSplitCode').val(doc.conteudo || '');
                     $('#modalDocumentoOficial').modal('open');
+                    setTimeout(function() {
+                        triggerLivePreview();
+                    }, 300);
                 } else {
                     M.toast({ html: (res.error || 'Erro ao carregar documento'), classes: 'rounded red' });
                 }
@@ -509,7 +480,7 @@ $(document).ready(function() {
     // Compilação Dinâmica Automática ao Digitar (Debounce de 600ms)
     let autoCompileTimer = null;
     $('#editorSplitCode, #docTitulo, #docEmenta, #docRelator, #docNumero, #docAno').on('input keyup change', function() {
-        if ($('#docModoEditor').val() === 'split_code' && $('#modalDocumentoOficial').is(':visible')) {
+        if ($('#modalDocumentoOficial').is(':visible')) {
             clearTimeout(autoCompileTimer);
             autoCompileTimer = setTimeout(function() {
                 triggerLivePreview();
@@ -518,7 +489,7 @@ $(document).ready(function() {
     });
 
     $('#docTipo, #docVarianteGlobal, input[name="modo_template"]').on('change', function() {
-        if ($('#docModoEditor').val() === 'split_code' && $('#modalDocumentoOficial').is(':visible')) {
+        if ($('#modalDocumentoOficial').is(':visible')) {
             triggerLivePreview();
         }
     });
@@ -535,10 +506,10 @@ $(document).ready(function() {
             ementa: $('#docEmenta').val(),
             relator: $('#docRelator').val(),
             data_emissao: $('#docDataEmissao').val(),
-            modo_editor: $('#docModoEditor').val(),
+            modo_editor: 'split_code',
             modo_template: $('input[name="modo_template"]:checked').val(),
             variante_global: $('#docVarianteGlobal').val(),
-            conteudo: $('#docModoEditor').val() === 'visual' ? $('#editorVisualDiv').html() : $('#editorSplitCode').val()
+            conteudo: $('#editorSplitCode').val()
         };
 
         $.ajax({
@@ -559,7 +530,7 @@ $(document).ready(function() {
 
     // Salvar Documento
     $('#btnSalvarDocumentoOficial').click(function() {
-        let conteudoFinal = $('#docModoEditor').val() === 'visual' ? $('#editorVisualDiv').html() : $('#editorSplitCode').val();
+        let conteudoFinal = $('#editorSplitCode').val();
         
         if (!$('#docTitulo').val().trim()) {
             return M.toast({ html: 'Informe o título do documento!', classes: 'rounded red' });
