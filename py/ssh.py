@@ -30,5 +30,8 @@ class SSH:
             print(stdout.read().decode())  # Modificado para Python 3
 
 if __name__ == '__main__':
-    ssh = SSH()
-    ssh.exec_cmd(COMANDO)
+    try:
+        ssh = SSH()
+        ssh.exec_cmd(COMANDO)
+    except Exception as e:
+        print(f"Erro de execução SSH (py/ssh.py): {str(e)}")

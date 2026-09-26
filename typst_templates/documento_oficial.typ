@@ -124,9 +124,9 @@
   ]
 
   // Conteúdo do Documento (em formato Typst)
-  #eval(conteudo_typst, mode: "markup")
+  eval(conteudo_typst, mode: "markup")
 
-  #v(1.2cm)
+  v(1.2cm)
 
   // Assinatura / Lavrado Digitalmente
   align(center)[
