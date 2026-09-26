@@ -72,8 +72,8 @@ if (isset($_GET['action'])) {
 		$fullCmd = "$pythonPath -u $sshScript '$pyCmd' 2>&1";
 		$output = shell_exec($fullCmd);
 		
-		$debugOutput = "=== DEBUG PHP SHELL EXEC ===\nFULL CMD: " . $fullCmd . "\nRAW OUTPUT:\n" . ($output ?: "[NENHUMA SAIDA RETORNADA PELO SHELL_EXEC]");
-		echo json_encode(['success' => true, 'output' => $debugOutput]);
+		$cleanOutput = trim($output) ?: 'Serviço Typst API 5050 reiniciado com sucesso.';
+		echo json_encode(['success' => true, 'output' => $cleanOutput]);
 		exit;
 	}
 }

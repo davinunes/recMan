@@ -46,7 +46,8 @@ $tiposCores = [
     .split-container {
         display: flex;
         gap: 15px;
-        min-height: 500px;
+        height: calc(100vh - 310px);
+        min-height: 520px;
     }
     .split-pane {
         flex: 1;
@@ -64,6 +65,24 @@ $tiposCores = [
     }
     .rich-toolbar button:hover {
         background: #e2e8f0;
+    }
+    /* Modal Fullscreen Real (96% Tela) */
+    .modal.modal-fullscreen-custom {
+        width: 96% !important;
+        max-width: 96% !important;
+        height: 94% !important;
+        max-height: 94% !important;
+        top: 3% !important;
+        left: 2% !important;
+        right: 2% !important;
+        margin: 0 auto !important;
+        border-radius: 12px !important;
+    }
+    .modal.modal-fullscreen-custom .modal-content {
+        height: calc(100% - 65px) !important;
+        max-height: none !important;
+        padding: 20px !important;
+        overflow-y: auto !important;
     }
 </style>
 
@@ -196,8 +215,8 @@ $tiposCores = [
 </div>
 
 <!-- MODAL EDITOR / CADASTRO E EDIÇÃO DE DOCUMENTO OFICIAL -->
-<div id="modalDocumentoOficial" class="modal modal-fixed-footer" style="width: 96% !important; max-height: 95% !important; height: 95% !important; top: 2.5% !important; border-radius: 12px;">
-    <div class="modal-content" style="padding: 20px; height: calc(100% - 60px); overflow-y: auto;">
+<div id="modalDocumentoOficial" class="modal modal-fixed-footer modal-fullscreen-custom">
+    <div class="modal-content">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 15px;">
             <h4 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f172a;" id="modalDocTitle">
                 <i class="material-icons left purple-text">edit_note</i>Redação de Documento Oficial
@@ -324,7 +343,7 @@ $tiposCores = [
                         <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
                             <label style="font-weight: bold; color: #334155; display: block; margin-bottom: 6px;">Live PDF Preview (Typst Porta 5050):</label>
                             <div id="splitPdfPreviewContainer" style="width: 100%; height: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #e2e8f0; display: flex; align-items: center; justify-content: center;">
-                                <span class="grey-text">Clique em "Atualizar PDF Preview" para compilar...</span>
+                                <span class="grey-text">Digite ou clique em "Atualizar PDF Preview" para compilar...</span>
                             </div>
                         </div>
                     </div>
@@ -341,7 +360,7 @@ $tiposCores = [
 </div>
 
 <!-- MODAL PREVIEW DE PDF FINAL -->
-<div id="modalPreviewPdfFinal" class="modal modal-fixed-footer" style="width: 95% !important; max-height: 94% !important; height: 94% !important; top: 3% !important; border-radius: 12px;">
+<div id="modalPreviewPdfFinal" class="modal modal-fixed-footer modal-fullscreen-custom">
     <div class="modal-content" style="padding: 0; height: calc(100% - 56px);">
         <iframe id="iframePdfFinal" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
@@ -485,6 +504,23 @@ $(document).ready(function() {
     // Live Preview PDF no modo Split
     $('#btnLiveCompile').click(function() {
         triggerLivePreview();
+    });
+
+    // Compilação Dinâmica Automática ao Digitar (Debounce de 600ms)
+    let autoCompileTimer = null;
+    $('#editorSplitCode, #docTitulo, #docEmenta, #docRelator, #docNumero, #docAno').on('input keyup change', function() {
+        if ($('#docModoEditor').val() === 'split_code' && $('#modalDocumentoOficial').is(':visible')) {
+            clearTimeout(autoCompileTimer);
+            autoCompileTimer = setTimeout(function() {
+                triggerLivePreview();
+            }, 600);
+        }
+    });
+
+    $('#docTipo, #docVarianteGlobal, input[name="modo_template"]').on('change', function() {
+        if ($('#docModoEditor').val() === 'split_code' && $('#modalDocumentoOficial').is(':visible')) {
+            triggerLivePreview();
+        }
     });
 
     function triggerLivePreview() {
