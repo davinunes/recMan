@@ -11,8 +11,14 @@ class SSH:
         self.ssh = SSHClient()
         self.ssh.load_system_host_keys()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        # Substitua 'caminho_para_sua_chave.ppk' pelo caminho do seu arquivo .ppk
-        self.key = RSAKey.from_private_key_file('/var/www/html/py/mykeyopenssh.pem')
+        
+        # Localiza a chave SSH no mesmo diretório do script (independente de /var/www/html ou /var/www/mini)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        key_file = os.path.join(script_dir, 'mykeyopenssh.pem')
+        if not os.path.exists(key_file):
+            key_file = '/var/www/html/py/mykeyopenssh.pem'
+            
+        self.key = RSAKey.from_private_key_file(key_file)
         self.ssh.connect(hostname='127.0.0.1', port='22', username='root', pkey=self.key)
 
     def exec_cmd(self, cmd):

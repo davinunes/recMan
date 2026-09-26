@@ -1,6 +1,6 @@
 <?php
 // Configuração do ambiente
-$htmlPath = '/var/www/html';
+$htmlPath = __DIR__;
 $pythonPath = '/usr/bin/python3';
 $sshScript = $htmlPath . '/py/ssh.py';
 
