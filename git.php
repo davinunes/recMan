@@ -66,8 +66,8 @@ if (isset($_GET['action'])) {
 	}
 
 	if ($_GET['action'] == 'restart_typst_api') {
-		// Comando para reiniciar a API Typst na porta 5050 em py/typst_server.py (com leitura forçada de log)
-		$pyCmd = "cd $htmlPath/py && (pkill -9 -f typst_server.py || true) && (nohup python3 -u typst_server.py > typst_server.log 2>&1 &) && sleep 1 && ps aux | grep typst_server.py | grep -v grep ; echo '=== CONTEUDO LOG ===' ; cat typst_server.log";
+		// Comando reforçado para matar processo na porta 5050 e reiniciar a API Typst
+		$pyCmd = "cd $htmlPath/py && (fuser -k 5050/tcp || true) && (pkill -9 -f typst_server.py || true) && sleep 1 && (nohup python3 -u typst_server.py </dev/null > typst_server.log 2>&1 &) && sleep 2 && ps aux | grep typst_server.py | grep -v grep";
 
 		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
 		$output = shell_exec($fullCmd);
