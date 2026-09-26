@@ -232,6 +232,12 @@ switch ($_GET['metodo']) {
     case "editaDiligencia":
         session_start();
 
+        if (empty($_POST['id_diligencia']) || !isset($_POST['messageText'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'ID da diligência ou texto ausente']);
+            break;
+        }
+
         $dados = $_POST;
         $dados['usuario'] = $_SESSION["user_id"];
         $response = updateDiligencia($dados);
@@ -261,7 +267,12 @@ switch ($_GET['metodo']) {
             }
         }
 
-        echo $response;
+        header('Content-Type: application/json; charset=utf-8');
+        if ($response === "ok") {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => $response]);
+        }
         break;
     case "previaEmailDiligencia":
     case "notificarRequerente":

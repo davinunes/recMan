@@ -816,6 +816,12 @@ $(document).on('click', '.editDiligence', function () {
     comentario = comentario ? comentario.trim().replace(/<br\s*\/?>/gi, "\n") : "";
     $("#messageTextDiligencia").val(comentario);
     $("#editDiligenciaId").val(id_dil);
+
+    let textarea = $("#messageTextDiligencia")[0];
+    if (textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+    }
     
     // Buscar anexos existentes
     $("#existingAttachmentsDiligence").html('<p class="center">Carregando anexos...</p>');
@@ -872,21 +878,42 @@ $(document).on('click', '#updateDiligence', function () {
     const formElement = document.getElementById('editDiligenciaForm');
     const formData = new FormData(formElement);
 
+    const idValue = $("#editDiligenciaId").val();
+    const textValue = $("#messageTextDiligencia").val();
+    
+    formData.set('id_diligencia', idValue);
+    formData.set('messageText', textValue);
+
+    if (!idValue || !textValue) {
+        return M.toast({ html: 'Erro: ID ou conteúdo da diligência ausente!', classes: 'rounded red' });
+    }
+
     $.ajax({
         url: "metodo.php?metodo=" + metodo,
         method: "POST",
         data: formData,
         contentType: false,
         processData: false,
+        dataType: 'json',
         success: function (responseData) {
-            if (responseData.trim() === "ok") {
+            let isOk = false;
+            if (typeof responseData === 'object' && responseData !== null) {
+                isOk = responseData.success === true;
+            } else if (typeof responseData === 'string') {
+                isOk = responseData.trim() === "ok" || responseData.includes('"success":true');
+            }
+
+            if (isOk) {
                 M.toast({ html: "Diligência atualizada!", classes: 'rounded green' });
-                setTimeout(() => window.location.reload(), 1000);
+                window.location.reload();
             } else {
-                M.toast({ html: responseData, classes: 'rounded red' });
+                console.error("Erro do Servidor:", responseData);
+                let err = (responseData && responseData.error) ? responseData.error : 'Erro ao salvar diligência. Verifique o console.';
+                M.toast({ html: err, classes: 'rounded red' });
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
+            console.error("Erro AJAX:", textStatus, errorThrown);
             M.toast({ html: 'Erro na solicitação', classes: 'rounded red' });
         }
     });
