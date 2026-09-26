@@ -263,13 +263,17 @@ class TypstHandler(BaseHTTPRequestHandler):
             })
 
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
+
 def main():
     print(f"Servidor Typst API iniciado na porta {PORT}...")
     print(f"Binário Typst: {TYPST_BIN or 'NÃO ENCONTRADO'}")
     print(f"Raiz do Projeto: {ROOT_DIR}")
     print(f"Templates em: {TEMPLATES_DIR}")
     print(f"Banner de Topo: {prepare_banner_image({})}")
-    server = HTTPServer(('0.0.0.0', PORT), TypstHandler)
+    server = ReusableHTTPServer(('0.0.0.0', PORT), TypstHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -279,3 +283,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
