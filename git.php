@@ -1,6 +1,6 @@
 <?php
 // Configuração do ambiente
-$htmlPath = __DIR__;
+$htmlPath = file_exists('/var/www/mini/py/ssh.py') ? '/var/www/mini' : __DIR__;
 $pythonPath = '/usr/bin/python3';
 $sshScript = $htmlPath . '/py/ssh.py';
 
