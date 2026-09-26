@@ -186,13 +186,13 @@ $tiposCores = [
                                             <?php endif; ?>
                                         </td>
                                         <td class="right-align" style="padding-right: 20px;">
-                                            <button class="btn-flat btn-small waves-effect waves-blue btnPreviewDoc" docid="<?php echo $doc['id']; ?>" title="Visualizar PDF">
+                                            <button class="btn-flat btn-small waves-effect waves-blue btnPreviewDoc" docid="<?php echo $doc['id']; ?>" data-docid="<?php echo $doc['id']; ?>" title="Visualizar PDF">
                                                 <i class="material-icons blue-text text-darken-2">visibility</i>
                                             </button>
-                                            <button class="btn-flat btn-small waves-effect waves-orange btnEditarDoc" docid="<?php echo $doc['id']; ?>" title="Editar">
+                                            <button class="btn-flat btn-small waves-effect waves-orange btnEditarDoc" docid="<?php echo $doc['id']; ?>" data-docid="<?php echo $doc['id']; ?>" title="Editar">
                                                 <i class="material-icons orange-text text-darken-3">edit</i>
                                             </button>
-                                            <button class="btn-flat btn-small waves-effect waves-red btnDeletarDoc" docid="<?php echo $doc['id']; ?>" num="<?php echo $numFormatado; ?>" title="Excluir">
+                                            <button class="btn-flat btn-small waves-effect waves-red btnDeletarDoc" docid="<?php echo $doc['id']; ?>" data-docid="<?php echo $doc['id']; ?>" num="<?php echo $numFormatado; ?>" title="Excluir">
                                                 <i class="material-icons red-text text-darken-2">delete</i>
                                             </button>
                                         </td>
@@ -569,8 +569,9 @@ $(document).ready(function() {
     });
 
     // Botão Ver PDF na Tabela
-    $(document).on('click', '.btnPreviewDoc', function() {
-        let id = $(this).attr('docid');
+    $(document).on('click', '.btnPreviewDoc', function(e) {
+        let btn = $(this).closest('.btnPreviewDoc');
+        let id = btn.attr('docid') || btn.data('docid');
         M.toast({ html: 'Gerando visualização...', classes: 'rounded blue' });
         
         $.ajax({

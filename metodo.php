@@ -319,6 +319,14 @@ switch ($_GET['metodo']) {
         require_once "classes/typstPdfService.php";
         $dados = $_POST;
         
+        if (!empty($dados['id'])) {
+            $docDb = getDocumentoOficialById($dados['id']);
+            if ($docDb) {
+                // Mescla os dados do banco com os dados postados, preservando overrides do POST
+                $dados = array_merge($docDb, $dados);
+            }
+        }
+        
         $tiposRotulo = [
             'orientacao_tecnica' => 'ORIENTAÇÃO TÉCNICA',
             'parecer_opinativo'  => 'PARECER OPINATIVO',
