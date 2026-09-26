@@ -23,6 +23,7 @@ class SSH:
     def exec_cmd(self, cmd):
         print(f"[SSH CMD] Enviando comando: {cmd}", flush=True)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
+        stdin.close()
         out_text = stdout.read().decode().strip()
         err_text = stderr.read().decode().strip()
         exit_code = stderr.channel.recv_exit_status()
