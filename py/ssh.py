@@ -5,8 +5,6 @@ import paramiko
 import sys
 import os
 
-COMANDO = sys.argv[1]
-
 class SSH:
     def __init__(self):
         self.ssh = SSHClient()
@@ -23,13 +21,13 @@ class SSH:
         self.ssh.connect(hostname='127.0.0.1', port='22', username='root', pkey=self.key)
 
     def exec_cmd(self, cmd):
-        print(f"[SSH CMD] Enviando comando: {cmd}")
+        print(f"[SSH CMD] Enviando comando: {cmd}", flush=True)
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
         exit_code = stderr.channel.recv_exit_status()
         out_text = stdout.read().decode().strip()
         err_text = stderr.read().decode().strip()
         
-        print(f"[SSH EXIT CODE] {exit_code}")
+        print(f"[SSH EXIT CODE] {exit_code}", flush=True)
         result = []
         if out_text:
             result.append("[SSH STDOUT]\n" + out_text)
@@ -38,13 +36,16 @@ class SSH:
         if not result:
             result.append(f"[SSH EMPTY] Nenhuma saída retornada (exit code {exit_code}).")
             
-        print("\n".join(result))
+        print("\n".join(result), flush=True)
 
 if __name__ == '__main__':
     try:
-        print(f"[SSH START] Iniciando conexão SSH no script py/ssh.py...")
+        print("[SSH START] Iniciando script py/ssh.py...", flush=True)
+        if len(sys.argv) < 2:
+            raise ValueError("Nenhum comando enviado via argumentos para py/ssh.py")
+        comando = sys.argv[1]
         ssh = SSH()
-        print("[SSH CONNECTED] Conectado ao SSH 127.0.0.1 como root com sucesso.")
-        ssh.exec_cmd(COMANDO)
+        print("[SSH CONNECTED] Conectado ao SSH 127.0.0.1 como root com sucesso.", flush=True)
+        ssh.exec_cmd(comando)
     except Exception as e:
-        print(f"[SSH EXCEPTION] {type(e).__name__}: {str(e)}")
+        print(f"[SSH EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)

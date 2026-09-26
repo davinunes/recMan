@@ -69,7 +69,7 @@ if (isset($_GET['action'])) {
 		// Comando com logs de debug detalhados do PHP + Python SSH
 		$pyCmd = "cd /var/www/mini/py && (pkill -9 -f typst_server.py || true) && (nohup /usr/bin/python3 -u typst_server.py > /var/log/typst_server.log 2>&1 &) && sleep 1 && cat /var/log/typst_server.log";
 
-		$fullCmd = "$pythonPath $sshScript '$pyCmd' 2>&1";
+		$fullCmd = "$pythonPath -u $sshScript '$pyCmd' 2>&1";
 		$output = shell_exec($fullCmd);
 		
 		$debugOutput = "=== DEBUG PHP SHELL EXEC ===\nFULL CMD: " . $fullCmd . "\nRAW OUTPUT:\n" . ($output ?: "[NENHUMA SAIDA RETORNADA PELO SHELL_EXEC]");
