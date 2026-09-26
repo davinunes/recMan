@@ -66,8 +66,8 @@ if (isset($_GET['action'])) {
 	}
 
 	if ($_GET['action'] == 'restart_typst_api') {
-		// Desacoplamento via Python POSIX setsid (start_new_session=True)
-		$pyCmd = "cd /var/www/mini/py && (pkill -9 -f typst_server.py || true) && sleep 1 && (python3 -c \"import subprocess; subprocess.Popen(['/usr/bin/python3', '/var/www/mini/py/typst_server.py'], start_new_session=True)\") && sleep 1 && ps aux | grep typst_server.py | grep -v grep";
+		// Executa o script dedicado py/restart_typst.sh
+		$pyCmd = "bash $htmlPath/py/restart_typst.sh";
 
 		$fullCmd = "$pythonPath -u $sshScript '$pyCmd' 2>&1";
 		$output = shell_exec($fullCmd);
