@@ -49,36 +49,30 @@ def find_typst_binary():
 
 
 def prepare_banner_image(input_data=None):
-    """Garante que a imagem LayoutMiami.jpg esteja presente dentro de typst_templates/LayoutMiami.jpg."""
+    """Garante que as imagens (LayoutMiami.jpg, lay-top-fist-page-1.png, lay-body-all-pages-1.png) estejam em typst_templates/."""
     if input_data is None:
         input_data = {}
 
-    dest = os.path.join(TEMPLATES_DIR, 'LayoutMiami.jpg')
+    images_to_sync = ['LayoutMiami.jpg', 'lay-top-fist-page-1.png', 'lay-body-all-pages-1.png']
+    os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
-    # Se já existir diretamente em typst_templates/LayoutMiami.jpg, usa ela
-    if os.path.exists(dest) and os.path.getsize(dest) > 0:
-        return 'LayoutMiami.jpg'
-
-    requested_path = input_data.get('banner_path', '')
-    candidates = [
-        requested_path,
-        '/var/www/reportPDFpython/LayoutMiami.jpg',
-        os.path.abspath(os.path.join(ROOT_DIR, '..', 'reportPDFpython', 'LayoutMiami.jpg')),
-        os.path.join(ROOT_DIR, 'addons', 'api-pdf', 'LayoutMiami.jpg'),
-        os.path.join(ROOT_DIR, 'reportPDFpython', 'LayoutMiami.jpg'),
-        os.path.join(PY_DIR, 'LayoutMiami.jpg')
-    ]
-
-    for c in candidates:
-        if c and os.path.exists(c):
-            try:
-                os.makedirs(TEMPLATES_DIR, exist_ok=True)
-                shutil.copy2(c, dest)
-                print(f"[BANNER READY] Imagem copiada de {c} para {dest}")
-                return 'LayoutMiami.jpg'
-            except Exception as e:
-                sys.stderr.write(f"[BANNER ERROR] Falha ao copiar imagem: {e}\n")
-                sys.stderr.flush()
+    for img_name in images_to_sync:
+        dest = os.path.join(TEMPLATES_DIR, img_name)
+        if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+            candidates = [
+                os.path.join(ROOT_DIR, 'addons', 'api-pdf', img_name),
+                os.path.join(ROOT_DIR, 'reportPDFpython', img_name),
+                os.path.join(PY_DIR, img_name)
+            ]
+            for c in candidates:
+                if c and os.path.exists(c):
+                    try:
+                        shutil.copy2(c, dest)
+                        print(f"[IMAGE READY] Imagem copiada de {c} para {dest}")
+                        break
+                    except Exception as e:
+                        sys.stderr.write(f"[IMAGE ERROR] Falha ao copiar {img_name}: {e}\n")
+                        sys.stderr.flush()
 
     return 'LayoutMiami.jpg'
 

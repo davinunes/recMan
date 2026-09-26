@@ -186,14 +186,16 @@ if ($action === 'buscar_parecer' && ($searchNum !== '' || $searchAno !== '')) {
 }
 
 $variantesDisponiveis = [
-    'modern'    => 'Moderno (com Banner LayoutMiami.jpg e Capa Escura)',
-    'classic'   => 'Clássico / Notarial (Sem Banner, Moldura Azul)',
-    'compact'   => 'Compacto / Executivo (Tabela Densa, Sem Capa Extra)',
-    'corporate' => 'Corporativo (Azul Royal Institucional)',
-    'minimal'   => 'Minimalista / Clean (Design Nórdico em Tons Cinza)',
-    'juridico'  => 'Jurídico Solene (Borda Dupla Cartório e Selo Verde)',
-    'dark'      => 'Dark Mode (Fundo Escuro Premium e Detalhes Ciano)',
-    'editorial' => 'Editorial / Boletim (Capa Verde Esmeralda)'
+    'modern'       => 'Moderno (com Banner LayoutMiami.jpg e Capa Escura)',
+    'classic'      => 'Clássico / Notarial (Sem Banner, Moldura Azul)',
+    'compact'      => 'Compacto / Executivo (Tabela Densa, Sem Capa Extra)',
+    'corporate'    => 'Corporativo (Azul Royal Institucional)',
+    'minimal'      => 'Minimalista / Clean (Design Nórdico em Tons Cinza)',
+    'juridico'     => 'Jurídico Solene (Borda Dupla Cartório e Selo Verde)',
+    'dark'         => 'Dark Mode (Fundo Escuro Premium e Detalhes Ciano)',
+    'editorial'    => 'Editorial / Boletim (Capa Verde Esmeralda)',
+    'top_header'   => 'Novo Topo 1ª Pág (lay-top-fist-page-1.png)',
+    'watermark_a4' => 'Nova Marca d\'Água A4 Full (lay-body-all-pages-1.png)'
 ];
 ?>
 <!DOCTYPE html>

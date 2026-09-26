@@ -181,6 +181,18 @@
     paper: "a4",
     margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
     fill: if variant == "dark" { rgb("0f172a") } else { white },
+    background: context {
+      let current_page = counter(page).get().first()
+      if variant == "watermark_a4" [
+        #place(top + left, dx: -2cm, dy: -2.5cm)[
+          #image("lay-body-all-pages-1.png", width: 210mm, height: 297mm)
+        ]
+      ] else if variant == "top_header" and current_page == 1 [
+        #place(top + left, dx: -2cm, dy: -2.5cm)[
+          #image("lay-top-fist-page-1.png", width: 210mm)
+        ]
+      ]
+    },
     header: context {
       let current_page = counter(page).get().first()
       if current_page > 1 [
@@ -207,7 +219,39 @@
   set par(justify: true, leading: 0.65em)
 
   // CAPAS DAS VARIANTES
-  if variant == "modern" [
+  if variant == "top_header" [
+    #align(center)[
+      #v(3cm)
+      #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
+        #text(fill: white, weight: "bold", size: 16pt)[#titulo]
+      ]
+      #v(1.5cm)
+      #text(size: 12pt, style: "italic", fill: rgb("334155"))[
+        Normas de Funcionamento, Convivência e Administração
+      ]
+      #v(3cm)
+      #text(size: 10pt, fill: rgb("64748b"))[
+        Taguatinga / DF • Versão Digital Interativa
+      ]
+    ]
+    #pagebreak()
+  ] else if variant == "watermark_a4" [
+    #align(center)[
+      #v(2cm)
+      #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
+        #text(fill: white, weight: "bold", size: 16pt)[#titulo]
+      ]
+      #v(1.5cm)
+      #text(size: 12pt, style: "italic", fill: rgb("334155"))[
+        Normas de Funcionamento, Convivência e Administração
+      ]
+      #v(3cm)
+      #text(size: 10pt, fill: rgb("64748b"))[
+        Taguatinga / DF • Versão Digital Interativa
+      ]
+    ]
+    #pagebreak()
+  ] else if variant == "modern" [
     #align(center)[
       #v(-1cm)
       #image(banner_path, width: 100%)

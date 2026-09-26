@@ -64,7 +64,7 @@
     title_color = rgb("38bdf8")
     bg_card = rgb("1e293b")
     stroke_card = rgb("0284c7")
-  } else if variant == "editorial" {
+  } else if variant == "editorial" or variant == "top_header" or variant == "watermark_a4" {
     title_color = rgb("065f46")
     bg_card = rgb("ecfdf5")
     stroke_card = rgb("059669")
@@ -76,9 +76,21 @@
     paper: "a4",
     margin: (x: 2cm, top: 2.5cm, bottom: 2.5cm),
     fill: if variant == "dark" { rgb("0f172a") } else { white },
+    background: context {
+      let current_page = counter(page).get().first()
+      if variant == "watermark_a4" [
+        #place(top + left, dx: -2cm, dy: -2.5cm)[
+          #image("lay-body-all-pages-1.png", width: 210mm, height: 297mm)
+        ]
+      ] else if variant == "top_header" and current_page == 1 [
+        #place(top + left, dx: -2cm, dy: -2.5cm)[
+          #image("lay-top-fist-page-1.png", width: 210mm)
+        ]
+      ]
+    },
     header: context {
       let current_page = counter(page).get().first()
-      if (variant != "modern" or not exibir_banner) or current_page > 1 [
+      if (variant != "modern" or not exibir_banner) and (variant != "top_header" or current_page > 1) or current_page > 1 [
         #grid(
           columns: (1fr, auto),
           align(left)[#text(size: 8.5pt, fill: text_secondary, weight: "bold")[CONDOMÍNIO RESIDENCIAL TOP LIFE MIAMI BEACH]],
@@ -108,6 +120,8 @@
       #image(banner_path, width: 100%)
     ]
     #v(0.3cm)
+  ] else if variant == "top_header" [
+    #v(2.5cm)
   ]
 
   // Data alinhada à direita
