@@ -82,7 +82,7 @@ $isBannerChecked = ($currBanner === null || $currBanner === '' || $currBanner ==
 
                             <!-- Template Padrão do Typst -->
                             <div class="col s12 m4">
-                                <label style="font-weight: bold; color: #334155; font-size: 0.95rem; display: block; margin-bottom: 8px;">Template Padrão Typst (10 Opções):</label>
+                                <label style="font-weight: bold; color: #334155; font-size: 0.95rem; display: block; margin-bottom: 8px;">Template Padrão Typst (11 Opções):</label>
                                 <select name="pdf_typst_template" class="browser-default" style="border-radius: 8px; border: 1px solid #cbd5e1; padding: 12px; background-color: #f8fafc; font-weight: 500; height: auto;">
                                     <option value="modern" <?php echo $currTemplate === 'modern' ? 'selected' : ''; ?>>Moderno (com Banner LayoutMiami.jpg)</option>
                                     <option value="classic" <?php echo $currTemplate === 'classic' ? 'selected' : ''; ?>>Clássico / Notarial (Sem Banner, Moldura Azul)</option>
@@ -94,6 +94,7 @@ $isBannerChecked = ($currBanner === null || $currBanner === '' || $currBanner ==
                                     <option value="editorial" <?php echo $currTemplate === 'editorial' ? 'selected' : ''; ?>>Editorial / Boletim (Verde Esmeralda)</option>
                                     <option value="top_header" <?php echo $currTemplate === 'top_header' ? 'selected' : ''; ?>>Topo 1ª Página (lay-top-fist-page-1.png)</option>
                                     <option value="watermark_a4" <?php echo $currTemplate === 'watermark_a4' ? 'selected' : ''; ?>>Marca d'Água Full A4 (lay-body-all-pages-1.png)</option>
+                                    <option value="margem_moderna" <?php echo $currTemplate === 'margem_moderna' ? 'selected' : ''; ?>>Marca d'Água Margem Moderna (lay-body-all-pages-2.png)</option>
                                 </select>
                             </div>
 

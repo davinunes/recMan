@@ -64,7 +64,7 @@
     title_color = rgb("38bdf8")
     bg_card = rgb("1e293b")
     stroke_card = rgb("0284c7")
-  } else if variant == "editorial" or variant == "top_header" or variant == "watermark_a4" {
+  } else if variant == "editorial" or variant == "top_header" or variant == "watermark_a4" or variant == "margem_moderna" {
     title_color = rgb("065f46")
     bg_card = rgb("ecfdf5")
     stroke_card = rgb("059669")
@@ -81,6 +81,10 @@
       if variant == "watermark_a4" [
         #place(top + left)[
           #image("lay-body-all-pages-1.png", width: 100%, height: 100%)
+        ]
+      ] else if variant == "margem_moderna" [
+        #place(top + left)[
+          #image("lay-body-all-pages-2.png", width: 100%, height: 100%)
         ]
       ] else if variant == "top_header" and current_page == 1 [
         #place(top + left)[
