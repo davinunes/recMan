@@ -303,6 +303,17 @@ switch ($_GET['metodo']) {
             echo json_encode(['success' => false, 'error' => 'Erro ao excluir documento']);
         }
         break;
+    case "getDocumentoOficialById":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $id = (int)($_POST['id'] ?? 0);
+        $doc = getDocumentoOficialById($id);
+        if ($doc) {
+            echo json_encode(['success' => true, 'data' => $doc]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Documento não encontrado']);
+        }
+        break;
     case "previewDocumentoOficial":
         session_start();
         require_once "classes/typstPdfService.php";

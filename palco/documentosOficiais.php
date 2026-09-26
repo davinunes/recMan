@@ -196,8 +196,8 @@ $tiposCores = [
 </div>
 
 <!-- MODAL EDITOR / CADASTRO E EDIÇÃO DE DOCUMENTO OFICIAL -->
-<div id="modalDocumentoOficial" class="modal modal-fixed-footer" style="width: 92% !important; max-height: 92% !important; border-radius: 12px;">
-    <div class="modal-content" style="padding: 20px;">
+<div id="modalDocumentoOficial" class="modal modal-fixed-footer" style="width: 96% !important; max-height: 95% !important; height: 95% !important; top: 2.5% !important; border-radius: 12px;">
+    <div class="modal-content" style="padding: 20px; height: calc(100% - 60px); overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 15px;">
             <h4 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f172a;" id="modalDocTitle">
                 <i class="material-icons left purple-text">edit_note</i>Redação de Documento Oficial
@@ -301,7 +301,7 @@ $tiposCores = [
                         <button type="button" onclick="execEditorCmd('insertUnorderedList')">• Lista</button>
                         <button type="button" onclick="execEditorCmd('insertOrderedList')">1. Lista</button>
                     </div>
-                    <div id="editorVisualDiv" contenteditable="true" style="min-height: 320px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; background: white; overflow-y: auto;">
+                    <div id="editorVisualDiv" contenteditable="true" style="min-height: 480px; max-height: 600px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; background: white; overflow-y: auto;">
                         <p>Escreva o conteúdo do seu parecer ou orientação técnica aqui...</p>
                     </div>
                 </div>
@@ -309,21 +309,21 @@ $tiposCores = [
 
             <div id="wrapperEditorSplit" class="row hide">
                 <div class="col s12">
-                    <div class="split-container">
+                    <div class="split-container" style="display: flex; gap: 15px; height: calc(100vh - 310px); min-height: 520px;">
                         <!-- Painel Código Left -->
-                        <div class="split-pane">
+                        <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
                             <label style="font-weight: bold; color: #334155; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <span>Código Fonte (Typst / Markdown):</span>
                                 <button type="button" class="btn-flat btn-small blue-text" id="btnLiveCompile">
                                     <i class="material-icons left tiny">play_arrow</i>Atualizar PDF Preview
                                 </button>
                             </label>
-                            <textarea id="editorSplitCode" name="conteudo" style="width: 100%; min-height: 420px; font-family: monospace; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5;"></textarea>
+                            <textarea id="editorSplitCode" name="conteudo" style="width: 100%; height: 100%; font-family: monospace; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5; resize: none;"></textarea>
                         </div>
                         <!-- Painel Live PDF Right -->
-                        <div class="split-pane">
+                        <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
                             <label style="font-weight: bold; color: #334155; display: block; margin-bottom: 6px;">Live PDF Preview (Typst Porta 5050):</label>
-                            <div id="splitPdfPreviewContainer" style="width: 100%; height: 420px; border: 1px solid #cbd5e1; border-radius: 8px; background: #e2e8f0; display: flex; align-items: center; justify-content: center;">
+                            <div id="splitPdfPreviewContainer" style="width: 100%; height: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #e2e8f0; display: flex; align-items: center; justify-content: center;">
                                 <span class="grey-text">Clique em "Atualizar PDF Preview" para compilar...</span>
                             </div>
                         </div>
@@ -341,12 +341,12 @@ $tiposCores = [
 </div>
 
 <!-- MODAL PREVIEW DE PDF FINAL -->
-<div id="modalPreviewPdfFinal" class="modal" style="width: 85% !important; height: 90% !important; border-radius: 12px;">
-    <div class="modal-content" style="padding: 0; height: calc(100% - 60px);">
+<div id="modalPreviewPdfFinal" class="modal modal-fixed-footer" style="width: 95% !important; max-height: 94% !important; height: 94% !important; top: 3% !important; border-radius: 12px;">
+    <div class="modal-content" style="padding: 0; height: calc(100% - 56px);">
         <iframe id="iframePdfFinal" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
-    <div class="modal-footer">
-        <a href="#!" class="modal-close btn-flat waves-effect">Fechar</a>
+    <div class="modal-footer" style="padding: 5px 20px;">
+        <a href="#!" class="modal-close btn-flat waves-effect bold">Fechar Visualização</a>
     </div>
 </div>
 
@@ -419,6 +419,7 @@ $(document).ready(function() {
 
     // Novo Documento
     $('#btnNovoDocumento').click(function() {
+        $('#modalDocTitle').html('<i class="material-icons left purple-text">edit_note</i>Redação de Documento Oficial');
         $('#docId').val('0');
         $('#docTitulo').val('');
         $('#docEmenta').val('');
@@ -426,7 +427,59 @@ $(document).ready(function() {
         $('#editorSplitCode').val('');
         $('#tmplModeGlobal').prop('checked', true).trigger('change');
         $('#docTipo').trigger('change');
+        $('#btnModeVisual').trigger('click');
         $('#modalDocumentoOficial').modal('open');
+    });
+
+    // Editar Documento
+    $(document).on('click', '.btnEditarDoc', function() {
+        let id = $(this).attr('docid');
+        M.toast({ html: 'Carregando documento...', classes: 'rounded blue' });
+        
+        $.ajax({
+            url: 'metodo.php?metodo=getDocumentoOficialById',
+            method: 'POST',
+            data: { id: id },
+            success: function(res) {
+                if (res && res.success && res.data) {
+                    let doc = res.data;
+                    let numFmt = ("000" + doc.numero).slice(-3) + "/" + doc.ano;
+                    $('#modalDocTitle').html('<i class="material-icons left purple-text">edit_note</i>Editar Documento Oficial Nº ' + numFmt);
+                    $('#docId').val(doc.id);
+                    $('#docTipo').val(doc.tipo);
+                    $('#docNumero').val(doc.numero);
+                    $('#docAno').val(doc.ano);
+                    $('#docRelator').val(doc.relator || 'Conselho Consultivo e Fiscal');
+                    $('#docDataEmissao').val(doc.data_emissao);
+                    $('#docTitulo').val(doc.titulo);
+                    $('#docEmenta').val(doc.ementa || '');
+
+                    if (doc.modo_template === 'clear') {
+                        $('#tmplModeClear').prop('checked', true).trigger('change');
+                    } else {
+                        $('#tmplModeGlobal').prop('checked', true).trigger('change');
+                    }
+                    if (doc.variante_global) {
+                        $('#docVarianteGlobal').val(doc.variante_global);
+                    }
+
+                    let modo = doc.modo_editor || 'visual';
+                    if (modo === 'split_code') {
+                        $('#btnModeSplit').trigger('click');
+                        $('#editorSplitCode').val(doc.conteudo || '');
+                        $('#editorVisualDiv').html('');
+                    } else {
+                        $('#btnModeVisual').trigger('click');
+                        $('#editorVisualDiv').html(doc.conteudo || '');
+                        $('#editorSplitCode').val('');
+                    }
+
+                    $('#modalDocumentoOficial').modal('open');
+                } else {
+                    M.toast({ html: (res.error || 'Erro ao carregar documento'), classes: 'rounded red' });
+                }
+            }
+        });
     });
 
     // Live Preview PDF no modo Split
