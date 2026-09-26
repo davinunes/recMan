@@ -30,7 +30,7 @@ Foi implementado o módulo para cadastro, numeração automática e emissão em 
 - [`classes/typstPdfService.php`](file:///e:/DEV/recMan/classes/typstPdfService.php): Adicionadas funções `htmlToTypst` e `gerarDocumentoOficial`.
 - [`py/typst_server.py`](file:///e:/DEV/recMan/py/typst_server.py): Adicionado endpoint `/gerar_documento_oficial` e suporte ao `modo_template == 'clear'`.
 - [`index.php`](file:///e:/DEV/recMan/index.php): Adicionada a rota `documentosOficiais`.
-- [`palco/tools.php`](file:///e:/DEV/recMan/palco/tools.php): Incluído o card botãozão **Documentos Oficiais**.
+- [`git.php`](file:///e:/DEV/recMan/git.php): Adicionada ação `restart_typst_api` e o botão **"Reiniciar Serviço Typst (5050)"** no painel de controle Git Deploy.
 
 ---
 

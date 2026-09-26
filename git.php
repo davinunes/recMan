@@ -64,6 +64,17 @@ if (isset($_GET['action'])) {
 		echo json_encode(['success' => true, 'output' => $cleanOutput]);
 		exit;
 	}
+
+	if ($_GET['action'] == 'restart_typst_api') {
+		// Comando para reiniciar a API Typst na porta 5050 em py/typst_server.py
+		$pyCmd = "cd $htmlPath && (pkill -9 -f typst_server.py || true) && (nohup python3 py/typst_server.py > py/typst_server.log 2>&1 &) && sleep 1 && ps aux | grep typst_server.py | grep -v grep 2>&1";
+
+		$fullCmd = "$pythonPath $sshScript '$pyCmd'";
+		$output = shell_exec($fullCmd);
+		$cleanOutput = trim($output) ?: 'Serviço Typst API 5050 reiniciado com sucesso.';
+		echo json_encode(['success' => true, 'output' => $cleanOutput]);
+		exit;
+	}
 }
 ?>
 
@@ -159,11 +170,22 @@ if (isset($_GET['action'])) {
 						<p style="font-size:0.9rem; opacity:0.9;">Gerencia o processo do serviço Flask em Python na porta 5000.</p>
 
 						<button id="btnRestartPdf" class="btn btn-small waves-effect waves-light amber darken-3 btn-deploy" style="margin-top:15px;">
-							<i class="material-icons left">autorenew</i> Reiniciar Serviço PDF
+							<i class="material-icons left">autorenew</i> Reiniciar Serviço PDF (5000)
 						</button>
 
 						<button id="btnPullPdf" class="btn btn-small waves-effect waves-light deep-purple darken-1 btn-deploy">
 							<i class="material-icons left">cloud_download</i> Git Pull + Reiniciar PDF
+						</button>
+					</div>
+				</div>
+
+				<div class="card teal darken-3 white-text">
+					<div class="card-content">
+						<span class="card-title"><i class="material-icons left">bolt</i>API Typst PDF CLI (Porta 5050)</span>
+						<p style="font-size:0.9rem; opacity:0.9;">Gerencia o processo do microserviço HTTP Typst em <code>py/typst_server.py</code>.</p>
+
+						<button id="btnRestartTypst" class="btn btn-small waves-effect waves-light cyan darken-3 btn-deploy" style="margin-top:15px;">
+							<i class="material-icons left">autorenew</i> Reiniciar Serviço Typst (5050)
 						</button>
 					</div>
 				</div>
@@ -299,6 +321,24 @@ if (isset($_GET['action'])) {
 				}).always(() => {
 					$('#loader').hide();
 					$('#btnPullPdf').removeClass('disabled');
+				});
+			});
+
+			$('#btnRestartTypst').click(function () {
+				$('#loader').show();
+				$('#btnRestartTypst').addClass('disabled');
+				log('Reiniciando serviço da API Typst (Porta 5050) em py/typst_server.py...');
+
+				$.get('git.php?action=restart_typst_api', function (res) {
+					var outText = (res && res.output && res.output !== 'null') ? res.output : 'Serviço da API Typst 5050 reiniciado com sucesso.';
+					$('#terminal').append('\n' + outText);
+					log('Serviço da API Typst 5050 reiniciado.');
+					M.toast({ html: 'API Typst (Porta 5050) reiniciada!', classes: 'green' });
+				}).fail(function () {
+					log('ERRO: Falha na comunicação com o servidor.');
+				}).always(() => {
+					$('#loader').hide();
+					$('#btnRestartTypst').removeClass('disabled');
 				});
 			});
 		});
