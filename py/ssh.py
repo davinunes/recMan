@@ -3,6 +3,7 @@
 from paramiko import SSHClient, RSAKey
 import paramiko
 import sys
+import os
 
 COMANDO = sys.argv[1]
 
