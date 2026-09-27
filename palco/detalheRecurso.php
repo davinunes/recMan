@@ -715,12 +715,24 @@ if ($esseRecurso == null) {
                 } else {
                     html = '<div class="row" style="margin-bottom:0;">';
                     moradores.forEach(m => {
+                        const hasUuid = !!(m && m.uuid);
+                        const nomeEscp = (m.nome || 'Morador').replace(/"/g, '&quot;');
+                        const fallbackJsonStr = hasUuid ? `{uuid:'${m.uuid}', nome:'${nomeEscp}', tipo:'${(m.tipo || 'Morador').replace(/'/g, "\\'")}'}` : 'null';
+                        const btnLupa = hasUuid
+                            ? `<button type="button" class="btn-lupa-preview" onclick="event.stopPropagation(); event.preventDefault(); window.abrirDetalhesMorador('${m.uuid}', ${fallbackJsonStr});">
+                                   <i class="material-icons tiny">search</i> Ver detalhes
+                               </button>`
+                            : '';
+
                         html += `
                             <div class="col s12 m6 l3">
-                                <div class="card-panel white center-align z-depth-1 hoverable" style="border-radius:10px; padding:12px 8px; border:1px solid #e0e0e0; margin-bottom:10px;">
-                                    ${m.foto ? `<img src="${m.foto}" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">` : `<div style="width:54px; height:54px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 4px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.2rem;">account_circle</i></div>`}
-                                    <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
-                                    <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo}</span>
+                                <div class="card-morador-wrapper">
+                                    <div class="morador-card-preview-lupa">${btnLupa}</div>
+                                    <div class="card-panel white center-align z-depth-1 hoverable" style="position:relative; border-radius:10px; padding:15px 10px; border:1px solid #e0e0e0; margin-bottom:12px; ${hasUuid ? 'cursor:pointer;' : ''}" ${hasUuid ? `onclick="window.abrirDetalhesMorador('${m.uuid}', ${fallbackJsonStr})"` : ''}>
+                                        ${m.foto ? `<img src="${m.foto}" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #00acc1; margin-bottom:4px;">` : `<div style="width:54px; height:54px; border-radius:50%; background:#e0f7fa; display:flex; align-items:center; justify-content:center; margin:0 auto 4px auto; border:2px solid #00acc1;"><i class="material-icons cyan-text text-darken-2" style="font-size:2.2rem;">account_circle</i></div>`}
+                                        <div style="font-weight:bold; font-size:0.95rem; color:#37474f;" class="truncate" title="${m.nome}">${m.nome}</div>
+                                        <span class="badge-mini cyan darken-1 white-text" style="margin-top:4px; font-size:0.7rem; padding:2px 6px; border-radius:4px; display:inline-block;">${m.tipo}</span>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -743,7 +755,7 @@ if ($esseRecurso == null) {
                         html += `
                             <div class="col s12 m6 l3">
                                 <div class="card-panel white center-align z-depth-1 hoverable" style="${cardStyle}">
-                                    ${v.foto ? `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : ''}
+                                    ${v.foto ? `<img src="${v.foto}" style="width:60px; height:60px; object-fit:cover; aspect-ratio:1/1; border-radius:8px; margin:0 auto 10px auto; display:block; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : ''}
                                     <div style="margin-bottom:8px;">
                                         <span class="badge ${badgeColorClass} white-text font-weight-bold" style="float:none; padding:5px 14px; border-radius:6px; font-family:monospace; font-size:1.15rem; letter-spacing:1px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                                             <i class="material-icons tiny">${iconName}</i> ${v.placa}
@@ -827,8 +839,8 @@ if ($esseRecurso == null) {
                                 </td>
                                 <td>${aut.documento}</td>
                                 <td><small>${aut.dtInicio}<br>até ${aut.dtFim}</small></td>
-                                <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${aut.autorizadoPor}</span></td>
-                                <td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${aut.status}</span></td>
+                                <td><span class="badge green lighten-5 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${formatObjStr(aut.autorizadoPor)}</span></td>
+                                <td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${formatObjStr(aut.status)}</span></td>
                                 <td><span class="btn-small waves-effect waves-light green darken-1 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
                             </tr>
                         `;
@@ -1859,5 +1871,93 @@ if ($esseRecurso == null) {
     </div>
     <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+    </div>
+</div>
+
+<!-- Modal Detalhes do Morador -->
+<div id="modalDetalhesMorador" class="modal modal-fixed-footer" style="max-width: 900px; width: 92%; max-height: 90%;">
+    <div class="modal-content" style="padding-bottom: 0;">
+        <h5 style="display:flex; align-items:center; gap:10px; margin-top:0; margin-bottom:10px;">
+            <i class="material-icons cyan-text text-darken-2" style="font-size:2rem;">person</i>
+            <span id="detalheMoradorTitulo">Detalhes do Morador</span>
+            <span id="detalheMoradorStatusBadge" style="margin-left:8px;"></span>
+            <span id="detalheMoradorIconeDebug" class="hide" style="margin-left:auto;">
+                <i class="material-icons debug-terminal-icon tooltipped"
+                    style="font-size:1.3rem; cursor:pointer; color:#1565c0;"
+                    onclick="if(window.lastMoradorDebugData){window.abrirModalDebugJson('Dados completos do Morador (API VDS)', window.lastMoradorDebugData);}else{M.toast({html:'Dados ainda não carregados.', classes:'orange rounded'});}"
+                    data-tooltip="Inspecionar JSON bruto deste Morador" title="Inspecionar JSON">terminal</i>
+            </span>
+        </h5>
+        <div id="detalheMoradorLoading" class="center-align" style="padding: 30px 0;">
+            <div class="preloader-wrapper active">
+                <div class="spinner-layer spinner-blue-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <p class="grey-text" style="margin-top:12px; font-weight:500;">Carregando detalhes do morador...</p>
+        </div>
+        <div id="detalheMoradorConteudo" class="hide">
+            <div class="row" style="margin-bottom: 0;">
+                <div class="col s12 m4 l3 center-align" style="padding-top: 8px;">
+                    <div id="detalheMoradorFoto" style="margin-bottom: 10px;"></div>
+                    <div id="detalheMoradorNome" style="font-weight: bold; font-size: 1.15rem; color: #263238;"></div>
+                    <div id="detalheMoradorTipo" style="margin-top: 4px;"></div>
+                    <div id="detalheMoradorMatricula" style="font-size:0.85rem; color:#607d8b; margin-top:6px;"></div>
+                    <div id="detalheMoradorDtCadastro" style="font-size:0.82rem; color:#78909c; margin-top:3px;"></div>
+                </div>
+                <div class="col s12 m8 l9" style="padding-top: 8px;">
+                    <div class="row" style="margin-bottom: 0;">
+                        <div class="col s12 l6" style="margin-bottom: 10px;">
+                            <div class="card-panel cyan lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#006064; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">business</i> Vínculo com a Unidade
+                                </h6>
+                                <div id="detalheMoradorUnidade" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                            </div>
+                        </div>
+                        <div class="col s12 l6" style="margin-bottom: 10px;">
+                            <div class="card-panel blue lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#0d47a1; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contacts</i> Dados Pessoais
+                                </h6>
+                                <div id="detalheMoradorPessoa" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                            </div>
+                        </div>
+                        <div class="col s12 l6" style="margin-bottom: 10px;">
+                            <div class="card-panel purple lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#4a148c; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contact_phone</i> Contato
+                                </h6>
+                                <div id="detalheMoradorContato" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                            </div>
+                        </div>
+                        <div class="col s12 l6" style="margin-bottom: 10px;">
+                            <div class="card-panel green lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#1b5e20; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">location_on</i> Endereço
+                                </h6>
+                                <div id="detalheMoradorEndereco" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                            </div>
+                        </div>
+                        <div class="col s12" style="margin-bottom: 6px;">
+                            <div class="card-panel grey lighten-4" style="border-radius: 8px; padding: 10px 14px; margin: 0;">
+                                <div id="detalheMoradorAuditoria" style="font-size: 0.82rem; color:#455a64; display:flex; align-items:center; gap:10px; flex-wrap:wrap;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="detalheMoradorErro" class="hide" style="padding: 30px 0;">
+            <div class="center-align red-text">
+                <i class="material-icons" style="font-size: 3rem; opacity: 0.7;">error_outline</i>
+                <p style="margin-top: 10px; font-weight: 500;" id="detalheMoradorMsgErro">Não foi possível carregar os detalhes do morador.</p>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background: #fafafa;">
+        <button class="modal-close btn-flat waves-effect">Fechar</button>
     </div>
 </div>

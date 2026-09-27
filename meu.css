@@ -132,3 +132,112 @@ pre {
   box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.15) !important;
   background: #ffffff !important;
 }
+
+/* Estilos de Card de Morador e Overlay de Lupinha */
+.card-morador-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+.card-morador-wrapper .card-panel {
+  transition: all 0.25s ease;
+}
+
+.card-morador-wrapper:hover .card-panel {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
+}
+
+.morador-card-preview-lupa {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -120%);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease-in-out;
+  z-index: 5;
+}
+
+.card-morador-wrapper:hover .morador-card-preview-lupa {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.btn-lupa-preview {
+  background: rgba(0, 96, 100, 0.92);
+  color: white;
+  border-radius: 999px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  box-shadow: 0 4px 14px rgba(0, 77, 64, 0.3);
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-lupa-preview:hover {
+  background: rgba(0, 77, 64, 1);
+  box-shadow: 0 6px 18px rgba(0, 77, 64, 0.45);
+  transform: scale(1.04);
+}
+
+.morador-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.morador-status-ativo {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+
+.morador-status-inativo {
+  background: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+}
+
+.detalhe-morador-linha {
+  padding: 2px 0;
+}
+
+.detalhe-morador-linha span.lbl {
+  color: #546e7a;
+  font-weight: 600;
+  font-size: 0.78rem;
+  margin-right: 4px;
+}
+
+.detalhe-morador-foto-wrap {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #00acc1;
+  margin: 0 auto 4px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0f7fa;
+}
+
+.detalhe-morador-foto-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

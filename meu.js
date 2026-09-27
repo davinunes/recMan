@@ -2288,7 +2288,7 @@ window.renderToolsetVeiculos = function (list, vagas, isVdsLoading) {
         }
 
         let fotoHtml = v.foto ? 
-            `<img src="${v.foto}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : '';
+            `<img src="${v.foto}" style="width:60px; height:60px; object-fit:cover; aspect-ratio:1/1; border-radius:8px; margin:0 auto 10px auto; display:block; border:1px solid #cfd8dc; ${!isAtivo ? 'filter:grayscale(60%);' : ''}">` : '';
 
         let descVeiculo = [v.marca, v.modelo, v.cor].filter(Boolean).join(' ') || 'Veículo';
         let propStr = v.proprietario ? `<div style="font-size:0.85rem; color:#455a64; font-weight:500; margin-top:4px;" class="truncate" title="${v.proprietario}"><i class="material-icons tiny" style="vertical-align:middle;">person</i> ${v.proprietario}</div>` : '';
@@ -2601,6 +2601,7 @@ window.renderToolsetEncomendas = function (list) {
 
 // 3. Renderizar Autorizações de Acesso
 window.renderToolsetAutorizacoes = function (list) {
+    list = list || [];
     $('#badgeCountAutorizacoes').text(list.length);
     if (!list || list.length === 0) {
         $('#conteudoAutorizacoes').html('<div class="grey-text center-align" style="padding:20px;"><i class="material-icons tiny">no_accounts</i> Nenhuma autorização de acesso registrada no mês selecionado.</div>');
@@ -2608,22 +2609,34 @@ window.renderToolsetAutorizacoes = function (list) {
     }
 
     let cardsHtml = '<div class="row" style="margin-bottom:0;">';
-    list.forEach(a => {
+    list.forEach((a, idx) => {
         let fotoUrl = a.foto || 'https://via.placeholder.com/60?text=Pessoa';
+        let autorizadoPorStr = window.vdsExtractStringValue ? window.vdsExtractStringValue(a.autorizadoPor, 'Morador') : (typeof a.autorizadoPor === 'object' ? (a.autorizadoPor.nome || 'Morador') : (a.autorizadoPor || 'Morador'));
+        let statusStr = window.vdsExtractStringValue ? window.vdsExtractStringValue(a.status, 'Ativo') : (typeof a.status === 'object' ? (a.status.nome || 'Ativo') : (a.status || 'Ativo'));
+
+        window.__aceleradorCache = window.__aceleradorCache || {};
+        const cacheKey = `autorizacao_h_${idx}`;
+        window.__aceleradorCache[cacheKey] = a;
+
         cardsHtml += `
             <div class="col s12 m6 l4">
-                <div class="card-panel grey lighten-5" style="border-radius:8px; padding:12px; border:1px solid #e0e0e0; margin-bottom:12px;">
+                <div class="card-panel grey lighten-5 hoverable" style="border-radius:8px; padding:12px; border:1px solid #e0e0e0; margin-bottom:12px; cursor:pointer;" onclick="window.abrirModalDetalhesAutorizacao('${cacheKey}')">
                     <div style="display:flex; gap:12px; align-items:center;">
                         <img src="${fotoUrl}" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid #009688;">
                         <div style="flex:1; overflow:hidden;">
-                            <div style="font-weight:bold; font-size:0.95rem;" class="truncate">${a.nome}</div>
+                            <div style="font-weight:bold; font-size:0.95rem;" class="truncate" title="${a.nome}">${a.nome}</div>
                             <small class="grey-text">${a.documento || 'Documento N/A'}</small>
                             <div style="font-size:0.8rem; margin-top:2px;" class="teal-text text-darken-3"><b>Vigência:</b> ${a.dtInicio} até ${a.dtFim}</div>
                         </div>
                     </div>
                     <div style="margin-top:8px; border-top:1px solid #eee; padding-top:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;" class="grey-text">
-                        <span>Por: ${a.autorizadoPor}</span>
-                        <span class="badge-mini teal white-text">${a.status}</span>
+                        <span>Por: <b>${autorizadoPorStr}</b></span>
+                        <span class="badge-mini teal white-text" style="padding:2px 6px; border-radius:4px;">${statusStr}</span>
+                    </div>
+                    <div style="margin-top:8px; text-align:right;">
+                        <button type="button" class="btn-small waves-effect waves-light green darken-1 white-text" onclick="event.stopPropagation(); window.abrirModalDetalhesAutorizacao('${cacheKey}')" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">
+                            Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2632,6 +2645,48 @@ window.renderToolsetAutorizacoes = function (list) {
     cardsHtml += '</div>';
 
     $('#conteudoAutorizacoes').html(cardsHtml);
+};
+
+window.abrirModalDetalhesAutorizacao = function (dataOrCacheKey) {
+    var data = dataOrCacheKey;
+    if (typeof data === 'string' && window.__aceleradorCache && window.__aceleradorCache[data]) {
+        data = window.__aceleradorCache[data];
+    }
+    if (!data) return;
+
+    var autorizadoPorStr = window.vdsExtractStringValue ? window.vdsExtractStringValue(data.autorizadoPor, 'Morador') : (typeof data.autorizadoPor === 'object' ? (data.autorizadoPor.nome || 'Morador') : (data.autorizadoPor || 'Morador'));
+    var registradoPorStr = window.vdsExtractStringValue ? window.vdsExtractStringValue(data.registradoPor, 'Portaria') : (typeof data.registradoPor === 'object' ? (data.registradoPor.nome || 'Portaria') : (data.registradoPor || 'Portaria'));
+    var statusStr = window.vdsExtractStringValue ? window.vdsExtractStringValue(data.status, 'Ativo') : (typeof data.status === 'object' ? (data.status.nome || 'Ativo') : (data.status || 'Ativo'));
+
+    var html = '<h5 style="margin-top:0; color:#2e7d32; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">verified_user</i> Autorização de Acesso / Convite</h5>';
+    if (data.foto) {
+        html += '<div style="text-align:center; margin:15px 0;"><img src="' + data.foto + '" style="max-width:240px; max-height:200px; border-radius:12px; border:3px solid #2e7d32; box-shadow:0 4px 12px rgba(46,125,50,0.25);"></div>';
+    }
+    html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+    html += '<tr><td style="width:35%;"><b>Visitante / Prestador:</b></td><td><b style="font-size:1.05rem;">' + (data.nome || 'N/A') + '</b></td></tr>';
+    if (data.documento) {
+        html += '<tr><td><b>Documento:</b></td><td>' + data.documento + '</td></tr>';
+    }
+    html += '<tr><td><b>Validade da Liberação:</b></td><td>' + (data.dtInicio || 'N/A') + ' até ' + (data.dtFim || 'N/A') + '</td></tr>';
+    html += '<tr><td><b>Autorizado Por (Morador):</b></td><td><span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px;">' + autorizadoPorStr + '</span></td></tr>';
+    html += '<tr><td><b>Cadastrado Por:</b></td><td>' + registradoPorStr + '</td></tr>';
+    if (data.chave) {
+        html += '<tr><td><b>Chave / Código QR:</b></td><td><code style="background:#e8f5e9; color:#1b5e20; padding:2px 8px; border-radius:4px; font-weight:bold;">' + data.chave + '</code></td></tr>';
+    }
+    html += '<tr><td><b>Status:</b></td><td><span class="badge blue lighten-4 blue-text text-darken-4" style="float:none; padding:2px 6px; border-radius:4px;">' + statusStr + '</span></td></tr>';
+    html += '</table>';
+
+    var modalEl = document.getElementById('modalInspecionarAcelerador');
+    if (modalEl) {
+        var contEl = document.getElementById('conteudoInspecionarAcelerador');
+        if (contEl) contEl.innerHTML = html;
+        if (typeof M !== 'undefined' && M.Modal) {
+            var inst = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl);
+            inst.open();
+        }
+    } else if (typeof window.abrirModalDebugJson === 'function') {
+        window.abrirModalDebugJson('Autorização de Acesso — ' + (data.nome || 'Visitante'), data);
+    }
 };
 
 // 3.1 Renderizar Eventos de Acesso (Catracas, Portões, Biometria/Facial/Tags)
@@ -2835,7 +2890,10 @@ window.renderToolsetOcorrenciasAutoria = function (list) {
 
     let html = '';
     list.forEach(o => {
-        let prot = o.protocolo || (o.numero + '/' + o.ano);
+        let prot = o.protocolo || o.protocolo_vds || (o.numero && o.ano ? (o.numero + '/' + o.ano) : (o.id || o.numero || 'N/A'));
+        if (!prot || prot === 'undefined/undefined' || prot === 'undefined') {
+            prot = o.protocolo_vds || o.id || o.numero || 'N/A';
+        }
         html += `
             <div class="card-panel white" style="border-left:4px solid #2196f3; padding:12px 18px; margin: 8px 0;">
                 <div class="row valign-wrapper flex-responsive" style="margin-bottom:0;">
@@ -2870,7 +2928,10 @@ window.renderToolsetOcorrenciasTag = function (list) {
 
     let html = '';
     list.forEach(o => {
-        let prot = o.protocolo || (o.numero + '/' + o.ano);
+        let prot = o.protocolo || o.protocolo_vds || (o.numero && o.ano ? (o.numero + '/' + o.ano) : (o.id || o.numero || 'N/A'));
+        if (!prot || prot === 'undefined/undefined' || prot === 'undefined') {
+            prot = o.protocolo_vds || o.id || o.numero || 'N/A';
+        }
         let tagTipo = (o.vinculo_final || 'citada').toUpperCase();
         html += `
             <div class="card-panel white" style="border-left:4px solid #9c27b0; padding:12px 18px; margin: 8px 0;">
@@ -3805,3 +3866,193 @@ $(document).on('click', '.btn-confirmar-sugestao-multa', function (e) {
         }
     });
 });
+
+// Funções globais de exibição de detalhes de morador
+window.lastMoradorDebugData = window.lastMoradorDebugData || null;
+window.__debugCacheMoradoresDetalhados = window.__debugCacheMoradoresDetalhados || {};
+
+window.abrirDetalhesMorador = window.abrirDetalhesMorador || function (moradorUuid, fallbackObj) {
+    if (!moradorUuid) {
+        if (typeof M !== 'undefined' && M.toast) {
+            M.toast({ html: 'UUID do morador não informado.', classes: 'red rounded' });
+        }
+        return;
+    }
+
+    var loading = document.getElementById('detalheMoradorLoading');
+    var conteudo = document.getElementById('detalheMoradorConteudo');
+    var erro = document.getElementById('detalheMoradorErro');
+    var msgErro = document.getElementById('detalheMoradorMsgErro');
+
+    if (loading) { loading.classList.remove('hide'); }
+    if (conteudo) { conteudo.classList.add('hide'); }
+    if (erro) { erro.classList.add('hide'); }
+
+    if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+        var iconeDebug = document.getElementById('detalheMoradorIconeDebug');
+        if (iconeDebug) iconeDebug.classList.remove('hide');
+    } else {
+        var iconeDebug2 = document.getElementById('detalheMoradorIconeDebug');
+        if (iconeDebug2) iconeDebug2.classList.add('hide');
+    }
+
+    var modal = document.getElementById('modalDetalhesMorador');
+    if (modal && typeof M !== 'undefined' && M.Modal) {
+        var inst = M.Modal.getInstance(modal) || M.Modal.init(modal);
+        if (inst) inst.open();
+    }
+
+    $.get('metodo.php', { metodo: 'obterDetalhesMorador', uuid: moradorUuid }, function (res) {
+        if (res && res.success && res.data) {
+            var d = res.data;
+
+            if (window.isDebugUser && typeof window.isDebugUser === 'function' && window.isDebugUser()) {
+                window.lastMoradorDebugData = d;
+                window.__debugCacheMoradoresDetalhados[moradorUuid] = d;
+            }
+
+            var nome = (d.pessoa && d.pessoa.nome) ? d.pessoa.nome : (fallbackObj && fallbackObj.nome ? fallbackObj.nome : 'Morador');
+            var tituloEl = document.getElementById('detalheMoradorTitulo');
+            if (tituloEl) tituloEl.textContent = nome;
+
+            var statusAtivo = d.statusAtivo;
+            if (typeof statusAtivo === 'undefined' || statusAtivo === null) {
+                var sRaw = d.status;
+                statusAtivo = (sRaw === 1 || sRaw === '1' || (typeof sRaw === 'string' && sRaw.trim() === '1'));
+            }
+            var statusEl = document.getElementById('detalheMoradorStatusBadge');
+            if (statusEl) {
+                statusEl.innerHTML = statusAtivo
+                    ? '<span class="morador-status-badge morador-status-ativo"><i class="material-icons tiny">check_circle</i> Ativo</span>'
+                    : '<span class="morador-status-badge morador-status-inativo"><i class="material-icons tiny">block</i> Inativo</span>';
+            }
+
+            var fotoHtml = '';
+            var fotoUrl = (d.pessoa && d.pessoa.fotoUrlCompleta) ? d.pessoa.fotoUrlCompleta : null;
+            if (fotoUrl) {
+                fotoHtml = '<div class="detalhe-morador-foto-wrap"><img src="' + fotoUrl + '" alt="Foto do Morador" loading="lazy"></div>';
+            } else {
+                fotoHtml = '<div class="detalhe-morador-foto-wrap"><i class="material-icons cyan-text text-darken-2" style="font-size:4rem;">account_circle</i></div>';
+            }
+            var elFoto = document.getElementById('detalheMoradorFoto');
+            if (elFoto) elFoto.innerHTML = fotoHtml;
+
+            var elNome = document.getElementById('detalheMoradorNome');
+            if (elNome) elNome.textContent = nome;
+
+            var tipoNome = (d.tipo && d.tipo.nome) ? d.tipo.nome : (fallbackObj && fallbackObj.tipo ? fallbackObj.tipo : 'Morador');
+            var grupoNome = (d.tipo && d.tipo.grupo && d.tipo.grupo.nome) ? d.tipo.grupo.nome : null;
+            var tipoHtml = '<span class="badge-mini cyan darken-1 white-text" style="font-size:0.78rem;">' + tipoNome + '</span>';
+            if (grupoNome) {
+                tipoHtml += ' <span class="badge-mini cyan lighten-4 cyan-text text-darken-4" style="font-size:0.72rem;">' + grupoNome + '</span>';
+            }
+            var elTipo = document.getElementById('detalheMoradorTipo');
+            if (elTipo) elTipo.innerHTML = tipoHtml;
+
+            var matricula = d.matricula;
+            var elMat = document.getElementById('detalheMoradorMatricula');
+            if (elMat) {
+                if (matricula && String(matricula).trim() !== '') {
+                    elMat.innerHTML = '<i class="material-icons tiny" style="vertical-align:middle;">confirmation_number</i> Matrícula: <b>' + String(matricula).trim() + '</b>';
+                } else {
+                    elMat.textContent = '';
+                }
+            }
+
+            var dtCad = d.dthoraFormatada || null;
+            var elDt = document.getElementById('detalheMoradorDtCadastro');
+            if (elDt) {
+                elDt.innerHTML = dtCad
+                    ? '<i class="material-icons tiny" style="vertical-align:middle;">event</i> Cadastrado em ' + dtCad
+                    : '';
+            }
+
+            var uniHtml = '';
+            if (d.unidade) {
+                var blocoNome = (d.unidade.bloco && d.unidade.bloco.nome) ? d.unidade.bloco.nome : null;
+                var uniNome = d.unidade.nome ? d.unidade.nome : null;
+                var uniInad = (d.unidade.inadimplente === true);
+                var uniLines = [];
+                if (uniNome) uniLines.push('<div class="detalhe-morador-linha"><span class="lbl">Unidade:</span>' + uniNome + '</div>');
+                if (blocoNome) uniLines.push('<div class="detalhe-morador-linha"><span class="lbl">Bloco:</span>' + blocoNome + '</div>');
+                uniLines.push('<div class="detalhe-morador-linha"><span class="lbl">Inadimplente:</span>' +
+                    (uniInad
+                        ? '<span style="color:#b71c1c; font-weight:700;">SIM</span>'
+                        : '<span style="color:#1b5e20; font-weight:600;">Não</span>') +
+                    '</div>');
+                uniHtml = uniLines.join('');
+            }
+            var elUni = document.getElementById('detalheMoradorUnidade');
+            if (elUni) elUni.innerHTML = uniHtml;
+
+            var pessHtml = '';
+            if (d.pessoa) {
+                var pLines = [];
+                if (d.pessoa.nome) pLines.push('<div class="detalhe-morador-linha"><span class="lbl">Nome:</span>' + d.pessoa.nome + '</div>');
+                if (d.pessoa.cpf) pLines.push('<div class="detalhe-morador-linha"><span class="lbl">CPF:</span>' + d.pessoa.cpf + '</div>');
+                if (d.pessoa.rg) pLines.push('<div class="detalhe-morador-linha"><span class="lbl">RG:</span>' + d.pessoa.rg + '</div>');
+                if (d.pessoa.dtNascimento) pLines.push('<div class="detalhe-morador-linha"><span class="lbl">Nascimento:</span>' + d.pessoa.dtNascimento + '</div>');
+                if (d.pessoa.sexo) pLines.push('<div class="detalhe-morador-linha"><span class="lbl">Sexo:</span>' + d.pessoa.sexo + '</div>');
+                pessHtml = pLines.join('');
+            }
+            var elPess = document.getElementById('detalheMoradorPessoa');
+            if (elPess) elPess.innerHTML = pessHtml || '<span class="grey-text">Sem dados pessoais cadastrados</span>';
+
+            var contHtml = '';
+            if (d.pessoa) {
+                var cLines = [];
+                if (d.pessoa.email) cLines.push('<div class="detalhe-morador-linha"><span class="lbl">E-mail:</span><a href="mailto:' + d.pessoa.email + '">' + d.pessoa.email + '</a></div>');
+                if (d.pessoa.telCelular) cLines.push('<div class="detalhe-morador-linha"><span class="lbl">Celular:</span>' + d.pessoa.telCelular + '</div>');
+                if (d.pessoa.telFixo) cLines.push('<div class="detalhe-morador-linha"><span class="lbl">Fixo:</span>' + d.pessoa.telFixo + '</div>');
+                if (d.pessoa.telTrabalho) cLines.push('<div class="detalhe-morador-linha"><span class="lbl">Trabalho:</span>' + d.pessoa.telTrabalho + '</div>');
+                contHtml = cLines.join('');
+            }
+            var elCont = document.getElementById('detalheMoradorContato');
+            if (elCont) elCont.innerHTML = contHtml || '<span class="grey-text">Sem dados de contato cadastrados</span>';
+
+            var endHtml = '';
+            if (d.pessoa && d.pessoa.endereco) {
+                var eObj = d.pessoa.endereco;
+                var eLines = [];
+                var logr = eObj.logradouro || '';
+                var num = eObj.numero || '';
+                var comp = eObj.complemento || '';
+                var bair = eObj.bairro || '';
+                var cid = eObj.cidade || '';
+                var uf = eObj.uf || '';
+                var cep = eObj.cep || '';
+                if (logr) eLines.push('<div class="detalhe-morador-linha"><span class="lbl">Logradouro:</span>' + logr + (num ? (', ' + num) : '') + (comp ? (' - ' + comp) : '') + '</div>');
+                if (bair) eLines.push('<div class="detalhe-morador-linha"><span class="lbl">Bairro:</span>' + bair + '</div>');
+                if (cid || uf) eLines.push('<div class="detalhe-morador-linha"><span class="lbl">Cidade/UF:</span>' + (cid || '') + (uf ? ('/' + uf) : '') + '</div>');
+                if (cep) eLines.push('<div class="detalhe-morador-linha"><span class="lbl">CEP:</span>' + cep + '</div>');
+                endHtml = eLines.join('');
+            }
+            var elEnd = document.getElementById('detalheMoradorEndereco');
+            if (elEnd) elEnd.innerHTML = endHtml || '<span class="grey-text">Sem endereço externo cadastrado</span>';
+
+            var audLines = [];
+            if (d.registradoPor) {
+                var rp = d.registradoPor;
+                var who = (rp.pessoa && rp.pessoa.nome) ? rp.pessoa.nome : (rp.nome || 'Sistema');
+                var fotoRp = rp.fotoUrlCompleta ? '<img src="' + rp.fotoUrlCompleta + '" style="width:22px; height:22px; border-radius:50%; vertical-align:middle; margin-right:4px; object-fit:cover;">' : '<i class="material-icons tiny" style="vertical-align:middle;">perm_identity</i>';
+                audLines.push('<span>' + fotoRp + ' Registrado por <b>' + who + '</b></span>');
+            }
+            if (d.dthoraFormatada) {
+                audLines.push('<span><i class="material-icons tiny" style="vertical-align:middle;">schedule</i> em ' + d.dthoraFormatada + '</span>');
+            }
+            var elAud = document.getElementById('detalheMoradorAuditoria');
+            if (elAud) elAud.innerHTML = audLines.join(' <span style="opacity:0.4;">|</span> ');
+
+            if (loading) loading.classList.add('hide');
+            if (conteudo) conteudo.classList.remove('hide');
+        } else {
+            if (loading) loading.classList.add('hide');
+            if (erro) erro.classList.remove('hide');
+            if (msgErro) msgErro.textContent = (res && res.message) ? res.message : 'Erro ao obter dados do morador.';
+        }
+    }).fail(function () {
+        if (loading) loading.classList.add('hide');
+        if (erro) erro.classList.remove('hide');
+        if (msgErro) msgErro.textContent = 'Erro de comunicação ao carregar detalhes do morador.';
+    });
+};
