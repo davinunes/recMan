@@ -277,8 +277,9 @@ $tiposCores = [
                     <label style="font-weight: bold; color: #334155;">Tipo de Documento:</label>
                     <select id="docTipo" name="tipo" class="browser-default"
                         style="border-radius: 6px; border: 1px solid #cbd5e1; padding: 8px;">
-                        <option value="orientacao_tecnica">Orientação Técnica</option>
+                        <option value="documento">Documento</option>
                         <option value="parecer_opinativo">Parecer Opinativo</option>
+                        <option value="orientacao_tecnica">Orientação Técnica</option>
                         <option value="entendimento">Entendimento do Conselho</option>
                         <option value="instrucao_normativa">Instrução Normativa</option>
                     </select>
