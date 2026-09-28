@@ -582,12 +582,12 @@ if ($esseRecurso == null) {
                 }
             }
 
-            $urlLocal = 'index.php?pag=livroDeOcorrencias&id=' . (int)$oc['id'];
+            $urlLocal = 'index.php?pag=livroDeOcorrencias&id=' . (int) $oc['id'];
             $urlRemota = !empty($oc['url']) ? $oc['url'] : '#!';
 
             echo '<div class="collection-item" style="display:flex; justify-space-between; align-items:center; flex-wrap:wrap; padding:10px 15px;">
                     <div style="flex:1; min-width:250px;">
-                        <span class="new badge blue left" style="margin-right:10px;" data-badge-caption="">ID ' . (int)$oc['id'] . '</span>
+                        <span class="new badge blue left" style="margin-right:10px;" data-badge-caption="">ID ' . (int) $oc['id'] . '</span>
                         <b>' . htmlspecialchars($oc['bloco'] ?? '') . ' / ' . htmlspecialchars($oc['unidade'] ?? '') . '</b>
                         <span class="grey-text text-darken-1" style="font-size:0.85rem; margin-left:8px;">' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '</span>
                         <div style="margin-top:4px;">' . $tagsHtml . '</div>
@@ -1467,7 +1467,7 @@ if ($esseRecurso == null) {
                         </div>
                     </div>
                 </li>
-                </ul>
+            </ul>
         </div>
     </div>
 
@@ -1525,8 +1525,8 @@ if ($esseRecurso == null) {
     if ($result['fase'] == 4)
         echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
 
-    echo '<button class="btn deep-orange" id="btnSyncSupabase" data-rec="' . htmlspecialchars($result['numero']) . '">Sincronizar Supabase</button> ';
-
+    // echo '<button class="btn deep-orange" id="btnSyncSupabase" data-rec="' . htmlspecialchars($result['numero']) . '">Sincronizar Supabase</button> ';
+    
     echo '
                 <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
@@ -1891,9 +1891,15 @@ if ($esseRecurso == null) {
         <div id="detalheMoradorLoading" class="center-align" style="padding: 30px 0;">
             <div class="preloader-wrapper active">
                 <div class="spinner-layer spinner-blue-only">
-                    <div class="circle-clipper left"><div class="circle"></div></div>
-                    <div class="gap-patch"><div class="circle"></div></div>
-                    <div class="circle-clipper right"><div class="circle"></div></div>
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="gap-patch">
+                        <div class="circle"></div>
+                    </div>
+                    <div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
                 </div>
             </div>
             <p class="grey-text" style="margin-top:12px; font-weight:500;">Carregando detalhes do morador...</p>
@@ -1910,40 +1916,59 @@ if ($esseRecurso == null) {
                 <div class="col s12 m8 l9" style="padding-top: 8px;">
                     <div class="row" style="margin-bottom: 0;">
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel cyan lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#006064; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">business</i> Vínculo com a Unidade
+                            <div class="card-panel cyan lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#006064; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">business</i> Vínculo
+                                    com a Unidade
                                 </h6>
-                                <div id="detalheMoradorUnidade" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorUnidade"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel blue lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#0d47a1; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">contacts</i> Dados Pessoais
+                            <div class="card-panel blue lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#0d47a1; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contacts</i> Dados
+                                    Pessoais
                                 </h6>
-                                <div id="detalheMoradorPessoa" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorPessoa"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel purple lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#4a148c; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">contact_phone</i> Contato
+                            <div class="card-panel purple lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#4a148c; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">contact_phone</i>
+                                    Contato
                                 </h6>
-                                <div id="detalheMoradorContato" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorContato"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12 l6" style="margin-bottom: 10px;">
-                            <div class="card-panel green lighten-5" style="border-radius: 8px; padding: 12px 14px; margin: 0;">
-                                <h6 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#1b5e20; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <i class="material-icons tiny" style="vertical-align: middle;">location_on</i> Endereço
+                            <div class="card-panel green lighten-5"
+                                style="border-radius: 8px; padding: 12px 14px; margin: 0;">
+                                <h6
+                                    style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color:#1b5e20; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="material-icons tiny" style="vertical-align: middle;">location_on</i>
+                                    Endereço
                                 </h6>
-                                <div id="detalheMoradorEndereco" style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
+                                <div id="detalheMoradorEndereco"
+                                    style="font-size: 0.9rem; color:#263238; line-height: 1.5;"></div>
                             </div>
                         </div>
                         <div class="col s12" style="margin-bottom: 6px;">
-                            <div class="card-panel grey lighten-4" style="border-radius: 8px; padding: 10px 14px; margin: 0;">
-                                <div id="detalheMoradorAuditoria" style="font-size: 0.82rem; color:#455a64; display:flex; align-items:center; gap:10px; flex-wrap:wrap;"></div>
+                            <div class="card-panel grey lighten-4"
+                                style="border-radius: 8px; padding: 10px 14px; margin: 0;">
+                                <div id="detalheMoradorAuditoria"
+                                    style="font-size: 0.82rem; color:#455a64; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1953,7 +1978,8 @@ if ($esseRecurso == null) {
         <div id="detalheMoradorErro" class="hide" style="padding: 30px 0;">
             <div class="center-align red-text">
                 <i class="material-icons" style="font-size: 3rem; opacity: 0.7;">error_outline</i>
-                <p style="margin-top: 10px; font-weight: 500;" id="detalheMoradorMsgErro">Não foi possível carregar os detalhes do morador.</p>
+                <p style="margin-top: 10px; font-weight: 500;" id="detalheMoradorMsgErro">Não foi possível carregar os
+                    detalhes do morador.</p>
             </div>
         </div>
     </div>
