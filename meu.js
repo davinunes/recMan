@@ -2502,9 +2502,11 @@ window.renderToolsetEncomendas = function (list) {
 
     list.forEach((e, idx) => {
         let fotoImg = e.foto ? `<img src="${e.foto}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer;" class="img-preview-entrega" data-uuid="${e.uuid}">` : `<i class="material-icons grey-text">inventory_2</i>`;
-        let statusBadge = (e.status || '').toLowerCase().includes('entregue') || (e.status || '').toLowerCase().includes('retirado') ? 
-            `<span class="badge-mini green white-text">${e.status}</span>` : 
-            `<span class="badge-mini amber darken-2 white-text">${e.status || 'Pendente'}</span>`;
+        let isEntregue = (e.retiradoMorador === true) || (e.status || '').toLowerCase().includes('entregue') || (e.status || '').toLowerCase().includes('retirado') || !!e.dtFim || !!e.retiradoPor;
+        let stNome = e.status || e.statusDetalhado || (isEntregue ? 'Entregue' : 'Notificado');
+        let statusBadge = isEntregue ? 
+            `<span class="badge-mini green white-text font-weight-bold">${stNome}</span>` : 
+            `<span class="badge-mini amber darken-2 white-text font-weight-bold">${stNome}</span>`;
 
         let colIdHtml = e.identificador ? 
             `<span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:3px;"><i class="material-icons tiny">qr_code</i> ${e.identificador}</span>` : 
@@ -2534,7 +2536,7 @@ window.renderToolsetEncomendas = function (list) {
                 <td>${e.descricao || 'Pacote'}</td>
                 <td>${e.destinatario || 'Morador'}</td>
                 <td><i class="material-icons tiny grey-text">access_time</i> ${e.dthoraChegada || 'N/A'}</td>
-                <td>${statusBadge}</td>
+                <td class="col-status">${statusBadge}</td>
                 <td>
                     <button type="button" class="btn-small btn-flat waves-effect blue lighten-5 blue-text text-darken-3 btn-inspect-entrega" data-uuid="${e.uuid}">
                         <i class="material-icons tiny left">visibility</i> Ver
@@ -2548,7 +2550,7 @@ window.renderToolsetEncomendas = function (list) {
     tableHtml += `</tbody></table>`;
     $('#conteudoEncomendas').html(tableHtml);
 
-    // Buscar em segundo plano identificador e foto de cada entrega por UUID (mesmo método da tela de detalheRecurso)
+    // Buscar em segundo plano identificador, foto e detalhes atualizados de cada entrega por UUID
     const rows = document.querySelectorAll('.linha-entrega-toolset[data-uuid]');
     rows.forEach(function (row) {
         const uuid = row.getAttribute('data-uuid');
@@ -2581,7 +2583,17 @@ window.renderToolsetEncomendas = function (list) {
                         }
                     }
 
-                    const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' + d.foto) : null);
+                    // Atualizar Status com base no detalhe oficial retornado
+                    const colStatus = row.querySelector('.col-status');
+                    if (colStatus) {
+                        let isEntregueD = (d.retiradoMorador === true) || (d.status || '').toLowerCase().includes('entregue') || (d.status || '').toLowerCase().includes('retirado') || !!d.dtFim || !!d.retiradoPor;
+                        let stNomeD = d.status || d.statusDetalhado || (isEntregueD ? 'Entregue' : 'Notificado');
+                        colStatus.innerHTML = isEntregueD ?
+                            `<span class="badge-mini green white-text font-weight-bold">${stNomeD}</span>` :
+                            `<span class="badge-mini amber darken-2 white-text font-weight-bold">${stNomeD}</span>`;
+                    }
+
+                    const fotoUrl = d.fotoUrlCompleta || (d.foto ? (d.foto.startsWith('http') ? d.foto : 'https://app.vidadesindico.com.br' . d.foto) : null);
                     if (fotoUrl) {
                         const colFoto = row.querySelector('.col-foto');
                         if (colFoto) {
@@ -3331,16 +3343,56 @@ $(document).on('click', '.btn-inspect-entrega, .img-preview-entrega', function (
                 window.__debugCache = window.__debugCache || {};
                 window.__debugCache['ent_uuid_' + uuid] = d;
             }
-            let foto = d.fotoUrlCompleta ? `<img src="${d.fotoUrlCompleta}" style="max-width:100%; max-height:350px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">` : '<p class="grey-text">Sem foto registrada</p>';
+            let foto = d.fotoUrlCompleta ? `<img src="${d.fotoUrlCompleta}" style="max-width:100%; max-height:350px; border-radius:8px; border:1px solid #ddd; margin-bottom:15px;">` : '<p class="grey-text" style="margin:10px 0;"><i class="material-icons tiny grey-text">image_not_supported</i> Sem foto registrada</p>';
             
+            let isEntregue = (d.retiradoMorador === true) || (d.status || '').toLowerCase().includes('entregue') || (d.status || '').toLowerCase().includes('retirado') || !!d.dtFim || !!d.retiradoPor;
+            let statusTexto = d.status || d.statusDetalhado || (isEntregue ? 'Entregue' : 'Notificado');
+            let retNome = d.retiradoPor ? (typeof d.retiradoPor === 'object' ? (d.retiradoPor.nome || 'Morador') : d.retiradoPor) : null;
+
+            let retiradaCard = '';
+            if (isEntregue) {
+                retiradaCard = `
+                    <div style="margin-top:10px; padding:10px 14px; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:6px;">
+                        <p style="margin:0; color:#2e7d32; font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:4px;">
+                            <i class="material-icons tiny">check_circle</i> Encomenda Retirada pelo Morador
+                        </p>
+                        ${d.dtFimFormatada || d.dtFim ? `<p style="margin:4px 0 0 0; font-size:0.85rem; color:#333;"><b>Data/Hora Retirada:</b> ${d.dtFimFormatada || d.dtFim}</p>` : ''}
+                        ${retNome ? `<p style="margin:4px 0 0 0; font-size:0.85rem; color:#333;"><b>Retirado por:</b> <span class="badge green lighten-4 green-text text-darken-4 font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px;">${retNome}</span></p>` : ''}
+                    </div>
+                `;
+            } else {
+                retiradaCard = `
+                    <div style="margin-top:10px; padding:10px 14px; background:#fff8e1; border:1px solid #ffe082; border-radius:6px;">
+                        <p style="margin:0; color:#e65100; font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:4px;">
+                            <i class="material-icons tiny">schedule</i> Aguardando Retirada pelo Morador
+                        </p>
+                        <p style="margin:4px 0 0 0; font-size:0.85rem; color:#666;">A correspondência encontra-se na portaria/sala de correspondência e o morador já foi notificado via App VDS.</p>
+                    </div>
+                `;
+            }
+
+            let eventosHtml = '';
+            if (d.eventos && Array.isArray(d.eventos) && d.eventos.length > 0) {
+                eventosHtml = '<div style="margin-top:14px;"><b style="font-size:0.85rem; color:#444;">Histórico de Eventos na Portaria:</b><ul class="collection" style="margin:6px 0 0 0; font-size:0.8rem; border-radius:6px;">';
+                d.eventos.forEach(function (ev) {
+                    const evStatus = ev.status ? (typeof ev.status === 'object' ? ev.status.nome : ev.status) : 'Status';
+                    const evReg = ev.registradoPor ? (typeof ev.registradoPor === 'object' ? ev.registradoPor.nome : ev.registradoPor) : '';
+                    eventosHtml += `<li class="collection-item" style="padding:6px 10px;"><b>${evStatus}</b> ${evReg ? `<span class="grey-text">por ${evReg}</span>` : ''}</li>`;
+                });
+                eventosHtml += '</ul></div>';
+            }
+
             let html = `
                 ${foto}
                 <div class="left-align" style="background:#f5f5f5; padding:15px; border-radius:8px;">
-                    <p><b>Identificador:</b> ${d.identificador || 'N/A'}</p>
-                    <p><b>Descrição:</b> ${d.descricao || 'N/A'}</p>
-                    <p><b>Destinatário:</b> ${d.destinatario || 'Morador'}</p>
-                    <p><b>Data / Hora Chegada:</b> ${d.dthoraFormatada || d.dthora || 'N/A'}</p>
-                    <p><b>Situação:</b> ${d.status || 'N/A'}</p>
+                    <p style="margin:4px 0;"><b>Identificador / Rastreio:</b> ${d.identificador ? `<span class="badge blue lighten-4 blue-text text-darken-3 font-weight-bold" style="float:none; padding:2px 8px; border-radius:4px;"><i class="material-icons tiny">qr_code</i> ${d.identificador}</span>` : 'N/A'}</p>
+                    ${d.protocolo ? `<p style="margin:4px 0;"><b>Protocolo VDS:</b> #${d.protocolo}</p>` : ''}
+                    <p style="margin:4px 0;"><b>Descrição:</b> ${d.descricao || 'N/A'}</p>
+                    <p style="margin:4px 0;"><b>Destinatário:</b> ${d.destinoNome || d.destinatario || 'Morador'}</p>
+                    <p style="margin:4px 0;"><b>Data / Hora Chegada:</b> ${d.dthoraFormatada || d.dthora || 'N/A'}</p>
+                    <p style="margin:4px 0;"><b>Status:</b> ${isEntregue ? `<span class="badge-mini green white-text font-weight-bold">${statusTexto}</span>` : `<span class="badge-mini amber darken-2 white-text font-weight-bold">${statusTexto}</span>`}</p>
+                    ${retiradaCard}
+                    ${eventosHtml}
                 </div>
             `;
             $('#conteudoModalEntrega').html(html);

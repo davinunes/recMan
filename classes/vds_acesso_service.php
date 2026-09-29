@@ -269,6 +269,62 @@ function vds_extract_string_value($val, $default = 'N/A') {
 }
 
 /**
+ * Determina com precisão o status real de uma entrega/encomenda da API VDS.
+ */
+function vds_determinar_status_entrega($ent) {
+    if (!is_array($ent)) return 'Pendente';
+
+    $foiRetirado = false;
+    if (isset($ent['retiradoMorador']) && ($ent['retiradoMorador'] === true || $ent['retiradoMorador'] === 1 || $ent['retiradoMorador'] === '1' || $ent['retiradoMorador'] === 'true')) {
+        $foiRetirado = true;
+    } elseif (!empty($ent['retiradoPor']) || !empty($ent['dtFim'])) {
+        $foiRetirado = true;
+    }
+
+    if ($foiRetirado) {
+        $stDetalhado = !empty($ent['statusDetalhado']) ? trim($ent['statusDetalhado']) : '';
+        if ($stDetalhado !== '' && stripos($stDetalhado, 'notif') === false && stripos($stDetalhado, 'receb') === false && stripos($stDetalhado, 'encam') === false) {
+            return $stDetalhado;
+        }
+        return 'Entregue';
+    }
+
+    // Se NÃO foi retirado pelo morador:
+    if (!empty($ent['statusDetalhado'])) {
+        $stDet = trim($ent['statusDetalhado']);
+        if (stripos($stDet, 'entregue') === false && stripos($stDet, 'retirad') === false) {
+            return $stDet;
+        }
+    }
+
+    // Checar último evento no histórico se disponível
+    if (!empty($ent['eventos']) && is_array($ent['eventos'])) {
+        $ultimoEv = end($ent['eventos']);
+        if (!empty($ultimoEv['status'])) {
+            $stNome = is_array($ultimoEv['status']) ? ($ultimoEv['status']['nome'] ?? '') : (string)$ultimoEv['status'];
+            if (!empty($stNome)) {
+                if (stripos($stNome, 'not') !== false) return 'Notificado';
+                if (stripos($stNome, 'receb') !== false) return 'Recebido';
+                if (stripos($stNome, 'encam') !== false) return 'Encaminhado';
+                if (stripos($stNome, 'ent') !== false && $foiRetirado) return 'Entregue';
+                return $stNome;
+            }
+        }
+    }
+
+    if (!empty($ent['notificado'])) {
+        return 'Notificado';
+    }
+
+    $rawStatus = vds_extract_string_value($ent['status'] ?? ($ent['situacao'] ?? null), '');
+    if (!empty($rawStatus) && stripos($rawStatus, 'entregue') === false && stripos($rawStatus, 'retirad') === false) {
+        return $rawStatus;
+    }
+
+    return 'Notificado';
+}
+
+/**
  * Consulta entregas/correspondências recentes da unidade.
  */
 function vds_get_entregas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null, $usuarioIdConselho = null) {
@@ -317,11 +373,12 @@ function vds_get_entregas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null
                     if (($eUnid !== '' && ($eUnid === $unidadeClean || ltrim($eUnid, '0') === ltrim($unidadeClean, '0'))) || ($eUnid === '' && !empty($unidadeUuid))) {
                         $descStr = vds_extract_string_value($ent['descricao'] ?? ($ent['pacote'] ?? ($ent['tipo'] ?? null)), 'Encomenda / Pacote');
                         $destStr = vds_extract_string_value($ent['destinatario'] ?? ($ent['recebidoPor'] ?? null), 'Morador');
-                        $statusStr = vds_extract_string_value($ent['status'] ?? ($ent['situacao'] ?? null), 'Entregue');
+                        $statusStr = vds_determinar_status_entrega($ent);
                         $fotoRel = $ent['foto'] ?? null;
                         $fotoUrl = !empty($fotoRel) ? (strpos($fotoRel, 'http') === 0 ? $fotoRel : 'https://app.vidadesindico.com.br' . $fotoRel) : null;
 
                         $rawDtChegada = $ent['dthora'] ?? ($ent['dtCadastro'] ?? ($ent['dtExibicao'] ?? null));
+                        $isRetirado = ($statusStr === 'Entregue' || !empty($ent['retiradoMorador']) || !empty($ent['retiradoPor']) || !empty($ent['dtFim']));
 
                         $filtrados[] = [
                             'uuid' => $ent['uuid'] ?? ($ent['id'] ?? null),
@@ -330,7 +387,11 @@ function vds_get_entregas_unidade($bloco, $unidade, $dtIni = null, $dtFim = null
                             'destinatario' => $destStr,
                             'identificador' => $ent['identificador'] ?? ($ent['codigoRastreio'] ?? null),
                             'foto' => $fotoUrl,
-                            'status' => $statusStr
+                            'status' => $statusStr,
+                            'statusDetalhado' => $ent['statusDetalhado'] ?? $statusStr,
+                            'retiradoMorador' => $isRetirado,
+                            'retiradoPor' => $ent['retiradoPor'] ?? null,
+                            'dtFim' => $ent['dtFim'] ?? null
                         ];
                     }
                 }
@@ -382,6 +443,10 @@ function vds_get_entrega_detalhe($uuid, $usuarioIdConselho = null) {
             if (!empty($data['dtFim'])) {
                 $data['dtFimFormatada'] = vds_format_datetime($data['dtFim'], 'd/m/Y H:i');
             }
+
+            $statusCalculado = vds_determinar_status_entrega($data);
+            $data['statusCalculado'] = $statusCalculado;
+            $data['status'] = $statusCalculado;
 
             return ['success' => true, 'data' => $data];
         }

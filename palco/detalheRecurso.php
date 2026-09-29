@@ -864,7 +864,7 @@ if ($esseRecurso == null) {
                             </button>
                         </div>
                         <table class="striped highlight responsive-table" style="font-size:0.85rem;" id="tabela-entregas-acelerador">
-                            <thead><tr><th>Chegada</th><th>Identificador / Rastreio</th><th>Foto / Anexo</th><th>Descrição</th><th>Destinatário</th><th>Inspecionar</th></tr></thead>
+                            <thead><tr><th>Chegada</th><th>Identificador / Rastreio</th><th>Foto / Anexo</th><th>Descrição</th><th>Destinatário</th><th>Status</th><th>Inspecionar</th></tr></thead>
                             <tbody>
                     `;
                     data.forEach((ent, idx) => {
@@ -875,6 +875,12 @@ if ($esseRecurso == null) {
                         if (isMatch) {
                             $('#badge-entrega-match-header').show();
                         }
+
+                        let isEntregue = (ent.retiradoMorador === true) || (ent.status || '').toLowerCase().includes('entregue') || (ent.status || '').toLowerCase().includes('retirado') || !!ent.dtFim || !!ent.retiradoPor;
+                        let stNome = ent.status || ent.statusDetalhado || (isEntregue ? 'Entregue' : 'Notificado');
+                        let statusBadge = isEntregue ? 
+                            `<span class="badge-mini green white-text font-weight-bold">${stNome}</span>` : 
+                            `<span class="badge-mini amber darken-2 white-text font-weight-bold">${stNome}</span>`;
 
                         html += `
                             <tr data-entrega-uuid="${entUuid}" data-is-notif-match="${isMatch}" class="linha-entrega-item" style="cursor:pointer; ${isMatch ? 'background:#fff8e1; border-left:4px solid #ffa000;' : ''}" onclick="inspecionarItemAcelerador('entrega', '${cacheKey}')">
@@ -891,6 +897,7 @@ if ($esseRecurso == null) {
                                 </td>
                                 <td><b>${ent.descricao}</b></td>
                                 <td>${ent.destinatario}</td>
+                                <td class="col-status-entrega">${statusBadge}</td>
                                 <td><span class="btn-small waves-effect waves-light blue lighten-2 white-text" style="height:24px; line-height:24px; padding:0 8px; font-size:0.75rem; border-radius:4px;">Inspecionar <i class="material-icons right tiny" style="margin-left:2px;">search</i></span></td>
                             </tr>
                         `;
@@ -1022,6 +1029,16 @@ if ($esseRecurso == null) {
                                         `;
                                     }
                                 }
+                            }
+
+                            // Atualizar Status da Entrega na linha
+                            const colStatus = row.querySelector('.col-status-entrega');
+                            if (colStatus) {
+                                let isEntregueD = (d.retiradoMorador === true) || (d.status || '').toLowerCase().includes('entregue') || (d.status || '').toLowerCase().includes('retirado') || !!d.dtFim || !!d.retiradoPor;
+                                let stNomeD = d.status || d.statusDetalhado || (isEntregueD ? 'Entregue' : 'Notificado');
+                                colStatus.innerHTML = isEntregueD ?
+                                    `<span class="badge-mini green white-text font-weight-bold">${stNomeD}</span>` :
+                                    `<span class="badge-mini amber darken-2 white-text font-weight-bold">${stNomeD}</span>`;
                             }
 
                             // Atualizar Foto do Pacote (Miniatura super compacta 28x28px)
@@ -1209,6 +1226,9 @@ if ($esseRecurso == null) {
 
             const isMatch = checarMatchNotificacao(data.identificador) || checarMatchNotificacao(data.descricao);
 
+            const isEntregue = (data.retiradoMorador === true) || (data.status || '').toLowerCase().includes('entregue') || (data.status || '').toLowerCase().includes('retirado') || !!data.dtFim || !!data.retiradoPor;
+            const statusTexto = data.status || data.statusDetalhado || (isEntregue ? 'Entregue' : 'Notificado');
+
             var html = '<h5 style="margin-top:0; color:#1e88e5; font-weight:600; display:flex; align-items:center; gap:6px;"><i class="material-icons">markunread_mailbox</i> Inspecionar Entrega / Encomenda</h5>';
 
             const fotoUrl = data.fotoUrlCompleta || (data.foto ? (data.foto.startsWith('http') ? data.foto : 'https://app.vidadesindico.com.br' + data.foto) : null);
@@ -1217,11 +1237,12 @@ if ($esseRecurso == null) {
             }
 
             html += '<table class="striped" style="font-size:0.9rem; margin-top:10px;">';
+            html += '<tr><td style="width:35%;"><b>Situação / Status:</b></td><td>' + (isEntregue ? '<span class="badge-mini green white-text font-weight-bold">' + statusTexto + ' (Retirado)</span>' : '<span class="badge-mini amber darken-2 white-text font-weight-bold">' + statusTexto + ' (Ainda NÃO Retirado)</span>') + '</td></tr>';
             if (data.identificador) {
                 if (isMatch) {
-                    html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="amber-text text-darken-4" style="font-size:1.05rem;"><i class="material-icons tiny">star</i> ' + data.identificador + ' <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">⭐ Correspondente à Notificação ' + recNumCompleto + '</span></b></td></tr>';
+                    html += '<tr><td><b>Identificador / Rastreio:</b></td><td><b class="amber-text text-darken-4" style="font-size:1.05rem;"><i class="material-icons tiny">star</i> ' + data.identificador + ' <span class="badge amber darken-2 white-text font-weight-bold" style="float:none; padding:2px 6px; border-radius:4px; font-size:0.75rem;">⭐ Correspondente à Notificação ' + recNumCompleto + '</span></b></td></tr>';
                 } else {
-                    html += '<tr><td style="width:35%;"><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
+                    html += '<tr><td><b>Identificador / Rastreio:</b></td><td><b class="blue-text text-darken-3" style="font-size:1.05rem;"><i class="material-icons tiny">qr_code</i> ' + data.identificador + '</b></td></tr>';
                 }
             }
             if (data.protocolo) {
@@ -1266,7 +1287,7 @@ if ($esseRecurso == null) {
                     const matchChegada = String(dtChegadaRaw).match(/(\d{2}\/\d{2}\/\d{4})/);
                     if (matchChegada) {
                         dataSugerida = matchChegada[1];
-                        fonteData = 'chegada na portaria (retirada ainda não registrada)';
+                        fonteData = 'chegada na portaria (encomenda ainda NÃO retirada)';
                     }
                 }
 
@@ -1279,7 +1300,10 @@ if ($esseRecurso == null) {
                 if (jaTemRetirada) {
                     html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#555;"><i class="material-icons tiny green-text">check_circle</i> Data de ciência atual: <b class="green-text text-darken-3">' + diaRetiradaAtual + '</b></p>';
                 } else {
-                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#c62828;"><i class="material-icons tiny">warning</i> <b>Nenhuma data de ciência cadastrada.</b>' + (dataSugerida ? ' Sugestão baseada na <b>' + fonteData + '</b>: <b>' + dataSugerida + '</b>.' : '') + '</p>';
+                    if (!isEntregue) {
+                        html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#d84315;"><i class="material-icons tiny">warning</i> <b>Atenção:</b> Esta notificação ainda consta como <b>NÃO retirada</b> na portaria (Status: ' + statusTexto + ').</p>';
+                    }
+                    html += '<p style="margin:0 0 8px; font-size:0.85rem; color:#c62828;"><i class="material-icons tiny">info_outline</i> <b>Nenhuma data de ciência cadastrada.</b>' + (dataSugerida ? ' Sugestão baseada na <b>' + fonteData + '</b>: <b>' + dataSugerida + '</b>.' : '') + '</p>';
                 }
 
                 html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
