@@ -878,8 +878,8 @@ if ($esseRecurso == null) {
 
                         let isEntregue = (ent.retiradoMorador === true) || (ent.status || '').toLowerCase().includes('entregue') || (ent.status || '').toLowerCase().includes('retirado') || !!ent.dtFim || !!ent.retiradoPor;
                         let stNome = ent.status || ent.statusDetalhado || (isEntregue ? 'Entregue' : 'Notificado');
-                        let statusBadge = isEntregue ? 
-                            `<span class="badge-mini green white-text font-weight-bold">${stNome}</span>` : 
+                        let statusBadge = isEntregue ?
+                            `<span class="badge-mini green white-text font-weight-bold">${stNome}</span>` :
                             `<span class="badge-mini amber darken-2 white-text font-weight-bold">${stNome}</span>`;
 
                         html += `
@@ -1547,10 +1547,10 @@ if ($esseRecurso == null) {
     echo '<a class="modal-trigger btn indigo" href="#vincularOcorrenciaModal">Vincular Livro</a> ';
 
     if ($result['fase'] == 4)
-        echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a>';
+        echo '<a class="btn yellow darken-3" href="index.php?pag=emiteParecer&rec=' . $result['numero'] . '">Parecer</a> ';
 
-    // echo '<button class="btn deep-orange" id="btnSyncSupabase" data-rec="' . htmlspecialchars($result['numero']) . '">Sincronizar Supabase</button> ';
-    
+    echo '<button class="hide btn deep-orange waves-effect waves-light" id="btnSyncSupabase" data-rec="' . htmlspecialchars($result['numero'], ENT_QUOTES, 'UTF-8') . '"><i class="material-icons left">sync</i>Sincronizar Supabase</button> ';
+
     echo '
                 <a class="modal-trigger btn right" href="index.php">Sair</a>
             </div>
@@ -1591,18 +1591,18 @@ if ($esseRecurso == null) {
                             }, 1500);
                         } else {
                             M.toast({ html: 'Erro: ' + response.error, classes: 'red' });
-                            $btn.removeClass('disabled').text('Sincronizar Supabase');
+                            $btn.removeClass('disabled').html('<i class="material-icons left">sync</i>Sincronizar Supabase');
                         }
                     },
                     error: function (xhr, status, error) {
                         M.toast({ html: 'Erro ao conectar com o servidor.', classes: 'red' });
-                        $btn.removeClass('disabled').text('Sincronizar Supabase');
+                        $btn.removeClass('disabled').html('<i class="material-icons left">sync</i>Sincronizar Supabase');
                     }
                 });
             });
 
             // Buscar anexos do Supabase para esta notificação
-            var rec = $('#btnSyncSupabase').attr('data-rec');
+            var rec = $('#btnSyncSupabase').attr('data-rec') || '<?php echo htmlspecialchars($result['numero'], ENT_QUOTES, 'UTF-8'); ?>';
             if (rec) {
                 $.ajax({
                     url: 'magnacom-sistema/get_attachments.php',
