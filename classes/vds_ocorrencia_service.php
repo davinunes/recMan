@@ -1484,9 +1484,10 @@ function vds_get_encaminhar_funcionarios($ocorrenciaUuid, $condominioUuid = null
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Accept: application/json, text/plain, */*',
@@ -1533,9 +1534,10 @@ function vds_get_encaminhar_grupos($ocorrenciaUuid, $condominioUuid = null, $usu
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Accept: application/json, text/plain, */*',
@@ -1597,9 +1599,10 @@ function vds_encaminhar_ocorrencia($ocorrenciaUuid, $destinoTipo, $destinoIdOrUu
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 35,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -1610,6 +1613,8 @@ function vds_encaminhar_ocorrencia($ocorrenciaUuid, $destinoTipo, $destinoIdOrUu
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErrno = curl_errno($ch);
+    $curlError = curl_error($ch);
     curl_close($ch);
 
     if ($httpCode === 401) {
@@ -1618,7 +1623,29 @@ function vds_encaminhar_ocorrencia($ocorrenciaUuid, $destinoTipo, $destinoIdOrUu
     }
 
     if (($httpCode !== 200 && $httpCode !== 201) || !$response) {
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao encaminhar ocorrência na VDS.'];
+        if ($httpCode === 0 || $curlErrno === CURLE_OPERATION_TIMEDOUT) {
+            return [
+                'success' => false,
+                'httpCode' => 0,
+                'curlError' => $curlError,
+                'message' => 'Tempo limite esgotado ao aguardar resposta da VDS (Timeout). A VDS costuma processar o encaminhamento em segundo plano. Por favor, recarregue o chamado para verificar se o encaminhamento foi aplicado antes de tentar novamente.'
+            ];
+        }
+
+        $remoteMsg = null;
+        if ($response) {
+            $errData = json_decode($response, true);
+            if (is_array($errData)) {
+                $remoteMsg = $errData['message'] ?? $errData['msg'] ?? null;
+            }
+        }
+
+        return [
+            'success' => false,
+            'httpCode' => $httpCode,
+            'curlError' => $curlError ?: null,
+            'message' => $remoteMsg ?: ('Erro ao encaminhar ocorrência na VDS' . ($httpCode ? ' (HTTP ' . $httpCode . ')' : '') . '.')
+        ];
     }
 
     $data = json_decode($response, true);
@@ -1750,9 +1777,10 @@ function vds_alterar_status_classificacao($ocorrenciaUuid, $statusId, $classific
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CUSTOMREQUEST => 'PUT',
         CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) RecManVDS/1.0',
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -1763,6 +1791,8 @@ function vds_alterar_status_classificacao($ocorrenciaUuid, $statusId, $classific
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErrno = curl_errno($ch);
+    $curlError = curl_error($ch);
     curl_close($ch);
 
     if ($httpCode === 401) {
@@ -1771,7 +1801,29 @@ function vds_alterar_status_classificacao($ocorrenciaUuid, $statusId, $classific
     }
 
     if ($httpCode !== 200 || !$response) {
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro ao alterar status/classificação na VDS.'];
+        if ($httpCode === 0 || $curlErrno === CURLE_OPERATION_TIMEDOUT) {
+            return [
+                'success' => false,
+                'httpCode' => 0,
+                'curlError' => $curlError,
+                'message' => 'Tempo limite esgotado ao aguardar resposta da VDS (Timeout). Por favor, recarregue a tela para verificar se o status foi atualizado.'
+            ];
+        }
+
+        $remoteMsg = null;
+        if ($response) {
+            $errData = json_decode($response, true);
+            if (is_array($errData)) {
+                $remoteMsg = $errData['message'] ?? $errData['msg'] ?? null;
+            }
+        }
+
+        return [
+            'success' => false,
+            'httpCode' => $httpCode,
+            'curlError' => $curlError ?: null,
+            'message' => $remoteMsg ?: ('Erro ao alterar status/classificação na VDS' . ($httpCode ? ' (HTTP ' . $httpCode . ')' : '') . '.')
+        ];
     }
 
     $jsonDec = json_decode($response, true);
