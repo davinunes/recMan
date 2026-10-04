@@ -871,13 +871,63 @@ $isDebugUser = ($userIdDebug === 5);
             return null;
         }
 
+        /**
+         * Detecta e formata padrão de placa de veículo brasileira (antigo ABC-1234, Mercosul automóvel BRA-2E19 ou Mercosul moto BRA-22E9).
+         * Garante que placas digitadas sem hífen sejam enviadas com hífen conforme exigido pela API da VDS.
+         */
+        function normalizarPlacaVeiculo(termo) {
+            if (!termo || typeof termo !== 'string') return termo;
+            var trimmed = termo.trim();
+
+            // Lista de siglas/prefixos comuns de condomínio para evitar falsos positivos
+            var ignorar = ['APT', 'APTO', 'BLC', 'GAR', 'VAG', 'TOR', 'LOT', 'RES', 'CON', 'DOC', 'REF', 'NUM', 'TEL'];
+
+            // 1. Caso o termo inteiro seja exatamente uma placa (com ou sem hífen/espaço)
+            var matchExato = trimmed.match(/^([a-zA-Z]{3})[\s\-_]?([0-9][0-9a-zA-Z]{3})$/);
+            if (matchExato) {
+                var p1 = matchExato[1].toUpperCase();
+                var p2 = matchExato[2].toUpperCase();
+                if (ignorar.indexOf(p1) === -1) {
+                    var isTrad = /^[0-9]{4}$/.test(p2);
+                    var isMercCarro = /^[0-9][A-Z][0-9]{2}$/.test(p2);
+                    var isMercMoto = /^[0-9]{2}[A-Z][0-9]$/.test(p2);
+                    if (isTrad || isMercCarro || isMercMoto) {
+                        return p1 + '-' + p2;
+                    }
+                }
+            }
+
+            // 2. Detecção de placa dentro de texto composto (ex: "carro bra2e19")
+            return trimmed.replace(/\b([a-zA-Z]{3})[\s\-_]?([0-9][0-9a-zA-Z]{3})\b/gi, function (fullMatch, p1, p2) {
+                var p1U = p1.toUpperCase();
+                var p2U = p2.toUpperCase();
+                if (ignorar.indexOf(p1U) !== -1) {
+                    return fullMatch;
+                }
+                var isTrad = /^[0-9]{4}$/.test(p2U);
+                var isMercCarro = /^[0-9][A-Z][0-9]{2}$/.test(p2U);
+                var isMercMoto = /^[0-9]{2}[A-Z][0-9]$/.test(p2U);
+                if (isTrad || isMercCarro || isMercMoto) {
+                    return p1U + '-' + p2U;
+                }
+                return fullMatch;
+            });
+        }
+
         window.executarBuscaVDS = function () {
             var inputEl = document.getElementById('vdsBuscaQuery');
-            var q = inputEl ? inputEl.value.trim() : '';
+            var rawQ = inputEl ? inputEl.value.trim() : '';
 
-            if (!q) {
+            if (!rawQ) {
                 M.toast({ html: 'Digite um termo para pesquisar.', classes: 'orange rounded' });
                 return;
+            }
+
+            // Detectar placa e formatar com hífen exigido pela VDS
+            var q = normalizarPlacaVeiculo(rawQ);
+            var placaDetectada = (q !== rawQ);
+            if (inputEl && placaDetectada) {
+                inputEl.value = q;
             }
 
             var loader = document.getElementById('vdsBuscaLoader');
@@ -897,7 +947,14 @@ $isDebugUser = ($userIdDebug === 5);
                 if (res && res.success && Array.isArray(res.data)) {
                     var items = res.data;
                     if (countText) countText.textContent = items.length + ' registro(s) encontrado(s)';
-                    if (filterText) filterText.textContent = 'Filtro: ' + (res.tipo || tipoAtualVDS);
+                    if (filterText) {
+                        var statusTxt = 'Filtro: ' + (res.tipo || tipoAtualVDS);
+                        if (placaDetectada || (res.termo_buscado && res.termo_original && res.termo_buscado !== res.termo_original)) {
+                            var termoFinal = res.termo_buscado || q;
+                            statusTxt += ' • Placa formatada com hífen (' + termoFinal + ')';
+                        }
+                        filterText.textContent = statusTxt;
+                    }
                     if (statusBar) {
                         statusBar.classList.remove('hide');
                         statusBar.style.display = 'flex';
@@ -1030,6 +1087,16 @@ $isDebugUser = ($userIdDebug === 5);
             var q = $('#vdsBuscaQuery').val().trim();
             if (q) {
                 window.executarBuscaVDS();
+            }
+        });
+
+        $(document).on('change blur', '#vdsBuscaQuery', function () {
+            var val = $(this).val();
+            if (val) {
+                var norm = normalizarPlacaVeiculo(val);
+                if (norm !== val) {
+                    $(this).val(norm);
+                }
             }
         });
 

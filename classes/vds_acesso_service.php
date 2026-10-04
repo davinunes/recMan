@@ -1437,13 +1437,58 @@ function vds_get_liberacao_portaria_detalhes($uuid, $usuarioIdConselho = null) {
 }
 
 /**
- * Realiza busca genérica/global de registros na API v8 da VDS.
- * Endpoint: GET /registros?tipo={tipo}&busca={busca}
- * 
+ * Normaliza termo de busca para placas de veículos caso detectado o padrão brasileiro
+ * (antigo ABC-1234, Mercosul automóvel BRA-2E19 ou Mercosul moto BRA-22E9),
+ * garantindo a inclusão do hífen exigido pela VDS.
+ *
+ * @param string $busca Termo original
+ * @return string Termo com a placa normalizada e com hífen
+ */
+function vds_normalizar_termo_placa($busca) {
+    if (!is_string($busca) || empty(trim($busca))) {
+        return $busca;
+    }
+    $trimmed = trim($busca);
+    $ignorar = ['APT', 'APTO', 'BLC', 'GAR', 'VAG', 'TOR', 'LOT', 'RES', 'CON', 'DOC', 'REF', 'NUM', 'TEL'];
+
+    // 1. Correspondência exata do termo completo (ex: BRA2E19, bra-2e19, abc1234, bra 2e19)
+    if (preg_match('/^([a-zA-Z]{3})[\s\-_]?([0-9][0-9a-zA-Z]{3})$/', $trimmed, $m)) {
+        $p1 = strtoupper($m[1]);
+        $p2 = strtoupper($m[2]);
+        if (!in_array($p1, $ignorar, true)) {
+            $isTrad = preg_match('/^[0-9]{4}$/', $p2);
+            $isMercCarro = preg_match('/^[0-9][A-Z][0-9]{2}$/', $p2);
+            $isMercMoto = preg_match('/^[0-9]{2}[A-Z][0-9]$/', $p2);
+            if ($isTrad || $isMercCarro || $isMercMoto) {
+                return $p1 . '-' . $p2;
+            }
+        }
+    }
+
+    // 2. Detecção de placa dentro de texto composto (ex: "carro bra2e19")
+    return preg_replace_callback('/\b([a-zA-Z]{3})[\s\-_]?([0-9][0-9a-zA-Z]{3})\b/', function ($m) use ($ignorar) {
+        $p1 = strtoupper($m[1]);
+        $p2 = strtoupper($m[2]);
+        if (in_array($p1, $ignorar, true)) {
+            return $m[0];
+        }
+        $isTrad = preg_match('/^[0-9]{4}$/', $p2);
+        $isMercCarro = preg_match('/^[0-9][A-Z][0-9]{2}$/', $p2);
+        $isMercMoto = preg_match('/^[0-9]{2}[A-Z][0-9]$/', $p2);
+        if ($isTrad || $isMercCarro || $isMercMoto) {
+            return $p1 . '-' . $p2;
+        }
+        return $m[0];
+    }, $trimmed);
+}
+
+/**
+ * Executa busca rápida/genérica na API VDS em diversos domínios (apartamentos, moradores, automóveis, garagens, etc.)
+ *
  * @param string $busca Termo a ser pesquisado (ex: nome, placa, apartamento, vaga, etc.)
- * @param string $tipo Tipo de registro (ALL, APARTAMENTO, AUTOMOVEL, MORADOR, SINDICO, GARAGEM, RECURSO)
+ * @param string $tipo Tipo de filtro (ALL, APARTAMENTO, MORADOR, AUTOMOVEL, GARAGEM, SINDICO, RECURSO)
  * @param int|null $usuarioIdConselho ID do usuário conselheiro para recuperar token JWT
- * @return array ['success' => bool, 'data' => array, 'count' => int, 'tipo' => string, 'error' => string|null]
+ * @return array ['success' => bool, 'data' => array, 'count' => int, 'tipo' => string, 'termo_original' => string, 'termo_buscado' => string, 'error' => string|null]
  */
 function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
     if (empty(trim($busca))) {
@@ -1455,8 +1500,9 @@ function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
         return ['success' => false, 'error' => 'Nenhum token ativo da VDS disponível.'];
     }
 
+    $buscaNormalizada = vds_normalizar_termo_placa($busca);
     $tipoClean = !empty($tipo) ? strtoupper(trim($tipo)) : 'ALL';
-    $url = VDS_BASE_URL . '/registros?tipo=' . urlencode($tipoClean) . '&busca=' . urlencode(trim($busca));
+    $url = VDS_BASE_URL . '/registros?tipo=' . urlencode($tipoClean) . '&busca=' . urlencode(trim($buscaNormalizada));
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -1493,6 +1539,8 @@ function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
         'success' => true,
         'data' => $json,
         'count' => count($json),
-        'tipo' => $tipoClean
+        'tipo' => $tipoClean,
+        'termo_original' => trim($busca),
+        'termo_buscado' => trim($buscaNormalizada)
     ];
 }
