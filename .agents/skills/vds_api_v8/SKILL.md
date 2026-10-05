@@ -49,16 +49,26 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
 #### 📌 Fluxo Completo de Anexo de Arquivos em Ocorrências (3 Etapas Sequenciais):
 
 1. **Passo 1: Upload Temporário (Staging):** `POST /upload`
-   - **Body:** `{"base64String": "data:image/jpeg;base64,..."}`
+   - **Body:**
+     ```json
+     {
+       "base64String": "data:application/pdf;base64,...",
+       "fileName": "documento_exemplo.pdf"
+     }
+     ```
+   - **MIME types suportados no Base64:**
+     - PDFs: `data:application/pdf;base64,...`
+     - Imagens: `data:image/jpeg;base64,...`, `data:image/png;base64,...`, `data:image/webp;base64,...`
+   - **Campo `fileName`**: Obrigatório/Recomendado para manter o nome e a extensão correta (`.pdf`, `.jpeg`, etc.) no staging.
    - **Response de Sucesso:**
      ```json
      {
        "success": true,
        "message": "Arquivo salvo com sucesso",
-       "url": "app\\dados\\tmp\\1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.jpeg"
+       "url": "app\\dados\\tmp\\1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.pdf"
      }
      ```
-   - Extrair o nome do arquivo gerado no diretório temporário: `1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.jpeg`.
+   - Extrair o nome do arquivo gerado no diretório temporário: `1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.pdf`.
 
 2. **Passo 2: Publicar o Comentário/Evento na Ocorrência:** `POST /ocorrencia/comentario?condominioUuid={condominioUuid}`
    - **Body:**
@@ -69,6 +79,7 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
        "ocorrenciaPaiId": 51970481
      }
      ```
+   - **Atenção:** `mensagem` não pode ser vazia na API da VDS. Se a nota contiver apenas anexo, enviar um texto amigável como fallback (`"Segue documento em anexo."`).
    - **Response de Sucesso:**
      ```json
      {
@@ -81,14 +92,17 @@ Esta skill fornece todas as diretrizes, endpoints, headers, payloads e especific
    - **Body:**
      ```json
      {
-       "anexoCaminho": "1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.jpeg*WhatsApp Image 2026-07-30 at 13.00.47.jpeg",
+       "anexoCaminho": "1d55b4af-a8d7-4b20-a4a0-d807f1dc7e6f.pdf*documento_original.pdf",
        "tipoId": "35",
        "destinoUuid": "52075990",
-       "cortarQuadrado": true
+       "cortarQuadrado": false
      }
      ```
    - **Regra do Campo `anexoCaminho`**: Formato `{nome_temp_passo1}*{nome_original_arquivo}`.
    - **Regra do Campo `destinoUuid`**: Deve ser a string do ID numérico `ocorrenciaId` capturado no Passo 2.
+   - **Regra do Campo `cortarQuadrado`**:
+     - `true` para imagens que geram thumbnail quadrada (JPEG, PNG).
+     - `false` para PDFs, vídeos e documentos (evita falha interna de crop no backend da VDS).
    - **Response de Sucesso:** `{"message": "Anexos salvo com sucesso!"}`
 
 ### C. Gestão Completa de Autorização de Acesso, QR Codes & Convites Sociais

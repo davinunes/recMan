@@ -343,10 +343,26 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                 </div>
                 <div style="margin-top:4px; font-size:0.95rem;"><?= nl2br(htmlspecialchars($n['texto'])) ?></div>
                 <?php if (!empty($n['anexo_caminho'])): ?>
+                    <?php
+                    $anxCaminho = $n['anexo_caminho'];
+                    $extAnx = strtolower(pathinfo($anxCaminho, PATHINFO_EXTENSION));
+                    $isImgAnx = in_array($extAnx, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                    $isPdfAnx = ($extAnx === 'pdf');
+                    ?>
                     <div style="margin-top:6px;">
-                        <a href="<?= htmlspecialchars($n['anexo_caminho']) ?>" target="_blank" title="Clique para abrir a imagem">
-                            <img src="<?= htmlspecialchars($n['anexo_caminho']) ?>" style="max-width:220px; max-height:180px; border-radius:6px; border:1px solid #dcdcdc; object-fit:cover; display:block; margin-top:4px;">
-                        </a>
+                        <?php if ($isImgAnx): ?>
+                            <a href="<?= htmlspecialchars($anxCaminho) ?>" target="_blank" title="Clique para abrir a imagem">
+                                <img src="<?= htmlspecialchars($anxCaminho) ?>" style="max-width:220px; max-height:180px; border-radius:6px; border:1px solid #dcdcdc; object-fit:cover; display:block; margin-top:4px;">
+                            </a>
+                        <?php elseif ($isPdfAnx): ?>
+                            <a href="<?= htmlspecialchars($anxCaminho) ?>" target="_blank" class="btn-small red darken-1 white-text waves-effect waves-light" style="display:inline-flex; align-items:center; gap:6px; text-transform:none; border-radius:6px; font-weight:500; height:30px; line-height:30px; padding:0 12px; margin-top:4px;" title="Clique para visualizar o arquivo PDF">
+                                <i class="material-icons tiny">picture_as_pdf</i> Documento PDF anexado
+                            </a>
+                        <?php else: ?>
+                            <a href="<?= htmlspecialchars($anxCaminho) ?>" target="_blank" class="blue-text" style="font-size:0.85rem; display:inline-flex; align-items:center; gap:4px; margin-top:4px;">
+                                <i class="material-icons tiny">attach_file</i> <?= htmlspecialchars(basename($anxCaminho)) ?>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
                 
@@ -375,9 +391,12 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
 
     <!-- Footer: Adicionar Nota Interna (1º Fator) -->
     <div class="chat-footer" style="padding-top:4px;">
-        <!-- Preview do Anexo (Imagem Selecionada ou Colada) -->
+        <!-- Preview do Anexo (Imagem ou PDF Selecionado/Colado) -->
         <div id="preview-anexo-nota-container" style="display:none; padding:6px 12px; background:#f5f5f5; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; align-items:center; gap:10px;">
-            <img id="preview-anexo-nota-img" src="" style="height:48px; max-width:80px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
+            <img id="preview-anexo-nota-img" src="" style="height:48px; max-width:80px; object-fit:cover; border-radius:4px; border:1px solid #ccc; display:none;">
+            <div id="preview-anexo-nota-pdf-icon" style="display:none; width:48px; height:48px; background:#ffebee; border:1px solid #ffcdd2; border-radius:4px; align-items:center; justify-content:center; color:#d32f2f;">
+                <i class="material-icons">picture_as_pdf</i>
+            </div>
             <span id="preview-anexo-nota-info" style="font-size:0.8rem; color:#555; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
             <button type="button" class="btn-flat btn-small" onclick="removerAnexoNotaPreview()" title="Remover anexo" style="padding:0 6px; color:#d32f2f;">
                 <i class="material-icons tiny">close</i>
@@ -388,13 +407,13 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
             <input type="hidden" name="action" value="adicionar_nota_interna">
             <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
             <input type="hidden" name="anexo_base64" id="input-anexo-base64" value="">
-            <input type="file" name="anexo" id="input-anexo-nota" accept="image/*" style="display:none;" onchange="tratarAnexoNotaArquivo(this)">
+            <input type="file" name="anexo" id="input-anexo-nota" accept="image/*,application/pdf,.pdf" style="display:none;" onchange="tratarAnexoNotaArquivo(this)">
             
             <div style="display:flex; gap:10px; align-items:center;">
-                <label for="input-anexo-nota" id="btn-clip-anexo" class="btn-flat waves-effect" title="Anexar Imagem" style="padding:0 10px; margin:0; height:50px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#555; border:1px solid #ccc; border-radius:6px; background:#fff;">
+                <label for="input-anexo-nota" id="btn-clip-anexo" class="btn-flat waves-effect" title="Anexar Imagem ou PDF" style="padding:0 10px; margin:0; height:50px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#555; border:1px solid #ccc; border-radius:6px; background:#fff;">
                     <i class="material-icons" style="font-size:1.4rem;">attach_file</i>
                 </label>
-                <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho... (Cole Ctrl+V ou anexe uma imagem)" style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
+                <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho... (Cole Ctrl+V ou anexe PDF/imagem)" style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
                 <button type="submit" id="btn-salvar-nota-interna" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
                     Salvar Nota Interna <i class="material-icons right">note_add</i>
                 </button>
@@ -1720,11 +1739,19 @@ window.addEventListener('popstate', function(e) {
 window.tratarAnexoNotaArquivo = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
+        const isPdf = (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         const reader = new FileReader();
         reader.onload = function(e) {
             $('#input-anexo-base64').val(''); // Limpa o base64 se veio via upload de arquivo
-            $('#preview-anexo-nota-img').attr('src', e.target.result);
-            $('#preview-anexo-nota-info').text('Arquivo selecionado: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+            if (isPdf) {
+                $('#preview-anexo-nota-img').hide().attr('src', '');
+                $('#preview-anexo-nota-pdf-icon').css('display', 'flex');
+                $('#preview-anexo-nota-info').text('Documento PDF: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+            } else {
+                $('#preview-anexo-nota-pdf-icon').hide();
+                $('#preview-anexo-nota-img').show().attr('src', e.target.result);
+                $('#preview-anexo-nota-info').text('Arquivo selecionado: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+            }
             $('#preview-anexo-nota-container').css('display', 'flex');
         };
         reader.readAsDataURL(file);
@@ -1735,7 +1762,8 @@ window.tratarAnexoNotaArquivo = function(input) {
 window.removerAnexoNotaPreview = function() {
     $('#input-anexo-nota').val('');
     $('#input-anexo-base64').val('');
-    $('#preview-anexo-nota-img').attr('src', '');
+    $('#preview-anexo-nota-img').hide().attr('src', '');
+    $('#preview-anexo-nota-pdf-icon').hide();
     $('#preview-anexo-nota-info').text('');
     $('#preview-anexo-nota-container').css('display', 'none');
 };
@@ -1754,7 +1782,8 @@ $(document).off('paste', '#input-texto-nota-interna').on('paste', '#input-texto-
                 reader.onload = function(evt) {
                     $('#input-anexo-base64').val(evt.target.result);
                     $('#input-anexo-nota').val(''); // Limpa arquivo do input file
-                    $('#preview-anexo-nota-img').attr('src', evt.target.result);
+                    $('#preview-anexo-nota-pdf-icon').hide();
+                    $('#preview-anexo-nota-img').show().attr('src', evt.target.result);
                     $('#preview-anexo-nota-info').text('Imagem colada da área de transferência (' + file.type + ')');
                     $('#preview-anexo-nota-container').css('display', 'flex');
                 };
@@ -1777,7 +1806,7 @@ window.submeterNotaInternaAjax = function(e, ocorrenciaId) {
     const hasFile = $('#input-anexo-nota')[0] && $('#input-anexo-nota')[0].files.length > 0;
 
     if (!texto && !hasBase64 && !hasFile) {
-        M.toast({ html: 'Digite uma mensagem ou anexe uma imagem.', classes: 'rounded orange' });
+        M.toast({ html: 'Digite uma mensagem ou anexe uma imagem/documento.', classes: 'rounded orange' });
         return;
     }
 

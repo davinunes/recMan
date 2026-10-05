@@ -495,19 +495,32 @@ function vds_adicionar_nota_interna($ocorrenciaId, $conselheiroId, $conselheiroN
             if (move_uploaded_file($anexoData['tmp_name'], $fullPath)) {
                 $anexoCaminho = 'storage/comentarios/' . $fileName;
             }
-        } elseif (is_string($anexoData) && strpos($anexoData, 'data:image/') === 0) {
-            if (preg_match('/^data:image\/(\w+);base64,/', $anexoData, $type)) {
-                $data = substr($anexoData, strpos($anexoData, ',') + 1);
-                $ext = strtolower($type[1]);
+        } elseif (is_string($anexoData) && preg_match('/^data:([a-zA-Z0-9\/\-\+\.]+);base64,/', $anexoData, $typeMatch)) {
+            $mimeCaptured = strtolower($typeMatch[1]);
+            $mapMimeExt = [
+                'application/pdf' => 'pdf',
+                'image/jpeg'      => 'jpg',
+                'image/jpg'       => 'jpg',
+                'image/png'       => 'png',
+                'image/gif'       => 'gif',
+                'image/webp'      => 'webp',
+                'text/plain'      => 'txt',
+            ];
+            $ext = $mapMimeExt[$mimeCaptured] ?? null;
+            if (!$ext && strpos($mimeCaptured, 'image/') === 0) {
+                $ext = str_replace('image/', '', $mimeCaptured);
                 if ($ext === 'jpeg') $ext = 'jpg';
-                $data = base64_decode($data);
+            }
+            if (empty($ext)) $ext = 'bin';
 
-                if ($data !== false) {
-                    $fileName = 'anexo_' . date('Ymd_His') . '_' . uniqid() . '.' . $ext;
-                    $fullPath = $storageDir . $fileName;
-                    if (file_put_contents($fullPath, $data)) {
-                        $anexoCaminho = 'storage/comentarios/' . $fileName;
-                    }
+            $data = substr($anexoData, strpos($anexoData, ',') + 1);
+            $data = base64_decode($data);
+
+            if ($data !== false) {
+                $fileName = 'anexo_' . date('Ymd_His') . '_' . uniqid() . '.' . $ext;
+                $fullPath = $storageDir . $fileName;
+                if (file_put_contents($fullPath, $data)) {
+                    $anexoCaminho = 'storage/comentarios/' . $fileName;
                 }
             }
         } elseif (is_string($anexoData) && !empty($anexoData)) {
@@ -580,9 +593,14 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
     }
 
     // Enviar mensagem/comentário para a API VDS (Endpoint: POST /ocorrencia/comentario)
+    $textoComentario = trim($nota['texto'] ?? '');
+    if ($textoComentario === '' && !empty($nota['anexo_caminho'])) {
+        $textoComentario = "Segue documento em anexo.";
+    }
+
     $payloadData = [
         'uuid' => $nota['uuid_remoto'],
-        'mensagem' => $nota['texto'],
+        'mensagem' => $textoComentario,
         'ocorrenciaPaiId' => $remoteOcoId
     ];
 
@@ -593,8 +611,9 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -616,31 +635,49 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
 
         // Se a nota possuía um anexo local, realiza o upload e vinculação na VDS (3 Etapas)
         $anexoEnviadoVds = false;
+        $anexoAvisoErro = null;
         if (!empty($nota['anexo_caminho'])) {
             $localFullPath = __DIR__ . '/../' . ltrim($nota['anexo_caminho'], '/\\');
             if (file_exists($localFullPath)) {
                 $fileBytes = file_get_contents($localFullPath);
                 if ($fileBytes !== false) {
                     $ext = strtolower(pathinfo($localFullPath, PATHINFO_EXTENSION));
-                    $mime = ($ext === 'png') ? 'image/png' : (($ext === 'gif') ? 'image/gif' : (($ext === 'webp') ? 'image/webp' : 'image/jpeg'));
+                    $mapMimes = [
+                        'pdf'  => 'application/pdf',
+                        'png'  => 'image/png',
+                        'jpg'  => 'image/jpeg',
+                        'jpeg' => 'image/jpeg',
+                        'gif'  => 'image/gif',
+                        'webp' => 'image/webp',
+                        'txt'  => 'text/plain',
+                        'doc'  => 'application/msword',
+                        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    ];
+                    $mime = $mapMimes[$ext] ?? 'application/octet-stream';
                     $base64String = 'data:' . $mime . ';base64,' . base64_encode($fileBytes);
-                    
-                    // Passo 1 VDS: Upload temporário
-                    $resUp = vds_upload_midia($base64String, $usuarioIdConselho);
+                    $originalFileName = basename($localFullPath);
+                    $isImagem = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                    $cortarQuadrado = $isImagem; // Para PDFs e documentos em geral cortarQuadrado deve ser false
+
+                    // Passo 1 VDS: Upload temporário enviando base64 e nome do arquivo
+                    $resUp = vds_upload_midia($base64String, $originalFileName, $usuarioIdConselho);
                     if ($resUp['success'] && !empty($resUp['data']['url'])) {
                         $rawUrl = $resUp['data']['url'];
                         $tempFileName = basename(str_replace('\\', '/', $rawUrl));
-                        $originalFileName = basename($localFullPath);
                         
                         // Passo 3 VDS: Vinculação do Anexo ao evento/comentário criado
                         if ($vdsEventoId) {
-                            $resBind = vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho);
+                            $resBind = vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho, $cortarQuadrado);
                             if ($resBind['success']) {
                                 $anexoEnviadoVds = true;
                                 // Remove o arquivo físico local conforme solicitado
                                 @unlink($localFullPath);
+                            } else {
+                                $anexoAvisoErro = "Comentário postado, mas falha ao vincular anexo: " . ($resBind['message'] ?? 'Erro');
                             }
                         }
+                    } else {
+                        $anexoAvisoErro = "Comentário postado, mas falha no upload do anexo: " . ($resUp['message'] ?? 'Erro');
                     }
                 }
             }
@@ -655,8 +692,10 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
         $msgSucesso = "Nota publicada com sucesso no chamado remoto (ID VDS {$remoteOcoId}" . ($vdsEventoId ? ", Evento VDS {$vdsEventoId}" : "") . ")!";
         if ($anexoEnviadoVds) {
             $msgSucesso .= " Anexo enviado para a VDS e limpo do servidor local.";
+        } elseif ($anexoAvisoErro) {
+            $msgSucesso .= " Aviso: {$anexoAvisoErro}";
         }
-        return ['success' => true, 'message' => $msgSucesso];
+        return ['success' => true, 'message' => $msgSucesso, 'anexoEnviado' => $anexoEnviadoVds];
     }
 
     DBClose($link);
@@ -666,21 +705,27 @@ function vds_publicar_nota_remoto($notaId, $usuarioIdConselho = null) {
 /**
  * Upload de mídias/anexos na VDS (Passo 1).
  */
-function vds_upload_midia($base64String, $usuarioIdConselho = null) {
+function vds_upload_midia($base64String, $fileName = null, $usuarioIdConselho = null) {
     $token = vds_get_token($usuarioIdConselho);
     if (!$token) {
         return ['success' => false, 'message' => 'Token indisponível para upload.'];
     }
 
-    $payload = json_encode(['base64String' => $base64String]);
+    $payloadData = ['base64String' => $base64String];
+    if (!empty($fileName)) {
+        $payloadData['fileName'] = $fileName;
+    }
+
+    $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
 
     $ch = curl_init(VDS_BASE_URL . '/upload');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -690,6 +735,7 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
     if ($httpCode === 401) {
@@ -700,13 +746,14 @@ function vds_upload_midia($base64String, $usuarioIdConselho = null) {
         return ['success' => true, 'data' => json_decode($response, true)];
     }
 
-    return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro no upload de imagem/arquivo.'];
+    $errDetail = $response ? substr($response, 0, 200) : ($curlErr ?: "HTTP {$httpCode}");
+    return ['success' => false, 'httpCode' => $httpCode, 'message' => 'Erro no upload de imagem/arquivo: ' . $errDetail];
 }
 
 /**
  * Vincula um arquivo/anexo (upload temporário no staging) a uma ocorrência/comentário VDS (Passo 3).
  */
-function vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho = null) {
+function vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoId, $usuarioIdConselho = null, $cortarQuadrado = true) {
     $token = vds_get_token($usuarioIdConselho, false);
     if (!$token) {
         return ['success' => false, 'message' => 'Token indisponível para vinculação de anexo.'];
@@ -718,7 +765,7 @@ function vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoI
         'anexoCaminho' => $anexoCaminho,
         'tipoId' => '35',
         'destinoUuid' => (string)$vdsEventoId,
-        'cortarQuadrado' => true
+        'cortarQuadrado' => (bool)$cortarQuadrado
     ];
 
     $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
@@ -728,8 +775,9 @@ function vds_vincular_anexo_remoto($tempFileName, $originalFileName, $vdsEventoI
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_TIMEOUT => 12,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
