@@ -3590,85 +3590,92 @@ function ajustaValores(data) {
     M.FormSelect.init(document.querySelector("#bloco"));
 }
 
-// Inicializa o materialbox com ajuste para tamanho máximo no elemento pai/viewport ou tamanho original
-function initMaterialboxed(selector) {
-    var $target = selector ? $(selector) : $('.materialboxed');
-    $target.materialbox({
-        onOpenStart: function(el) {
-            document.body.style.overflow = 'hidden';
-            var $img = $(el);
-            // Salva estilos inline originais da miniatura para restauração
-            $img.data('orig-width', el.style.width || '');
-            $img.data('orig-height', el.style.height || '');
-            $img.data('orig-max-width', el.style.maxWidth || '');
-            $img.data('orig-max-height', el.style.maxHeight || '');
-            $img.data('orig-position', el.style.position || '');
-            $img.data('orig-top', el.style.top || '');
-            $img.data('orig-left', el.style.left || '');
-            $img.data('orig-transform', el.style.transform || '');
-        },
-        onOpenEnd: function(el) {
-            var $img = $(el);
-            var vw = window.innerWidth;
-            var vh = window.innerHeight;
-            var maxW = vw * 0.95;
-            var maxH = vh * 0.92;
+// Alterna zoom inline de imagem estilo feed (cresce dentro do próprio container)
+function toggleImageFeed(imgEl) {
+    if (!imgEl) return;
+    var $img = $(imgEl);
+    var isExpanded = $img.hasClass('img-feed-expanded');
 
-            // Dimensões naturais da imagem
-            var natW = el.naturalWidth || el.offsetWidth;
-            var natH = el.naturalHeight || el.offsetHeight;
+    if (isExpanded) {
+        // Fechar / Retornar ao modo lado a lado
+        $img.removeClass('img-feed-expanded');
+        
+        // Remove dos containers pais que foram expandidos
+        var $parent = $img.parent();
+        $parent.removeClass('img-feed-parent-expanded');
+        $img.parents('.img-feed-parent-expanded').removeClass('img-feed-parent-expanded');
+        $img.parents('.img-feed-grid-expanded').removeClass('img-feed-grid-expanded');
+    } else {
+        // Abrir / Modo Feed
+        $img.addClass('img-feed-expanded');
 
-            if (natW && natH) {
-                // Altera as dimensões para o máximo possível até tocar a largura ou altura do pai/viewport,
-                // ou mantém o tamanho original caso este seja menor que o espaço disponível.
-                var ratio = Math.min(maxW / natW, maxH / natH, 1);
-                var newW = Math.round(natW * ratio);
-                var newH = Math.round(natH * ratio);
+        // 1. Container pai direto (remove limites de max-width / height)
+        var $parent = $img.parent();
+        $parent.addClass('img-feed-parent-expanded');
 
-                el.style.width = newW + 'px';
-                el.style.height = newH + 'px';
-                el.style.maxWidth = 'none';
-                el.style.maxHeight = 'none';
-                el.style.position = 'fixed';
-                el.style.top = Math.round((vh - newH) / 2) + 'px';
-                el.style.left = Math.round((vw - newW) / 2) + 'px';
-                el.style.marginTop = '0';
-                el.style.marginLeft = '0';
-                el.style.transform = 'none';
-                el.style.cursor = 'zoom-out';
-            }
-
-            // Registra listener de fechar para o próximo clique na imagem aberta (não conflita com abertura)
-            $img.off('click.mbClose').one('click.mbClose', function() {
-                var instance = M.Materialbox.getInstance(this);
-                if (instance && instance.isOpen) {
-                    instance.close();
-                }
+        // 2. Se estiver dentro de flex com wrap (miniaturas lado a lado)
+        var $flexContainer = $img.closest('div[style*="flex-wrap"], .diligencia-anexos, .comentario-anexos');
+        if ($flexContainer.length) {
+            var $flexItem = $flexContainer.children().filter(function() {
+                return $(this).is($img) || $(this).has($img).length > 0;
             });
-        },
-        onCloseStart: function(el) {
-            document.body.style.overflow = '';
-            var $img = $(el);
-            $img.off('click.mbClose');
-            el.style.transform = 'none';
-            el.style.cursor = '';
-        },
-        onCloseEnd: function(el) {
-            var $img = $(el);
-            el.style.width = $img.data('orig-width') || '';
-            el.style.height = $img.data('orig-height') || '';
-            el.style.maxWidth = $img.data('orig-max-width') || '';
-            el.style.maxHeight = $img.data('orig-max-height') || '';
-            el.style.position = $img.data('orig-position') || '';
-            el.style.top = $img.data('orig-top') || '';
-            el.style.left = $img.data('orig-left') || '';
-            el.style.marginTop = '';
-            el.style.marginLeft = '';
-            el.style.transform = $img.data('orig-transform') || '';
-            el.style.cursor = '';
+            if ($flexItem.length) {
+                $flexItem.addClass('img-feed-parent-expanded');
+            }
+        }
+
+        // 3. Se estiver dentro de um card em CSS grid (galeria de anexos)
+        var $gridContainer = $img.closest('div[style*="grid-template-columns"], div[style*="display: grid"], div[style*="display:grid"]');
+        if ($gridContainer.length) {
+            var $gridItem = $gridContainer.children().filter(function() {
+                return $(this).has($img).length > 0;
+            });
+            if ($gridItem.length) {
+                $gridItem.addClass('img-feed-grid-expanded');
+            }
+        }
+    }
+}
+
+// Inicializa o comportamento de zoom inline estilo feed nas imagens
+function initMaterialboxed(selector) {
+    var $target = selector ? $(selector) : $('.materialboxed, .img-feed-toggle');
+    $target.each(function() {
+        var el = this;
+        var $el = $(el);
+        $el.addClass('img-feed-toggle');
+        // Remove qualquer listener antigo do Materialize caso presente
+        $el.off('click.materialbox');
+        if (window.M && M.Materialbox) {
+            var instance = M.Materialbox.getInstance(el);
+            if (instance && typeof instance.destroy === 'function') {
+                try { instance.destroy(); } catch (err) {}
+            }
         }
     });
 }
+
+// Listener delegado global de clique para zoom estilo feed
+$(document).off('click.imgFeedToggle').on('click.imgFeedToggle', '.img-feed-toggle, .materialboxed', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) {
+        e.stopImmediatePropagation();
+    }
+    toggleImageFeed(this);
+});
+
+// Suporte para fechar imagens expandidas com a tecla ESC
+$(document).off('keydown.imgFeedEsc').on('keydown.imgFeedEsc', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        var $expanded = $('.img-feed-expanded');
+        if ($expanded.length) {
+            $expanded.each(function() {
+                toggleImageFeed(this);
+            });
+        }
+    }
+});
 
 // Renderiza uma linha de sugestão de multa evitando duplicatas
 function renderSingleSuggestionRow(s) {

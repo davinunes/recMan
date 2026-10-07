@@ -351,9 +351,9 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                     ?>
                     <div style="margin-top:6px;">
                         <?php if ($isImgAnx): ?>
-                            <a href="<?= htmlspecialchars($anxCaminho) ?>" target="_blank" title="Clique para abrir a imagem">
-                                <img src="<?= htmlspecialchars($anxCaminho) ?>" style="max-width:220px; max-height:180px; border-radius:6px; border:1px solid #dcdcdc; object-fit:cover; display:block; margin-top:4px;">
-                            </a>
+                            <div>
+                                <img src="<?= htmlspecialchars($anxCaminho) ?>" class="responsive-img materialboxed z-depth-1" style="max-width:280px; max-height:200px; border-radius:6px; border:1px solid #dcdcdc; object-fit:cover; display:block; cursor:pointer; margin-top:4px;" alt="Anexo Nota Interna">
+                            </div>
                         <?php elseif ($isPdfAnx): ?>
                             <a href="<?= htmlspecialchars($anxCaminho) ?>" target="_blank" class="btn-small red darken-1 white-text waves-effect waves-light" style="display:inline-flex; align-items:center; gap:6px; text-transform:none; border-radius:6px; font-weight:500; height:30px; line-height:30px; padding:0 12px; margin-top:4px;" title="Clique para visualizar o arquivo PDF">
                                 <i class="material-icons tiny">picture_as_pdf</i> Documento PDF anexado
@@ -1671,11 +1671,9 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
                 $('#chat-real-content').html(res.html).show();
                 $('#vds-skeleton-chat-container').removeClass('active').hide();
 
-                // Inicializar visualizadores de imagens se disponível
+                // Inicializar visualizadores de imagens estilo feed
                 if (typeof initMaterialboxed === 'function') {
                     initMaterialboxed('#chat-real-content .materialboxed');
-                } else if ($.fn.materialbox) {
-                    $('#chat-real-content .materialboxed').materialbox();
                 }
 
                 // Iniciar verificação assíncrona de e-mail no Gmail
