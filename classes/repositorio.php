@@ -266,29 +266,115 @@ function getEstatisticas($mes = null, $ano = null)
         $ano = date('Y');
     }
 
+    $ano = (int) $ano;
+
     // Se $mes não for fornecido ou for 0, não aplicamos o filtro de mês
     if ($mes === null || $mes == 0) {
-        $mesFiltro = ''; // Deixa $mesFiltro vazio para não aplicar o filtro de mês
+        $mesFiltro = '';
     } else {
-        $mesFiltro = "AND MONTH(data) = '$mes'";
+        $mes = (int) $mes;
+        $mesFiltro = "AND MONTH(p.data) = '$mes'";
     }
 
-    $sql = "SELECT conclusao, COUNT(*) as total_pareceres, GROUP_CONCAT(id) as lista_ids
-            FROM conselho.parecer
-            WHERE YEAR(data) = '$ano' $mesFiltro
-            GROUP BY conclusao";
+    // Buscar pareceres do período com id de recurso correspondente se existir
+    $sql = "SELECT p.id, p.conclusao, p.resultado, r.id AS id_recurso
+            FROM conselho.parecer p
+            LEFT JOIN conselho.recurso r ON r.numero = p.id
+            WHERE YEAR(p.data) = '$ano' $mesFiltro";
 
-    // dump($sql);
     $result = DBExecute($sql);
-    $dados = array(); // Inicializa a variável $dados como um array vazio
+    $pareceres = array();
+    $recursoIds = array();
 
-    if (mysqli_num_rows($result) > 0) {
-        while ($retorno = mysqli_fetch_assoc($result)) {
-            $dados[] = $retorno;
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $pareceres[] = $row;
+            if (!empty($row['id_recurso'])) {
+                $recursoIds[] = (int) $row['id_recurso'];
+            }
         }
     }
 
-    return $dados;
+    if (empty($pareceres)) {
+        return array();
+    }
+
+    // Mapear votos mais votados por id_recurso se houver recursos vinculados
+    $votosMaisVotados = array();
+    if (!empty($recursoIds)) {
+        $idsStr = implode(',', array_unique($recursoIds));
+        $sqlVotos = "SELECT id_recurso, LOWER(voto) AS voto, COUNT(*) AS total
+                     FROM conselho.votos
+                     WHERE id_recurso IN ($idsStr)
+                     GROUP BY id_recurso, LOWER(voto)
+                     ORDER BY id_recurso, total DESC";
+        $resVotos = DBExecute($sqlVotos);
+        if ($resVotos && mysqli_num_rows($resVotos) > 0) {
+            while ($vRow = mysqli_fetch_assoc($resVotos)) {
+                $rId = $vRow['id_recurso'];
+                if (!isset($votosMaisVotados[$rId])) {
+                    // O primeiro registro traz a opção de voto com maior contagem devido ao ORDER BY total DESC
+                    $votosMaisVotados[$rId] = $vRow['voto'];
+                }
+            }
+        }
+    }
+
+    // Agrupar os pareceres pelas categorias padronizadas
+    $agrupados = array();
+
+    foreach ($pareceres as $p) {
+        $decisao = null;
+        $rId = !empty($p['id_recurso']) ? $p['id_recurso'] : null;
+
+        // 1. Tentar obter pelo maior número de votos
+        if ($rId && isset($votosMaisVotados[$rId])) {
+            $votoVencedor = strtolower($votosMaisVotados[$rId]);
+            if ($votoVencedor === 'manter') {
+                $decisao = 'MANTER';
+            } elseif ($votoVencedor === 'revogar') {
+                $decisao = 'REVOGAR';
+            } elseif ($votoVencedor === 'converter') {
+                $decisao = 'CONVERTER EM ADVERTÊNCIA';
+            }
+        }
+
+        // 2. Fallback: Se não houver votos registrados, categorizar com base no texto dos campos conclusao/resultado
+        if (empty($decisao)) {
+            $textoAnalise = mb_strtoupper(($p['conclusao'] ?? '') . ' ' . ($p['resultado'] ?? ''), 'UTF-8');
+            if (strpos($textoAnalise, 'REVOGAR') !== false) {
+                $decisao = 'REVOGAR';
+            } elseif (strpos($textoAnalise, 'CONVERTER') !== false) {
+                $decisao = 'CONVERTER EM ADVERTÊNCIA';
+            } elseif (strpos($textoAnalise, 'MANTER') !== false) {
+                $decisao = 'MANTER';
+            } elseif (!empty(trim($p['conclusao'] ?? ''))) {
+                $decisao = trim($p['conclusao']);
+            } else {
+                $decisao = 'OUTROS';
+            }
+        }
+
+        if (!isset($agrupados[$decisao])) {
+            $agrupados[$decisao] = array(
+                'conclusao' => $decisao,
+                'total_pareceres' => 0,
+                'lista_ids' => array()
+            );
+        }
+
+        $agrupados[$decisao]['total_pareceres']++;
+        $agrupados[$decisao]['lista_ids'][] = $p['id'];
+    }
+
+    // Formatar retorno para manter compatibilidade exata de estrutura
+    $resultadoFinal = array();
+    foreach ($agrupados as $item) {
+        $item['lista_ids'] = implode(',', $item['lista_ids']);
+        $resultadoFinal[] = $item;
+    }
+
+    return $resultadoFinal;
 }
 
 
