@@ -22,6 +22,21 @@ $elapsedMs = null;
 $selectedVariant = $_POST['variant'] ?? 'modern';
 $selectedDocType = $_POST['doc_type'] ?? 'regimento';
 
+// Carregar URLs salvas nos documentos normativos
+$regimentoJsonFile = __DIR__ . '/../regimento/database.json';
+$convencaoJsonFile = __DIR__ . '/../convencao_coletiva/convencao_coletiva_miami_json.json';
+
+$regData = file_exists($regimentoJsonFile) ? json_decode(file_get_contents($regimentoJsonFile), true) : [];
+$convData = file_exists($convencaoJsonFile) ? json_decode(file_get_contents($convencaoJsonFile), true) : [];
+
+$urlCartorioRegDefault = $regData['url_cartorio'] ?? 'https://recman.davinunes.eti.br/regimento/documento_original.pdf';
+$textoCartorioRegDefault = $regData['texto_cartorio'] ?? 'Visualizar Regimento Interno original registrado em cartório';
+
+$urlCartorioConvDefault = $convData['url_cartorio'] ?? 'https://recman.davinunes.eti.br/convencao_coletiva/documento_original.pdf';
+$textoCartorioConvDefault = $convData['texto_cartorio'] ?? 'Visualizar Convenção de Condomínio original registrada em cartório';
+
+$urlCartorioVal = isset($_POST['url_cartorio']) ? trim($_POST['url_cartorio']) : (($selectedDocType === 'convencao') ? $urlCartorioConvDefault : $urlCartorioRegDefault);
+$textoCartorioVal = isset($_POST['texto_cartorio']) ? trim($_POST['texto_cartorio']) : (($selectedDocType === 'convencao') ? $textoCartorioConvDefault : $textoCartorioRegDefault);
 
 $searchNum = trim($_POST['search_numero'] ?? '');
 $searchAno = trim($_POST['search_ano'] ?? '');
@@ -150,6 +165,25 @@ if ($action === 'buscar_parecer' && ($searchNum !== '' || $searchAno !== '')) {
         if (file_exists($normativoFile)) {
             $jsonData = json_decode(file_get_contents($normativoFile), true);
             $jsonData['variant'] = $selectedVariant;
+            $jsonData['url_cartorio'] = $urlCartorioVal;
+            $jsonData['texto_cartorio'] = $textoCartorioVal;
+
+            // Persistir URL e texto nos JSONs normativos se preenchido
+            if (!empty($urlCartorioVal)) {
+                $needsSave = false;
+                if (!isset($jsonData['url_cartorio']) || $jsonData['url_cartorio'] !== $urlCartorioVal) {
+                    $jsonData['url_cartorio'] = $urlCartorioVal;
+                    $needsSave = true;
+                }
+                if (!isset($jsonData['texto_cartorio']) || $jsonData['texto_cartorio'] !== $textoCartorioVal) {
+                    $jsonData['texto_cartorio'] = $textoCartorioVal;
+                    $needsSave = true;
+                }
+                if ($needsSave) {
+                    @file_put_contents($normativoFile, json_encode($jsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                }
+            }
+
             $res = TypstPdfService::gerarRegimento($jsonData, true);
             if ($res['status'] === 'success' && !empty($res['pdf_base64'])) {
                 $resultPdf = $res['pdf_base64'];
@@ -367,7 +401,7 @@ $variantesDisponiveis = [
                 <form method="POST" action="test_typst.php?action=test_regimento">
                     <div class="form-group">
                         <label>Documento Normativo</label>
-                        <select name="doc_type" id="selectDocType">
+                        <select name="doc_type" id="selectDocType" onchange="atualizarDocConfig(this.value)">
                             <option value="regimento" <?= ($selectedDocType ?? 'regimento') === 'regimento' ? 'selected' : '' ?>>
                                 Regimento Interno (33 Capítulos - database.json)
                             </option>
@@ -377,7 +411,7 @@ $variantesDisponiveis = [
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Variante de Layout Visual (8 Opções)</label>
+                        <label>Variante de Layout Visual</label>
                         <select name="variant">
                             <?php foreach ($variantesDisponiveis as $varKey => $varLabel): ?>
                                 <option value="<?= $varKey ?>" <?= $selectedVariant === $varKey ? 'selected' : '' ?>>
@@ -386,6 +420,34 @@ $variantesDisponiveis = [
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <!-- Campos de Link e QR Code para Arquivo Original Registrado em Cartório -->
+                    <div style="background: rgba(16, 185, 129, 0.08); padding: 14px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); margin-bottom: 16px;">
+                        <label style="color: #6ee7b7; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span class="material-icons" style="font-size: 18px;">qr_code_2</span> 
+                            Arquivo Original Registrado em Cartório (Capa do PDF)
+                        </label>
+                        
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label style="font-size: 0.82rem; color: var(--text-muted);">URL do Arquivo Original:</label>
+                            <input type="url" name="url_cartorio" id="inputUrlCartorio" 
+                                   placeholder="https://exemplo.com/documento_cartorio.pdf" 
+                                   value="<?= htmlspecialchars($urlCartorioVal ?? '') ?>" 
+                                   style="width: 100%;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 6px;">
+                            <label style="font-size: 0.82rem; color: var(--text-muted);">Texto do Link na Capa:</label>
+                            <input type="text" name="texto_cartorio" id="inputTextoCartorio" 
+                                   placeholder="Visualizar via original registrada em cartório" 
+                                   value="<?= htmlspecialchars($textoCartorioVal ?? '') ?>" 
+                                   style="width: 100%;">
+                        </div>
+                        <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-top: 6px;">
+                            Será inserido na capa um <strong>link clicável</strong> e um <strong>QR Code escaneável</strong> para a URL informada.
+                        </small>
+                    </div>
+
                     <button type="submit" class="btn btn-green">
                         <span class="material-icons">picture_as_pdf</span> Gerar PDF do Documento Selecionado
                     </button>
@@ -516,6 +578,30 @@ $variantesDisponiveis = [
 
     <script>
         const pareceresReais = <?= json_encode($listaPareceresReais, JSON_UNESCAPED_UNICODE) ?>;
+        const normativosUrls = {
+            'regimento': {
+                'url': <?= json_encode($urlCartorioRegDefault) ?>,
+                'texto': <?= json_encode($textoCartorioRegDefault) ?>
+            },
+            'convencao': {
+                'url': <?= json_encode($urlCartorioConvDefault) ?>,
+                'texto': <?= json_encode($textoCartorioConvDefault) ?>
+            }
+        };
+
+        function atualizarDocConfig(docType) {
+            const cfg = normativosUrls[docType];
+            if (cfg) {
+                const inputUrl = document.getElementById('inputUrlCartorio');
+                const inputTexto = document.getElementById('inputTextoCartorio');
+                if (inputUrl) {
+                    inputUrl.value = cfg.url || '';
+                }
+                if (inputTexto) {
+                    inputTexto.value = cfg.texto || '';
+                }
+            }
+        }
         
         function carregarParecerDb(id) {
             if (!id) return;

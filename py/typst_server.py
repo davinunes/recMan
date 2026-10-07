@@ -78,6 +78,31 @@ def prepare_banner_image(input_data=None):
     return 'LayoutMiami.jpg'
 
 
+def generate_qr_svg(text, output_path):
+    """Gera um arquivo SVG de QR Code sem depender de bibliotecas externas (usando py/qrcodegen.py) ou com fallback."""
+    try:
+        from qrcodegen import QrCode
+        qr = QrCode.encode_text(text, QrCode.Ecc.MEDIUM)
+        svg_content = qr.to_svg_str(border=2)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(svg_content)
+        return True
+    except Exception as e1:
+        sys.stderr.write(f"[QRCODE INFO] qrcodegen fallback: {e1}\n")
+
+    try:
+        import qrcode
+        import qrcode.image.svg
+        factory = qrcode.image.svg.SvgPathImage
+        img = qrcode.make(text, image_factory=factory)
+        img.save(output_path)
+        return True
+    except Exception as e2:
+        sys.stderr.write(f"[QRCODE ERROR] Falha completa na geração de QR Code: {e2}\n")
+
+    return False
+
+
 TYPST_BIN = find_typst_binary()
 
 
@@ -113,8 +138,25 @@ def run_typst(template_name, input_data=None):
     if input_data is None:
         input_data = {}
 
-    # Garante que LayoutMiami.jpg esteja disponível na pasta dos templates
+    # Garante que LayoutMiami.jpg e fundos estejam disponíveis na pasta dos templates
     input_data['banner_path'] = prepare_banner_image(input_data)
+
+    # Processa QR Code se url_cartorio / cartorio_url for fornecido
+    qrcode_tmp_file = None
+    url_cartorio = input_data.get('url_cartorio') or input_data.get('cartorio_url')
+    if url_cartorio and str(url_cartorio).strip():
+        try:
+            import hashlib
+            url_str = str(url_cartorio).strip()
+            url_hash = hashlib.md5(url_str.encode('utf-8')).hexdigest()[:8]
+            qr_filename = f"qr_{url_hash}.svg"
+            qr_dest_path = os.path.join(TEMPLATES_DIR, qr_filename)
+            if generate_qr_svg(url_str, qr_dest_path):
+                input_data['qrcode_image'] = qr_filename
+                qrcode_tmp_file = qr_dest_path
+        except Exception as e_qr:
+            sys.stderr.write(f"[QRCODE ERROR] Falha ao processar QR Code: {e_qr}\n")
+            sys.stderr.flush()
 
     func_name = 'regimento-doc' if template_name == 'regimento.typ' else ('documento-oficial-doc' if template_name == 'documento_oficial.typ' else 'parecer-doc')
 
@@ -166,6 +208,11 @@ def run_typst(template_name, input_data=None):
                     os.remove(f_tmp.name)
                 except Exception:
                     pass
+        if qrcode_tmp_file and os.path.exists(qrcode_tmp_file):
+            try:
+                os.remove(qrcode_tmp_file)
+            except Exception:
+                pass
 
 
 class TypstHandler(BaseHTTPRequestHandler):
