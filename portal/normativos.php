@@ -67,12 +67,11 @@ $documentos = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Normativos & Política de Tratamento de Dados - Conselho Miami Beach</title>
     
-    <!-- Favicon -->
-    <link rel="apple-touch-icon" sizes="180x180" href="fav_portal_recurso_conselho/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="fav_portal_recurso_conselho/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="fav_portal_recurso_conselho/favicon-16x16.png">
-    <link rel="shortcut icon" href="favicon.ico">
-    <link rel="manifest" href="fav_portal_recurso_conselho/site.webmanifest">
+    <!-- Favicon Oficial do Conselho -->
+    <link rel="apple-touch-icon" sizes="180x180" href="logo-conselho.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="logo-conselho.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo-conselho.png">
+    <link rel="shortcut icon" href="logo-conselho.png">
     
     <!-- Tailwind CSS & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -91,7 +90,7 @@ $documentos = [
     <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/95">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
-                <img src="fav_portal_recurso_conselho/android-chrome-192x192.png" alt="Logo Conselho" class="w-10 h-10 rounded-lg shadow-sm border border-gray-200 object-contain">
+                <img src="logo-conselho.png" alt="Logo Oficial do Conselho" class="w-10 h-10 rounded-lg shadow-sm border border-gray-200 object-contain">
                 <div>
                     <span class="text-xs uppercase font-bold tracking-wider text-orange-600 block leading-tight">Transparência & Governança</span>
                     <h1 class="text-lg sm:text-xl font-extrabold text-blue-900 leading-tight">Documentos Normativos & LGPD</h1>
@@ -228,7 +227,7 @@ $documentos = [
 
     <!-- Rodapé -->
     <footer class="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-500 space-y-1">
-        <p class="font-medium text-gray-700">Conselho Fiscal & Administrativo • Residencial Miami Beach</p>
+        <p class="font-medium text-gray-700">Conselho Consultivo e Fiscal • Residencial Miami Beach</p>
         <p>&copy; <?= date("Y") ?> - Todos os documentos normativos estão em vigor e disponíveis para consulta pública dos condôminos.</p>
     </footer>
 

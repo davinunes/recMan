@@ -89,7 +89,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                                     Seus dados e recursos estão protegidos?
                                 </h3>
                                 <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                    Conheça a nossa <strong>Política de Tratamento de Dados (PTD)</strong> e consulte os normativos oficiais (Convenção e Regimento Interno) direto no seu navegador.
+                                    Conheça a nossa <strong>Política de Tratamento de Dados</strong> e consulte a <strong>Convenção</strong> e <strong>Regimento Interno</strong> na versão transcrita e pesquisável.
                                 </p>
                             </div>
                         </div>
@@ -548,13 +548,13 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
         </div>
 
         <div class="text-center mt-8 pt-2 space-y-3">
-            <div>
+            <!-- <div>
                 <a href="normativos.php" 
                    class="inline-flex items-center text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full transition shadow-sm">
                     <span class="material-icons text-sm mr-1.5 text-emerald-600">verified_user</span>
                     Política de Tratamento de Dados (LGPD) & Normativos
                 </a>
-            </div>
+            </div> -->
             <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">&copy;
                 <?= date("Y") ?> - Conselho Fiscal Miami
             </p>

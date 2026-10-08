@@ -1,4 +1,4 @@
-# Walkthrough / Taklin: Esclarecimento sobre Transcrição dos Normativos no Portal
+# Walkthrough / Taklin: Ajuste de Identidade Visual e Nomenclatura Oficial na Tela Normativos
 
 **Data**: 2026-10-08  
 **Autor**: Antigravity  
@@ -8,18 +8,17 @@
 
 ## 1. O que foi ajustado
 
-1. **Esclarecimento nos Cards da Convenção e do Regimento Interno**:
-   - Adicionada nota formal e clara de esclarecimento:
-     > *"Nota de Transcrição: O Conselho transcreveu integralmente o documento original registrado devido à tecnologia de digitalização anterior (scans em imagem) não permitir ajustes de layout nem pesquisa textual."*
-   - O selo do formato foi atualizado para: *"PDF Oficial • Transcrição Pesquisável"*.
-   - A nota aparece destacada em bloco visual neutro e profissional com ícone de documento histórico (`history_edu`), mantendo transparência total com os moradores.
+1. **Logo Oficial do Conselho em `portal/normativos.php`**:
+   - Como o escopo da tela transcende os recursos e abrange a governança institucional e a LGPD, a logo do portal de recursos foi substituída pela **logo oficial do Conselho** (`portal/logo-conselho.png`, originária da matriz em `favicon/logo-conselho/256-256.png`).
+   - Os favicons da página de normativos também foram associados à logo oficial do Conselho.
 
-2. **Benefício para o Morador**:
-   - Evita questionamentos sobre formatação moderna em relação aos registros em papel/cartório antigos.
-   - Demonstra o trabalho ativo do Conselho em viabilizar a acessibilidade, leitura nítida em telas e busca textual rápida (`Ctrl + F`).
+2. **Nomenclatura do Órgão no Rodapé**:
+   - O rodapé foi retificado de *"Conselho Fiscal & Administrativo"* para:
+     > **Conselho Consultivo e Fiscal • Residencial Miami Beach**
 
 ---
 
 ## 2. Arquivos Atualizados
 
-- [`portal/normativos.php`](file:///d:/dev/github/recMan/portal/normativos.php): Adição da nota de transcrição e badge atualizado nos cards da Convenção e do Regimento.
+- [`portal/normativos.php`](file:///d:/dev/github/recMan/portal/normativos.php): Logo oficial no cabeçalho/favicons e rodapé com Conselho Consultivo e Fiscal.
+- `portal/logo-conselho.png`: Imagem da logo oficial do Conselho copiada para disponibilização no portal.
