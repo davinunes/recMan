@@ -66,6 +66,35 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         Acompanhar Recurso Existente
                     </button>
                 </div>
+
+                <!-- Link/Card Chamativo: Política de Tratamento de Dados & Normativos -->
+                <div class="mt-8 pt-6 border-t border-gray-100 text-left">
+                    <a href="normativos.php"
+                        class="group block p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5">
+                        <div class="flex items-start space-x-3">
+                            <div class="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm group-hover:scale-105 group-hover:bg-emerald-700 transition-all shrink-0">
+                                <span class="material-icons text-xl block">verified_user</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-1 mb-1">
+                                    <span class="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-200/70 border border-emerald-300 px-2 py-0.5 rounded-full inline-flex items-center">
+                                        <span class="material-icons text-[12px] mr-1">security</span>
+                                        LGPD & Privacidade
+                                    </span>
+                                    <span class="text-xs font-bold text-emerald-700 group-hover:text-emerald-900 group-hover:translate-x-1 transition-transform inline-flex items-center shrink-0">
+                                        Consultar <span class="material-icons text-sm ml-0.5">arrow_forward</span>
+                                    </span>
+                                </div>
+                                <h3 class="text-sm font-extrabold text-gray-900 group-hover:text-emerald-950 transition-colors">
+                                    Seus dados e recursos estão protegidos?
+                                </h3>
+                                <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+                                    Conheça a nossa <strong>Política de Tratamento de Dados (PTD)</strong> e consulte inline os normativos oficiais (Convenção e Regimento Interno).
+                                </p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
             </div>
 
             <!-- ETAPA 1: Número da Notificação -->
@@ -518,7 +547,14 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 
         </div>
 
-        <div class="text-center mt-8 pt-4">
+        <div class="text-center mt-8 pt-2 space-y-3">
+            <div>
+                <a href="normativos.php" 
+                   class="inline-flex items-center text-xs font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full transition shadow-sm">
+                    <span class="material-icons text-sm mr-1.5 text-emerald-600">verified_user</span>
+                    Política de Tratamento de Dados (LGPD) & Normativos
+                </a>
+            </div>
             <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">&copy;
                 <?= date("Y") ?> - Conselho Fiscal Miami
             </p>
