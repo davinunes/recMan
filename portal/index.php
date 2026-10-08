@@ -89,7 +89,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                                     Seus dados e recursos estão protegidos?
                                 </h3>
                                 <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                    Conheça a nossa <strong>Política de Tratamento de Dados (PTD)</strong> e consulte inline os normativos oficiais (Convenção e Regimento Interno).
+                                    Conheça a nossa <strong>Política de Tratamento de Dados (PTD)</strong> e consulte os normativos oficiais (Convenção e Regimento Interno) direto no seu navegador.
                                 </p>
                             </div>
                         </div>
