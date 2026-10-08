@@ -143,6 +143,9 @@
   let artigos = if "artigos" in data { data.artigos } else { (:) }
   let variant = if "variant" in data { data.variant } else { "modern" }
   let banner_path = if "banner_path" in data and data.banner_path != "" { data.banner_path } else { "LayoutMiami.jpg" }
+  let url_cartorio = if "url_cartorio" in data and data.url_cartorio != none { str(data.url_cartorio).trim() } else if "cartorio_url" in data and data.cartorio_url != none { str(data.cartorio_url).trim() } else { "" }
+  let texto_cartorio = if "texto_cartorio" in data and data.texto_cartorio != none and str(data.texto_cartorio).trim() != "" { str(data.texto_cartorio).trim() } else { "Acessar via original registrada em cartório" }
+  let qrcode_image = if "qrcode_image" in data and data.qrcode_image != none { str(data.qrcode_image).trim() } else { "" }
 
   // Cores dinâmicas por variante
   let main_color = rgb("0f172a")
@@ -169,7 +172,7 @@
     bg_cap = rgb("1e293b")
     text_primary = rgb("f8fafc")
     text_secondary = rgb("cbd5e1")
-  } else if variant == "editorial" {
+  } else if variant == "editorial" or variant == "margem_moderna" {
     main_color = rgb("065f46")
     accent_color = rgb("047857")
     bg_cap = rgb("ecfdf5")
@@ -186,6 +189,10 @@
       if variant == "watermark_a4" [
         #place(top + left)[
           #image("lay-body-all-pages-1.png", width: 100%, height: 100%)
+        ]
+      ] else if variant == "margem_moderna" [
+        #place(top + left)[
+          #image("lay-body-all-pages-2.png", width: 100%, height: 100%)
         ]
       ] else if variant == "top_header" and current_page == 1 [
         #place(top + left)[
@@ -218,18 +225,66 @@
   set text(lang: "pt", size: 10pt, fill: text_primary)
   set par(justify: true, leading: 0.65em)
 
+  // FUNÇÃO DE RENDERIZAÇÃO DO LINK E QR CODE DO CARTÓRIO
+  let render-bloco-cartorio(url, texto, qr_img) = {
+    if url != "" [
+      #v(0.6cm)
+      #align(center)[
+        #block(
+          width: 88%,
+          inset: (x: 12pt, y: 10pt),
+          radius: 6pt,
+          stroke: 0.5pt + (if variant == "dark" { rgb("0284c7") } else if variant == "margem_moderna" or variant == "editorial" { rgb("059669") } else { rgb("cbd5e1") }),
+          fill: if variant == "dark" { rgb("1e293b") } else if variant == "margem_moderna" or variant == "editorial" { rgb("ecfdf5") } else { rgb("f8fafc") }
+        )[
+          #text(size: 9.5pt, weight: "bold", fill: if variant == "dark" { rgb("38bdf8") } else if variant == "margem_moderna" or variant == "editorial" { rgb("065f46") } else { accent_color })[
+            #link(url)[#underline[#texto]]
+          ]
+          #if qr_img != "" [
+            #v(6pt)
+            #align(center)[
+              #image(qr_img, width: 2.7cm)
+            ]
+            #v(2pt)
+            #text(size: 7.5pt, fill: text_secondary)[
+              Aponte a câmera para o QR Code para acessar o arquivo original
+            ]
+          ]
+        ]
+      ]
+    ]
+  }
+
   // CAPAS DAS VARIANTES
   if variant == "top_header" [
     #align(center)[
-      #v(3cm)
+      #v(2.5cm)
       #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
         #text(fill: white, weight: "bold", size: 16pt)[#titulo]
       ]
-      #v(1.5cm)
+      #v(1cm)
       #text(size: 12pt, style: "italic", fill: rgb("334155"))[
         Normas de Funcionamento, Convivência e Administração
       ]
-      #v(3cm)
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
+      #v(2cm)
+      #text(size: 10pt, fill: rgb("64748b"))[
+        Taguatinga / DF • Versão Digital Interativa
+      ]
+    ]
+    #pagebreak()
+  ] else if variant == "margem_moderna" [
+    #align(center)[
+      #v(2cm)
+      #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("065f46"))[
+        #text(fill: white, weight: "bold", size: 16pt)[#titulo]
+      ]
+      #v(1cm)
+      #text(size: 12pt, style: "italic", fill: rgb("047857"), weight: "medium")[
+        Normas de Funcionamento, Convivência e Administração
+      ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
+      #v(1.5cm)
       #text(size: 10pt, fill: rgb("64748b"))[
         Taguatinga / DF • Versão Digital Interativa
       ]
@@ -241,11 +296,12 @@
       #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
         #text(fill: white, weight: "bold", size: 16pt)[#titulo]
       ]
-      #v(1.5cm)
+      #v(1cm)
       #text(size: 12pt, style: "italic", fill: rgb("334155"))[
         Normas de Funcionamento, Convivência e Administração
       ]
-      #v(3cm)
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
+      #v(2cm)
       #text(size: 10pt, fill: rgb("64748b"))[
         Taguatinga / DF • Versão Digital Interativa
       ]
@@ -255,16 +311,17 @@
     #align(center)[
       #v(-1cm)
       #image(banner_path, width: 100%)
-      #v(2cm)
-      #rect(width: 100%, inset: 20pt, radius: 6pt, fill: rgb("0f172a"))[
+      #v(1.2cm)
+      #rect(width: 100%, inset: 18pt, radius: 6pt, fill: rgb("0f172a"))[
         #text(fill: white, weight: "bold", size: 16pt)[#titulo]
       ]
-      #v(1.5cm)
-      #text(size: 12pt, style: "italic", fill: rgb("334155"))[
+      #v(0.8cm)
+      #text(size: 11pt, style: "italic", fill: rgb("334155"))[
         Normas de Funcionamento, Convivência e Administração
       ]
-      #v(3cm)
-      #text(size: 10pt, fill: rgb("64748b"))[
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
+      #v(1.5cm)
+      #text(size: 9.5pt, fill: rgb("64748b"))[
         Taguatinga / DF • Versão Digital Interativa
       ]
     ]
@@ -275,13 +332,14 @@
       #rect(width: 100%, inset: 24pt, radius: 4pt, fill: rgb("1e40af"))[
         #text(fill: white, weight: "bold", size: 18pt)[#titulo]
       ]
-      #v(1cm)
+      #v(0.8cm)
       #line(length: 40%, stroke: 2pt + rgb("1d4ed8"))
-      #v(1cm)
+      #v(0.8cm)
       #text(size: 11pt, weight: "medium", fill: rgb("334155"))[
         REGULAMENTO CORPORATIVO E NORMAS CONDOMINIAIS
       ]
-      #v(3cm)
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
+      #v(2cm)
       #text(size: 9.5pt, fill: rgb("64748b"))[
         Conselho Consultivo e Fiscal • Taguatinga / DF
       ]
@@ -291,12 +349,13 @@
     #align(center + horizon)[
       #v(-2cm)
       #text(size: 20pt, weight: "light", fill: rgb("334155"))[#titulo]
-      #v(1cm)
+      #v(0.8cm)
       #line(length: 20%, stroke: 0.5pt + rgb("94a3b8"))
-      #v(1cm)
+      #v(0.8cm)
       #text(size: 10pt, style: "italic", fill: rgb("64748b"))[
         Normas de Convivência
       ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
     ]
     #pagebreak()
   ] else if variant == "juridico" [
@@ -305,14 +364,15 @@
       #rect(width: 100%, inset: 20pt, radius: 0pt, stroke: (rest: 3pt + rgb("1e3a8a")))[
         #text(fill: rgb("1e3a8a"), weight: "bold", size: 16pt)[#titulo]
       ]
-      #v(1.5cm)
+      #v(1cm)
       #text(size: 11pt, weight: "bold", fill: rgb("1e3a8a"))[
         TÍTULO NORMATIVO E COMPENDIO REGIMENTAL
       ]
-      #v(0.5cm)
+      #v(0.3cm)
       #text(size: 10pt, style: "italic", fill: rgb("334155"))[
         Aprovado em Assembleia Geral Extraordinária
       ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
     ]
     #pagebreak()
   ] else if variant == "dark" [
@@ -321,10 +381,11 @@
       #rect(width: 100%, inset: 24pt, radius: 8pt, fill: rgb("1e293b"), stroke: 1pt + rgb("0284c7"))[
         #text(fill: rgb("38bdf8"), weight: "bold", size: 18pt)[#titulo]
       ]
-      #v(1.5cm)
+      #v(1cm)
       #text(size: 11pt, fill: rgb("94a3b8"))[
         Edição Digital Noturna • Top Life Miami Beach
       ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
     ]
     #pagebreak()
   ] else if variant == "editorial" [
@@ -333,14 +394,15 @@
       #rect(width: 100%, fill: rgb("065f46"), inset: 15pt)[
         #text(fill: white, weight: "bold", size: 16pt)[BOLETIM REGIMENTAL]
       ]
-      #v(1cm)
+      #v(0.8cm)
       #text(size: 15pt, weight: "bold", fill: rgb("065f46"))[#titulo]
-      #v(1.5cm)
+      #v(1cm)
       #rect(width: 80%, fill: rgb("ecfdf5"), inset: 12pt, radius: 4pt, stroke: 0.5pt + rgb("047857"))[
         #text(size: 10pt, fill: rgb("065f46"))[
           Documento consolidado contendo as seções do Regimento Interno.
         ]
       ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
     ]
     #pagebreak()
   ] else if variant == "classic" [
@@ -349,10 +411,11 @@
       #rect(width: 100%, inset: 24pt, radius: 0pt, stroke: 2pt + rgb("1e3a8a"))[
         #text(fill: rgb("1e3a8a"), weight: "bold", size: 16pt)[#titulo]
       ]
-      #v(1.5cm)
+      #v(1cm)
       #text(size: 12pt, style: "italic", fill: rgb("334155"))[
         Documento Normativo do Condomínio
       ]
+      #render-bloco-cartorio(url_cartorio, texto_cartorio, qrcode_image)
     ]
     #pagebreak()
   ]

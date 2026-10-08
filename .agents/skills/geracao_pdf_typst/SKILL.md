@@ -28,7 +28,7 @@ graph TD
 
 ## 2. Catálogo de 8 Variantes Visuais de Layout
 
-O sistema suporta 8 variantes de design através do parâmetro `variant` no payload JSON:
+O sistema suporta variantes de design através do parâmetro `variant` no payload JSON:
 
 | Variante | Nome Visual | Estilo e Destaques |
 | :--- | :--- | :--- |
@@ -40,8 +40,14 @@ O sistema suporta 8 variantes de design através do parâmetro `variant` no payl
 | `juridico` | Jurídico Solene | Formatação solene de cartório/tribunal com moldura dupla pesada e cabeçalhos formais. |
 | `dark` | Dark Mode | Fundo escuro premium (`#0f172a`), texto claro e detalhes visuais em Ciano Neon (`#0284c7`). |
 | `editorial` | Editorial / Boletim | Estilo publicação oficial / boletim informativo condominial com capa em Verde Esmeralda (`#065f46`). |
+| `top_header` | Novo Topo 1ª Pág | Aplica `lay-top-fist-page-1.png` no cabeçalho da primeira página. |
+| `watermark_a4` | Marca d'Água A4 Full | Aplica `lay-body-all-pages-1.png` de fundo (background) em todas as páginas. |
+| `margem_moderna`| Marca d'Água Margem Moderna | Aplica `lay-body-all-pages-2.png` de fundo em todas as páginas com capa em Verde Esmeralda (`#065f46`). |
 
----
+### QR Code e Link da Via Registrada em Cartório
+Quando os campos `url_cartorio` e `texto_cartorio` são informados no JSON de Regimento/Convenção:
+1. O microserviço Python gera automaticamente um QR Code vetorial SVG (`py/qrcodegen.py`) sem dependências externas.
+2. O template Typst renderiza na capa um bloco com o link clicável (`#link()`) e o QR Code em alta definição vetorial logo abaixo para escaneamento móvel.
 
 ## 3. Instalação e Bootstrapping do Typst CLI no Linux
 
