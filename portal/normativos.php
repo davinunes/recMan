@@ -67,6 +67,16 @@ $documentos = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Normativos & Política de Tratamento de Dados - Conselho Miami Beach</title>
     
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8Z3EGW55DC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-8Z3EGW55DC');
+    </script>
+
     <!-- Favicon Oficial do Conselho -->
     <link rel="apple-touch-icon" sizes="180x180" href="logo-conselho.png">
     <link rel="icon" type="image/png" sizes="32x32" href="logo-conselho.png">

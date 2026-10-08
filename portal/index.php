@@ -9,6 +9,17 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistente de Recursos - Conselho</title>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8Z3EGW55DC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-8Z3EGW55DC');
+    </script>
+
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="fav_portal_recurso_conselho/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="fav_portal_recurso_conselho/favicon-32x32.png">
