@@ -36,8 +36,9 @@ $documentos = [
         'subtitulo' => 'Estatuto Constitutivo Oficial',
         'entenda_chamada' => 'Entenda as normas fundamentais, direitos e deveres de todos os moradores.',
         'descricao' => 'O documento principal do condomínio registrado em cartório. Define direitos e obrigações dos condôminos, divisão das unidades, despesas comuns e como funcionam o Síndico, Conselho e Assembleias.',
+        'nota_transcricao' => 'O Conselho transcreveu integralmente o documento original registrado devido à tecnologia de digitalização anterior (scans em imagem) não permitir ajustes de layout nem pesquisa textual.',
         'arquivo' => 'docs/normativos/cc-miami-pesquisavel-interativo.pdf',
-        'formato' => 'PDF Oficial • Pesquisável'
+        'formato' => 'PDF Oficial • Transcrição Pesquisável'
     ],
     [
         'id' => 'regimento',
@@ -52,8 +53,9 @@ $documentos = [
         'subtitulo' => 'Regras de Uso, Convivência e Ampla Defesa',
         'entenda_chamada' => 'Entenda as regras de convivência, uso das áreas comuns e ampla defesa.',
         'descricao' => 'Regulamenta o dia a dia: horários de silêncio, salão de festas, piscina, garagem, penalidades e o Artigo 181, que garante ao morador o agendamento presencial para assistir filmagens de câmeras antes de recorrer.',
+        'nota_transcricao' => 'O Conselho transcreveu integralmente o documento original devido à tecnologia de digitalização anterior não permitir ajustes de layout nem pesquisa textual.',
         'arquivo' => 'docs/normativos/ri-miami-pesquisavel-interativo.pdf',
-        'formato' => 'PDF Oficial • Pesquisável'
+        'formato' => 'PDF Oficial • Transcrição Pesquisável'
     ]
 ];
 ?>
@@ -176,6 +178,16 @@ $documentos = [
                                 <?= htmlspecialchars($doc['descricao']) ?>
                             </p>
                         </div>
+
+                        <?php if (!empty($doc['nota_transcricao'])): ?>
+                            <div class="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200/90 flex items-start space-x-2.5">
+                                <span class="material-icons text-base text-slate-500 shrink-0 mt-0.5">history_edu</span>
+                                <div class="text-xs text-slate-600 leading-relaxed">
+                                    <strong class="font-bold text-slate-800">Nota de Transcrição:</strong>
+                                    <?= htmlspecialchars($doc['nota_transcricao']) ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Coluna de Ação / Botão de Abertura -->

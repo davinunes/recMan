@@ -1,4 +1,4 @@
-# Walkthrough / Taklin: Página de Normativos com Abertura Direta no Navegador
+# Walkthrough / Taklin: Esclarecimento sobre Transcrição dos Normativos no Portal
 
 **Data**: 2026-10-08  
 **Autor**: Antigravity  
@@ -8,22 +8,18 @@
 
 ## 1. O que foi ajustado
 
-1. **Remoção total de termos técnicos**:
-   - Eliminado o termo "inline" de todos os textos, botões e descrições do portal (`portal/index.php` e `portal/normativos.php`).
-   - Linguagem clara e amigável: *"Visualizar no Navegador"*, *"Abre diretamente na tela do seu aparelho sem precisar baixar arquivos"*.
+1. **Esclarecimento nos Cards da Convenção e do Regimento Interno**:
+   - Adicionada nota formal e clara de esclarecimento:
+     > *"Nota de Transcrição: O Conselho transcreveu integralmente o documento original registrado devido à tecnologia de digitalização anterior (scans em imagem) não permitir ajustes de layout nem pesquisa textual."*
+   - O selo do formato foi atualizado para: *"PDF Oficial • Transcrição Pesquisável"*.
+   - A nota aparece destacada em bloco visual neutro e profissional com ícone de documento histórico (`history_edu`), mantendo transparência total com os moradores.
 
-2. **Remoção do visualizador embutido (iframe)**:
-   - Evita problemas de scroll duplo, engasgos e falhas de compatibilidade em telas touch de smartphones Android e iPhones.
-   - Cada documento conta com botão dedicado que abre o PDF diretamente em nova guia (`target="_blank"`), exatamente como no modelo da VDS (`https://arq.vidadesindico.com.br/.../documento.pdf`), permitindo zoom nativo e tela cheia limpa.
-
-3. **Ordem e Apresentação dos Documentos**:
-   - **1. Política de Tratamento de Dados (PTD)**: Destaque de prioridade 1 com badges de LGPD e segurança.
-   - **2. Convenção de Condomínio**: Estatuto jurídico fundamental.
-   - **3. Regimento Interno (RI)**: Regras de convivência e procedimentos de ampla defesa (Art. 181).
+2. **Benefício para o Morador**:
+   - Evita questionamentos sobre formatação moderna em relação aos registros em papel/cartório antigos.
+   - Demonstra o trabalho ativo do Conselho em viabilizar a acessibilidade, leitura nítida em telas e busca textual rápida (`Ctrl + F`).
 
 ---
 
 ## 2. Arquivos Atualizados
 
-- [`portal/normativos.php`](file:///d:/dev/github/recMan/portal/normativos.php): Interface redesenhada, leve, rápida e mobile-first.
-- [`portal/index.php`](file:///d:/dev/github/recMan/portal/index.php): Texto amigável no card inicial e link no rodapé.
+- [`portal/normativos.php`](file:///d:/dev/github/recMan/portal/normativos.php): Adição da nota de transcrição e badge atualizado nos cards da Convenção e do Regimento.
