@@ -11,6 +11,7 @@ $titulo = $_POST['titulo'] ?? 'Sistema de Recursos';
 $mensagem = $_POST['mensagem'] ?? null;
 $url = $_POST['url'] ?? '/';
 $user_ids = $_POST['user_ids'] ?? null; // Serializado como string se vier via POST
+$icon = $_POST['icon'] ?? null;
 
 if ($mensagem) {
     require_once "push_helper.php";
@@ -20,5 +21,5 @@ if ($mensagem) {
         $user_ids = explode(',', $user_ids);
     }
 
-    sendPushNotification($titulo, $mensagem, $url, $user_ids);
+    sendPushNotification($titulo, $mensagem, $url, $user_ids, $icon);
 }

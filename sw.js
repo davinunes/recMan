@@ -14,7 +14,8 @@ self.addEventListener('push', function (event) {
 
         let options = {
             body: data.body,
-            icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/3239/3239952.png',
+            icon: data.icon || 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png',
+            badge: data.badge || 'https://mini.davinunes.eti.br/favicon/logo-conselho/96-96.png',
             vibrate: [200, 100, 200, 100, 200, 100, 200], // vibração bacana de notificação
             data: { url: data.url }
         };

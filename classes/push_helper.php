@@ -39,9 +39,9 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
 
         $webPush = new WebPush($auth);
 
-        // Icone padrão se não for passado
+        // Icone padrão se não for passado (Novo Logo do Conselho)
         if (!$icon) {
-            $icon = 'https://mini.davinunes.eti.br/storage/icons/conselho-toon.webp';
+            $icon = 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png';
         }
 
         $sql = "SELECT id, user_id, endpoint, p256dh, auth, base_url FROM push_subscriptions";
@@ -110,8 +110,9 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
  * @param string $mensagem
  * @param string $url
  * @param array|null $userIds
+ * @param string|null $icon URL ou caminho do ícone.
  */
-function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null)
+function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
 {
     // Domínio oficial para garantir que o curl interno sempre funcione
     // Mesmo se o request vier do portal (outro dominio), o curl interno deve usar o dominio que tem a pasta /classes/
@@ -125,6 +126,10 @@ function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null)
 
     if ($userIds) {
         $postData['user_ids'] = is_array($userIds) ? implode(',', $userIds) : $userIds;
+    }
+
+    if ($icon) {
+        $postData['icon'] = $icon;
     }
 
     $postFields = http_build_query($postData);

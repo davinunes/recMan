@@ -1071,11 +1071,17 @@ function upsertComentario($dados)
         require_once "push_helper.php";
         $usuario = getUsuariosById($id_usuario);
         $nome_usuario = $usuario['nome'] ?? "Conselheiro";
-        $resumo_comentario = substr($dados['messageText'], 0, 100) . (strlen($dados['messageText']) > 100 ? "..." : "");
+        
+        $recurso = getRecursoById($id_recurso);
+        $numeroRecurso = !empty($recurso['numero']) ? $recurso['numero'] : $id_recurso;
 
-        $titulo = "Novo Comentário";
-        $mensagem = "$nome_usuario comentou no recurso $id_recurso:\n$resumo_comentario";
-        $url = "/index.php?pag=recurso&rec=" . urlencode($id_recurso);
+        $textoLimpo = trim($dados['messageText'] ?? '');
+        $limiteCaracteres = 280;
+        $resumo_comentario = mb_substr($textoLimpo, 0, $limiteCaracteres, 'UTF-8') . (mb_strlen($textoLimpo, 'UTF-8') > $limiteCaracteres ? "..." : "");
+
+        $titulo = "Novo Comentário ($numeroRecurso)";
+        $mensagem = "$nome_usuario comentou no recurso $numeroRecurso:\n$resumo_comentario";
+        $url = "/index.php?pag=recurso&rec=" . urlencode($numeroRecurso);
 
         sendPushBackground($titulo, $mensagem, $url);
         return $id_mensagem;

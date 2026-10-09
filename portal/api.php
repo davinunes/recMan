@@ -688,8 +688,11 @@ if (
             DBExecute($sql);
 
             // Notifica conselheiros
+            $textoLimpo = trim($texto);
+            $limite = 280;
+            $resumoTexto = mb_substr($textoLimpo, 0, $limite, 'UTF-8') . (mb_strlen($textoLimpo, 'UTF-8') > $limite ? "..." : "");
             $tituloPush = "Novo Comentário ($numeroRec)";
-            $mensagemPush = "O condômino adicionou informações ao recurso.";
+            $mensagemPush = "O condômino adicionou ao recurso $numeroRec:\n$resumoTexto";
             $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroRec);
             sendPushBackground($tituloPush, $mensagemPush, $urlPush);
 
