@@ -584,30 +584,498 @@ if ($esseRecurso == null) {
 
             $urlLocal = 'index.php?pag=livroDeOcorrencias&id=' . (int) $oc['id'];
             $urlRemota = !empty($oc['url']) ? $oc['url'] : '#!';
+            $ocId = (int)$oc['id'];
 
-            echo '<div class="collection-item" style="display:flex; justify-space-between; align-items:center; flex-wrap:wrap; padding:10px 15px;">
-                    <div style="flex:1; min-width:250px;">
-                        <span class="new badge blue left" style="margin-right:10px;" data-badge-caption="">ID ' . (int) $oc['id'] . '</span>
-                        <b>' . htmlspecialchars($oc['bloco'] ?? '') . ' / ' . htmlspecialchars($oc['unidade'] ?? '') . '</b>
-                        <span class="grey-text text-darken-1" style="font-size:0.85rem; margin-left:8px;">' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '</span>
-                        <div style="margin-top:4px;">' . $tagsHtml . '</div>
-                    </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <a href="' . $urlLocal . '" class="btn-small blue waves-effect waves-light" style="padding:0 10px;" title="Abrir no Chat RecMan">
-                            <i class="material-icons left" style="margin-right:4px;">chat</i> Chat Local
-                        </a>';
+            echo '<div class="collection-item item-oco-vinculada-wrapper" id="item-oco-wrapper-' . $ocId . '" style="padding:10px 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div style="flex:1; min-width:240px; cursor:pointer;" onclick="toggleOcorrenciaInline(' . $ocId . ', event)" title="Clique para expandir/recolher histórico">
+                            <span class="new badge blue left" style="margin-right:10px;" data-badge-caption="">ID ' . $ocId . '</span>
+                            <b>' . htmlspecialchars($oc['bloco'] ?? '') . ' / ' . htmlspecialchars($oc['unidade'] ?? '') . '</b>
+                            <span class="grey-text text-darken-1" style="font-size:0.85rem; margin-left:8px;">' . date('d/m/Y H:i', strtotime($oc['abertura'])) . '</span>
+                            <div style="margin-top:4px;">' . $tagsHtml . '</div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <!-- Botão Principal: Expandir inline via AJAX sem sair da página -->
+                            <button type="button" class="btn-small blue waves-effect waves-light btn-toggle-oco-inline" id="btn-toggle-oco-' . $ocId . '" onclick="toggleOcorrenciaInline(' . $ocId . ', event)" style="padding:0 12px; display:inline-flex; align-items:center; gap:4px;" title="Ver mensagens e histórico desta ocorrência nesta tela">
+                                <i class="material-icons" style="font-size:1.15rem; margin-right:2px;" id="icon-toggle-oco-' . $ocId . '">chat</i>
+                                <span id="label-toggle-oco-' . $ocId . '">Ver Chat</span>
+                            </button>
+
+                            <!-- Botão Secundário: Abrir no Livro de Ocorrências em Nova Guia -->
+                            <a href="' . $urlLocal . '" target="_blank" class="btn-small white grey-text text-darken-3 waves-effect" style="padding:0 8px; border:1px solid #d0d7de; box-shadow:none; height:32.4px; line-height:32.4px; display:inline-flex; align-items:center;" title="Abrir Livro de Ocorrências em nova guia">
+                                <i class="material-icons tiny">open_in_new</i>
+                            </a>';
             if (!empty($oc['url'])) {
-                echo '   <a href="' . $urlRemota . '" target="_blank" class="btn-small grey waves-effect waves-light" style="padding:0 8px;" title="Abrir no VDS Remoto">
-                            <i class="material-icons">open_in_new</i>
-                        </a>';
+                echo '       <!-- Botão Secundário: Abrir no VDS Remoto -->
+                            <a href="' . $urlRemota . '" target="_blank" class="btn-small grey lighten-4 grey-text text-darken-3 waves-effect" style="padding:0 8px; border:1px solid #d0d7de; box-shadow:none; height:32.4px; line-height:32.4px; display:inline-flex; align-items:center;" title="Abrir no VDS Remoto em nova guia">
+                                <i class="material-icons tiny">launch</i>
+                            </a>';
             }
-            echo '  </div>
+            echo '      </div>
+                    </div>
+                    <!-- Container Expansível do Conteúdo da Ocorrência via AJAX -->
+                    <div class="oco-inline-expand-container" id="oco-inline-expand-' . $ocId . '" style="display:none; width:100%; margin-top:12px; border-top:1px dashed #dcdcdc; padding-top:12px;"></div>
                   </div>';
         }
     } else {
         echo '<p class="grey-text p-10" style="padding:10px">Nenhuma ocorrência vinculada por ID ou Tag.</p>';
     }
     echo '</div>';
+
+    // Estilos Dedicados para o Chat Inline das Ocorrências
+    ?>
+    <style>
+        .oco-inline-chat-wrapper {
+            background: #efeae2;
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+            margin-top: 4px;
+        }
+        .oco-inline-chat-wrapper .chat-header {
+            background: #ffffff;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .oco-inline-chat-wrapper .chat-body {
+            max-height: 480px;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .oco-inline-chat-wrapper .chat-footer {
+            background: #ffffff;
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .oco-inline-chat-wrapper .msg-bubble {
+            max-width: 82%;
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            line-height: 1.4;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .oco-inline-chat-wrapper .msg-left {
+            background: #ffffff;
+            border-top-left-radius: 2px;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        .oco-inline-chat-wrapper .msg-internal {
+            background: #fff3cd;
+            border: 1px solid #ffeba0;
+            border-top-right-radius: 2px;
+            margin-left: auto;
+            color: #856404;
+        }
+        .oco-inline-chat-wrapper .msg-right {
+            background: #dcf8c6;
+            border-top-right-radius: 2px;
+            margin-left: auto;
+            color: #111;
+        }
+        .oco-inline-chat-wrapper .msg-author {
+            font-weight: bold;
+            font-size: 0.82rem;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .oco-inline-chat-wrapper .msg-time {
+            font-size: 0.72rem;
+            color: #888;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .oco-inline-chat-wrapper .badge-tipo {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .oco-inline-chat-wrapper a[onclick*="voltarParaListaMobile"] {
+            display: none !important;
+        }
+        @keyframes oco-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spin-icon {
+            display: inline-block;
+            animation: oco-spin 0.9s linear infinite;
+        }
+    </style>
+    <script>
+        // Função Central de Expansão/Recolhimento Inline das Ocorrências via AJAX
+        window.toggleOcorrenciaInline = function(ocorrenciaId, ev) {
+            if (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
+
+            var $container = $('#oco-inline-expand-' + ocorrenciaId);
+            var $btn = $('#btn-toggle-oco-' + ocorrenciaId);
+            var $icon = $('#icon-toggle-oco-' + ocorrenciaId);
+            var $label = $('#label-toggle-oco-' + ocorrenciaId);
+
+            // 1. Se já está visível, recolhe com animação suave
+            if ($container.is(':visible')) {
+                $container.slideUp(250);
+                $icon.text('chat');
+                $label.text('Ver Chat');
+                $btn.removeClass('blue-grey darken-1').addClass('blue');
+                return;
+            }
+
+            // 2. Se já foi carregado anteriormente (em cache no DOM)
+            if ($container.data('carregado') === true) {
+                $container.slideDown(250);
+                $icon.text('expand_less');
+                $label.text('Recolher');
+                $btn.removeClass('blue').addClass('blue-grey darken-1');
+                return;
+            }
+
+            // 3. Exibir feedback de carregamento amigável
+            $container.html(
+                '<div style="background:#ffffff; border-radius:8px; border:1px solid #e0e0e0; padding:22px; text-align:center;">' +
+                    '<div class="preloader-wrapper small active" style="vertical-align:middle; margin-right:10px;">' +
+                        '<div class="spinner-layer spinner-blue-only">' +
+                            '<div class="circle-clipper left"><div class="circle"></div></div>' +
+                            '<div class="gap-patch"><div class="circle"></div></div>' +
+                            '<div class="circle-clipper right"><div class="circle"></div></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<span style="font-weight:500; color:#555; vertical-align:middle;">Carregando histórico e mensagens da ocorrência #' + ocorrenciaId + '...</span>' +
+                '</div>'
+            ).slideDown(200);
+
+            $icon.text('sync').addClass('spin-icon');
+            $label.text('Carregando...');
+
+            // 4. Buscar conteúdo completo da ocorrência via AJAX
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'GET',
+                data: {
+                    is_ajax: 1,
+                    action: 'carregar_detalhe',
+                    id: ocorrenciaId
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success && res.html) {
+                        $container.html('<div class="oco-inline-chat-wrapper">' + res.html + '</div>');
+                        $container.data('carregado', true);
+
+                        $icon.removeClass('spin-icon').text('expand_less');
+                        $label.text('Recolher');
+                        $btn.removeClass('blue').addClass('blue-grey darken-1');
+
+                        // Inicializar zoom de imagem feed caso exista imagens
+                        if (typeof initMaterialboxed === 'function') {
+                            initMaterialboxed('#oco-inline-expand-' + ocorrenciaId + ' .materialboxed');
+                        }
+                    } else {
+                        $container.html(
+                            '<div class="card-panel red lighten-5 red-text text-darken-3" style="margin:0; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">' +
+                                '<span><i class="material-icons tiny" style="vertical-align:middle; margin-right:6px;">error</i> Não foi possível carregar os dados desta ocorrência.</span>' +
+                                '<button type="button" class="btn-flat btn-small red-text text-darken-3" onclick="$(\'#oco-inline-expand-' + ocorrenciaId + '\').removeData(\'carregado\'); toggleOcorrenciaInline(' + ocorrenciaId + ');">Tentar novamente</button>' +
+                            '</div>'
+                        );
+                        $icon.removeClass('spin-icon').text('chat');
+                        $label.text('Ver Chat');
+                    }
+                },
+                error: function() {
+                    $container.html(
+                        '<div class="card-panel red lighten-5 red-text text-darken-3" style="margin:0; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">' +
+                            '<span><i class="material-icons tiny" style="vertical-align:middle; margin-right:6px;">wifi_off</i> Erro de conexão ao buscar a ocorrência.</span>' +
+                            '<button type="button" class="btn-flat btn-small red-text text-darken-3" onclick="$(\'#oco-inline-expand-' + ocorrenciaId + '\').removeData(\'carregado\'); toggleOcorrenciaInline(' + ocorrenciaId + ');">Tentar novamente</button>' +
+                        '</div>'
+                    );
+                    $icon.removeClass('spin-icon').text('chat');
+                    $label.text('Ver Chat');
+                }
+            });
+        };
+
+        // Tratamento de Nota Interna e Ações Inline dentro do Chat expandido
+        window.tratarAnexoNotaArquivo = window.tratarAnexoNotaArquivo || function(input) {
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                var isPdf = (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#input-anexo-base64').val('');
+                    if (isPdf) {
+                        $('#preview-anexo-nota-img').hide().attr('src', '');
+                        $('#preview-anexo-nota-pdf-icon').css('display', 'flex');
+                        $('#preview-anexo-nota-info').text('Documento PDF: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+                    } else {
+                        $('#preview-anexo-nota-pdf-icon').hide();
+                        $('#preview-anexo-nota-img').show().attr('src', e.target.result);
+                        $('#preview-anexo-nota-info').text('Arquivo selecionado: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)');
+                    }
+                    $('#preview-anexo-nota-container').css('display', 'flex');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        window.removerAnexoNotaPreview = window.removerAnexoNotaPreview || function() {
+            $('#input-anexo-nota').val('');
+            $('#input-anexo-base64').val('');
+            $('#preview-anexo-nota-img').hide().attr('src', '');
+            $('#preview-anexo-nota-pdf-icon').hide();
+            $('#preview-anexo-nota-info').text('');
+            $('#preview-anexo-nota-container').css('display', 'none');
+        };
+
+        window.submeterNotaInternaAjax = window.submeterNotaInternaAjax || function(e, ocorrenciaId) {
+            e.preventDefault();
+            var form = document.getElementById('form-adicionar-nota-interna');
+            var $textarea = $('#input-texto-nota-interna');
+            var $btn = $('#btn-salvar-nota-interna');
+            var texto = $textarea.val().trim();
+            var hasBase64 = $('#input-anexo-base64').val();
+            var hasFile = $('#input-anexo-nota')[0] && $('#input-anexo-nota')[0].files.length > 0;
+
+            if (!texto && !hasBase64 && !hasFile) {
+                if (typeof M !== 'undefined' && M.toast) {
+                    M.toast({ html: 'Digite uma mensagem ou anexe uma imagem/documento.', classes: 'rounded orange' });
+                }
+                return;
+            }
+
+            $btn.prop('disabled', true).css('opacity', '0.7');
+
+            var formData = new FormData(form);
+            formData.append('is_ajax', '1');
+
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: res.message || 'Nota interna salva no Conselho!', classes: 'rounded green' });
+                        }
+                        removerAnexoNotaPreview();
+                        // Recarrega container inline
+                        var $container = $('#oco-inline-expand-' + ocorrenciaId);
+                        if ($container.length) {
+                            $container.removeData('carregado');
+                            window.toggleOcorrenciaInline(ocorrenciaId);
+                        }
+                    } else {
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: (res && res.message) ? res.message : 'Falha ao salvar nota.', classes: 'rounded red' });
+                        }
+                    }
+                },
+                error: function() {
+                    if (typeof M !== 'undefined' && M.toast) {
+                        M.toast({ html: 'Erro de comunicação ao salvar nota interna.', classes: 'rounded red' });
+                    }
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).css('opacity', '1');
+                }
+            });
+        };
+
+        // Ações Rápidas de Ocorrência (Lido / Resolvido / Responsabilidade / Auditoria) para execução inline
+        window.executarAcaoAjaxLido = window.executarAcaoAjaxLido || function(ocorrenciaId, uuidRemoto, novoStatusLidoVal) {
+            var $btn = $('#btn-ajax-lido');
+            $btn.css('opacity', '0.7');
+
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: {
+                    is_ajax: 1,
+                    action: 'marcar_como_lido',
+                    ocorrencia_id: ocorrenciaId,
+                    uuid_remoto: uuidRemoto,
+                    novo_status_lido: novoStatusLidoVal
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        var isLida = !!res.isLidaVds;
+                        if (isLida) {
+                            $btn.removeClass('teal').addClass('orange darken-3').attr('title', 'Marcar como NÃO Lido na VDS');
+                            $('#icon-ajax-lido').text('mark_email_unread');
+                            $('#lbl-ajax-lido').text('Marcar NÃO Lido');
+                            $btn.attr('onclick', 'executarAcaoAjaxLido(' + ocorrenciaId + ', "' + uuidRemoto + '", 0)');
+                        } else {
+                            $btn.removeClass('orange darken-3').addClass('teal').attr('title', 'Marcar como LIDO na VDS');
+                            $('#icon-ajax-lido').text('mark_email_read');
+                            $('#lbl-ajax-lido').text('Marcar Lido');
+                            $btn.attr('onclick', 'executarAcaoAjaxLido(' + ocorrenciaId + ', "' + uuidRemoto + '", 1)');
+                        }
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: isLida ? 'Ocorrência marcada como lida na VDS!' : 'Marcada como não lida na VDS.', classes: 'rounded green' });
+                        }
+                    }
+                },
+                complete: function() {
+                    $btn.css('opacity', '1');
+                }
+            });
+        };
+
+        window.executarAcaoAjaxResolvido = window.executarAcaoAjaxResolvido || function(ocorrenciaId, novoStatus) {
+            var $btn = $('#btn-ajax-resolvido');
+            $btn.css('opacity', '0.7');
+
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: {
+                    is_ajax: 1,
+                    action: 'atualizar_resolvido',
+                    ocorrencia_id: ocorrenciaId,
+                    resolvido: novoStatus
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        var isResolvido = !!res.resolvido;
+                        if (isResolvido) {
+                            $btn.removeClass('green darken-1').addClass('grey').attr('title', 'Reabrir Chamado (Local)');
+                            $('#icon-ajax-resolvido').text('undo');
+                            $('#lbl-ajax-resolvido').text('Reabrir (Local)');
+                            $btn.attr('onclick', 'executarAcaoAjaxResolvido(' + ocorrenciaId + ', 0)');
+                        } else {
+                            $btn.removeClass('grey').addClass('green darken-1').attr('title', 'Marcar como Resolvido (Local)');
+                            $('#icon-ajax-resolvido').text('check_circle');
+                            $('#lbl-ajax-resolvido').text('Marcar Resolvido (Local)');
+                            $btn.attr('onclick', 'executarAcaoAjaxResolvido(' + ocorrenciaId + ', 1)');
+                        }
+                    }
+                },
+                complete: function() {
+                    $btn.css('opacity', '1');
+                }
+            });
+        };
+
+        window.executarAcaoAjaxAuditoria = window.executarAcaoAjaxAuditoria || function(ocorrenciaId, novoStatusAuditoria) {
+            var $btn = $('#btn-ajax-auditoria');
+            $btn.css('opacity', '0.7');
+
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: {
+                    is_ajax: 1,
+                    action: 'atualizar_auditoria',
+                    ocorrencia_id: ocorrenciaId,
+                    auditoria: novoStatusAuditoria
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        var isAuditoria = !!res.auditoria;
+                        if (isAuditoria) {
+                            $btn.removeClass('white grey-text text-darken-3').addClass('amber darken-2 white-text');
+                            $('#icon-ajax-auditoria').css('color', '#fff');
+                            $btn.attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 0)');
+                        } else {
+                            $btn.removeClass('amber darken-2 white-text').addClass('white grey-text text-darken-3');
+                            $('#icon-ajax-auditoria').css('color', '#f57c00');
+                            $btn.attr('onclick', 'executarAcaoAjaxAuditoria(' + ocorrenciaId + ', 1)');
+                        }
+                    }
+                },
+                complete: function() {
+                    $btn.css('opacity', '1');
+                }
+            });
+        };
+
+        window.executarAcaoAjaxResponsabilidade = window.executarAcaoAjaxResponsabilidade || function(ocorrenciaId, responsabilidade) {
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: {
+                    is_ajax: 1,
+                    action: 'atualizar_responsabilidade',
+                    ocorrencia_id: ocorrenciaId,
+                    responsabilidade: responsabilidade
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        $('.btn-resp-icon').removeClass('active active-sindico active-sub');
+                        if (!responsabilidade) {
+                            $('#btn-resp-none').addClass('active');
+                        } else if (responsabilidade === 'sindico') {
+                            $('#btn-resp-sindico').addClass('active-sindico');
+                        } else if (responsabilidade === 'sub') {
+                            $('#btn-resp-sub').addClass('active-sub');
+                        }
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: 'Responsabilidade atualizada!', classes: 'rounded green' });
+                        }
+                    }
+                }
+            });
+        };
+
+        window.publicarNotaRemotoAjax = window.publicarNotaRemotoAjax || function(notaId, ocorrenciaId) {
+            if (!confirm('Deseja realmente publicar esta nota interna diretamente no chamado da VDS? Ela se tornará visível para o morador e administração.')) {
+                return;
+            }
+
+            $.ajax({
+                url: 'index.php?pag=livroDeOcorrencias',
+                type: 'POST',
+                data: {
+                    is_ajax: 1,
+                    action: 'publicar_nota_remoto',
+                    nota_id: notaId,
+                    ocorrencia_id: ocorrenciaId
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success) {
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: res.message || 'Nota publicada com sucesso na VDS!', classes: 'rounded green' });
+                        }
+                        var $container = $('#oco-inline-expand-' + ocorrenciaId);
+                        if ($container.length) {
+                            $container.removeData('carregado');
+                            window.toggleOcorrenciaInline(ocorrenciaId);
+                        }
+                    } else {
+                        if (typeof M !== 'undefined' && M.toast) {
+                            M.toast({ html: (res && res.message) ? res.message : 'Falha ao publicar nota na VDS.', classes: 'rounded red' });
+                        }
+                    }
+                }
+            });
+        };
+    </script>
+    <?php
 
     // --- ACELERADORES DE ANÁLISE (CONDOMÍNIO DIGITAL API v8) ---
     // Filtro temporal baseado na data do fato ocorrido da notificação
