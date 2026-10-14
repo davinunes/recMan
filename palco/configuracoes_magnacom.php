@@ -283,6 +283,13 @@ $(document).ready(function() {
                     html += '⚠️ O endpoint direto confirmou a exigência de CAPTCHA/Turnstile. Utilize o formulário ao lado para colar os tokens gerados via navegador.';
                     html += '</div>';
                 }
+
+                if (res.rawResponse) {
+                    html += '<div style="margin-top: 10px;">';
+                    html += '<strong style="color: #c62828;">Resposta Bruta do Supabase:</strong>';
+                    html += '<pre style="max-height: 160px; overflow-y: auto; background-color: #263238; color: #ffab91; padding: 8px; border-radius: 4px; font-size: 0.78rem; font-family: monospace; white-space: pre-wrap; margin-top: 4px;">' + (typeof res.rawResponse === 'object' ? JSON.stringify(res.rawResponse, null, 2) : res.rawResponse) + '</pre>';
+                    html += '</div>';
+                }
                 html += '</div>';
                 html += '</div>';
             }
