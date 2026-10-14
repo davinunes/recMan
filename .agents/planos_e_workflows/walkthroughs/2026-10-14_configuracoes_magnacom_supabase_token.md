@@ -24,6 +24,7 @@ Implementamos a infraestrutura completa para gerenciar as credenciais da **Magna
 | [`magnacom-sistema/get_attachments.php`](file:///d:/dev/recMan/magnacom-sistema/get_attachments.php) | Atualizado para carregar configurações do banco e resolver tokens automaticamente. |
 | [`magnacom-sistema/sync_supabase.php`](file:///d:/dev/recMan/magnacom-sistema/sync_supabase.php) | Atualizado para consultar o banco e validar tokens via `getValidMagnacomToken()`. |
 | [`portal/api.php`](file:///d:/dev/recMan/portal/api.php) | Função `sincronizarNotificacaoSupabase` simplificada para usar `getMagnacomConfig()` e `getValidMagnacomToken()`. |
+| [`palco/detalheRecurso.php`](file:///d:/dev/recMan/palco/detalheRecurso.php) | Adicionado container `#supabaseFilesAlert` e feedback visual em caso de erro na consulta de anexos ou sincronização, com link direto para reconfigurar token. |
 
 ---
 

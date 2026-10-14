@@ -385,6 +385,7 @@ if ($esseRecurso == null) {
                 <h6 style="font-weight: bold; color: #37474f; margin-top: 25px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                     <i class="material-icons orange-text text-darken-3">cloud_queue</i> Anexos da Notificação (Sistema Magnacom)
                 </h6>
+                <div id="supabaseFilesAlert" style="display: none; margin-bottom: 15px;"></div>
                 <div id="supabaseFilesList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                     <!-- Os cards dos arquivos serão inseridos via AJAX -->
                 </div>
@@ -2058,7 +2059,13 @@ if ($esseRecurso == null) {
                                 location.reload();
                             }, 1500);
                         } else {
-                            M.toast({ html: 'Erro: ' + response.error, classes: 'red' });
+                            var errText = response.error || 'Falha na sincronização';
+                            var isAuthErr = /token|auth|autoriza|sessao|jwt|401/i.test(errText);
+                            var toastHtml = '<span>Erro: ' + errText + '</span>';
+                            if (isAuthErr) {
+                                toastHtml += ' <a href="index.php?pag=configuracoes_magnacom" class="btn-flat yellow-text" style="margin-left:8px; padding:0 4px;">Reconfigurar Token</a>';
+                            }
+                            M.toast({ html: toastHtml, classes: 'red', displayLength: 6000 });
                             $btn.removeClass('disabled').html('<i class="material-icons left">sync</i>Sincronizar Supabase');
                         }
                     },
@@ -2078,72 +2085,113 @@ if ($esseRecurso == null) {
                     data: { rec: rec },
                     dataType: 'json',
                     success: function (response) {
-                        if (response.success && response.attachments && response.attachments.length > 0) {
+                        if (response.success) {
+                            if (response.attachments && response.attachments.length > 0) {
+                                $('#supabaseFilesContainer').show();
+                                $('#supabaseFilesAlert').hide().empty();
+
+                                var $list = $('#supabaseFilesList');
+                                $list.empty();
+
+                                response.attachments.forEach(function (file) {
+                                    var ext = file.nome_arquivo.split('.').pop().toLowerCase();
+                                    var sizeKb = (file.tamanho_bytes / 1024).toFixed(1);
+                                    var cardHtml = '';
+
+                                    cardHtml += '<div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+
+                                    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
+                                        cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center; border: 1px solid #f0f0f0;">' +
+                                            '<img src="' + file.url + '" class="responsive-img materialboxed" style="max-height: 180px; max-width: 100%; cursor: pointer;" alt="' + file.nome_arquivo + '">' +
+                                            '</div>' +
+                                            '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                            '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                            file.nome_arquivo +
+                                            '</span>' +
+                                            '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                            '</div>';
+                                    } else if (['mp4', 'webm', 'ogg', 'mov'].indexOf(ext) !== -1) {
+                                        cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #000; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center;">' +
+                                            '<video controls style="max-width: 100%; max-height: 180px;"><source src="' + file.url + '" type="video/' + (ext === 'mov' ? 'mp4' : ext) + '">Seu navegador não suporta vídeos.</video>' +
+                                            '</div>' +
+                                            '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                            '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                            file.nome_arquivo +
+                                            '</span>' +
+                                            '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                            '</div>';
+                                    } else if (ext === 'pdf') {
+                                        cardHtml += '<div style="padding: 10px; background: #ffebee; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
+                                            '<i class="material-icons red-text" style="font-size: 3rem;">picture_as_pdf</i>' +
+                                            '<span style="font-weight: 500; font-size: 0.9rem; color: #c62828;">Documento PDF</span>' +
+                                            '</div>' +
+                                            '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                            '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                            file.nome_arquivo +
+                                            '</span>' +
+                                            '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small red lighten-5 red-text" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">open_in_new</i>Abrir</a>' +
+                                            '</div>';
+                                    } else {
+                                        cardHtml += '<div style="padding: 10px; background: #eceff1; border-radius: 6px; margin-bottom: 10px; border: 1px solid #cfd8dc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
+                                            '<i class="material-icons grey-text text-darken-1" style="font-size: 3rem;">insert_drive_file</i>' +
+                                            '<span style="font-weight: 500; font-size: 0.9rem; color: #37474f;">Arquivo .' + ext.toUpperCase() + '</span>' +
+                                            '</div>' +
+                                            '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
+                                            '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
+                                            file.nome_arquivo +
+                                            '</span>' +
+                                            '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
+                                            '</div>';
+                                    }
+
+                                    cardHtml += '</div>';
+                                    $list.append(cardHtml);
+                                });
+
+                                // Inicializa visualizador das novas imagens injetadas
+                                initMaterialboxed();
+                            }
+                        } else {
                             $('#supabaseFilesContainer').show();
-
-                            var $list = $('#supabaseFilesList');
-                            $list.empty();
-
-                            response.attachments.forEach(function (file) {
-                                var ext = file.nome_arquivo.split('.').pop().toLowerCase();
-                                var sizeKb = (file.tamanho_bytes / 1024).toFixed(1);
-                                var cardHtml = '';
-
-                                cardHtml += '<div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
-
-                                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) !== -1) {
-                                    cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center; border: 1px solid #f0f0f0;">' +
-                                        '<img src="' + file.url + '" class="responsive-img materialboxed" style="max-height: 180px; max-width: 100%; cursor: pointer;" alt="' + file.nome_arquivo + '">' +
+                            var errorMsg = response.error || 'Falha ao consultar anexos remotos.';
+                            var alertHtml = '<div class="card amber lighten-5 z-depth-1" style="border-left: 4px solid #ff8f00; border-radius: 6px; padding: 12px 16px; margin: 0;">' +
+                                '<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">' +
+                                    '<div style="display: flex; align-items: center; gap: 10px;">' +
+                                        '<i class="material-icons orange-text text-darken-3" style="font-size: 2.2rem;">vpn_key</i>' +
+                                        '<div>' +
+                                            '<strong style="color: #d84315; font-size: 0.95rem;">Não foi possível carregar os anexos da Magnacom</strong>' +
+                                            '<div style="font-size: 0.85rem; color: #5d4037; margin-top: 2px;">' +
+                                                'A sessão de autenticação pode ter expirado ou o token precisa ser atualizado. <em>(' + $('<div>').text(errorMsg).html() + ')</em>' +
+                                            '</div>' +
                                         '</div>' +
-                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                        file.nome_arquivo +
-                                        '</span>' +
-                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                        '</div>';
-                                } else if (['mp4', 'webm', 'ogg', 'mov'].indexOf(ext) !== -1) {
-                                    cardHtml += '<div style="text-align: center; margin-bottom: 10px; background: #000; border-radius: 6px; overflow: hidden; height: 180px; display: flex; align-items: center; justify-content: center;">' +
-                                        '<video controls style="max-width: 100%; max-height: 180px;"><source src="' + file.url + '" type="video/' + (ext === 'mov' ? 'mp4' : ext) + '">Seu navegador não suporta vídeos.</video>' +
-                                        '</div>' +
-                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                        file.nome_arquivo +
-                                        '</span>' +
-                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                        '</div>';
-                                } else if (ext === 'pdf') {
-                                    cardHtml += '<div style="padding: 10px; background: #ffebee; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ffcdd2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
-                                        '<i class="material-icons red-text" style="font-size: 3rem;">picture_as_pdf</i>' +
-                                        '<span style="font-weight: 500; font-size: 0.9rem; color: #c62828;">Documento PDF</span>' +
-                                        '</div>' +
-                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                        file.nome_arquivo +
-                                        '</span>' +
-                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small red lighten-5 red-text" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">open_in_new</i>Abrir</a>' +
-                                        '</div>';
-                                } else {
-                                    cardHtml += '<div style="padding: 10px; background: #eceff1; border-radius: 6px; margin-bottom: 10px; border: 1px solid #cfd8dc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; gap: 10px;">' +
-                                        '<i class="material-icons grey-text text-darken-1" style="font-size: 3rem;">insert_drive_file</i>' +
-                                        '<span style="font-weight: 500; font-size: 0.9rem; color: #37474f;">Arquivo .' + ext.toUpperCase() + '</span>' +
-                                        '</div>' +
-                                        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">' +
-                                        '<span style="font-size: 0.85rem; color: #424242; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="' + file.nome_arquivo + '">' +
-                                        file.nome_arquivo +
-                                        '</span>' +
-                                        '<a href="' + file.url + '" target="_blank" class="btn-flat btn-small grey lighten-4" style="padding: 0 8px; height: 28px; line-height: 28px; font-size:0.75rem;"><i class="material-icons left" style="font-size: 1rem; margin-right: 4px;">file_download</i>Baixar</a>' +
-                                        '</div>';
-                                }
-
-                                cardHtml += '</div>';
-                                $list.append(cardHtml);
-                            });
-
-                            // Inicializa visualizador das novas imagens injetadas
-                            initMaterialboxed();
+                                    '</div>' +
+                                    '<a href="index.php?pag=configuracoes_magnacom" class="btn-small amber darken-3 waves-effect waves-light" style="border-radius: 4px; text-transform: none; font-weight: 500;">' +
+                                        '<i class="material-icons left" style="font-size: 1.1rem; margin-right: 4px;">settings</i>Reconfigurar Token' +
+                                    '</a>' +
+                                '</div>' +
+                            '</div>';
+                            $('#supabaseFilesAlert').html(alertHtml).show();
                         }
                     },
                     error: function (xhr, status, error) {
+                        $('#supabaseFilesContainer').show();
+                        var alertHtml = '<div class="card red lighten-5 z-depth-1" style="border-left: 4px solid #d32f2f; border-radius: 6px; padding: 12px 16px; margin: 0;">' +
+                            '<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">' +
+                                '<div style="display: flex; align-items: center; gap: 10px;">' +
+                                    '<i class="material-icons red-text text-darken-2" style="font-size: 2.2rem;">warning</i>' +
+                                    '<div>' +
+                                        '<strong style="color: #b71c1c; font-size: 0.95rem;">Erro de conexão com o módulo Magnacom</strong>' +
+                                        '<div style="font-size: 0.85rem; color: #7f0000; margin-top: 2px;">' +
+                                            'Falha ao consultar anexos remotos. Se necessário, reconfigure suas credenciais de integração.' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<a href="index.php?pag=configuracoes_magnacom" class="btn-small red darken-2 waves-effect waves-light" style="border-radius: 4px; text-transform: none; font-weight: 500;">' +
+                                    '<i class="material-icons left" style="font-size: 1.1rem; margin-right: 4px;">settings</i>Reconfigurar Token' +
+                                '</a>' +
+                            '</div>' +
+                        '</div>';
+                        $('#supabaseFilesAlert').html(alertHtml).show();
                         console.log('Erro ao buscar anexos remotos:', error);
                     }
                 });

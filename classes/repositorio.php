@@ -2161,24 +2161,44 @@ function renovarTokenMagnacomViaRefresh()
     return ['success' => false, 'error' => $errMsg, 'response' => $data, 'httpCode' => $httpCode];
 }
 
+function isMagnacomTokenExpired($jwt, $marginSeconds = 120)
+{
+    if (empty($jwt)) return true;
+    $parts = explode('.', $jwt);
+    if (count($parts) < 2) return true;
+
+    $payloadJson = base64_decode(strtr($parts[1], '-_', '+/'));
+    if (!$payloadJson) return true;
+
+    $payload = json_decode($payloadJson, true);
+    if (!isset($payload['exp'])) return false;
+
+    return ($payload['exp'] <= (time() + $marginSeconds));
+}
+
 function getValidMagnacomToken()
 {
     $cfg = getMagnacomConfig();
 
-    // 1. Se tem access_token configurado manualmente ou no banco, usa ele
-    if (!empty($cfg['access_token'])) {
+    // 1. Se tem access_token e ele AINDA É VÁLIDO (com margem de segurança de 2 minutos), usa direto
+    if (!empty($cfg['access_token']) && !isMagnacomTokenExpired($cfg['access_token'])) {
         return $cfg['access_token'];
     }
 
-    // 2. Se tem refresh_token, tenta renovar
+    // 2. Se o access_token expirou (ou está ausente) mas temos refresh_token, auto-renova no Supabase
     if (!empty($cfg['refresh_token'])) {
         $refreshRes = renovarTokenMagnacomViaRefresh();
-        if ($refreshRes['success']) {
+        if ($refreshRes['success'] && !empty($refreshRes['access_token'])) {
             return $refreshRes['access_token'];
         }
     }
 
-    // 3. Fallback: tenta login direto no Supabase com email e senha
+    // 3. Se a renovação falhou mas havia um access_token, devolve como última tentativa
+    if (!empty($cfg['access_token'])) {
+        return $cfg['access_token'];
+    }
+
+    // 4. Fallback: tenta login direto no Supabase com email e senha (caso o captcha venha a ser desligado)
     if (!empty($cfg['url']) && !empty($cfg['anon_key']) && !empty($cfg['email']) && !empty($cfg['password'])) {
         $authUrl = $cfg['url'] . '/auth/v1/token?grant_type=password';
         $payload = json_encode([
