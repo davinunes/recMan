@@ -361,12 +361,23 @@ $(document).ready(function() {
 
             let html = '';
             if (res.success) {
-                html += '<div class="card-panel green lighten-5 green-text text-darken-4" style="padding: 12px; border-radius: 4px; border-left: 4px solid #2e7d32; font-size: 0.88rem;">';
-                html += '<strong>✓ Consulta realizada com SUCESSO! (HTTP ' + res.httpCode + ' - ' + res.latencyMs + 'ms)</strong><br>';
-                html += '<div style="margin-top: 6px;">O token está válido e possui permissão de leitura no banco.</div>';
+                html += '<div class="card-panel green lighten-5 green-text text-darken-4" style="padding: 14px; border-radius: 6px; border-left: 4px solid #2e7d32; font-size: 0.88rem;">';
+                html += '<strong><i class="material-icons left" style="margin-right: 6px; font-size: 1.2rem;">check_circle</i> Consulta realizada com SUCESSO! (HTTP ' + res.httpCode + ' - ' + res.latencyMs + 'ms)</strong><br>';
+                html += '<div style="margin-top: 6px; color: #1b5e20;">O token está 100% válido e autorizado a ler a tabela <code>notificacoes</code> no Supabase.</div>';
+                
+                if (res.colunas && res.colunas.length > 0) {
+                    html += '<div style="margin-top: 10px;"><strong>Colunas Detectadas no Supabase (' + res.colunas.length + '):</strong><br>';
+                    html += '<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">';
+                    res.colunas.forEach(function(col) {
+                        html += '<span class="chip" style="height: 24px; line-height: 24px; font-size: 0.75rem; background-color: #c8e6c9; color: #1b5e20; font-family: monospace; padding: 0 8px; margin: 0;">' + col + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
                 if (res.exemplo_registro) {
-                    html += '<div style="margin-top: 8px; font-family: monospace; font-size: 0.78rem; background: #ffffff; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">';
-                    html += 'Notificação ID: ' + (res.exemplo_registro.id || '-') + ' | Número: ' + (res.exemplo_registro.numero || '-') + ' | Torre: ' + (res.exemplo_registro.torre || '-') + ' ' + (res.exemplo_registro.unidade || '-');
+                    html += '<div style="margin-top: 12px;">';
+                    html += '<strong>Payload Bruto da Notificação (Exemplo):</strong>';
+                    html += '<pre style="max-height: 250px; overflow-y: auto; background-color: #263238; color: #eceff1; padding: 10px; border-radius: 4px; font-size: 0.78rem; font-family: monospace; white-space: pre-wrap; margin-top: 6px;">' + JSON.stringify(res.exemplo_registro, null, 2) + '</pre>';
                     html += '</div>';
                 }
                 html += '</div>';

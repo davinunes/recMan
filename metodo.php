@@ -1652,7 +1652,7 @@ switch ($_GET['metodo']) {
             break;
         }
 
-        $apiUrl = $cfg['url'] . '/rest/v1/notificacoes?select=id,numero,created_at,torre,unidade&limit=1';
+        $apiUrl = $cfg['url'] . '/rest/v1/notificacoes?select=*&order=id.desc&limit=1';
         $t0 = microtime(true);
         $ch = curl_init($apiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -1675,12 +1675,16 @@ switch ($_GET['metodo']) {
 
         $data = json_decode($res, true);
         if ($httpCode === 200 && is_array($data)) {
+            $primeiroRegistro = $data[0] ?? null;
+            $colunas = $primeiroRegistro ? array_keys($primeiroRegistro) : [];
+
             echo json_encode([
                 'success' => true,
                 'httpCode' => $httpCode,
                 'latencyMs' => $latencyMs,
                 'total_encontrado' => count($data),
-                'exemplo_registro' => $data[0] ?? null
+                'colunas' => $colunas,
+                'exemplo_registro' => $primeiroRegistro
             ], JSON_UNESCAPED_UNICODE);
         } else {
             $msg = $data['message'] ?? ($data['error'] ?? "Erro HTTP $httpCode");
