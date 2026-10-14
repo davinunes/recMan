@@ -2041,4 +2041,178 @@ function deleteDocumentoOficial($id)
         $res = DBExecute($sql);
     }
     return $res;
+}
+
+// ==========================================
+// CONFIGURAÇÕES E INTEGRAÇÃO MAGNACOM / SUPABASE
+// ==========================================
+
+function getMagnacomConfig()
+{
+    // 1. Tenta carregar do banco de dados (tabela config_sistema)
+    $url = getConfigSistema('magnacom_supabase_url');
+    $anonKey = getConfigSistema('magnacom_supabase_anon_key');
+    $email = getConfigSistema('magnacom_supabase_email');
+    $password = getConfigSistema('magnacom_supabase_password');
+    $accessToken = getConfigSistema('magnacom_access_token');
+    $refreshToken = getConfigSistema('magnacom_refresh_token');
+    $grant = getConfigSistema('magnacom_grant');
+    $tokensJson = getConfigSistema('magnacom_tokens_json');
+    $updatedAt = getConfigSistema('magnacom_token_updated_at');
+
+    // 2. Se as credenciais básicas estiverem vazias no banco, carrega do .env como fallback
+    $envPath = dirname(__DIR__) . '/magnacom-sistema/.env';
+    if ((empty($url) || empty($anonKey) || empty($email) || empty($password)) && file_exists($envPath)) {
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || strpos($line, '#') === 0) continue;
+            $parts = explode('=', $line, 2);
+            if (count($parts) === 2) {
+                $key = trim($parts[0]);
+                $val = trim($parts[1]);
+                if (preg_match('/^"([^"]*)"$/', $val, $m) || preg_match('/^\'([^\']*)\'$/', $val, $m)) {
+                    $val = $m[1];
+                }
+                if ($key === 'SUPABASE_URL' && empty($url)) $url = $val;
+                if ($key === 'SUPABASE_ANON_KEY' && empty($anonKey)) $anonKey = $val;
+                if ($key === 'SUPABASE_EMAIL' && empty($email)) $email = $val;
+                if ($key === 'SUPABASE_PASSWORD' && empty($password)) $password = $val;
+            }
+        }
+    }
+
+    return [
+        'url' => rtrim($url ?? '', '/'),
+        'anon_key' => $anonKey ?? '',
+        'email' => $email ?? '',
+        'password' => $password ?? '',
+        'access_token' => $accessToken ?? '',
+        'refresh_token' => $refreshToken ?? '',
+        'grant' => $grant ?? '',
+        'tokens_json' => $tokensJson ?? '',
+        'token_updated_at' => $updatedAt ?? ''
+    ];
+}
+
+function salvarTokensMagnacom($accessToken, $refreshToken = '', $grant = '', $rawJson = '')
+{
+    upsertConfigSistema('magnacom_access_token', $accessToken);
+    if (!empty($refreshToken)) {
+        upsertConfigSistema('magnacom_refresh_token', $refreshToken);
+    }
+    if (!empty($grant)) {
+        upsertConfigSistema('magnacom_grant', $grant);
+    }
+    if (!empty($rawJson)) {
+        upsertConfigSistema('magnacom_tokens_json', $rawJson);
+    }
+    upsertConfigSistema('magnacom_token_updated_at', date('Y-m-d H:i:s'));
+    return true;
+}
+
+function renovarTokenMagnacomViaRefresh()
+{
+    $cfg = getMagnacomConfig();
+    if (empty($cfg['url']) || empty($cfg['anon_key']) || empty($cfg['refresh_token'])) {
+        return ['success' => false, 'error' => 'URL, Anon Key ou Refresh Token ausente para renovação.'];
+    }
+
+    $url = $cfg['url'] . '/auth/v1/token?grant_type=refresh_token';
+    $payload = json_encode(['refresh_token' => $cfg['refresh_token']]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'apikey: ' . $cfg['anon_key']
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        return ['success' => false, 'error' => "Erro de rede ao renovar token: $err"];
+    }
+
+    $data = json_decode($response, true);
+    if ($httpCode === 200 && !empty($data['access_token'])) {
+        $newAccess = $data['access_token'];
+        $newRefresh = $data['refresh_token'] ?? $cfg['refresh_token'];
+        $newJson = json_encode([
+            'access_token' => $newAccess,
+            'refresh_token' => $newRefresh,
+            'grant' => $cfg['grant']
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        salvarTokensMagnacom($newAccess, $newRefresh, $cfg['grant'], $newJson);
+        return [
+            'success' => true,
+            'access_token' => $newAccess,
+            'refresh_token' => $newRefresh,
+            'expires_in' => $data['expires_in'] ?? 3600
+        ];
+    }
+
+    $errMsg = $data['msg'] ?? ($data['error_description'] ?? ($data['error'] ?? "HTTP $httpCode"));
+    return ['success' => false, 'error' => $errMsg, 'response' => $data, 'httpCode' => $httpCode];
+}
+
+function getValidMagnacomToken()
+{
+    $cfg = getMagnacomConfig();
+
+    // 1. Se tem access_token configurado manualmente ou no banco, usa ele
+    if (!empty($cfg['access_token'])) {
+        return $cfg['access_token'];
+    }
+
+    // 2. Se tem refresh_token, tenta renovar
+    if (!empty($cfg['refresh_token'])) {
+        $refreshRes = renovarTokenMagnacomViaRefresh();
+        if ($refreshRes['success']) {
+            return $refreshRes['access_token'];
+        }
+    }
+
+    // 3. Fallback: tenta login direto no Supabase com email e senha
+    if (!empty($cfg['url']) && !empty($cfg['anon_key']) && !empty($cfg['email']) && !empty($cfg['password'])) {
+        $authUrl = $cfg['url'] . '/auth/v1/token?grant_type=password';
+        $payload = json_encode([
+            'email' => $cfg['email'],
+            'password' => $cfg['password']
+        ]);
+
+        $ch = curl_init($authUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'apikey: ' . $cfg['anon_key']
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $res = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            $data = json_decode($res, true);
+            if (!empty($data['access_token'])) {
+                $newAccess = $data['access_token'];
+                $newRefresh = $data['refresh_token'] ?? '';
+                $jsonRep = json_encode([
+                    'access_token' => $newAccess,
+                    'refresh_token' => $newRefresh
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                salvarTokensMagnacom($newAccess, $newRefresh, '', $jsonRep);
+                return $newAccess;
+            }
+        }
+    }
+
+    return null;
 }

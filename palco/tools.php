@@ -11,6 +11,7 @@ $tools = [
         ['label' => 'Ambiente de Testes Typst 5050', 'url' => 'palco/test_typst.php', 'icon' => 'science', 'target' => '_blank', 'color' => 'teal darken-1'],
     ],
     'Sincronização' => [
+        ['label' => 'Configurações Magnacom', 'url' => 'index.php?pag=configuracoes_magnacom', 'icon' => 'cloud_sync', 'target' => '_self', 'color' => 'amber darken-3'],
         ['label' => 'Importar Planilha de Multas', 'url' => 'json.php?importar_magnacom=1', 'icon' => 'grid_on', 'target' => '_self', 'color' => 'blue'],
         ['label' => 'GIT Deploy', 'url' => 'git.php', 'icon' => 'cloud_sync', 'target' => '_blank', 'color' => 'black'],
     ],

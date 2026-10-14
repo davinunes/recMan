@@ -36,54 +36,17 @@ if (isset($_POST['numero']) || isset($_POST['ano'])) {
 
 function sincronizarNotificacaoSupabase($numero, $ano) {
     list($numero, $ano) = sanitizarNumeroAnoNotificacao($numero, $ano);
-    $envPath = __DIR__ . '/../magnacom-sistema/.env';
-    if (!file_exists($envPath)) return null;
-    
-    // Ler variáveis do .env
-    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $env = [];
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line) || strpos($line, '#') === 0) continue;
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $val = trim($parts[1]);
-            if (preg_match('/^"([^"]*)"$/', $val, $matches) || preg_match('/^\'([^\']*)\'$/', $val, $matches)) {
-                $val = $matches[1];
-            }
-            $env[$key] = $val;
-        }
-    }
-    
-    $url = $env['SUPABASE_URL'] ?? '';
-    $apiKey = $env['SUPABASE_ANON_KEY'] ?? '';
-    $email = $env['SUPABASE_EMAIL'] ?? '';
-    $password = $env['SUPABASE_PASSWORD'] ?? '';
-    
-    if (empty($url) || empty($apiKey) || empty($email) || empty($password)) return null;
-    
+
+    $cfg = getMagnacomConfig();
+    $url = $cfg['url'];
+    $apiKey = $cfg['anon_key'];
+
+    if (empty($url) || empty($apiKey)) return null;
+
+    $token = getValidMagnacomToken();
+    if (empty($token)) return null;
+
     try {
-        // 1. Autenticação
-        $authUrl = rtrim($url, '/') . '/auth/v1/token?grant_type=password';
-        $authPayload = json_encode(['email' => $email, 'password' => $password]);
-        
-        $ch = curl_init($authUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $authPayload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'apikey: ' . $apiKey]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        $authResponse = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode !== 200) return null;
-        
-        $authData = json_decode($authResponse, true);
-        $token = $authData['access_token'] ?? '';
-        if (empty($token)) return null;
-        
         // 2. Consulta
         $rec = $numero . '/' . $ano;
         $dbUrl = rtrim($url, '/') . '/rest/v1/notificacoes?select=*&numero=eq.' . urlencode($rec);

@@ -51,43 +51,7 @@ if (!$numero || !$ano) {
     exit;
 }
 
-// --- 2. CARREGAMENTO DO .ENV E CLASSES ---
-function loadEnv($path) {
-    if (!file_exists($path)) return false;
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line) || strpos($line, '#') === 0) continue;
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $val = trim($parts[1]);
-            if (preg_match('/^"([^"]*)"$/', $val, $matches) || preg_match('/^\'([^\']*)\'$/', $val, $matches)) {
-                $val = $matches[1];
-            }
-            $_ENV[$key] = $val;
-            putenv("$key=$val");
-        }
-    }
-    return true;
-}
-
-$envPath = __DIR__ . '/.env';
-if (!loadEnv($envPath)) {
-    echo json_encode(['success' => false, 'error' => 'Arquivo .env não localizado na pasta magnacom-sistema.']);
-    exit;
-}
-
-$supabaseUrl = getenv('SUPABASE_URL');
-$supabaseAnonKey = getenv('SUPABASE_ANON_KEY');
-$supabaseEmail = getenv('SUPABASE_EMAIL');
-$supabasePassword = getenv('SUPABASE_PASSWORD');
-
-if (empty($supabaseUrl) || empty($supabaseAnonKey) || empty($supabaseEmail) || empty($supabasePassword)) {
-    echo json_encode(['success' => false, 'error' => 'Configurações de credenciais do Supabase ausentes no arquivo .env.']);
-    exit;
-}
-
+// --- 2. CARREGAMENTO DAS CONFIGURAÇÕES E CLASSES ---
 $repositorioPath = dirname(__DIR__) . "/classes/repositorio.php";
 if (!file_exists($repositorioPath)) {
     echo json_encode(['success' => false, 'error' => 'Arquivo de repositório local não encontrado.']);
@@ -95,41 +59,22 @@ if (!file_exists($repositorioPath)) {
 }
 require_once $repositorioPath;
 
+$cfg = getMagnacomConfig();
+$supabaseUrl = $cfg['url'];
+$supabaseAnonKey = $cfg['anon_key'];
+
+if (empty($supabaseUrl) || empty($supabaseAnonKey)) {
+    echo json_encode(['success' => false, 'error' => 'Configurações de URL e Anon Key do Supabase ausentes. Acesse Ferramentas > Configurações Magnacom.']);
+    exit;
+}
+
 // --- 3. REQUISIÇÃO AO SUPABASE VIA cURL ---
 
 try {
-    // A. Autenticação para obter o Token JWT
-    $authUrl = rtrim($supabaseUrl, '/') . '/auth/v1/token?grant_type=password';
-    $authPayload = json_encode([
-        'email' => $supabaseEmail,
-        'password' => $supabasePassword
-    ]);
-
-    $ch = curl_init($authUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $authPayload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'apikey: ' . $supabaseAnonKey
-    ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $authResponse = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
-
-    if ($curlErr) {
-        throw new Exception("Falha de comunicação de rede no Auth: " . $curlErr);
-    }
-    if ($httpCode !== 200) {
-        throw new Exception("Falha de autenticação (HTTP $httpCode): " . $authResponse);
-    }
-
-    $authData = json_decode($authResponse, true);
-    $token = $authData['access_token'] ?? '';
+    // A. Obtenção do Token JWT (usa o token salvo no banco/manual ou autentica)
+    $token = getValidMagnacomToken();
     if (empty($token)) {
-        throw new Exception("Token de acesso JWT não retornado pelo Supabase.");
+        throw new Exception("Não foi possível obter um Token de acesso JWT válido. Configure os tokens em Ferramentas > Configurações Magnacom.");
     }
 
     // B. Consulta à Notificação Específica
@@ -149,6 +94,27 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlErr = curl_error($ch);
     curl_close($ch);
+
+    // Se deu 401 (token expirado), tenta renovar via refresh_token uma vez
+    if ($httpCode === 401 && !empty($cfg['refresh_token'])) {
+        $refreshRes = renovarTokenMagnacomViaRefresh();
+        if ($refreshRes['success']) {
+            $token = $refreshRes['access_token'];
+            $ch = curl_init($dbUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'apikey: ' . $supabaseAnonKey,
+                'authorization: Bearer ' . $token,
+                'accept-profile: public',
+                'accept: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $dbResponse = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+        }
+    }
 
     if ($curlErr) {
         throw new Exception("Falha de comunicação de rede na consulta: " . $curlErr);

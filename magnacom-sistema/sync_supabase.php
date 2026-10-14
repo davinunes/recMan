@@ -25,69 +25,37 @@ function logMessage($msg) {
     echo "[" . date('Y-m-d H:i:s') . "] " . $msg . "\n";
 }
 
-// --- 1. CARREGAMENTO DAS VARIÁVEIS DE AMBIENTE (.env) ---
-function loadEnv($path) {
-    if (!file_exists($path)) {
-        return false;
-    }
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        // Ignora comentários
-        if (empty($line) || strpos($line, '#') === 0) {
-            continue;
-        }
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $val = trim($parts[1]);
-            // Remove aspas simples/duplas das pontas do valor
-            if (preg_match('/^"([^"]*)"$/', $val, $matches) || preg_match('/^\'([^\']*)\'$/', $val, $matches)) {
-                $val = $matches[1];
-            }
-            $_ENV[$key] = $val;
-            putenv("$key=$val");
-        }
-    }
-    return true;
-}
-
-$envPath = __DIR__ . '/.env';
-if (!loadEnv($envPath)) {
-    logMessage("Erro: Arquivo de configuração .env não encontrado em: $envPath");
-    exit(1);
-}
-
-// Se executado via Web (browser ou cURL de fora do console), exige token de segurança
-if (php_sapi_name() !== 'cli') {
-    $secretToken = getenv('SYNC_SECRET_TOKEN');
-    $receivedToken = $_GET['token'] ?? '';
-    if (empty($secretToken) || $receivedToken !== $secretToken) {
-        http_response_code(403);
-        echo "Acesso Negado: Token de seguranca (?token=...) invalido ou nao configurado no .env.\n";
-        exit(1);
-    }
-}
-
-$supabaseUrl = getenv('SUPABASE_URL');
-$supabaseAnonKey = getenv('SUPABASE_ANON_KEY');
-$supabaseEmail = getenv('SUPABASE_EMAIL');
-$supabasePassword = getenv('SUPABASE_PASSWORD');
-$supabaseQueryFilter = getenv('SUPABASE_QUERY_FILTER') ?: '';
-
-if (empty($supabaseUrl) || empty($supabaseAnonKey) || empty($supabaseEmail) || empty($supabasePassword)) {
-    logMessage("Erro: Uma ou mais variáveis obrigatórias no arquivo .env estão vazias.");
-    logMessage("Certifique-se de preencher: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_EMAIL e SUPABASE_PASSWORD.");
-    exit(1);
-}
-
-// --- 2. CARREGAMENTO DOS REPOSITÓRIOS DO SISTEMA ---
+// --- 1. CARREGAMENTO DOS REPOSITÓRIOS E CONFIGURAÇÕES ---
 $repositorioPath = dirname(__DIR__) . "/classes/repositorio.php";
 if (!file_exists($repositorioPath)) {
     logMessage("Erro: Repositório do banco de dados não encontrado em: $repositorioPath");
     exit(1);
 }
 require_once $repositorioPath;
+
+$cfg = getMagnacomConfig();
+$supabaseUrl = $cfg['url'];
+$supabaseAnonKey = $cfg['anon_key'];
+$supabaseEmail = $cfg['email'];
+$supabasePassword = $cfg['password'];
+$supabaseQueryFilter = getenv('SUPABASE_QUERY_FILTER') ?: '';
+
+// Se executado via Web (browser ou cURL de fora do console), exige token de segurança
+if (php_sapi_name() !== 'cli') {
+    $secretToken = getenv('SYNC_SECRET_TOKEN') ?: getConfigSistema('magnacom_sync_secret_token');
+    $receivedToken = $_GET['token'] ?? '';
+    if (empty($secretToken) || $receivedToken !== $secretToken) {
+        http_response_code(403);
+        echo "Acesso Negado: Token de seguranca (?token=...) invalido ou nao configurado.\n";
+        exit(1);
+    }
+}
+
+if (empty($supabaseUrl) || empty($supabaseAnonKey)) {
+    logMessage("Erro: Configurações de URL e Anon Key do Supabase ausentes.");
+    logMessage("Configure em Ferramentas > Configurações Magnacom ou preencha o arquivo .env.");
+    exit(1);
+}
 
 // --- 3. FUNÇÕES DE COMUNICAÇÃO COM O SUPABASE (cURL) ---
 
@@ -245,8 +213,11 @@ try {
     logMessage("Iniciando processo de sincronização com o Supabase...");
     
     // Autenticação
-    logMessage("Autenticando no Supabase com o e-mail: $supabaseEmail...");
-    $token = getSupabaseToken($supabaseUrl, $supabaseAnonKey, $supabaseEmail, $supabasePassword);
+    logMessage("Obtendo token de autenticação JWT...");
+    $token = getValidMagnacomToken();
+    if (empty($token)) {
+        throw new Exception("Não foi possível obter um Token de acesso JWT para o Supabase. Configure as credenciais ou tokens em Ferramentas > Configurações Magnacom.");
+    }
     logMessage("Autenticação realizada com sucesso!");
 
     // Download dos dados

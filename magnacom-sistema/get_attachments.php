@@ -37,40 +37,20 @@ if (empty($rec)) {
     exit;
 }
 
-// --- 2. CARREGAMENTO DO .ENV ---
-function loadEnv($path) {
-    if (!file_exists($path)) return false;
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line) || strpos($line, '#') === 0) continue;
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $val = trim($parts[1]);
-            if (preg_match('/^"([^"]*)"$/', $val, $matches) || preg_match('/^\'([^\']*)\'$/', $val, $matches)) {
-                $val = $matches[1];
-            }
-            $_ENV[$key] = $val;
-            putenv("$key=$val");
-        }
-    }
-    return true;
-}
-
-$envPath = __DIR__ . '/.env';
-if (!loadEnv($envPath)) {
-    echo json_encode(['success' => false, 'error' => 'Arquivo .env não localizado.']);
+// --- 2. CARREGAMENTO DAS CONFIGURAÇÕES E CLASSES ---
+$repositorioPath = dirname(__DIR__) . "/classes/repositorio.php";
+if (!file_exists($repositorioPath)) {
+    echo json_encode(['success' => false, 'error' => 'Arquivo de repositório local não encontrado.']);
     exit;
 }
+require_once $repositorioPath;
 
-$supabaseUrl = getenv('SUPABASE_URL');
-$supabaseAnonKey = getenv('SUPABASE_ANON_KEY');
-$supabaseEmail = getenv('SUPABASE_EMAIL');
-$supabasePassword = getenv('SUPABASE_PASSWORD');
+$cfg = getMagnacomConfig();
+$supabaseUrl = $cfg['url'];
+$supabaseAnonKey = $cfg['anon_key'];
 
-if (empty($supabaseUrl) || empty($supabaseAnonKey) || empty($supabaseEmail) || empty($supabasePassword)) {
-    echo json_encode(['success' => false, 'error' => 'Configurações de credenciais do Supabase ausentes no arquivo .env.']);
+if (empty($supabaseUrl) || empty($supabaseAnonKey)) {
+    echo json_encode(['success' => false, 'error' => 'Configurações de URL e Anon Key do Supabase ausentes. Acesse Ferramentas > Configurações Magnacom.']);
     exit;
 }
 
@@ -80,43 +60,13 @@ try {
     if (isset($_SESSION['supabase_token']) && isset($_SESSION['supabase_token_expires']) && $_SESSION['supabase_token_expires'] > time()) {
         $token = $_SESSION['supabase_token'];
     } else {
-        $authUrl = rtrim($supabaseUrl, '/') . '/auth/v1/token?grant_type=password';
-        $authPayload = json_encode([
-            'email' => $supabaseEmail,
-            'password' => $supabasePassword
-        ]);
-
-        $ch = curl_init($authUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $authPayload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'apikey: ' . $supabaseAnonKey
-        ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        $authResponse = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlErr) {
-            throw new Exception("Falha de rede na autenticação: " . $curlErr);
-        }
-        if ($httpCode !== 200) {
-            throw new Exception("Falha de autenticação no Supabase (HTTP $httpCode)");
-        }
-
-        $authData = json_decode($authResponse, true);
-        $token = $authData['access_token'] ?? '';
-        $expiresIn = $authData['expires_in'] ?? 3600;
-        
+        $token = getValidMagnacomToken();
         if (empty($token)) {
-            throw new Exception("Token de acesso JWT não retornado pelo Supabase.");
+            throw new Exception("Token de acesso JWT não disponível para o Supabase. Configure em Ferramentas > Configurações Magnacom.");
         }
 
         $_SESSION['supabase_token'] = $token;
-        $_SESSION['supabase_token_expires'] = time() + $expiresIn - 60; // margem de segurança de 60 segundos
+        $_SESSION['supabase_token_expires'] = time() + 3500;
     }
 
     // --- 4. CONSULTA A NOTIFICAÇÃO PARA OBTER O ID ---

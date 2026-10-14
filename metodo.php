@@ -1485,4 +1485,212 @@ switch ($_GET['metodo']) {
         $res = vds_get_morador_detalhe($uuid);
         echo json_encode($res, JSON_UNESCAPED_UNICODE);
         break;
+
+    case "salvarConfigMagnacom":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $url = trim($_POST['url'] ?? '');
+        $anonKey = trim($_POST['anon_key'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+
+        if (!empty($url)) upsertConfigSistema('magnacom_supabase_url', rtrim($url, '/'));
+        if (!empty($anonKey)) upsertConfigSistema('magnacom_supabase_anon_key', $anonKey);
+        if (!empty($email)) upsertConfigSistema('magnacom_supabase_email', $email);
+        if (!empty($password)) upsertConfigSistema('magnacom_supabase_password', $password);
+
+        echo json_encode(['success' => true, 'message' => 'Configurações básicas salvas com sucesso!'], JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "salvarTokensMagnacomJson":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $rawJson = trim($_POST['tokens_json'] ?? '');
+
+        $access = trim($_POST['access_token'] ?? '');
+        $refresh = trim($_POST['refresh_token'] ?? '');
+        $grant = trim($_POST['grant'] ?? '');
+
+        if (!empty($rawJson)) {
+            $parsed = json_decode($rawJson, true);
+            if (!is_array($parsed)) {
+                echo json_encode(['success' => false, 'error' => 'O texto colado não é um JSON válido. Verifique as aspas e o formato.'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $access = $parsed['access_token'] ?? ($parsed['accessToken'] ?? $access);
+            $refresh = $parsed['refresh_token'] ?? ($parsed['refreshToken'] ?? $refresh);
+            $grant = $parsed['grant'] ?? ($parsed['token_type'] ?? $grant);
+        }
+
+        if (empty($access)) {
+            echo json_encode(['success' => false, 'error' => 'Nenhum "access_token" foi localizado no JSON informado.'], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $formattedJson = !empty($rawJson) ? $rawJson : json_encode([
+            'access_token' => $access,
+            'refresh_token' => $refresh,
+            'grant' => $grant
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        salvarTokensMagnacom($access, $refresh, $grant, $formattedJson);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Tokens da Magnacom salvos com sucesso no banco de dados!',
+            'access_token' => $access,
+            'refresh_token' => $refresh,
+            'grant' => $grant,
+            'updated_at' => date('Y-m-d H:i:s')
+        ], JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "testarLoginMagnacomDirect":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $cfg = getMagnacomConfig();
+
+        $url = trim($_POST['url'] ?? '') ?: $cfg['url'];
+        $anonKey = trim($_POST['anon_key'] ?? '') ?: $cfg['anon_key'];
+        $email = trim($_POST['email'] ?? '') ?: $cfg['email'];
+        $password = trim($_POST['password'] ?? '') ?: $cfg['password'];
+
+        if (empty($url) || empty($anonKey) || empty($email) || empty($password)) {
+            echo json_encode(['success' => false, 'error' => 'URL, Anon Key, E-mail e Senha são obrigatórios para o teste de login direto.'], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $authUrl = rtrim($url, '/') . '/auth/v1/token?grant_type=password';
+        $payload = json_encode(['email' => $email, 'password' => $password]);
+
+        $t0 = microtime(true);
+        $ch = curl_init($authUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'apikey: ' . $anonKey
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        $res = curl_exec($ch);
+        $latencyMs = round((microtime(true) - $t0) * 1000);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr) {
+            echo json_encode(['success' => false, 'error' => 'Falha de comunicação: ' . $curlErr, 'latencyMs' => $latencyMs], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $parsed = json_decode($res, true);
+        $hasCaptcha = false;
+
+        if (stripos($res, 'captcha') !== false || stripos($res, 'turnstile') !== false || stripos($res, 'nonce') !== false) {
+            $hasCaptcha = true;
+        }
+
+        if ($httpCode === 200 && !empty($parsed['access_token'])) {
+            if (!empty($_POST['auto_salvar'])) {
+                $newAccess = $parsed['access_token'];
+                $newRefresh = $parsed['refresh_token'] ?? '';
+                $jsonRep = json_encode([
+                    'access_token' => $newAccess,
+                    'refresh_token' => $newRefresh
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                salvarTokensMagnacom($newAccess, $newRefresh, '', $jsonRep);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'httpCode' => $httpCode,
+                'latencyMs' => $latencyMs,
+                'message' => 'Login direto no Supabase realizado com SUCESSO! O endpoint direto ainda não está bloqueado por captcha.',
+                'access_token' => $parsed['access_token'],
+                'refresh_token' => $parsed['refresh_token'] ?? null,
+                'expires_in' => $parsed['expires_in'] ?? null,
+                'user' => [
+                    'id' => $parsed['user']['id'] ?? null,
+                    'email' => $parsed['user']['email'] ?? null,
+                    'role' => $parsed['user']['role'] ?? null
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            $errorMsg = $parsed['msg'] ?? ($parsed['error_description'] ?? ($parsed['error'] ?? 'Falha na autenticação (HTTP ' . $httpCode . ')'));
+            echo json_encode([
+                'success' => false,
+                'httpCode' => $httpCode,
+                'latencyMs' => $latencyMs,
+                'error' => $errorMsg,
+                'hasCaptcha' => $hasCaptcha,
+                'rawResponse' => $parsed ?: $res
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        break;
+
+    case "testarRefreshTokenMagnacom":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $res = renovarTokenMagnacomViaRefresh();
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "testarConsultaNotificacaoMagnacom":
+        session_start();
+        header('Content-Type: application/json; charset=utf-8');
+        $cfg = getMagnacomConfig();
+        $token = trim($_POST['token'] ?? '') ?: getValidMagnacomToken();
+
+        if (empty($token)) {
+            echo json_encode(['success' => false, 'error' => 'Nenhum token disponível (nem no banco nem informado). Cole um token ou teste o login.'], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        if (empty($cfg['url']) || empty($cfg['anon_key'])) {
+            echo json_encode(['success' => false, 'error' => 'URL do Supabase e Anon Key devem estar configurados.'], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $apiUrl = $cfg['url'] . '/rest/v1/notificacoes?select=id,numero,created_at,torre,unidade&limit=1';
+        $t0 = microtime(true);
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'apikey: ' . $cfg['anon_key'],
+            'authorization: Bearer ' . $token,
+            'accept: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $res = curl_exec($ch);
+        $latencyMs = round((microtime(true) - $t0) * 1000);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlErr) {
+            echo json_encode(['success' => false, 'error' => 'Erro de rede: ' . $curlErr, 'latencyMs' => $latencyMs], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+
+        $data = json_decode($res, true);
+        if ($httpCode === 200 && is_array($data)) {
+            echo json_encode([
+                'success' => true,
+                'httpCode' => $httpCode,
+                'latencyMs' => $latencyMs,
+                'total_encontrado' => count($data),
+                'exemplo_registro' => $data[0] ?? null
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            $msg = $data['message'] ?? ($data['error'] ?? "Erro HTTP $httpCode");
+            echo json_encode([
+                'success' => false,
+                'httpCode' => $httpCode,
+                'latencyMs' => $latencyMs,
+                'error' => $msg,
+                'raw' => $data ?: $res
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        break;
 }

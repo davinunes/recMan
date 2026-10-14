@@ -121,6 +121,9 @@ switch ($pag) {
 	case "configuracoes_pdf":
 		include "palco/configuracoes_pdf.php";
 		break;
+	case "configuracoes_magnacom":
+		include "palco/configuracoes_magnacom.php";
+		break;
 	case "documentosOficiais":
 		include "palco/documentosOficiais.php";
 		break;
