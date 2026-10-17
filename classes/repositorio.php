@@ -2235,4 +2235,48 @@ function getValidMagnacomToken()
     }
 
     return null;
-}
+}
+
+if (!function_exists('parseTipificacaoToNotacao')) {
+    /**
+     * Converte tipificação da Magnacom (ex: "Art. 14, inciso I") para notação do regimento (ex: "14.1")
+     */
+    function parseTipificacaoToNotacao($tipificacao)
+    {
+        $tipificacao = trim((string)$tipificacao);
+        if (empty($tipificacao)) return null;
+
+        $clean = preg_replace('/^art(igo)?\.?\s+/i', '', $tipificacao);
+        if (!preg_match('/^(\d+)/', $clean, $matches)) {
+            return null;
+        }
+        $artigo = $matches[1];
+        $resto = trim(substr($clean, strlen($artigo)));
+
+        $romanos = [
+            'xiv' => 14, 'xiii' => 13, 'xii' => 12, 'xi' => 11, 'x' => 10,
+            'ix' => 9, 'viii' => 8, 'vii' => 7, 'vi' => 6, 'v' => 5,
+            'iv' => 4, 'iii' => 3, 'ii' => 2, 'i' => 1
+        ];
+
+        if (preg_match('/(?:inciso\s+)?([ivxldcm]+)\b/i', $resto, $matches)) {
+            $romano = strtolower($matches[1]);
+            if (isset($romanos[$romano])) {
+                return $artigo . '.' . $romanos[$romano];
+            }
+        }
+        if (preg_match('/inciso\s+(\d+)/i', $resto, $matches)) {
+            return $artigo . '.' . $matches[1];
+        }
+
+        if (preg_match('/par[aá]grafo\s+u[nni]co/i', $resto)) {
+            return $artigo . '.unico';
+        }
+        if (preg_match('/(?:par[aá]grafo\s+|§\s*)(\d+)/ui', $resto, $matches)) {
+            return $artigo . '.' . $matches[1];
+        }
+
+        return $artigo;
+    }
+}
+

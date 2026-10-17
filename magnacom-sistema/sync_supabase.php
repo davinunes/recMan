@@ -101,43 +101,67 @@ function getSupabaseToken($url, $apiKey, $email, $password) {
 }
 
 /**
- * Consulta a tabela 'notificacoes' no Supabase usando o token de autenticação
+ * Consulta a tabela 'notificacoes' no Supabase usando o token de autenticação (com paginação)
  */
 function getSupabaseNotifications($url, $apiKey, $token, $queryFilter) {
-    $dbUrl = rtrim($url, '/') . '/rest/v1/notificacoes?select=*';
-    if (!empty($queryFilter)) {
-        $dbUrl .= '&' . ltrim($queryFilter, '&');
+    $todas = [];
+    $limit = 1000;
+    $offset = 0;
+    $hasMore = true;
+
+    while ($hasMore) {
+        $dbUrl = rtrim($url, '/') . '/rest/v1/notificacoes?select=*';
+        if (!empty($queryFilter)) {
+            $dbUrl .= '&' . ltrim($queryFilter, '&');
+        }
+        $dbUrl .= '&order=id.asc&limit=' . $limit . '&offset=' . $offset;
+
+        $ch = curl_init($dbUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'apikey: ' . $apiKey,
+            'authorization: Bearer ' . $token,
+            'accept-profile: public',
+            'accept: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            throw new Exception("Erro de rede (cURL) ao buscar notificações (offset $offset): " . $err);
+        }
+
+        if ($httpCode !== 200) {
+            throw new Exception("Status de erro HTTP ao buscar notificações ($httpCode no offset $offset). Detalhes: " . $response);
+        }
+
+        $data = json_decode($response, true);
+        if (!is_array($data)) {
+            throw new Exception("Payload de resposta inválido do banco de dados (não é um array JSON).");
+        }
+
+        $qtd = count($data);
+        if ($qtd === 0) {
+            $hasMore = false;
+            break;
+        }
+
+        foreach ($data as $item) {
+            $todas[] = $item;
+        }
+
+        if ($qtd < $limit) {
+            $hasMore = false;
+        } else {
+            $offset += $limit;
+        }
     }
 
-    $ch = curl_init($dbUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'apikey: ' . $apiKey,
-        'authorization: Bearer ' . $token,
-        'accept-profile: public',
-        'accept: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
-
-    if ($err) {
-        throw new Exception("Erro de rede (cURL) ao buscar notificações: " . $err);
-    }
-
-    if ($httpCode !== 200) {
-        throw new Exception("Status de erro HTTP ao buscar notificações ($httpCode). Detalhes: " . $response);
-    }
-
-    $data = json_decode($response, true);
-    if (!is_array($data)) {
-        throw new Exception("Payload de resposta inválido do banco de dados (não é um array JSON).");
-    }
-
-    return $data;
+    return $todas;
 }
 
 /**
