@@ -401,7 +401,22 @@ try {
     logMessage("Falhas ao salvar Datas de Retirada: " . $stats['retiradas_error']);
     logMessage("Registros ignorados (dados inconsistentes): " . $stats['skipped']);
 
+    // Persiste feedback da sincronização no banco de dados (tabela config_sistema)
+    $resumoJson = json_encode([
+        'data' => date('Y-m-d H:i:s'),
+        'status' => 'sucesso',
+        'total' => $stats['total'],
+        'notificacoes_success' => $stats['notificacoes_success'],
+        'retiradas_success' => $stats['retiradas_success'],
+        'erros' => $stats['notificacoes_error'] + $stats['retiradas_error'],
+        'skipped' => $stats['skipped']
+    ], JSON_UNESCAPED_UNICODE);
+    upsertConfigSistema('magnacom_sync_ultima_execucao', date('Y-m-d H:i:s'));
+    upsertConfigSistema('magnacom_sync_ultimo_resumo', $resumoJson);
+
 } catch (Exception $e) {
     logMessage("CRITICAL ERROR: " . $e->getMessage());
+    upsertConfigSistema('magnacom_sync_ultimo_erro', date('Y-m-d H:i:s') . ' - ' . $e->getMessage());
     exit(1);
 }
+

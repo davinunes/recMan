@@ -38,8 +38,11 @@ O usuário relatou que ao acessar `json.php?importar_magnacom=1`, o feedback ind
 ### 2.2 Centralização de `parseTipificacaoToNotacao()` em [`classes/repositorio.php`](file:///e:/DEV/recMan/classes/repositorio.php)
 - Função disponibilizada no escopo global para reaproveitamento tanto em `json.php`, `sync_supabase.php` e `sync_single.php`.
 
-### 2.3 Paginação em [`magnacom-sistema/sync_supabase.php`](file:///e:/DEV/recMan/magnacom-sistema/sync_supabase.php)
+### 2.3 Paginação e Feedback em [`magnacom-sistema/sync_supabase.php`](file:///e:/DEV/recMan/magnacom-sistema/sync_supabase.php)
 - Aprimorada a função `getSupabaseNotifications()` para realizar paginação em lote de 1.000 em 1.000 registros, tornando as execuções de cron ou CLI imunes ao limite de linhas do Supabase.
+- Adicionada persistência de feedback no banco de dados (`config_sistema`): data da última execução, totais processados e eventuais mensagens de erro, permitindo que a execução do Cron (`curl -s`) seja monitorada visualmente.
+- O card de status da sincronização automática foi adicionado na tela de [Configurações Magnacom](file:///e:/DEV/recMan/palco/configuracoes_magnacom.php).
+
 
 ### 2.4 Atualização de [`palco/tools.php`](file:///e:/DEV/recMan/palco/tools.php)
 - Atualizado o rótulo do menu de "Importar Planilha de Multas" para *"Sincronizar Notificações (Magnacom)"*.

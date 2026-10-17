@@ -2,6 +2,10 @@
 require_once "classes/repositorio.php";
 
 $cfg = getMagnacomConfig();
+$ultimaExecucaoSync = getConfigSistema('magnacom_sync_ultima_execucao');
+$ultimoResumoSyncRaw = getConfigSistema('magnacom_sync_ultimo_resumo');
+$ultimoErroSync = getConfigSistema('magnacom_sync_ultimo_erro');
+$resumoSync = !empty($ultimoResumoSyncRaw) ? json_decode($ultimoResumoSyncRaw, true) : null;
 ?>
 
 <div class="container" style="margin-top: 25px; margin-bottom: 50px;">
@@ -20,6 +24,49 @@ $cfg = getMagnacomConfig();
             </p>
         </div>
     </div>
+
+    <!-- Status do Cron / Sincronização Automática de Fundo -->
+    <div class="row">
+        <div class="col s12">
+            <div class="card white z-depth-1" style="border-left: 5px solid #0284c7; border-radius: 6px;">
+                <div class="card-content" style="padding: 16px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span style="font-weight: 600; font-size: 1.05rem; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+                            <i class="material-icons">schedule</i> Sincronização Automática (Cron / Background)
+                        </span>
+                        <div>
+                            <a href="json.php?importar_magnacom=1" class="btn-small blue darken-2 waves-effect waves-light">
+                                <i class="material-icons left">sync</i> Sincronizar Agora Manualmente
+                            </a>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px; font-size: 0.92rem; color: #334155;">
+                        <?php if (!empty($ultimaExecucaoSync)): ?>
+                            <div>
+                                <span class="new badge green" data-badge-caption="Ativo" style="float: none; margin-left: 0;"></span>
+                                Última execução registrada: <strong><?php echo htmlspecialchars($ultimaExecucaoSync); ?></strong>
+                                <?php if ($resumoSync): ?>
+                                    — <span>Processadas: <strong><?php echo $resumoSync['total'] ?? 0; ?></strong> | Notificações salvas: <strong><?php echo $resumoSync['notificacoes_success'] ?? 0; ?></strong> | Retiradas salvas: <strong><?php echo $resumoSync['retiradas_success'] ?? 0; ?></strong></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="grey-text">
+                                Nenhuma execução recente do cron foi registrada ainda no banco. (Comando cron: <code>0 * * * * curl -s "http://localhost/magnacom-sistema/sync_supabase.php?token=segredo123"</code>)
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($ultimoErroSync)): ?>
+                            <div style="margin-top: 8px; color: #b91c1c; font-size: 0.88rem;">
+                                <strong>Último alerta do cron:</strong> <?php echo htmlspecialchars($ultimoErroSync); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Alerta Informativo sobre a migração de sistema e Captcha -->
     <div class="row">
