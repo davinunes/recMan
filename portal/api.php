@@ -292,9 +292,9 @@ if ($action == 'send_token') {
         'expires' => time() + 3600
     ];
 
-    $numeroStr = isset($_POST['numero']) && isset($_POST['ano'])
-        ? filter_var($_POST['numero'], FILTER_SANITIZE_STRING) . '/' . filter_var($_POST['ano'], FILTER_SANITIZE_STRING)
-        : '';
+    $numeroLimpo = isset($_POST['numero']) ? preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)$_POST['numero']) : '';
+    $anoLimpo = isset($_POST['ano']) ? preg_replace('/[^0-9]/', '', (string)$_POST['ano']) : '';
+    $numeroStr = ($numeroLimpo !== '' && $anoLimpo !== '') ? ($numeroLimpo . '/' . $anoLimpo) : '';
 
     if ($numeroStr !== '') {
         DBExecute("UPDATE recurso SET token = '$tokenNum' WHERE numero = '" . DBEscape($numeroStr) . "'");

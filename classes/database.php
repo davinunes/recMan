@@ -4,6 +4,11 @@ ini_set('display_errors', 0);
 // ini_set('display_startup_errors', 1);
 // error_reporting(E_ALL);
 
+// Compatibilidade PHP 7.4 <-> 8.3+: Mantém modo de erro do MySQLi retrocompatível (sem exceptions fatais não capturadas)
+if (function_exists('mysqli_report')) {
+	mysqli_report(MYSQLI_REPORT_OFF);
+}
+
 if (file_exists(__DIR__ . "/key.php")) {
 	include __DIR__ . "/key.php";
 } else {
@@ -35,17 +40,17 @@ function DBClose($link)
 }
 
 function DBEscape($dados)
-{ # Proteje contra SQL Injection
+{ # Proteje contra SQL Injection (Compatível PHP 7.4 e PHP 8.x)
 	$link = DBConnect();
 	// var_dump($link);
 
 	if (!is_array($dados)) {
-		$dados = mysqli_real_escape_string($link, $dados);
+		$dados = mysqli_real_escape_string($link, (string)($dados ?? ''));
 	} else {
 		$arr = $dados;
 		foreach ($arr as $key => $value) {
-			$key = mysqli_real_escape_string($link, $key);
-			$value = mysqli_real_escape_string($link, $value);
+			$key = mysqli_real_escape_string($link, (string)($key ?? ''));
+			$value = mysqli_real_escape_string($link, (string)($value ?? ''));
 
 			$dados[$key] = $value;
 		}
@@ -79,10 +84,10 @@ function DBExecute($query, $returnId = false, $die = true)
 }
 
 function DBQuery($sql)
-{ # Executa um Comando na Conexão
+{ # Executa um Comando na Conexão (Compatível PHP 7.4 e PHP 8.x)
 	$result = DBExecute($sql);
 	// echo $sql;
-	if (mysqli_num_rows($result) > 0) {
+	if ($result instanceof mysqli_result && mysqli_num_rows($result) > 0) {
 		while ($retorno = mysqli_fetch_assoc($result)) {
 			$dados[] = $retorno;
 		}
