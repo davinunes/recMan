@@ -13,11 +13,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-8Z3EGW55DC"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-      gtag('config', 'G-8Z3EGW55DC');
+        gtag('config', 'G-8Z3EGW55DC');
     </script>
 
     <!-- Favicon -->
@@ -38,7 +38,8 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
         class="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[90vh]">
         <!-- Header -->
         <div class="text-center mb-8 flex flex-col items-center">
-            <img src="fav_portal_recurso_conselho/android-chrome-192x192.png" alt="Logo Conselho" class="w-16 h-16 mb-3 rounded-xl shadow-md border border-gray-100 object-contain">
+            <img src="fav_portal_recurso_conselho/android-chrome-192x192.png" alt="Logo Conselho"
+                class="w-16 h-16 mb-3 rounded-xl shadow-md border border-gray-100 object-contain">
             <h1 class="text-3xl font-extrabold text-blue-900 border-b-4 border-orange-500 pb-2 inline-block">Central de
                 Recursos</h1>
             <p class="text-gray-600 mt-2 text-lg font-medium">Conselho Miami Beach</p>
@@ -83,24 +84,30 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     <a href="normativos.php"
                         class="group block p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5">
                         <div class="flex items-start space-x-3">
-                            <div class="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm group-hover:scale-105 group-hover:bg-emerald-700 transition-all shrink-0">
+                            <div
+                                class="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm group-hover:scale-105 group-hover:bg-emerald-700 transition-all shrink-0">
                                 <span class="material-icons text-xl block">verified_user</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-1 mb-1">
-                                    <span class="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-200/70 border border-emerald-300 px-2 py-0.5 rounded-full inline-flex items-center">
+                                    <span
+                                        class="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-200/70 border border-emerald-300 px-2 py-0.5 rounded-full inline-flex items-center">
                                         <span class="material-icons text-[12px] mr-1">security</span>
                                         LGPD & Privacidade
                                     </span>
-                                    <span class="text-xs font-bold text-emerald-700 group-hover:text-emerald-900 group-hover:translate-x-1 transition-transform inline-flex items-center shrink-0">
+                                    <span
+                                        class="text-xs font-bold text-emerald-700 group-hover:text-emerald-900 group-hover:translate-x-1 transition-transform inline-flex items-center shrink-0">
                                         Consultar <span class="material-icons text-sm ml-0.5">arrow_forward</span>
                                     </span>
                                 </div>
-                                <h3 class="text-sm font-extrabold text-gray-900 group-hover:text-emerald-950 transition-colors">
+                                <h3
+                                    class="text-sm font-extrabold text-gray-900 group-hover:text-emerald-950 transition-colors">
                                     Seus dados e recursos estão protegidos?
                                 </h3>
                                 <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                    Conheça a nossa <strong>Política de Tratamento de Dados</strong> e consulte a <strong>Convenção</strong> e <strong>Regimento Interno</strong> na versão transcrita e pesquisável.
+                                    Conheça a nossa <strong>Política de Tratamento de Dados</strong> e consulte a
+                                    <strong>Convenção</strong> e <strong>Regimento Interno</strong> na versão transcrita
+                                    e pesquisável.
                                 </p>
                             </div>
                         </div>
@@ -143,21 +150,40 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     </div>
 
                     <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) -->
-                    <div class="mb-6 p-4 bg-blue-50 text-blue-900 rounded-lg border-l-4 border-blue-500 shadow-sm">
-                        <div class="flex items-start">
-                            <span class="text-xl mr-2.5 shrink-0">📌</span>
-                            <div class="text-xs leading-relaxed">
-                                <p class="font-bold text-sm text-blue-950 mb-1">ATENÇÃO AO ELABORAR SEU RECURSO</p>
-                                <p>As imagens (prints) anexadas à notificação servem apenas para comprovar a
-                                    existência do registro do fato. Para garantir o seu direito à ampla defesa, o
-                                    morador tem o direito de agendar a visualização do vídeo completo
-                                    presencialmente na Sala de Operações de CFTV, acompanhado pela Administração,
-                                    nos termos do Artigo 181 do Regimento Interno. Evite fundamentar sua defesa
-                                    apenas na imagem estática impressa: conheça o contexto integral das filmagens
-                                    antes de enviar seu recurso.</p>
-                            </div>
+
+                    <div
+                        class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-sm">
+                        <div class="mb-3 flex items-start gap-2">
+                            <span class="text-xl leading-none">⚠️</span>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wide text-amber-900">
+                                Atenção: você conhece o contexto completo da ocorrência?
+                            </h3>
                         </div>
+
+                        <p class="mb-3">
+                            As imagens anexadas à notificação são apenas registros pontuais
+                            da ocorrência e podem não demonstrar tudo o que aconteceu.
+                        </p>
+
+                        <p class="mb-3">
+                            Nos termos do <b>Art. 181 do Regimento Interno</b>, você pode
+                            solicitar à Administração o agendamento para assistir à gravação
+                            completa na Sala de Operações de CFTV, acompanhado por representante
+                            da Administração.
+                        </p>
+
+                        <p class="mb-3 font-semibold">
+                            Antes de elaborar seu recurso, considere assistir ao vídeo.
+                            Conhecer o contexto completo pode ajudar você a compreender melhor
+                            a ocorrência e apresentar argumentos mais precisos em sua defesa.
+                        </p>
+
+                        <p class="border-t border-amber-200 pt-2 text-xs text-amber-800">
+                            A visualização da gravação é opcional e não constitui condição
+                            para apresentar o recurso.
+                        </p>
                     </div>
+
 
                     <div class="flex justify-between items-center mt-8">
                         <button type="button" @click="etapa = 0"
@@ -316,26 +342,66 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     </div>
 
                     <!-- Card Informativo: Dica de Ampla Defesa -->
-                    <div class="mb-6 p-3.5 bg-amber-50 text-amber-900 text-xs rounded-lg border border-amber-200 leading-relaxed shadow-sm">
-                        <p>
-                            💡 <b>DICA DE AMPLA DEFESA:</b> As fotos no PDF são apenas um indicativo de prova. Nos
-                            termos do Art. 181 do Regimento Interno, você pode agendar uma visita à Sala de CFTV
-                            junto à Administração para assistir à gravação completa antes de protocolar sua defesa.
-                            Não baseie seu recurso apenas no quadro impresso.
+
+                    <div
+                        class="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-md">
+                        <div class="mb-3 flex items-start gap-2">
+                            <span class="text-2xl leading-none">🚨</span>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wide text-amber-900">
+                                Antes de protocolar sua defesa, leia isto!
+                            </h3>
+                        </div>
+
+                        <p class="mb-3 font-semibold text-amber-950">
+                            Você está prestes a apresentar seu recurso com base nas
+                            informações disponíveis nesta notificação.
+                        </p>
+
+                        <p class="mb-3">
+                            As imagens impressas são apenas recortes da ocorrência.
+                            <b>A gravação completa pode conter informações importantes
+                                que não aparecem nos prints.</b>
+                        </p>
+
+                        <p class="mb-3">
+                            Conforme o <b>Art. 181 do Regimento Interno</b>, você pode
+                            agendar, junto à Administração, a visualização do vídeo na
+                            Sala de Operações de CFTV.
+                        </p>
+
+                        <div class="mb-3 rounded-lg border border-amber-300 bg-white p-3">
+                            <p class="font-extrabold text-amber-900">
+                                Nossa recomendação é clara: assista à gravação antes
+                                de concluir sua defesa.
+                            </p>
+                            <p class="mt-1 text-amber-900">
+                                Isso pode ajudar você a compreender o contexto dos fatos
+                                e evitar argumentos baseados em uma compreensão incompleta
+                                da ocorrência.
+                            </p>
+                        </div>
+
+                        <p class="border-t border-amber-200 pt-3 text-xs text-amber-800">
+                            <b>Importante:</b> a visualização é opcional. Você pode protocolar
+                            sua defesa sem assistir ao vídeo. Caso precise de mais tempo para
+                            agendar a consulta, solicite à Administração a prorrogação do prazo.
                         </p>
                     </div>
+
 
                     <div class="mb-6 p-3.5 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                         <label class="flex items-start cursor-pointer">
                             <input type="checkbox" required
                                 class="mt-1 mr-2.5 cursor-pointer h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded shrink-0">
-                            <span class="text-xs text-gray-700 leading-relaxed">
-                                Declaro ter ciência de que o Conselho atua estritamente na análise e julgamento do
-                                recurso, não sendo este o responsável pela aplicação da penalidade. Confirmo estar
-                                ciente do meu direito de agendar a visualização prévia da gravação completa na Sala de
-                                CFTV junto à Administração (nos termos do Art. 181 do Regimento Interno) para a plena
-                                elaboração da minha defesa antes da decisão final, ciente de que o Conselho entenderá
-                                que por intermédio deste pedido, já visualizei as imagens ou DECIDI não visualiza-las.
+                            <span class="text-sm leading-relaxed text-gray-800">
+                                <b>Declaro estar ciente</b> de que posso solicitar à
+                                Administração o agendamento para visualizar a gravação
+                                completa da ocorrência, nos termos do Art. 181 do
+                                Regimento Interno, antes de apresentar minha defesa.
+                                Estou ciente de que as imagens impressas podem não
+                                apresentar todo o contexto dos fatos e de que a
+                                visualização do vídeo é opcional, não sendo requisito
+                                para protocolar o recurso.
                             </span>
                         </label>
                     </div>
