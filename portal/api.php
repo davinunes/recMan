@@ -8,6 +8,19 @@ define('EMAIL_SINDICO_NOTIFICACAO', 'sindicogeral.miami@gmail.com, centralderecu
 
 $action = $_GET['action'] ?? '';
 
+// Detecção e Persistência do Modo Debug / Simulação
+if (isset($_GET['modo_debug']) || isset($_GET['modo-debug']) || isset($_GET['debug']) ||
+    isset($_POST['modo_debug']) || isset($_POST['modo-debug']) || isset($_POST['debug'])) {
+    $paramVal = $_GET['modo_debug'] ?? ($_GET['modo-debug'] ?? ($_GET['debug'] ?? ($_POST['modo_debug'] ?? ($_POST['modo-debug'] ?? ($_POST['debug'] ?? '1')))));
+    if ($paramVal === '0' || $paramVal === 'false') {
+        unset($_SESSION['portal_modo_debug']);
+    } else {
+        $_SESSION['portal_modo_debug'] = true;
+    }
+}
+$isModoDebug = !empty($_SESSION['portal_modo_debug']);
+
+
 /**
  * Sanitiza o número e ano da notificação/recurso.
  * Impede que múltiplos separadores ou barras concatenadas (ex: 322/26/2026) sejam processados.
@@ -284,8 +297,7 @@ if ($action == 'send_token') {
         exit;
     }
 
-
-    $tokenNum = rand(100000, 999999);
+    $tokenNum = $isModoDebug ? '123456' : (string)rand(100000, 999999);
     $_SESSION['portal_token'] = [
         'email' => $email,
         'code' => $tokenNum,
@@ -295,6 +307,17 @@ if ($action == 'send_token') {
     $numeroLimpo = isset($_POST['numero']) ? preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)$_POST['numero']) : '';
     $anoLimpo = isset($_POST['ano']) ? preg_replace('/[^0-9]/', '', (string)$_POST['ano']) : '';
     $numeroStr = ($numeroLimpo !== '' && $anoLimpo !== '') ? ($numeroLimpo . '/' . $anoLimpo) : '';
+
+    // Se estiver em modo debug, não dispara o e-mail real e retorna token simulado
+    if ($isModoDebug) {
+        echo json_encode([
+            'success' => true,
+            'debug' => true,
+            'token' => $tokenNum,
+            'message' => 'Modo simulação: nenhum e-mail disparado. Utilize o token ' . $tokenNum . ' para prosseguir.'
+        ]);
+        exit;
+    }
 
     if ($numeroStr !== '') {
         DBExecute("UPDATE recurso SET token = '$tokenNum' WHERE numero = '" . DBEscape($numeroStr) . "'");
@@ -344,22 +367,113 @@ painel de acompanhamento.";
 }
 
 if ($action == 'verify_token') {
-    $token = $_POST['token'] ?? '';
+    $token = trim((string)($_POST['token'] ?? ''));
     $sess = $_SESSION['portal_token'] ?? null;
+
+    // Em modo debug, aceita qualquer token fornecido
+    if ($isModoDebug) {
+        $_SESSION['portal_verified'] = true;
+        echo json_encode(['success' => true, 'debug' => true]);
+        exit;
+    }
 
     if ($sess && $sess['code'] == $token && time() <= $sess['expires']) {
         $_SESSION['portal_verified'] = true;
-        echo
-            json_encode(['success' => true]);
+        echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => 'Código inválido ou expirado.']);
     }
     exit;
 }
 
+if ($action == 'verificar_unidade_vds') {
+    require_once "../classes/vds_auth_service.php";
+    require_once "../classes/vds_acesso_service.php";
+
+    $email = trim($_POST['email'] ?? ($_SESSION['portal_token']['email'] ?? ''));
+    $numero = trim($_POST['numero'] ?? '');
+    $ano = trim($_POST['ano'] ?? '');
+
+    $blocoNotif = '';
+    $unidadeNotif = '';
+
+    if (!empty($numero) && !empty($ano)) {
+        $sqlNot = "SELECT torre, bloco, unidade, assunto, notificacao FROM notificacoes WHERE numero = '" . DBEscape($numero) . "' AND ano = '" . DBEscape($ano) . "' LIMIT 1";
+        $resNot = DBExecute($sqlNot);
+        if ($resNot && mysqli_num_rows($resNot) > 0) {
+            $notRow = mysqli_fetch_assoc($resNot);
+            $blocoNotif = strtoupper(trim($notRow['torre'] ?? ($notRow['bloco'] ?? '')));
+            $unidadeNotif = trim((string)($notRow['unidade'] ?? ''));
+        } else {
+            $notSup = sincronizarNotificacaoSupabase((int)$numero, (int)$ano);
+            if ($notSup) {
+                $blocoNotif = strtoupper(trim($notSup['torre'] ?? ($notSup['bloco'] ?? '')));
+                $unidadeNotif = trim((string)($notSup['unidade'] ?? ''));
+            }
+        }
+    }
+
+    $unidadesVds = [];
+    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $unidadesVds = vds_buscar_unidades_por_email($email);
+    }
+
+    $divergente = false;
+    $mensagemAviso = null;
+    $match = false;
+
+    if (!empty($unidadesVds)) {
+        // Encontrou unidades na VDS para o e-mail
+        if (!empty($blocoNotif) && !empty($unidadeNotif)) {
+            foreach ($unidadesVds as $u) {
+                if ($u['bloco'] === $blocoNotif && ltrim($u['unidade'], '0') === ltrim($unidadeNotif, '0')) {
+                    $match = true;
+                    break;
+                }
+            }
+            if (!$match) {
+                $divergente = true;
+                $rotulosVds = array_column($unidadesVds, 'rotulo');
+                $textoUnidadesVds = implode(', ', $rotulosVds);
+                $mensagemAviso = "Identificamos no sistema de portaria (VDS) que seu e-mail está cadastrado para: <b>{$textoUnidadesVds}</b>, enquanto a Notificação nº <b>{$numero}/{$ano}</b> está registrada para a unidade <b>Bloco {$blocoNotif} - Unidade {$unidadeNotif}</b>.<br><br>Por favor, confira os campos de <b>Bloco</b> e <b>Unidade</b> abaixo antes de protocolar para garantir que o recurso seja direcionado à unidade correta.";
+            }
+        }
+    } else {
+        // E-mail não localizado na VDS
+        if (!empty($email)) {
+            $divergente = true;
+            $mensagemAviso = "Não localizamos cadastro ativo na portaria (VDS) para o e-mail <b>" . htmlspecialchars($email) . "</b>. Por gentileza, certifique-se de que os campos <b>Bloco</b> e <b>Unidade</b> abaixo correspondam exatamente ao seu imóvel notificado.";
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'email' => $email,
+        'unidades_vds' => $unidadesVds,
+        'bloco_notificacao' => $blocoNotif,
+        'unidade_notificacao' => $unidadeNotif,
+        'match' => $match,
+        'divergente' => $divergente,
+        'mensagem_aviso' => $mensagemAviso
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($action == 'submit') {
     if (empty($_SESSION['portal_verified'])) {
         echo json_encode(['success' => false, 'error' => 'Sessão não verificada. Faça o fluxo novamente.']);
+        exit;
+    }
+
+    // Se estiver em modo debug/simulação, não grava no banco, não move arquivos e não envia e-mails
+    if ($isModoDebug) {
+        unset($_SESSION['portal_verified']);
+        unset($_SESSION['portal_token']);
+        echo json_encode([
+            'success' => true,
+            'debug' => true,
+            'message' => 'Simulação concluída com sucesso! Nenhum registro foi inserido no banco de dados e nenhum e-mail foi disparado.'
+        ]);
         exit;
     }
 
@@ -399,6 +513,7 @@ if ($action == 'submit') {
         echo json_encode(['success' => false, 'error' => 'Erro ao salvar o recurso no banco de dados.']);
         exit;
     }
+
 
     // --- ENVIAR PUSH NOTIFICATION (Background) ---
     $tituloPush = "Novo Recurso ($numeroCompleto)";

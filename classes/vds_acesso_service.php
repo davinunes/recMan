@@ -1544,3 +1544,98 @@ function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
         'termo_buscado' => trim($buscaNormalizada)
     ];
 }
+
+/**
+ * Consulta a API VDS buscando moradores vinculados a um determinado e-mail
+ * e retorna as unidades e blocos associados.
+ *
+ * @param string $email E-mail do morador a ser pesquisado
+ * @param int|null $usuarioIdConselho ID do conselheiro para token
+ * @return array Lista de unidades encontradas: [['bloco' => 'A', 'unidade' => '101', 'nome' => '...', 'rotulo' => '...']]
+ */
+function vds_buscar_unidades_por_email($email, $usuarioIdConselho = null) {
+    $emailClean = trim((string)$email);
+    if (empty($emailClean) || !filter_var($emailClean, FILTER_VALIDATE_EMAIL)) {
+        return [];
+    }
+
+    $resBusca = vds_busca_generica($emailClean, 'MORADOR', $usuarioIdConselho);
+    $itens = [];
+    if (!empty($resBusca['success']) && !empty($resBusca['data']) && is_array($resBusca['data'])) {
+        $itens = $resBusca['data'];
+    }
+
+    // Se não encontrou como MORADOR, tenta busca genérica ALL
+    if (empty($itens)) {
+        $resAll = vds_busca_generica($emailClean, 'ALL', $usuarioIdConselho);
+        if (!empty($resAll['success']) && !empty($resAll['data']) && is_array($resAll['data'])) {
+            foreach ($resAll['data'] as $it) {
+                if (isset($it['tipo']) && strtoupper($it['tipo']) === 'MORADOR') {
+                    $itens[] = $it;
+                }
+            }
+        }
+    }
+
+    $unidadesEncontradas = [];
+    $chavesVistas = [];
+
+    foreach ($itens as $item) {
+        $moradorUuid = $item['id'] ?? null;
+        $nomeMorador = $item['titulo'] ?? '';
+        $subtitulo = $item['subtitulo'] ?? '';
+
+        $bloco = '';
+        $unidade = '';
+
+        // 1. Tentar obter dados estruturados via detalhe do morador
+        if (!empty($moradorUuid)) {
+            $det = vds_get_morador_detalhe($moradorUuid, $usuarioIdConselho);
+            if (!empty($det['success']) && !empty($det['data'])) {
+                $d = $det['data'];
+                if (!empty($d['unidade'])) {
+                    $unidade = (string)($d['unidade']['numero'] ?? ($d['unidade']['nome'] ?? ''));
+                    $blocoObj = $d['unidade']['bloco'] ?? null;
+                    if (is_array($blocoObj)) {
+                        $bloco = (string)($blocoObj['nome'] ?? ($blocoObj['sigla'] ?? ''));
+                    } elseif (is_string($blocoObj)) {
+                        $bloco = $blocoObj;
+                    }
+                }
+                if (!empty($d['pessoa']['nome'])) {
+                    $nomeMorador = $d['pessoa']['nome'];
+                }
+            }
+        }
+
+        // 2. Fallback: extrair do subtitulo (ex: "Bloco A - Apto 304", "Torre B - 504")
+        if (empty($bloco) || empty($unidade)) {
+            if (preg_match('/(?:bloco|torre)\s*([a-fA-F0-9])/i', $subtitulo, $mB)) {
+                $bloco = strtoupper($mB[1]);
+            }
+            if (preg_match('/(?:unidade|apto|apartamento)?\s*(\d{2,4})/i', $subtitulo, $mU)) {
+                $unidade = $mU[1];
+            }
+        }
+
+        // Normalizar bloco (apenas letra A-F) e unidade (apenas números)
+        $blocoClean = preg_replace('/[^A-F]/i', '', strtoupper($bloco));
+        $unidadeClean = preg_replace('/[^\d]/', '', (string)$unidade);
+
+        if (!empty($blocoClean) && !empty($unidadeClean)) {
+            $chaveUnica = $blocoClean . '-' . $unidadeClean;
+            if (!isset($chavesVistas[$chaveUnica])) {
+                $chavesVistas[$chaveUnica] = true;
+                $unidadesEncontradas[] = [
+                    'bloco' => $blocoClean,
+                    'unidade' => $unidadeClean,
+                    'nome' => $nomeMorador,
+                    'rotulo' => 'Bloco ' . $blocoClean . ' - Unidade ' . $unidadeClean
+                ];
+            }
+        }
+    }
+
+    return $unidadesEncontradas;
+}
+

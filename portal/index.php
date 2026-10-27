@@ -1,5 +1,14 @@
 <?php
 session_start();
+if (isset($_GET['modo_debug']) || isset($_GET['modo-debug']) || isset($_GET['debug'])) {
+    $pVal = $_GET['modo_debug'] ?? ($_GET['modo-debug'] ?? ($_GET['debug'] ?? '1'));
+    if ($pVal === '0' || $pVal === 'false') {
+        unset($_SESSION['portal_modo_debug']);
+    } else {
+        $_SESSION['portal_modo_debug'] = true;
+    }
+}
+$modoDebug = !empty($_SESSION['portal_modo_debug']);
 $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 ?>
 <!DOCTYPE html>
@@ -37,13 +46,30 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
     <div x-data="assistenteData()"
         class="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[90vh]">
         <!-- Header -->
-        <div class="text-center mb-8 flex flex-col items-center">
+        <div class="text-center mb-6 flex flex-col items-center">
             <img src="fav_portal_recurso_conselho/android-chrome-192x192.png" alt="Logo Conselho"
                 class="w-16 h-16 mb-3 rounded-xl shadow-md border border-gray-100 object-contain">
             <h1 class="text-3xl font-extrabold text-blue-900 border-b-4 border-orange-500 pb-2 inline-block">Central de
                 Recursos</h1>
             <p class="text-gray-600 mt-2 text-lg font-medium">Conselho Miami Beach</p>
         </div>
+
+        <!-- Banner Modo Debug / Simulação -->
+        <?php if ($modoDebug): ?>
+        <div class="mb-6 p-4 rounded-xl border-2 border-dashed border-amber-500 bg-amber-50/95 text-amber-900 shadow-sm flex items-start gap-3">
+            <span class="text-2xl select-none">🧪</span>
+            <div class="flex-1 text-sm">
+                <div class="flex items-center justify-between">
+                    <strong class="uppercase tracking-wide text-xs font-black text-amber-900">Modo Simulação Ativo</strong>
+                    <span class="text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">Sem gravação</span>
+                </div>
+                <p class="text-xs text-amber-800 mt-1">
+                    Esta sessão está em modo de teste/simulação. O assistente percorrerá todas as telas sem gravar no banco de dados e sem enviar e-mails reais. Qualquer código de verificação será aceito.
+                </p>
+            </div>
+        </div>
+        <?php endif; ?>
+
 
         <!-- Feedback Messages -->
         <div x-show="erro" x-transition
@@ -118,83 +144,109 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
             <!-- ETAPA 1: Número da Notificação -->
             <div x-show="etapa === 1" x-transition class="p-6 sm:p-8" style="display: none;">
                 <h3 class="text-xl font-bold mb-2">Identificação da Notificação</h3>
-                <p class="text-sm text-gray-500 mb-6">Informe os números exatamente como constam no documento recebido.
+                <p class="text-sm text-gray-500 mb-4">Informe os números exatamente como constam no documento recebido.
                 </p>
 
-                <form @submit.prevent="checarNotificacao()">
-                    <div class="flex gap-4 mb-6">
-                        <div class="w-2/3">
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
-                            <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required
-                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
-                        </div>
-                        <div class="w-1/3 text-center pt-8 text-2xl text-gray-400">/</div>
-                        <div class="w-2/3">
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
-                            <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
-                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
-                        </div>
+                <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) - Posicionado no topo -->
+                <div
+                    class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-sm">
+                    <div class="mb-3 flex items-start gap-2">
+                        <span class="text-xl leading-none">⚠️</span>
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-amber-900">
+                            Atenção: você conhece o contexto completo da ocorrência?
+                        </h3>
                     </div>
 
-                    <div x-show="notificacaoNaoEncontrada" x-transition
-                        class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
-                        <div class="flex">
-                            <i class="material-icons mr-2 text-orange-500">warning</i>
-                            <div>
-                                <p class="font-bold">Notificação não localizada!</p>
-                                <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
-                                    corretos em seu documento físico, clique em "Continuar" para prosseguir com a
-                                    validação manual.</p>
+                    <p class="mb-3">
+                        As imagens anexadas à notificação são apenas registros pontuais
+                        da ocorrência e podem não demonstrar tudo o que aconteceu.
+                    </p>
+
+                    <p class="mb-3">
+                        Nos termos do <b>Art. 181 do Regimento Interno</b>, você pode
+                        solicitar à Administração o agendamento para assistir à gravação
+                        completa na Sala de Operações de CFTV, acompanhado por representante
+                        da Administração.
+                    </p>
+
+                    <p class="mb-3 font-semibold">
+                        Antes de elaborar seu recurso, considere assistir ao vídeo.
+                        Conhecer o contexto completo pode ajudar você a compreender melhor
+                        a ocorrência e apresentar argumentos mais precisos em sua defesa.
+                    </p>
+
+                    <p class="border-t border-amber-200 pt-2 text-xs text-amber-800">
+                        A visualização da gravação é opcional e não constitui condição
+                        para apresentar o recurso.
+                    </p>
+                </div>
+
+                <!-- Timer de Leitura: Aguarda a pessoa ler antes de revelar inputs -->
+                <div x-show="!timerLeituraLiberado" x-transition
+                    class="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-center shadow-sm mb-4">
+                    <div class="flex items-center justify-center space-x-2 text-blue-900 mb-1 font-bold">
+                        <span class="material-icons animate-spin text-lg text-blue-600">hourglass_top</span>
+                        <span>Por favor, leia atentamente as orientações acima...</span>
+                    </div>
+                    <p class="text-xs text-blue-700 mt-1">
+                        Liberando o preenchimento da notificação em <span class="text-base font-black text-blue-900" x-text="timerLeitura"></span> segundo(s)
+                    </p>
+                    <template x-if="modoDebug">
+                        <div class="mt-3">
+                            <button type="button" @click="pularTimerLeitura()"
+                                class="text-xs text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 font-bold py-1 px-3 rounded-md transition shadow-xs">
+                                ⚡ Pular Timer de Leitura (Debug)
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Formulário com Inputs: Liberado após o timer -->
+                <div x-show="timerLeituraLiberado" x-transition>
+                    <form @submit.prevent="checarNotificacao()">
+                        <div class="flex gap-4 mb-6">
+                            <div class="w-2/3">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Número</label>
+                                <input x-model="notificacaoStr" type="text" placeholder="Ex: 154" required
+                                    class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                            </div>
+                            <div class="w-1/3 text-center pt-8 text-2xl text-gray-400">/</div>
+                            <div class="w-2/3">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Ano</label>
+                                <input x-model="anoStr" type="text" placeholder="Ex: 2026" required
+                                    class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Card Informativo: Orientações de Ampla Defesa / CFTV (Art. 181) -->
-
-                    <div
-                        class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-sm">
-                        <div class="mb-3 flex items-start gap-2">
-                            <span class="text-xl leading-none">⚠️</span>
-                            <h3 class="text-sm font-extrabold uppercase tracking-wide text-amber-900">
-                                Atenção: você conhece o contexto completo da ocorrência?
-                            </h3>
+                        <div x-show="notificacaoNaoEncontrada" x-transition
+                            class="mb-6 p-4 bg-orange-50 text-orange-800 rounded-lg border-l-4 border-orange-400">
+                            <div class="flex">
+                                <i class="material-icons mr-2 text-orange-500">warning</i>
+                                <div>
+                                    <p class="font-bold">Notificação não localizada!</p>
+                                    <p class="text-xs mt-1">Verifique o número e o ano informados. Caso os dados estejam
+                                        corretos em seu documento físico, clique em "Continuar" para prosseguir com a
+                                        validação manual.</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <p class="mb-3">
-                            As imagens anexadas à notificação são apenas registros pontuais
-                            da ocorrência e podem não demonstrar tudo o que aconteceu.
-                        </p>
+                        <div class="flex justify-between items-center mt-8">
+                            <button type="button" @click="etapa = 0"
+                                class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
+                            <button type="submit" :disabled="carregando"
+                                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
+                                <span x-show="!carregando">Continuar</span>
+                                <span x-show="carregando">Processando...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
 
-                        <p class="mb-3">
-                            Nos termos do <b>Art. 181 do Regimento Interno</b>, você pode
-                            solicitar à Administração o agendamento para assistir à gravação
-                            completa na Sala de Operações de CFTV, acompanhado por representante
-                            da Administração.
-                        </p>
-
-                        <p class="mb-3 font-semibold">
-                            Antes de elaborar seu recurso, considere assistir ao vídeo.
-                            Conhecer o contexto completo pode ajudar você a compreender melhor
-                            a ocorrência e apresentar argumentos mais precisos em sua defesa.
-                        </p>
-
-                        <p class="border-t border-amber-200 pt-2 text-xs text-amber-800">
-                            A visualização da gravação é opcional e não constitui condição
-                            para apresentar o recurso.
-                        </p>
-                    </div>
-
-
-                    <div class="flex justify-between items-center mt-8">
-                        <button type="button" @click="etapa = 0"
-                            class="text-gray-500 font-medium hover:text-gray-800 transition">Voltar</button>
-                        <button type="submit" :disabled="carregando"
-                            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition flex items-center">
-                            <span x-show="!carregando">Continuar</span>
-                            <span x-show="carregando">Processando...</span>
-                        </button>
-                    </div>
-                </form>
+                <div x-show="!timerLeituraLiberado" class="flex justify-start mt-4">
+                    <button type="button" @click="etapa = 0"
+                        class="text-gray-500 font-medium hover:text-gray-800 transition text-sm">Voltar</button>
+                </div>
             </div>
 
             <!-- ETAPA 2: Já Existe -->
@@ -297,6 +349,23 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-r">
                     <p class="text-sm text-blue-800">Assunto: <b>Recurso para Notificação <span
                                 x-text="notificacaoStr+'/'+anoStr"></span></b></p>
+                </div>
+
+                <!-- Card Informativo: Divergência de Unidade detectada na VDS -->
+                <div x-show="validacaoVds && validacaoVds.divergente" x-transition
+                    class="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl shrink-0 select-none">⚠️</span>
+                        <div>
+                            <h4 class="text-xs font-black uppercase tracking-wide text-amber-900">
+                                Atenção: Conferência de Unidade do Morador
+                            </h4>
+                            <div class="text-xs text-amber-900 mt-1.5 leading-relaxed" x-html="validacaoVds ? validacaoVds.mensagem_aviso : ''"></div>
+                            <p class="text-[11px] text-amber-800 mt-2 font-medium bg-amber-100/70 p-2 rounded border border-amber-300/60">
+                                ℹ️ <b>Aviso orientativo:</b> você pode prosseguir normalmente. Caso a notificação realmente pertença à sua unidade, basta confirmar ou selecionar o <b>Bloco</b> e a <b>Unidade</b> corretos nos campos abaixo.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <form @submit.prevent="enviarRecursoFinal()">
@@ -425,6 +494,12 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     </svg>
                 </div>
                 <h2 class="text-3xl font-bold mb-4 text-gray-800">Protocolado com Sucesso!</h2>
+                <template x-if="modoDebug">
+                    <div class="mb-5 inline-flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-xs">
+                        <span>🧪</span>
+                        <span>Simulação Concluída (Nenhum dado real foi gravado e nenhum e-mail disparado)</span>
+                    </div>
+                </template>
                 <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 text-left">
                     <p class="mb-3 text-gray-700">Seu recurso de número <b><span
                                 x-text="notificacaoStr + '/' + anoStr"></span></b> foi oficializado com sucesso pela
@@ -656,6 +731,14 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
             }
 
             return {
+                modoDebug: <?= $modoDebug ? 'true' : 'false' ?>,
+                timerLeitura: 6,
+                timerLeituraLiberado: false,
+                intervalTimerLeitura: null,
+
+                validacaoVds: null,
+                carregandoValidacaoVds: false,
+
                 etapa: initialEtapa,
                 carregando: false,
                 erro: false,
@@ -717,7 +800,28 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                     this.erro = false;
                     this.notificacaoNaoEncontrada = false;
                     this.etapa = 1;
+                    this.iniciarTimerLeitura();
                 },
+
+                iniciarTimerLeitura() {
+                    if (this.timerLeituraLiberado) return;
+                    this.timerLeitura = 6;
+                    clearInterval(this.intervalTimerLeitura);
+                    this.intervalTimerLeitura = setInterval(() => {
+                        this.timerLeitura--;
+                        if (this.timerLeitura <= 0) {
+                            this.timerLeituraLiberado = true;
+                            clearInterval(this.intervalTimerLeitura);
+                        }
+                    }, 1000);
+                },
+
+                pularTimerLeitura() {
+                    clearInterval(this.intervalTimerLeitura);
+                    this.timerLeitura = 0;
+                    this.timerLeituraLiberado = true;
+                },
+
 
                 sanitizarCamposEnvio() {
                     if (this.notificacaoStr) {
@@ -870,7 +974,10 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
 
                         if (res.success) {
                             this.etapa = 4;
-                            this.codigoValidacao = ''; // reset do input
+                            this.codigoValidacao = res.debug ? (res.token || '123456') : '';
+                            if (res.debug) {
+                                this.mostraSucesso("Modo Simulação: código de teste preenchido (" + this.codigoValidacao + ").");
+                            }
                         } else {
                             this.mostraErro(res.error || "Houve uma falha ao preparar o envio do email.");
                         }
@@ -882,19 +989,21 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                 },
 
                 async validarCodigo() {
-                    if (this.codigoValidacao.length < 5) return;
+                    if (!this.modoDebug && this.codigoValidacao.length < 5) return;
                     this.carregando = true;
                     this.erro = false;
 
                     let fd = new FormData();
-                    fd.append('token', this.codigoValidacao);
+                    fd.append('token', this.codigoValidacao || '123456');
 
                     try {
                         let req = await fetch('api.php?action=verify_token', { method: 'POST', body: fd });
                         let res = await req.json();
 
                         if (res.success) {
-                            this.etapa = 5; // Vai formulário real
+                            // Dispara a verificação da unidade na VDS para conferência preventiva
+                            this.verificarUnidadeVds();
+                            this.etapa = 5; // Vai para o formulário de redação
                         } else {
                             this.mostraErro(res.error || "Token fornecido inválido.");
                         }
@@ -904,6 +1013,30 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         this.carregando = false;
                     }
                 },
+
+                async verificarUnidadeVds() {
+                    if (!this.emailContato) return;
+                    this.carregandoValidacaoVds = true;
+                    this.validacaoVds = null;
+
+                    let fd = new FormData();
+                    fd.append('email', this.emailContato);
+                    fd.append('numero', this.notificacaoStr);
+                    fd.append('ano', this.anoStr);
+
+                    try {
+                        let req = await fetch('api.php?action=verificar_unidade_vds', { method: 'POST', body: fd });
+                        let res = await req.json();
+                        if (res.success) {
+                            this.validacaoVds = res;
+                        }
+                    } catch (e) {
+                        console.warn("Validação VDS indisponível:", e);
+                    } finally {
+                        this.carregandoValidacaoVds = false;
+                    }
+                },
+
 
                 async enviarRecursoFinal() {
                     this.sanitizarCamposEnvio();
