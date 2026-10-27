@@ -435,7 +435,7 @@ if ($action == 'verificar_unidade_vds') {
                 $divergente = true;
                 $rotulosVds = array_column($unidadesVds, 'rotulo');
                 $textoUnidadesVds = implode(', ', $rotulosVds);
-                $mensagemAviso = "Identificamos no sistema de portaria (VDS) que seu e-mail está cadastrado para: <b>{$textoUnidadesVds}</b>, enquanto a Notificação nº <b>{$numero}/{$ano}</b> está registrada para a unidade <b>Bloco {$blocoNotif} - Unidade {$unidadeNotif}</b>.<br><br>Por favor, confira os campos de <b>Bloco</b> e <b>Unidade</b> abaixo antes de protocolar para garantir que o recurso seja direcionado à unidade correta.";
+                $mensagemAviso = "Identificamos no sistema de portaria (VDS) que seu e-mail está cadastrado para: <b>{$textoUnidadesVds}</b>, e esta unidade não corresponde aos registros da Notificação nº <b>{$numero}/{$ano}</b> informada.<br><br>Por favor, certifique-se de que o número da notificação informado está correto e confira os campos de <b>Bloco</b> e <b>Unidade</b> abaixo antes de protocolar.";
             }
         }
     } else {
@@ -450,8 +450,8 @@ if ($action == 'verificar_unidade_vds') {
         'success' => true,
         'email' => $email,
         'unidades_vds' => $unidadesVds,
-        'bloco_notificacao' => $blocoNotif,
-        'unidade_notificacao' => $unidadeNotif,
+        'bloco_notificacao' => $match ? $blocoNotif : null,
+        'unidade_notificacao' => $match ? $unidadeNotif : null,
         'match' => $match,
         'divergente' => $divergente,
         'mensagem_aviso' => $mensagemAviso

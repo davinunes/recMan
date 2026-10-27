@@ -1029,6 +1029,11 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         let res = await req.json();
                         if (res.success) {
                             this.validacaoVds = res;
+                            if (res.divergente && res.unidades_vds && res.unidades_vds.length === 1) {
+                                // Sugere e preenche com a unidade comprovada do morador
+                                this.dados.bloco = res.unidades_vds[0].bloco;
+                                this.dados.unidade = res.unidades_vds[0].unidade;
+                            }
                         }
                     } catch (e) {
                         console.warn("Validação VDS indisponível:", e);
@@ -1036,6 +1041,7 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                         this.carregandoValidacaoVds = false;
                     }
                 },
+
 
 
                 async enviarRecursoFinal() {

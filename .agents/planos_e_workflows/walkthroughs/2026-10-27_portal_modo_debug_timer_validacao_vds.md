@@ -29,9 +29,11 @@ Atendendo à solicitação do usuário, implementamos 3 grandes melhorias no ass
    - Criamos o serviço `vds_buscar_unidades_por_email($email)` em `classes/vds_acesso_service.php` utilizando os endpoints de busca de morador da API v8 da VDS (`/registros?tipo=MORADOR`).
    - Criamos o endpoint `verificar_unidade_vds` em `portal/api.php`.
    - Assim que o e-mail do morador é validado, o sistema consulta a VDS para saber em qual(is) unidade(s) e bloco(s) o morador está registrado.
-   - Se a unidade informada na notificação divergir da unidade cadastrada na VDS (ou caso o e-mail não conste na base da portaria), a Etapa 5 exibe um card de alerta âmbar em destaque:
-     - Informa a divergência com clareza.
+   - **Privacidade e Proteção de Dados (LGPD)**: Se houver divergência (ex: morador digitou número de notificação de outro imóvel ou se equivocou), o sistema **NUNCA** revela para qual unidade aquela notificação foi emitida nem no texto da tela nem no JSON retornado. O sistema informa apenas para qual unidade o **e-mail do morador** comprovado está vinculado na VDS e que ela não corresponde à notificação digitada.
+   - Se a unidade informada na notificação divergir da unidade cadastrada na VDS (ou caso o e-mail não conste na base da portaria), a Etapa 5 exibe o card de alerta âmbar em destaque:
+     - Informa a divergência e sugere o preenchimento com a unidade comprovada do morador.
      - **Não impeditivo**: orienta o morador a revisar os campos de Bloco e Unidade nos campos abaixo, mas permite que ele conclua e protocole o recurso normalmente caso os dados estejam corretos no documento físico.
+
 
 ---
 
