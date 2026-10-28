@@ -90,6 +90,75 @@ try {
 
 
 
+        case 'verificar_email_requerente':
+            $emailReq = trim($_GET['email'] ?? '');
+            if (empty($emailReq) || !filter_var($emailReq, FILTER_VALIDATE_EMAIL)) {
+                echo json_encode([
+                    'success' => true,
+                    'status' => 'sem_email',
+                    'email' => $emailReq,
+                    'badge_class' => 'grey darken-1',
+                    'badge_icon' => 'mail_outline',
+                    'titulo' => 'Sem e-mail',
+                    'mensagem' => 'Nenhum e-mail registrado neste recurso.'
+                ]);
+                break;
+            }
+
+            $unidadesVds = vds_buscar_unidades_por_email($emailReq, $usuarioId);
+            $blocoReq = strtoupper(trim($bloco));
+            $unidadeReq = trim((string)$unidade);
+
+            $match = false;
+            $nomeMorador = null;
+
+            if (!empty($unidadesVds)) {
+                foreach ($unidadesVds as $u) {
+                    if ($u['bloco'] === $blocoReq && ltrim($u['unidade'], '0') === ltrim($unidadeReq, '0')) {
+                        $match = true;
+                        $nomeMorador = $u['nome'] ?? null;
+                        break;
+                    }
+                }
+
+                if ($match) {
+                    echo json_encode([
+                        'success' => true,
+                        'status' => 'confirmado',
+                        'email' => $emailReq,
+                        'badge_class' => 'green darken-2',
+                        'badge_icon' => 'verified_user',
+                        'titulo' => 'E-mail Morador VDS',
+                        'mensagem' => 'E-mail cadastrado na portaria para esta unidade' . ($nomeMorador ? " ($nomeMorador)" : ''),
+                        'unidades' => $unidadesVds
+                    ]);
+                } else {
+                    $rotulos = array_column($unidadesVds, 'rotulo');
+                    echo json_encode([
+                        'success' => true,
+                        'status' => 'divergente',
+                        'email' => $emailReq,
+                        'badge_class' => 'deep-orange darken-2',
+                        'badge_icon' => 'warning',
+                        'titulo' => 'E-mail Outra Unidade (VDS)',
+                        'mensagem' => 'Atenção: E-mail cadastrado na portaria para: ' . implode(', ', $rotulos),
+                        'unidades' => $unidadesVds
+                    ]);
+                }
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'status' => 'nao_encontrado',
+                    'email' => $emailReq,
+                    'badge_class' => 'amber darken-4',
+                    'badge_icon' => 'person_off',
+                    'titulo' => 'E-mail Não Localizado (VDS)',
+                    'mensagem' => 'E-mail não possui cadastro ativo de morador na portaria',
+                    'unidades' => []
+                ]);
+            }
+            break;
+
         default:
             echo json_encode(['success' => false, 'error' => 'Ação inválida.']);
             break;

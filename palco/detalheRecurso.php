@@ -174,6 +174,7 @@ if ($esseRecurso == null) {
                 Unidade: <span id="unidadeRecurso">' . $result['unidade'] . $result['bloco'] . '</span>
             </div>
             <div id="container-badge-inadimplente" style="display:inline-block;"></div>
+            <div id="container-badge-email-vds" style="display:inline-block;"></div>
 
 
             <div class="chip white-text" style="background: rgba(255,255,255,0.1); margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
@@ -219,6 +220,11 @@ if ($esseRecurso == null) {
                     <div>
                         <span style="font-size: 0.8rem; color: #757575; display: block;">Apresentação do Recurso</span>
                         <strong style="font-size: 0.95rem; color: #37474f;">' . date('d/m/Y', strtotime($result["data"])) . '</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: #757575; display: block;">E-mail do Recorrente</span>
+                        <strong style="font-size: 0.95rem; color: #37474f;" class="truncate" title="' . htmlspecialchars($result['email'] ?? '') . '">' . (!empty($result['email']) ? htmlspecialchars($result['email']) : '<span style="color:#9e9e9e; font-weight:normal;">Não informado</span>') . '</strong>
+                        <div id="status-email-vds-box" style="margin-top: 3px; font-size: 0.78rem;"></div>
                     </div>
                 </div>';
     if (!empty($dataRetirada[0]["obs"])) {
@@ -1123,13 +1129,80 @@ if ($esseRecurso == null) {
         const vdsParams = {
             bloco: '<?= $result['bloco'] ?>',
             unidade: '<?= $result['unidade'] ?>',
+            email: '<?= htmlspecialchars($result['email'] ?? '', ENT_QUOTES) ?>',
             dtInicio: '<?= $dtInicio ?>',
             dtFim: '<?= $dtFim ?>',
             dtIniJanela: '<?= $dtIniJanela ?>',
             dtFimJanela: '<?= $dtFimJanela ?>'
         };
 
+        function verificarEmailRequerente() {
+            if (!vdsParams.email) {
+                $('#container-badge-email-vds').html(`
+                    <div class="chip grey darken-1 white-text" style="background: #757575; margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
+                        <i class="material-icons left" style="color: #fff; margin-top: 4px;">mail_outline</i>
+                        Sem e-mail
+                    </div>
+                `);
+                return;
+            }
+
+            $('#container-badge-email-vds').html(`
+                <div class="chip blue-grey darken-3 white-text" style="margin: 0; border: 1px solid rgba(255,255,255,0.2); height: 32px; line-height: 32px;">
+                    <i class="material-icons left" style="color: #fff; margin-top: 4px;">sync</i>
+                    Checando E-mail VDS...
+                </div>
+            `);
+
+            const url = `palco/ajax_aceleradores.php?action=verificar_email_requerente&bloco=${encodeURIComponent(vdsParams.bloco)}&unidade=${encodeURIComponent(vdsParams.unidade)}&email=${encodeURIComponent(vdsParams.email)}`;
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        const badgeClass = res.badge_class || 'blue-grey';
+                        const badgeIcon = res.badge_icon || 'info';
+                        const titulo = res.titulo || 'E-mail VDS';
+                        const mensagem = res.mensagem || '';
+
+                        $('#container-badge-email-vds').html(`
+                            <div class="chip ${badgeClass} white-text tooltipped" data-position="bottom" data-tooltip="${mensagem.replace(/"/g, '&quot;')}" style="margin: 0; border: 1px solid rgba(255,255,255,0.3); height: 32px; line-height: 32px; cursor: pointer;">
+                                <i class="material-icons left" style="color: #fff; margin-top: 4px;">${badgeIcon}</i>
+                                ${titulo}
+                            </div>
+                        `);
+
+                        if (typeof M !== 'undefined' && M.Tooltip) {
+                            M.Tooltip.init(document.querySelectorAll('#container-badge-email-vds .tooltipped'));
+                        }
+
+                        let corTexto = '#2e7d32';
+                        if (res.status === 'divergente') corTexto = '#c62828';
+                        if (res.status === 'nao_encontrado') corTexto = '#e65100';
+
+                        $('#status-email-vds-box').html(`
+                            <span style="color: ${corTexto}; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="material-icons tiny" style="font-size: 14px;">${badgeIcon}</i>
+                                ${mensagem}
+                            </span>
+                        `);
+                    }
+                },
+                error: function () {
+                    $('#container-badge-email-vds').html(`
+                        <div class="chip red darken-3 white-text" style="margin: 0; height: 32px; line-height: 32px;">
+                            <i class="material-icons left" style="color: #fff; margin-top: 4px;">error_outline</i>
+                            Erro VDS
+                        </div>
+                    `);
+                }
+            });
+        }
+
         function carregarAceleradoresAssincronos() {
+            verificarEmailRequerente();
             const actions = [
                 { id: 'moradores', action: 'moradores', target: '#container-moradores', countTarget: '#count-moradores' },
                 { id: 'veiculos', action: 'veiculos', target: '#container-veiculos', countTarget: '#count-veiculos' },
