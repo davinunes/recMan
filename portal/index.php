@@ -1205,6 +1205,26 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
             }
         }
     </script>
+
+    <!-- VLibras Widget com ajuste de posicionamento no meio da borda direita -->
+    <style>
+        [vw] [vw-access-button] {
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            right: 0 !important;
+            z-index: 9999 !important;
+        }
+    </style>
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div vw-plugin-top-wrapper></div>
+        </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 
 </html>
