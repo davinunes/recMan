@@ -351,6 +351,15 @@ $sessaoAtiva = isset($_SESSION['portal_auth']) ? $_SESSION['portal_auth'] : '';
                                 x-text="notificacaoStr+'/'+anoStr"></span></b></p>
                 </div>
 
+                <!-- Feedback de carregamento da checagem VDS -->
+                <div x-show="carregandoValidacaoVds" x-transition class="mb-4 p-3 bg-blue-50/70 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-blue-600 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>Conferindo cadastro do e-mail junto à portaria (VDS)...</span>
+                </div>
+
                 <!-- Card Informativo: Divergência de Unidade detectada na VDS -->
                 <div x-show="validacaoVds && validacaoVds.divergente" x-transition
                     class="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 shadow-sm">

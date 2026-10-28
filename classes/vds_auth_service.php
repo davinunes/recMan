@@ -327,6 +327,14 @@ function vds_get_token($usuarioIdConselho = null, $allowCondominioFallback = tru
         }
     }
 
+    // 3. Fallback amplo: se ainda não encontrou e fallback for permitido, buscar qualquer token ativo disponível
+    if (!$targetRow && (!$usuarioIdConselho || $allowCondominioFallback)) {
+        $resAny = mysqli_query($link, "SELECT * FROM vds_tokens WHERE bearer_token IS NOT NULL AND bearer_token != '' ORDER BY (status = 'ativo') DESC, (tipo = 'condominio') DESC, id DESC LIMIT 1");
+        if ($resAny) {
+            $targetRow = mysqli_fetch_assoc($resAny);
+        }
+    }
+
     DBClose($link);
 
     if (!$targetRow || empty($targetRow['bearer_token'])) {

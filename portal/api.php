@@ -398,16 +398,16 @@ if ($action == 'verificar_unidade_vds') {
     $unidadeNotif = '';
 
     if (!empty($numero) && !empty($ano)) {
-        $sqlNot = "SELECT torre, bloco, unidade, assunto, notificacao FROM notificacoes WHERE numero = '" . DBEscape($numero) . "' AND ano = '" . DBEscape($ano) . "' LIMIT 1";
+        $sqlNot = "SELECT torre, unidade, assunto, notificacao FROM notificacoes WHERE numero = '" . DBEscape($numero) . "' AND ano = '" . DBEscape($ano) . "' LIMIT 1";
         $resNot = DBExecute($sqlNot);
         if ($resNot && mysqli_num_rows($resNot) > 0) {
             $notRow = mysqli_fetch_assoc($resNot);
-            $blocoNotif = strtoupper(trim($notRow['torre'] ?? ($notRow['bloco'] ?? '')));
+            $blocoNotif = strtoupper(trim($notRow['torre'] ?? ''));
             $unidadeNotif = trim((string)($notRow['unidade'] ?? ''));
         } else {
             $notSup = sincronizarNotificacaoSupabase((int)$numero, (int)$ano);
             if ($notSup) {
-                $blocoNotif = strtoupper(trim($notSup['torre'] ?? ($notSup['bloco'] ?? '')));
+                $blocoNotif = strtoupper(trim($notSup['torre'] ?? ''));
                 $unidadeNotif = trim((string)($notSup['unidade'] ?? ''));
             }
         }
