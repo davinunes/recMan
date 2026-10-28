@@ -106,8 +106,8 @@ try {
             }
 
             $unidadesVds = vds_buscar_unidades_por_email($emailReq, $usuarioId);
-            $blocoReq = strtoupper(trim($bloco));
-            $unidadeReq = trim((string)$unidade);
+            $blocoReq = vds_normalizar_bloco($bloco);
+            $unidadeReq = preg_replace('/[^\d]/', '', (string)$unidade);
 
             $match = false;
             $nomeMorador = null;

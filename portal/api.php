@@ -413,6 +413,9 @@ if ($action == 'verificar_unidade_vds') {
         }
     }
 
+    $blocoNotif = vds_normalizar_bloco($blocoNotif);
+    $unidadeNotif = preg_replace('/[^\d]/', '', (string)$unidadeNotif);
+
     $unidadesVds = [];
     if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $unidadesVds = vds_buscar_unidades_por_email($email);

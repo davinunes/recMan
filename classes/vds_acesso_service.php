@@ -1546,6 +1546,21 @@ function vds_busca_generica($busca, $tipo = 'ALL', $usuarioIdConselho = null) {
 }
 
 /**
+ * Normaliza o identificador de bloco/torre para uma única letra limpa (ex: "Bloco F" -> "F").
+ */
+function vds_normalizar_bloco($bloco) {
+    if (empty($bloco)) return '';
+    $b = trim((string)$bloco);
+    $b = trim(preg_replace('/^(?:bloco|torre|edif[íi]cio|bl\.?|ed\.?)\s*/i', '', $b));
+    $b = trim(preg_replace('/\b(?:bloco|torre|bl)\b/i', '', $b));
+    if (preg_match('/([A-Fa-f0-9])\b/', $b, $m)) {
+        return strtoupper($m[1]);
+    }
+    $apenasValidos = preg_replace('/[^A-Fa-f0-9]/', '', $b);
+    return !empty($apenasValidos) ? strtoupper(substr($apenasValidos, -1)) : strtoupper($b);
+}
+
+/**
  * Consulta a API VDS buscando moradores vinculados a um determinado e-mail
  * e retorna as unidades e blocos associados.
  *
@@ -1619,7 +1634,7 @@ function vds_buscar_unidades_por_email($email, $usuarioIdConselho = null) {
         }
 
         // Normalizar bloco (apenas letra A-F) e unidade (apenas números)
-        $blocoClean = preg_replace('/[^A-F]/i', '', strtoupper($bloco));
+        $blocoClean = vds_normalizar_bloco($bloco);
         $unidadeClean = preg_replace('/[^\d]/', '', (string)$unidade);
 
         if (!empty($blocoClean) && !empty($unidadeClean)) {
