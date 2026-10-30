@@ -467,6 +467,16 @@ function getAllNotificacoes()
                     ,n.obs
                     ,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
                     ,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
+                    ,(
+                        SELECT LOWER(v.voto)
+                        FROM recurso r
+                        JOIN votos v ON v.id_recurso = r.id
+                        WHERE r.numero = n.numero_ano_virtual
+                        GROUP BY LOWER(v.voto)
+                        ORDER BY COUNT(*) DESC, v.id DESC
+                        LIMIT 1
+                    ) AS resultado_voto
+                    ,DATEDIFF(CURRENT_DATE(), n.data_envio) AS dias_desde_envio
                     ,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
                     ,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
                     ,mc.valor
@@ -534,7 +544,7 @@ function upsertMultaCobrada($data)
     return $result ? "ok" : "error";
 }
 
-function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bloco = null, $multa_cobrada = null)
+function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bloco = null, $multa_cobrada = null, $voto_parecer = 'padrao')
 {
     $sql = "SELECT n.numero
                     ,n.torre
@@ -551,6 +561,16 @@ function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bl
                     ,n.obs
                     ,DATE_FORMAT(d.dia_retirada, '%d/%m/%Y') AS dia_retirada
                     ,(SELECT 'Sim' FROM recurso WHERE recurso.numero = n.numero_ano_virtual) AS existe_recurso
+                    ,(
+                        SELECT LOWER(v.voto)
+                        FROM recurso r
+                        JOIN votos v ON v.id_recurso = r.id
+                        WHERE r.numero = n.numero_ano_virtual
+                        GROUP BY LOWER(v.voto)
+                        ORDER BY COUNT(*) DESC, v.id DESC
+                        LIMIT 1
+                    ) AS resultado_voto
+                    ,DATEDIFF(CURRENT_DATE(), n.data_envio) AS dias_desde_envio
                     ,(SELECT conclusao FROM parecer WHERE parecer.id = n.numero_ano_virtual) AS existe_parecer
                     ,DATEDIFF(CURRENT_DATE(), d.dia_retirada) AS diferenca_dias
                     ,mc.valor
@@ -596,6 +616,28 @@ function getNotificacoesByFilters($ano = null, $status = null, $tipo = null, $bl
         } else {
             // Se passar um valor diferente, usa a verificação da CASE
             $sql .= " AND CASE WHEN mc.numero IS NOT NULL THEN 'Sim' ELSE 'Não' END = '$multa_cobrada'";
+        }
+    }
+
+    // Filtro por resultado do parecer (baseado no tipo do voto)
+    $subqueryVoto = "(
+        SELECT LOWER(v.voto)
+        FROM recurso r
+        JOIN votos v ON v.id_recurso = r.id
+        WHERE r.numero = n.numero_ano_virtual
+        GROUP BY LOWER(v.voto)
+        ORDER BY COUNT(*) DESC, v.id DESC
+        LIMIT 1
+    )";
+
+    if ($voto_parecer !== null && strtolower($voto_parecer) !== 'todos') {
+        $votoLimpo = strtolower(trim($voto_parecer));
+        if ($votoLimpo === 'padrao' || $votoLimpo === 'sem_resultado_ou_manter') {
+            $sql .= " AND ($subqueryVoto IS NULL OR $subqueryVoto = 'manter')";
+        } elseif ($votoLimpo === 'sem_resultado') {
+            $sql .= " AND $subqueryVoto IS NULL";
+        } elseif (in_array($votoLimpo, ['manter', 'revogar', 'converter'])) {
+            $sql .= " AND $subqueryVoto = '$votoLimpo'";
         }
     }
 
