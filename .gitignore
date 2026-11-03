@@ -8,6 +8,10 @@ storage/*.log
 *.ignore
 *.ignore.*
 
+# Credenciais e segredos locais (VAPID Push / Keys)
+classes/vapid.json
+classes/key.php
+
 # Ignorar configurações locais de IDE e ambiente
 .idea/
 .vscode/

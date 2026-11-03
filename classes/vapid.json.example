@@ -1,0 +1,5 @@
+{
+    "publicKey": "{{SUA_CHAVE_PUBLICA_VAPID_AQUI}}",
+    "privateKey": "{{SUA_CHAVE_PRIVADA_VAPID_AQUI}}"
+}
+
