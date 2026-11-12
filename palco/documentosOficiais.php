@@ -61,18 +61,96 @@ $tiposCores = [
         flex-direction: column;
     }
 
-    .rich-toolbar button {
-        background: #f1f5f9;
+    .typst-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        background: #f8fafc;
         border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-right: 2px;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        padding: 6px 8px;
     }
 
-    .rich-toolbar button:hover {
+    .typst-toolbar .tool-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        border-right: 1px solid #e2e8f0;
+        padding-right: 6px;
+        margin-right: 4px;
+    }
+
+    .typst-toolbar .tool-group:last-child {
+        border-right: none;
+        padding-right: 0;
+        margin-right: 0;
+    }
+
+    .typst-toolbar button.btn-tool {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 3px 7px;
+        font-size: 0.8rem;
+        color: #334155;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 28px;
+        transition: all 0.15s ease;
+        line-height: 1;
+        outline: none;
+    }
+
+    .typst-toolbar button.btn-tool:hover {
         background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
+    .typst-toolbar button.btn-tool i.material-icons {
+        font-size: 16px;
+        margin: 0;
+    }
+
+    .typst-toolbar button.btn-tool.btn-magic {
+        background: #ede9fe;
+        color: #6d28d9;
+        border-color: #c4b5fd;
+        font-weight: 600;
+        padding: 3px 9px;
+    }
+
+    .typst-toolbar button.btn-tool.btn-magic:hover {
+        background: #ddd6fe;
+        color: #5b21b6;
+        border-color: #a78bfa;
+    }
+
+    .typst-toolbar button.btn-tool.btn-magic i {
+        margin-right: 4px !important;
+        font-size: 16px;
+    }
+
+    .typst-toolbar button.btn-tool.btn-fn {
+        background: #ecfdf5;
+        color: #047857;
+        border-color: #a7f3d0;
+        font-weight: 600;
+        padding: 3px 8px;
+    }
+
+    .typst-toolbar button.btn-tool.btn-fn:hover {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .typst-toolbar button.btn-tool.btn-fn i {
+        margin-right: 3px !important;
+        font-size: 15px;
     }
 
     /* Modal Fullscreen Real (96% Tela) */
@@ -365,14 +443,56 @@ $tiposCores = [
                         <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
                             <label
                                 style="font-weight: bold; color: #334155; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <span>Código Fonte (Typst / Markdown):</span>
+                                <span>Código Fonte Typst:</span>
                                 <button type="button" class="btn-flat btn-small blue-text" id="btnLiveCompile">
                                     <i class="material-icons left tiny">play_arrow</i>Atualizar PDF Preview
                                 </button>
                             </label>
+
+                            <!-- Toolbar Typst & Varinha Mágica -->
+                            <div class="typst-toolbar">
+                                <!-- Varinha Mágica (Markdown -> Typst) -->
+                                <div class="tool-group">
+                                    <button type="button" class="btn-tool btn-magic waves-effect" id="btnMagicMarkdown" title="Varinha Mágica: Converte Markdown selecionado (ou todo o texto) para Typst">
+                                        <i class="material-icons">auto_awesome</i>Varinha Mágica (MD ➔ Typst)
+                                    </button>
+                                </div>
+
+                                <!-- Formatação Básica -->
+                                <div class="tool-group">
+                                    <button type="button" class="btn-tool" id="btnToolBold" title="Negrito (*texto*)"><b>B</b></button>
+                                    <button type="button" class="btn-tool" id="btnToolItalic" title="Itálico (_texto_)"><i>I</i></button>
+                                    <button type="button" class="btn-tool" id="btnToolUnderline" title="Sublinhado (#underline[...])"><u>U</u></button>
+                                    <button type="button" class="btn-tool" id="btnToolCase" title="Alternar MAIÚSCULAS / minúsculas"><b>Aa</b></button>
+                                </div>
+
+                                <!-- Títulos -->
+                                <div class="tool-group">
+                                    <button type="button" class="btn-tool" id="btnToolH1" title="Título H1 (= Título)"><b>H1</b></button>
+                                    <button type="button" class="btn-tool" id="btnToolH2" title="Seção H2 (== Seção)"><b>H2</b></button>
+                                    <button type="button" class="btn-tool" id="btnToolH3" title="Subseção H3 (=== Subseção)"><b>H3</b></button>
+                                </div>
+
+                                <!-- Listas & Citação -->
+                                <div class="tool-group">
+                                    <button type="button" class="btn-tool" id="btnToolBullet" title="Lista com Marcadores (- Item)"><i class="material-icons">format_list_bulleted</i></button>
+                                    <button type="button" class="btn-tool" id="btnToolNumber" title="Lista Numerada (+ Item)"><i class="material-icons">format_list_numbered</i></button>
+                                    <button type="button" class="btn-tool" id="btnToolQuote" title="Citação com Recuo (#pad)"><i class="material-icons">format_quote</i></button>
+                                </div>
+
+                                <!-- Nota de Rodapé & Estrutura -->
+                                <div class="tool-group">
+                                    <button type="button" class="btn-tool btn-fn waves-effect" id="btnToolFootnote" title="Inserir Nota de Rodapé no texto (#footnote[...])">
+                                        <i class="material-icons">vertical_align_bottom</i>[¹] Nota Rodapé
+                                    </button>
+                                    <button type="button" class="btn-tool" id="btnToolLine" title="Linha Divisória Horizontal"><i class="material-icons">horizontal_rule</i></button>
+                                    <button type="button" class="btn-tool" id="btnToolPagebreak" title="Quebra de Página (#pagebreak())"><i class="material-icons">insert_page_break</i></button>
+                                </div>
+                            </div>
+
                             <textarea id="editorSplitCode" name="conteudo"
                                 placeholder="Digite o código Typst ou texto do documento aqui..."
-                                style="width: 100%; height: 100%; font-family: monospace; font-size: 0.95rem; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5; resize: none;"></textarea>
+                                style="width: 100%; height: calc(100% - 44px); font-family: monospace; font-size: 0.95rem; padding: 12px; border-radius: 0 0 8px 8px; border: 1px solid #cbd5e1; background: #0f172a; color: #f8fafc; line-height: 1.5; resize: none;"></textarea>
                         </div>
                         <!-- Painel Live PDF Right -->
                         <div class="split-pane" style="flex: 1; display: flex; flex-direction: column;">
@@ -408,6 +528,30 @@ $tiposCores = [
     </div>
 </div>
 
+<!-- MODAL INSERIR NOTA DE RODAPÉ -->
+<div id="modalInserirFootnote" class="modal" style="width: 520px; max-width: 90%; border-radius: 12px; top: 15% !important;">
+    <div class="modal-content" style="padding: 20px;">
+        <h5 style="margin-top: 0; font-size: 1.25rem; font-weight: 700; color: #065f46; display: flex; align-items: center;">
+            <i class="material-icons left" style="margin-right: 6px;">vertical_align_bottom</i>Inserir Nota de Rodapé (#footnote)
+        </h5>
+        <p class="grey-text text-darken-1" style="font-size: 0.85rem; margin-bottom: 15px;">
+            O Typst colocará automaticamente o número sobrescrito no local da seleção e renderizará a descrição numerada no rodapé da respectiva página.
+        </p>
+        <div>
+            <label style="font-weight: 600; color: #334155;">Texto da Nota de Rodapé:</label>
+            <textarea id="inputFootnoteTexto" class="materialize-textarea"
+                placeholder="Ex: Contrato nº 0400769796 firmado em 06/11/2026..."
+                style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; font-size: 0.9rem; min-height: 70px; background: #f8fafc; margin-top: 6px;"></textarea>
+        </div>
+    </div>
+    <div class="modal-footer" style="padding: 10px 20px; background: #f1f5f9;">
+        <button type="button" class="modal-close btn-flat waves-effect" style="margin-right: 8px;">Cancelar</button>
+        <button type="button" class="btn green darken-2 waves-effect waves-light" id="btnConfirmarFootnote" style="border-radius: 6px;">
+            <i class="material-icons left">check</i>Inserir no Texto
+        </button>
+    </div>
+</div>
+
 <script>
     function execEditorCmd(cmd, value = null) {
         document.execCommand(cmd, false, value);
@@ -415,6 +559,227 @@ $tiposCores = [
 
     $(document).ready(function () {
         $('.modal').modal();
+
+        // ==========================================
+        // Utilitários de Manipulação do Editor Typst
+        // ==========================================
+        function getTypstEditorSelection() {
+            const textarea = document.getElementById('editorSplitCode');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            const selected = text.substring(start, end);
+            return { textarea, start, end, text, selected };
+        }
+
+        function replaceTypstSelection(newText, selectNew = false) {
+            const { textarea, start, end, text } = getTypstEditorSelection();
+            textarea.value = text.substring(0, start) + newText + text.substring(end);
+            if (selectNew) {
+                textarea.selectionStart = start;
+                textarea.selectionEnd = start + newText.length;
+            } else {
+                textarea.selectionStart = textarea.selectionEnd = start + newText.length;
+            }
+            textarea.focus();
+            $(textarea).trigger('input');
+        }
+
+        function wrapTypstSelection(prefix, suffix, defaultPlaceholder = "texto") {
+            const { textarea, selected } = getTypstEditorSelection();
+            const content = selected || defaultPlaceholder;
+            replaceTypstSelection(prefix + content + suffix, false);
+        }
+
+        function prefixLinesTypst(prefix) {
+            const { textarea, start, end, text, selected } = getTypstEditorSelection();
+            if (selected.length > 0) {
+                const lines = selected.split('\n');
+                const modified = lines.map(line => prefix + line).join('\n');
+                replaceTypstSelection(modified, true);
+            } else {
+                replaceTypstSelection(prefix + "Título ou Item", true);
+            }
+        }
+
+        // ==========================================
+        // Varinha Mágica: Conversor Markdown -> Typst
+        // ==========================================
+        function converterMarkdownParaTypst(conteudo) {
+            if (!conteudo) return "";
+            let str = conteudo;
+
+            // 1. Extrair e converter notas de rodapé estilo Markdown [^1]: texto
+            const footnotes = {};
+            const fnRegex = /^\[\^([a-zA-Z0-9_\-]+)\]:\s*(.+)$/gm;
+            let match;
+            while ((match = fnRegex.exec(str)) !== null) {
+                footnotes[match[1]] = match[2].trim();
+            }
+            // Remove as definições de rodapé do corpo
+            str = str.replace(/^\[\^([a-zA-Z0-9_\-]+)\]:\s*.+$/gm, '');
+
+            // Substitui [^id] por #footnote[desc]
+            for (const [id, desc] of Object.entries(footnotes)) {
+                const descSafe = desc.replace(/\[/g, '(').replace(/\]/g, ')');
+                str = str.split(`[^${id}]`).join(`#footnote[${descSafe}]`);
+            }
+
+            // 2. Extrair referências numéricas do tipo [1] Descrição... ou [4] Descrição... no final
+            const refRegex = /^\[([0-9]{1,3})\]\s+([^\n\r]+)$/gm;
+            const refNumericas = {};
+            while ((match = refRegex.exec(str)) !== null) {
+                if (match[2].trim().length > 8) {
+                    refNumericas[match[1]] = match[2].trim();
+                }
+            }
+            for (const [id, desc] of Object.entries(refNumericas)) {
+                str = str.replace(new RegExp(`^\\[${id}\\]\\s+.+$`, 'gm'), '');
+                const descSafe = desc.replace(/\[/g, '(').replace(/\]/g, ')');
+                str = str.replace(new RegExp(`\\[${id}\\]`, 'g'), `#footnote[${descSafe}]`);
+            }
+
+            // 3. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
+            str = str.replace(/^(#{1,6})\s+(.+)$/gm, function(m, hashes, title) {
+                const nivel = hashes.length;
+                const equals = "=".repeat(nivel);
+                return `\n${equals} ${title.trim()}\n`;
+            });
+
+            // 4. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
+            str = str.replace(/\*\*(.+?)\*\*/gs, '*$1*');
+
+            // 5. Linha divisória: --- ou *** -> Linha Typst
+            str = str.replace(/^(\-{3,}|\*{3,})\s*$/gm, '\n#v(0.3cm)\n#line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))\n#v(0.3cm)\n');
+
+            // 6. Links [texto](url) -> #link("url")[texto]
+            str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '#link("$2")[$1]');
+
+            // 7. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
+            str = str.replace(/^>\s*(.+)$/gm, '#pad(left: 15pt)[_$1_]');
+
+            return str.trim();
+        }
+
+        // Varinha Mágica (Atua na seleção ou no texto completo)
+        $('#btnMagicMarkdown').click(function () {
+            const { textarea, start, end, text, selected } = getTypstEditorSelection();
+            const alvo = (selected && selected.trim().length > 0) ? selected : text;
+
+            if (!alvo || !alvo.trim()) {
+                return M.toast({ html: 'Nenhum texto para converter.', classes: 'rounded amber darken-3' });
+            }
+
+            const resultado = converterMarkdownParaTypst(alvo);
+
+            if (selected && selected.trim().length > 0) {
+                replaceTypstSelection(resultado, true);
+                M.toast({ html: '<i class="material-icons left tiny">auto_awesome</i>Trecho selecionado convertido de Markdown para Typst!', classes: 'rounded purple' });
+            } else {
+                textarea.value = resultado;
+                textarea.selectionStart = textarea.selectionEnd = 0;
+                textarea.focus();
+                $(textarea).trigger('input');
+                M.toast({ html: '<i class="material-icons left tiny">auto_awesome</i>Documento completo convertido de Markdown para Typst!', classes: 'rounded purple' });
+            }
+        });
+
+        // ==========================================
+        // Botões de Formatação Básica da Toolbar
+        // ==========================================
+        $('#btnToolBold').click(function () {
+            wrapTypstSelection('*', '*', 'texto em negrito');
+        });
+
+        $('#btnToolItalic').click(function () {
+            wrapTypstSelection('_', '_', 'texto em itálico');
+        });
+
+        $('#btnToolUnderline').click(function () {
+            wrapTypstSelection('#underline[', ']', 'texto sublinhado');
+        });
+
+        $('#btnToolCase').click(function () {
+            const { selected } = getTypstEditorSelection();
+            if (!selected) {
+                return M.toast({ html: 'Selecione um texto para alternar maiúsculas/minúsculas.', classes: 'rounded amber darken-3' });
+            }
+            const isUpper = selected === selected.toUpperCase();
+            const converted = isUpper ? selected.toLowerCase() : selected.toUpperCase();
+            replaceTypstSelection(converted, true);
+        });
+
+        // Títulos H1, H2, H3
+        $('#btnToolH1').click(function () {
+            wrapTypstSelection('\n= ', '\n', 'Título Principal');
+        });
+
+        $('#btnToolH2').click(function () {
+            wrapTypstSelection('\n== ', '\n', 'Título da Seção');
+        });
+
+        $('#btnToolH3').click(function () {
+            wrapTypstSelection('\n=== ', '\n', 'Subseção');
+        });
+
+        // Listas e Citação
+        $('#btnToolBullet').click(function () {
+            prefixLinesTypst('- ');
+        });
+
+        $('#btnToolNumber').click(function () {
+            prefixLinesTypst('+ ');
+        });
+
+        $('#btnToolQuote').click(function () {
+            wrapTypstSelection('\n#pad(left: 15pt)[_', '_]\n', 'Transcrição ou citação...');
+        });
+
+        // Linha Divisória e Quebra de Página
+        $('#btnToolLine').click(function () {
+            replaceTypstSelection('\n#v(0.3cm)\n#line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))\n#v(0.3cm)\n');
+        });
+
+        $('#btnToolPagebreak').click(function () {
+            replaceTypstSelection('\n#pagebreak()\n');
+        });
+
+        // ==========================================
+        // Inserção de Nota de Rodapé (#footnote)
+        // ==========================================
+        let savedFootnoteSelection = null;
+        $('#btnToolFootnote').click(function () {
+            savedFootnoteSelection = getTypstEditorSelection();
+            let defaultText = '';
+            if (savedFootnoteSelection.selected && savedFootnoteSelection.selected.length > 5 && !savedFootnoteSelection.selected.startsWith('[')) {
+                defaultText = savedFootnoteSelection.selected;
+            }
+            $('#inputFootnoteTexto').val(defaultText);
+            $('#modalInserirFootnote').modal('open');
+            setTimeout(() => $('#inputFootnoteTexto').focus(), 250);
+        });
+
+        $('#btnConfirmarFootnote').click(function () {
+            const textoNota = $('#inputFootnoteTexto').val().trim();
+            if (!textoNota) {
+                return M.toast({ html: 'Informe o texto da nota de rodapé!', classes: 'rounded red' });
+            }
+            const notaSanitizada = textoNota.replace(/\[/g, '(').replace(/\]/g, ')');
+            const snippet = `#footnote[${notaSanitizada}]`;
+
+            const textarea = document.getElementById('editorSplitCode');
+            if (savedFootnoteSelection) {
+                const { start, end, text } = savedFootnoteSelection;
+                textarea.value = text.substring(0, start) + snippet + text.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+            } else {
+                replaceTypstSelection(snippet);
+            }
+            textarea.focus();
+            $(textarea).trigger('input');
+            $('#modalInserirFootnote').modal('close');
+            M.toast({ html: 'Nota de rodapé (#footnote) inserida!', classes: 'rounded green' });
+        });
 
         // Atualizar próximo número ao alterar Tipo ou Ano
         $('#docTipo, #docAno').on('change', function () {

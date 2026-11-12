@@ -90,6 +90,78 @@ class TypstPdfService {
     }
 
     /**
+     * Converte marcações Markdown comuns em sintaxe válida Typst Markup
+     * Evita erros como "unclosed delimiter" e "expected identifier"
+     */
+    public static function markdownToTypstMarkup($texto) {
+        if (empty($texto) || !is_string($texto)) return "";
+
+        $str = $texto;
+
+        // 1. Extrai notas de rodapé Markdown estilo [^1]: texto explicativo
+        $footnotes = [];
+        if (preg_match_all('/^\[\^([a-zA-Z0-9_\-]+)\]:\s*(.+)$/m', $str, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $id = $m[1];
+                $desc = trim($m[2]);
+                $footnotes[$id] = $desc;
+            }
+            // Remove as definições de rodapé do corpo principal
+            $str = preg_replace('/^\[\^([a-zA-Z0-9_\-]+)\]:\s*.+$/m', '', $str);
+        }
+
+        // Substitui chamadas [^1] por #footnote[desc]
+        foreach ($footnotes as $id => $desc) {
+            $descSanit = str_replace(['[', ']'], ['(', ')'], $desc);
+            $str = str_replace("[^$id]", "#footnote[$descSanit]", $str);
+        }
+
+        // 2. Extrai referências numéricas finais do tipo [1] Texto da referência...
+        $refNumericas = [];
+        if (preg_match_all('/^\[([0-9]{1,3})\]\s+([^\n\r]+)$/m', $str, $matchesRef, PREG_SET_ORDER)) {
+            foreach ($matchesRef as $m) {
+                $id = $m[1];
+                $desc = trim($m[2]);
+                // Apenas se a descrição tiver tamanho significativo (evita falsos positivos)
+                if (strlen($desc) > 8) {
+                    $refNumericas[$id] = $desc;
+                }
+            }
+            if (!empty($refNumericas)) {
+                foreach ($refNumericas as $id => $desc) {
+                    // Remove a linha de referência do final
+                    $str = preg_replace('/^\[' . $id . '\]\s+.+$/m', '', $str);
+                    $descSanit = str_replace(['[', ']'], ['(', ')'], $desc);
+                    // Substitui a chamada [1] no texto por #footnote[desc]
+                    $str = preg_replace('/\[(' . $id . ')\]/', '#footnote[' . $descSanit . ']', $str);
+                }
+            }
+        }
+
+        // 3. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
+        $str = preg_replace_callback('/^(#{1,6})\s+(.+)$/m', function($m) {
+            $nivel = strlen($m[1]);
+            $equals = str_repeat('=', $nivel);
+            $titulo = trim($m[2]);
+            return "\n$equals $titulo\n";
+        }, $str);
+
+        // 4. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
+        $str = preg_replace('/\*\*(.+?)\*\*/s', '*$1*', $str);
+
+        // 5. Linha divisória (--- ou ***)
+        $str = preg_replace('/^(\-{3,}|\*{3,})\s*$/m', "\n#v(0.3cm)\n#line(length: 100%, stroke: 0.5pt + rgb(\"cbd5e1\"))\n#v(0.3cm)\n", $str);
+
+        // 6. Links [texto](url) -> #link("url")[texto]
+        $str = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/', '#link("$2")[$1]', $str);
+
+        // 7. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
+        $str = preg_replace('/^>\s*(.+)$/m', '#pad(left: 15pt)[_$1_]', $str);
+
+        return trim($str);
+    }
+
+    /**
      * Gera PDF de Documento Oficial do Conselho (Orientação Técnica, Parecer Opinativo, etc.)
      */
     public static function gerarDocumentoOficial($dadosArray, $retornarBase64 = true) {
@@ -98,7 +170,9 @@ class TypstPdfService {
         if (($dadosClean['modo_editor'] ?? '') === 'visual' && !empty($dadosClean['conteudo'])) {
             $dadosClean['conteudo_typst'] = self::htmlToTypst($dadosClean['conteudo']);
         } else {
-            $dadosClean['conteudo_typst'] = $dadosClean['conteudo'] ?? '';
+            // No modo split_code, pré-processa prevenindo quebras por Markdown acidental
+            $conteudoOriginal = $dadosClean['conteudo'] ?? '';
+            $dadosClean['conteudo_typst'] = self::markdownToTypstMarkup($conteudoOriginal);
         }
 
         $endpoint = self::$apiUrl . '/gerar_documento_oficial' . ($retornarBase64 ? '?base64=true' : '');
