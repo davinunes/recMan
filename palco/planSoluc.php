@@ -83,6 +83,18 @@ require "classes/repositorio.php";
                     </div>
 
                     <div class="col s12 m6 l2">
+                        <label for="parecer_voto" style="font-weight: 600;">Resultado Parecer (Voto):</label>
+                        <select id="parecer_voto" name="parecer_voto" class="browser-default custom-select-cobranca">
+                            <option value="padrao" <?php echo (!isset($_GET['parecer_voto']) || $_GET['parecer_voto'] == 'padrao') ? 'selected' : ''; ?>>Padrão (Sem resultado ou Manter)</option>
+                            <option value="todos" <?php echo (isset($_GET['parecer_voto']) && $_GET['parecer_voto'] == 'todos') ? 'selected' : ''; ?>>Todos os resultados</option>
+                            <option value="sem_resultado" <?php echo (isset($_GET['parecer_voto']) && $_GET['parecer_voto'] == 'sem_resultado') ? 'selected' : ''; ?>>Sem Resultado / Sem Voto</option>
+                            <option value="manter" <?php echo (isset($_GET['parecer_voto']) && $_GET['parecer_voto'] == 'manter') ? 'selected' : ''; ?>>Manter (Penalidade Confirmada)</option>
+                            <option value="revogar" <?php echo (isset($_GET['parecer_voto']) && $_GET['parecer_voto'] == 'revogar') ? 'selected' : ''; ?>>Revogar (Penalidade Cancelada)</option>
+                            <option value="converter" <?php echo (isset($_GET['parecer_voto']) && $_GET['parecer_voto'] == 'converter') ? 'selected' : ''; ?>>Converter (Em Advertência)</option>
+                        </select>
+                    </div>
+
+                    <div class="col s12 m6 l2">
                         <label for="bloco" style="font-weight: 600;">Bloco:</label>
                         <select id="bloco" name="bloco" class="browser-default custom-select-cobranca">
                             <option value="todos" <?php echo (!isset($_GET['bloco']) || $_GET['bloco'] == 'todos') ? 'selected' : ''; ?>>Todos os blocos</option>
@@ -113,7 +125,7 @@ require "classes/repositorio.php";
                 <div class="col s12 m7 l8">
                     <div class="search-wrapper-cobranca" style="position: relative;">
                         <i class="material-icons grey-text" style="position: absolute; left: 12px; top: 10px; font-size: 20px;">search</i>
-                        <input type="text" id="busca-rapida-cards" placeholder="Busca rápida em tempo real (ex: B-102, 2026, cobrado, deferido, R$ 250)..." style="padding-left: 40px; border-radius: 20px; border: 1px solid #cfd8dc; height: 40px; margin: 0; box-sizing: border-box; background: #f8fafc;">
+                        <input type="text" id="busca-rapida-cards" placeholder="Busca rápida em tempo real (ex: B-102, no prazo, cobrar, manter, revogar, R$ 250)..." style="padding-left: 40px; border-radius: 20px; border: 1px solid #cfd8dc; height: 40px; margin: 0; box-sizing: border-box; background: #f8fafc;">
                         <i class="material-icons grey-text hide" id="limpar-busca-rapida" style="position: absolute; right: 12px; top: 10px; font-size: 18px; cursor: pointer;" title="Limpar busca">close</i>
                     </div>
                 </div>
@@ -252,30 +264,40 @@ require "classes/repositorio.php";
 
     <?php
     // Lógica para buscar dados com filtros
-    if (isset($_GET['ano']) || isset($_GET['status']) || isset($_GET['tipo']) || isset($_GET['bloco']) || isset($_GET['cobrada'])) {
-        $ano = isset($_GET['ano']) && $_GET['ano'] != 'todos' ? $_GET['ano'] : null;
-        $status = isset($_GET['status']) && $_GET['status'] != 'todos' ? $_GET['status'] : null;
-        $tipo = isset($_GET['tipo']) && $_GET['tipo'] != 'todos' ? $_GET['tipo'] : null;
-        $bloco = isset($_GET['bloco']) && $_GET['bloco'] != 'todos' ? $_GET['bloco'] : null;
-        $multa_cobrada = isset($_GET['cobrada']) && $_GET['cobrada'] != 'todos' ? $_GET['cobrada'] : null;
-        $lista = getNotificacoesByFilters($ano, $status, $tipo, $bloco, $multa_cobrada);
-    } else {
-        $lista = getAllNotificacoes();
-    }
+    $ano = isset($_GET['ano']) && $_GET['ano'] != 'todos' ? $_GET['ano'] : null;
+    $status = isset($_GET['status']) && $_GET['status'] != 'todos' ? $_GET['status'] : null;
+    $tipo = isset($_GET['tipo']) && $_GET['tipo'] != 'todos' ? $_GET['tipo'] : null;
+    $bloco = isset($_GET['bloco']) && $_GET['bloco'] != 'todos' ? $_GET['bloco'] : null;
+    $multa_cobrada = isset($_GET['cobrada']) && $_GET['cobrada'] != 'todos' ? $_GET['cobrada'] : null;
+    $parecer_voto = isset($_GET['parecer_voto']) ? $_GET['parecer_voto'] : 'padrao';
+
+    $lista = getNotificacoesByFilters($ano, $status, $tipo, $bloco, $multa_cobrada, $parecer_voto);
 
     $totalRegistros = count($lista);
     $totalCobrados = 0;
     $totalPendentes = 0;
+    $totalNoPrazo = 0;
+    $totalDeveCobrar = 0;
     $valorTotalCobrado = 0.0;
 
     foreach ($lista as $it) {
-        if (!empty($it['multa_cobrada']) && $it['multa_cobrada'] == 'Sim') {
+        $itTemMulta = !empty($it['multa_cobrada']) && $it['multa_cobrada'] == 'Sim';
+        if ($itTemMulta) {
             $totalCobrados++;
             if (!empty($it['valor'])) {
                 $valorTotalCobrado += (float)$it['valor'];
             }
         } else {
             $totalPendentes++;
+            $itTemCiencia = !empty($it['dia_retirada']);
+            $itDifDias = isset($it['diferenca_dias']) && $it['diferenca_dias'] !== null ? (int)$it['diferenca_dias'] : null;
+            $itDiasEnvio = isset($it['dias_desde_envio']) && $it['dias_desde_envio'] !== null ? (int)$it['dias_desde_envio'] : null;
+            $itNoPrazo = (!$itTemCiencia && $itDiasEnvio !== null && $itDiasEnvio < 31) || ($itTemCiencia && $itDifDias !== null && $itDifDias < 7);
+            if ($itNoPrazo) {
+                $totalNoPrazo++;
+            } else {
+                $totalDeveCobrar++;
+            }
         }
     }
     ?>
@@ -295,7 +317,6 @@ require "classes/repositorio.php";
             <?php foreach ($lista as $item): 
                 $temMulta = !empty($item['multa_cobrada']) && $item['multa_cobrada'] == 'Sim';
                 $idNotificacao = $item['numero'] . '/' . $item['ano'];
-                $cardClasseStatus = $temMulta ? 'card-status-cobrado' : 'card-status-pendente';
                 
                 // Tipo badge
                 $tipoUpper = strtoupper($item['notificacao'] ?? '');
@@ -306,15 +327,45 @@ require "classes/repositorio.php";
                     $tipoBadgeClass = 'chip-tipo-notificacao';
                 }
 
-                // Prazo ciência
-                $diferencaDias = isset($item['diferenca_dias']) ? (int)$item['diferenca_dias'] : null;
+                // Prazo ciência e envio
+                $diferencaDias = isset($item['diferenca_dias']) && $item['diferenca_dias'] !== null ? (int)$item['diferenca_dias'] : null;
+                $diasDesdeEnvio = isset($item['dias_desde_envio']) && $item['dias_desde_envio'] !== null ? (int)$item['dias_desde_envio'] : null;
                 $temCiencia = !empty($item['dia_retirada']);
+                
+                // Regras de Prazo para Cobrança:
+                // 1) sem data de ciencia mas com envio há menos de 31 dias
+                // 2) com data de ciencia menor que 7 dias atrás
+                $estaNoPrazo = false;
+                $motivoPrazo = '';
+                $badgePrazoHtml = '';
+
+                if (!$temCiencia && $diasDesdeEnvio !== null && $diasDesdeEnvio < 31) {
+                    $estaNoPrazo = true;
+                    $restamDias = 31 - $diasDesdeEnvio;
+                    $motivoPrazo = "Sem data de ciência: enviada há {$diasDesdeEnvio} dias (restam {$restamDias}d do prazo limite de 31d para retirada)";
+                    $badgePrazoHtml = '<span class="badge-no-prazo-tag" title="' . htmlspecialchars($motivoPrazo) . '"><i class="material-icons tiny">schedule</i> No Prazo (' . $diasDesdeEnvio . '/31d)</span>';
+                } elseif ($temCiencia && $diferencaDias !== null && $diferencaDias < 7) {
+                    $estaNoPrazo = true;
+                    $restamDias = 7 - $diferencaDias;
+                    $motivoPrazo = "Com data de ciência há {$diferencaDias} dias (restam {$restamDias}d do prazo recursal de 7d)";
+                    $badgePrazoHtml = '<span class="badge-no-prazo-tag" title="' . htmlspecialchars($motivoPrazo) . '"><i class="material-icons tiny">schedule</i> No Prazo (' . $diferencaDias . '/7d)</span>';
+                }
+
+                // Classe do card status
+                if ($temMulta) {
+                    $cardClasseStatus = 'card-status-cobrado';
+                } elseif ($estaNoPrazo) {
+                    $cardClasseStatus = 'card-status-no-prazo';
+                } else {
+                    $cardClasseStatus = 'card-status-deve-cobrar';
+                }
                 
                 // Valor formatado
                 $valorNum = (!empty($item['valor']) && (float)$item['valor'] > 0) ? (float)$item['valor'] : 0.0;
                 $valorFormatado = $valorNum > 0 ? 'R$ ' . number_format($valorNum, 2, ',', '.') : '-';
 
                 $parecerTexto = trim($item['existe_parecer'] ?? '');
+                $votoApurado = !empty($item['resultado_voto']) ? strtolower(trim($item['resultado_voto'])) : null;
 
                 // Dados em formato seguro para busca rápida
                 $searchableText = strtolower(implode(' ', [
@@ -328,6 +379,8 @@ require "classes/repositorio.php";
                     $item['notificacao'] ?? '',
                     $item['status'] ?? '',
                     $temMulta ? 'cobrado sim paga' : 'pendente nao cobrado',
+                    $estaNoPrazo ? 'no prazo prazo aguardando' : 'deve cobrar cobrar já expirada pronta',
+                    $votoApurado ? 'voto ' . $votoApurado : 'sem voto',
                     $item['existe_recurso'] ? 'recurso sim' : 'sem recurso',
                     $parecerTexto,
                     $valorFormatado
@@ -337,6 +390,8 @@ require "classes/repositorio.php";
                  data-id="<?php echo htmlspecialchars($idNotificacao); ?>" 
                  data-search="<?php echo htmlspecialchars($searchableText); ?>"
                  data-cobrado="<?php echo $temMulta ? '1' : '0'; ?>"
+                 data-no-prazo="<?php echo $estaNoPrazo ? '1' : '0'; ?>"
+                 data-voto="<?php echo htmlspecialchars($votoApurado ?? 'sem_resultado'); ?>"
                  data-valor="<?php echo $valorNum; ?>"
                  data-parecer="<?php echo htmlspecialchars($parecerTexto); ?>">
                 
@@ -349,6 +404,15 @@ require "classes/repositorio.php";
                                 <?php echo htmlspecialchars($item['notificacao'] ?: 'NOTIFICAÇÃO'); ?>
                             </span>
                             <span class="card-cobranca-num">#<?php echo htmlspecialchars($idNotificacao); ?></span>
+                            <?php if (!$temMulta): ?>
+                                <?php if ($estaNoPrazo): ?>
+                                    <?php echo $badgePrazoHtml; ?>
+                                <?php else: ?>
+                                    <span class="badge-deve-cobrar-tag" title="Prazo esgotado! Notificação pronta para cobrança.">
+                                        <i class="material-icons tiny">notification_important</i> Cobrar Multa
+                                    </span>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
                             <div class="chip-unidade-destaque">
@@ -363,18 +427,21 @@ require "classes/repositorio.php";
 
                     <!-- Coluna 2: Bloco Financeiro (Cobrança, Valor, Vencimento, Pagamento) -->
                     <div class="cobranca-col-financeiro">
-                        <div class="box-financeiro-cobranca-row <?php echo $temMulta ? 'box-fin-pago' : 'box-fin-pendente'; ?>">
+                        <div class="box-financeiro-cobranca-row <?php echo $temMulta ? 'box-fin-pago' : ($estaNoPrazo ? 'box-fin-no-prazo' : 'box-fin-deve-cobrar'); ?>">
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.82rem;">
                                     <?php if ($temMulta): ?>
                                         <i class="material-icons green-text text-darken-2 tiny">check_circle</i>
                                         <span class="green-text text-darken-3">Cobrada</span>
+                                    <?php elseif ($estaNoPrazo): ?>
+                                        <i class="material-icons blue-text text-darken-2 tiny">hourglass_top</i>
+                                        <span class="blue-text text-darken-3">No Prazo</span>
                                     <?php else: ?>
-                                        <i class="material-icons amber-text text-darken-3 tiny">pending_actions</i>
-                                        <span class="amber-text text-darken-4">Pendente</span>
+                                        <i class="material-icons deep-orange-text text-darken-3 tiny">priority_high</i>
+                                        <span class="deep-orange-text text-darken-4">Cobrar Já</span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="valor-multa-destaque <?php echo $temMulta ? 'green-text text-darken-3' : 'grey-text text-darken-1'; ?>">
+                                <div class="valor-multa-destaque <?php echo $temMulta ? 'green-text text-darken-3' : ($estaNoPrazo ? 'blue-text text-darken-3' : 'deep-orange-text text-darken-4'); ?>">
                                     <?php echo $valorFormatado; ?>
                                 </div>
                             </div>
@@ -411,19 +478,36 @@ require "classes/repositorio.php";
                         </div>
                     </div>
 
-                    <!-- Coluna 4: Jurídico (Recurso e Parecer com suporte a clique triplo) -->
+                    <!-- Coluna 4: Jurídico (Voto do Parecer e Detalhes) -->
                     <div class="cobranca-col-juridico">
-                        <div style="font-size: 0.8rem; margin-bottom: 3px;">
+                        <div style="font-size: 0.8rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                             <span class="grey-text text-darken-1">Recurso:</span>
                             <b><?php echo !empty($item['existe_recurso']) ? '<span class="blue-text text-darken-2">Sim</span>' : '<span class="grey-text">Não</span>'; ?></b>
+                        </div>
+                        <div style="margin-bottom: 3px;">
+                            <?php if ($votoApurado === 'manter'): ?>
+                                <span class="chip-voto chip-voto-manter" title="Voto predominante do Conselho: MANTER penalidade">
+                                    <i class="material-icons tiny">gavel</i> Manter
+                                </span>
+                            <?php elseif ($votoApurado === 'revogar'): ?>
+                                <span class="chip-voto chip-voto-revogar" title="Voto predominante do Conselho: REVOGAR penalidade">
+                                    <i class="material-icons tiny">cancel</i> Revogar
+                                </span>
+                            <?php elseif ($votoApurado === 'converter'): ?>
+                                <span class="chip-voto chip-voto-converter" title="Voto predominante do Conselho: CONVERTER em Advertência">
+                                    <i class="material-icons tiny">swap_horiz</i> Converter
+                                </span>
+                            <?php else: ?>
+                                <span class="chip-voto chip-voto-sem-voto" title="Sem votos registrados de conselheiros">
+                                    Sem voto
+                                </span>
+                            <?php endif; ?>
                         </div>
                         <div>
                             <?php if (!empty($parecerTexto)): ?>
                                 <span class="chip-parecer parecer click-triplo-target" data-valor="<?php echo htmlspecialchars($parecerTexto); ?>" title="Clique 3x para ocultar todos com este parecer">
                                     ⚖️ <?php echo htmlspecialchars($parecerTexto); ?>
                                 </span>
-                            <?php else: ?>
-                                <span class="grey-text" style="font-size: 0.75rem;">Sem parecer</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -510,6 +594,85 @@ require "classes/repositorio.php";
 
 .card-status-pendente {
     border-left: 5px solid #f59e0b !important;
+}
+
+.card-status-no-prazo {
+    border-left: 5px solid #0288d1 !important;
+}
+
+.card-status-deve-cobrar {
+    border-left: 5px solid #e65100 !important;
+}
+
+.box-fin-no-prazo {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+}
+
+.box-fin-deve-cobrar {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+}
+
+.badge-no-prazo-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+}
+
+.badge-deve-cobrar-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.chip-voto {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.chip-voto-manter {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.chip-voto-revogar {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.chip-voto-converter {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.chip-voto-sem-voto {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    font-size: 0.72rem;
 }
 
 /* Colunas do Row-Card */
@@ -768,22 +931,30 @@ require "classes/repositorio.php";
         var total = 0;
         var cobrados = 0;
         var pendentes = 0;
+        var noPrazo = 0;
+        var deveCobrar = 0;
         var valorTotalCobrado = 0.0;
 
         $('.card-cobranca-wrapper:visible').each(function() {
             total++;
             var isCobrado = $(this).attr('data-cobrado') === '1';
+            var isNoPrazo = $(this).attr('data-no-prazo') === '1';
             if (isCobrado) {
                 cobrados++;
                 var v = parseFloat($(this).attr('data-valor') || 0);
                 if (!isNaN(v)) valorTotalCobrado += v;
             } else {
                 pendentes++;
+                if (isNoPrazo) {
+                    noPrazo++;
+                } else {
+                    deveCobrar++;
+                }
             }
         });
 
         var valorFmt = "R$ " + valorTotalCobrado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        var htmlStats = `<b>Total:</b> ${total} &nbsp;|&nbsp; <b class="green-text text-darken-2">Cobrados:</b> ${cobrados} (${valorFmt}) &nbsp;|&nbsp; <b class="amber-text text-darken-3">Pendentes:</b> ${pendentes}`;
+        var htmlStats = `<b>Total:</b> ${total} &nbsp;|&nbsp; <b class="green-text text-darken-2">Cobrados:</b> ${cobrados} (${valorFmt}) &nbsp;|&nbsp; <b class="amber-text text-darken-4">Pendentes:</b> ${pendentes} (<b class="blue-text text-darken-2" title="No prazo legal/regulamentar">⏳ ${noPrazo} no prazo</b> &nbsp;|&nbsp; <b class="deep-orange-text text-darken-3" title="Prazo esgotado: deve cobrar!">⚠️ ${deveCobrar} cobrar já</b>)`;
         var el = document.getElementById('stats-resumo-cobrancas');
         if (el) el.innerHTML = htmlStats;
     };
