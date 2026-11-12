@@ -53,3 +53,31 @@ Adicionar uma toolbar com botões intuitivos sobre o textarea `#editorSplitCode`
 
 ### 2.3 Resiliência no Backend (`TypstPdfService.php`)
 - Função `markdownToTypstMarkup($conteudo)` como camada de segurança transparente: se o usuário salvar ou digitar Markdown sem converter, o backend detecta e converte automaticamente antes de repassar ao `eval(conteudo_typst, mode: "markup")`, prevenindo qualquer erro de compilação.
+
+
+---
+
+## 3. Diagnóstico Complementar (Cifrão Monetário, Listas com Asterisco e Indexação `)[1]`)
+
+### Problemas Críticos Identificados no Texto Real:
+1. **Cifrão monetário `R$`**:
+   - No Typst markup, `$` abre e fecha o modo matemático (*math mode*).
+   - O texto continha 3 ocorrências de `R$` (`R$ 48.125,00`, `R$ 1.650.000,00`, `R$ 68.750,00`).
+   - Sendo 3 ocorrências (quantidade ímpar), o 3º `$` abriu o modo matemático e nunca fechou, gerando o erro fatal do Typst: `error: unclosed delimiter`.
+   - **Correção**: Substituir `R$` por `R\$` (e qualquer `$` antes de dígitos monetários por `\$`).
+
+2. **Listas do Markdown com asterisco (`* `)**:
+   - Em Markdown, listas aceitam `* Item`. No Typst, `*` é o delimitador de negrito.
+   - Ao iniciar linhas com `* `, o Typst abre um bloco de negrito. Com negritos internos no mesmo item, os asteriscos ficam desbalanceados e geram `unclosed delimiter`.
+   - **Correção**: Converter `^(\s*)\*\s+(.+)$` em `$1- $2` (hífen Typst).
+
+3. **Colisão de Indexação após Parênteses: `)[1]` e `)[6][12]`**:
+   - No Typst, uma expressão entre parênteses seguida de colchete `(...) [...]` é interpretada como indexação de array ou chamada de função!
+   - Trechos como `(Projeto nº 813743642)[1]` e `(cláusulas...)[6][12]` tentavam indexar o conteúdo dos parênteses como código.
+   - **Correção**: Escapar referências entre colchetes como `\[1\]`, `\[4\]`, `\[6\]` ou convertê-las em notas de rodapé quando houver definições.
+
+4. **Escapes de Markdown no cabeçalho: `1\.`**:
+   - Markdown costuma escapar o ponto (`1\.`) para não virar lista automática. No Typst isso deve ser limpo para `1.`.
+
+5. **Asteriscos redundantes nos títulos `=== *Título*`**:
+   - `===` já deixa o título negrito no Typst; limpar `=== *...*` para `=== ...`.

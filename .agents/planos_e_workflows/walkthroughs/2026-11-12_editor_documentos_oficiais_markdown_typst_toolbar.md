@@ -46,3 +46,15 @@ Adicionada barra ergonômica e moderna sobre o editor de código (`#editorSplitC
 ### 1.4 Blindagem Preventiva no Backend (`classes/typstPdfService.php`)
 - Criado o método `TypstPdfService::markdownToTypstMarkup($conteudo)`.
 - Mesmo se o usuário esquecer de usar a varinha mágica e enviar Markdown puro, o backend sanitiza e converte preventivamente a sintaxe antes de encaminhar ao compilador Typst, impedindo a ocorrência de erros fatais de compilação como `error: unclosed delimiter` ou `error: expected identifier`.
+
+
+---
+
+## 2. Ajuste Complementar: O mistério dos delimitadores revelado
+
+Ao testar com o texto real do usuário, identificamos exatamente a causa do `error: unclosed delimiter`:
+1. **O Cifrão Monetário `R$`**: No Typst, o caractere `$` delimita o modo matemático. Como o texto tinha 3 valores em reais (`R$ 48.125,00`, `R$ 1.650.000,00` e `R$ 68.750,00`), o terceiro `$` abriu o modo matemático e nunca fechou, gerando o `unclosed delimiter`. Tratamento: `R$` agora é escapado automaticamente para `R\$`.
+2. **Marcador de Lista com Asterisco (`* `)**: O Markdown usa `* ` para listas, mas no Typst isso abre negrito. Tratamento: linhas com `* ` no início agora viram listas válidas do Typst com hífen `- `.
+3. **Colisão de Sintaxe em `)[1]` e `)[6][12]`**: No Typst, parênteses seguidos de colchetes `(...) [...]` tentam indexar uma tupla/código. Tratamento: referências soltas entre colchetes agora são escapadas como `\[1\]`, `\[4\]`, `\[6\]`.
+4. **Escapes de Markdown (`1\.`)**: Limpos para `1.`.
+5. **Títulos com asterisco `=== *...*`**: Limpos para `=== ...`.

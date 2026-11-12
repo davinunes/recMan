@@ -138,7 +138,18 @@ class TypstPdfService {
             }
         }
 
-        // 3. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
+        // 3. Escapa referências numéricas soltas sem definição (ex: [1], [4], [6][12])
+        // No Typst, colchetes logo após parênteses ')...[1]' são lidos como indexação/chamada inválida
+        $str = preg_replace('/(?<!\\\\)\[([0-9]{1,3})\]/', '\\[$1\\]', $str);
+
+        // 4. Converte listas não-ordenadas do Markdown com asterisco (* Item) em hífen Typst (- Item)
+        // Isso é crucial porque no Typst '*' no início da linha abre um bloco de negrito infinito!
+        $str = preg_replace('/^(\s*)\*\s+(.+)$/m', '$1- $2', $str);
+
+        // 5. Remove barras de escape desnecessárias do Markdown antes de pontos (ex: 1\. -> 1.)
+        $str = preg_replace('/([0-9]+)\\\\\./', '$1.', $str);
+
+        // 6. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
         $str = preg_replace_callback('/^(#{1,6})\s+(.+)$/m', function($m) {
             $nivel = strlen($m[1]);
             $equals = str_repeat('=', $nivel);
@@ -146,16 +157,24 @@ class TypstPdfService {
             return "\n$equals $titulo\n";
         }, $str);
 
-        // 4. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
+        // 7. Limpa asteriscos redundantes nos títulos (ex: === *Título* -> === Título)
+        $str = preg_replace('/^(={1,6})\s*\*(.+?)\*\s*$/m', '$1 $2', $str);
+
+        // 8. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
         $str = preg_replace('/\*\*(.+?)\*\*/s', '*$1*', $str);
 
-        // 5. Linha divisória (--- ou ***)
+        // 9. Escapa cifrões monetários (R$ 100,00 ou $ 50) para não abrir o modo matemático do Typst ($...$)
+        // Um número ímpar de cifrões soltos gera fatalmente "error: unclosed delimiter"
+        $str = preg_replace('/(?<!\\\\)R\$/', 'R\\$', $str);
+        $str = preg_replace('/(?<!\\\\)\$(\s*[0-9])/', '\\$$1', $str);
+
+        // 10. Linha divisória (--- ou ***)
         $str = preg_replace('/^(\-{3,}|\*{3,})\s*$/m', "\n#v(0.3cm)\n#line(length: 100%, stroke: 0.5pt + rgb(\"cbd5e1\"))\n#v(0.3cm)\n", $str);
 
-        // 6. Links [texto](url) -> #link("url")[texto]
+        // 11. Links [texto](url) -> #link("url")[texto]
         $str = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/', '#link("$2")[$1]', $str);
 
-        // 7. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
+        // 12. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
         $str = preg_replace('/^>\s*(.+)$/m', '#pad(left: 15pt)[_$1_]', $str);
 
         return trim($str);

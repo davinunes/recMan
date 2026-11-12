@@ -639,23 +639,42 @@ $tiposCores = [
                 str = str.replace(new RegExp(`\\[${id}\\]`, 'g'), `#footnote[${descSafe}]`);
             }
 
-            // 3. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
+            // 3. Escapa referências numéricas soltas sem definição (ex: [1], [4], [6][12])
+            // No Typst, colchetes logo após parênteses ')...[1]' são lidos como indexação/chamada inválida
+            str = str.replace(/(?<!\\)\[([0-9]{1,3})\]/g, '\\[$1\\]');
+
+            // 4. Converte listas não-ordenadas do Markdown com asterisco (* Item) em hífen Typst (- Item)
+            // Isso é crucial porque no Typst '*' no início da linha abre um bloco de negrito infinito!
+            str = str.replace(/^(\s*)\*\s+(.+)$/gm, '$1- $2');
+
+            // 5. Remove barras de escape desnecessárias do Markdown antes de pontos (ex: 1\. -> 1.)
+            str = str.replace(/([0-9]+)\\\./g, '$1.');
+
+            // 6. Títulos Markdown (# -> =, ## -> ==, ### -> ===, etc.)
             str = str.replace(/^(#{1,6})\s+(.+)$/gm, function(m, hashes, title) {
                 const nivel = hashes.length;
                 const equals = "=".repeat(nivel);
                 return `\n${equals} ${title.trim()}\n`;
             });
 
-            // 4. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
+            // 7. Limpa asteriscos redundantes nos títulos (ex: === *Título* -> === Título)
+            str = str.replace(/^(={1,6})\s*\*(.+?)\*\s*$/gm, '$1 $2');
+
+            // 8. Negrito duplo Markdown (**texto**) -> Negrito Typst (*texto*)
             str = str.replace(/\*\*(.+?)\*\*/gs, '*$1*');
 
-            // 5. Linha divisória: --- ou *** -> Linha Typst
+            // 9. Escapa cifrões monetários (R$ 100,00 ou $ 50) para não abrir o modo matemático do Typst ($...$)
+            // Um número ímpar de cifrões soltos gera fatalmente "error: unclosed delimiter"
+            str = str.replace(/(?<!\\)R\$/g, 'R\\$');
+            str = str.replace(/(?<!\\)\$(\s*[0-9])/g, '\\$$1');
+
+            // 10. Linha divisória: --- ou *** -> Linha Typst
             str = str.replace(/^(\-{3,}|\*{3,})\s*$/gm, '\n#v(0.3cm)\n#line(length: 100%, stroke: 0.5pt + rgb("cbd5e1"))\n#v(0.3cm)\n');
 
-            // 6. Links [texto](url) -> #link("url")[texto]
+            // 11. Links [texto](url) -> #link("url")[texto]
             str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '#link("$2")[$1]');
 
-            // 7. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
+            // 12. Citações Markdown (> texto) -> #pad(left: 15pt)[_texto_]
             str = str.replace(/^>\s*(.+)$/gm, '#pad(left: 15pt)[_$1_]');
 
             return str.trim();
