@@ -1322,12 +1322,12 @@ function upsertVoto($dados)
 
         $titulo = "Voto Registrado";
         $mensagem = "O conselheiro $nome_usuario votou no recurso $numero_recurso";
-        $domain = "mini.davinunes.eti.br";
+        $url = "/index.php?pag=recurso&rec=" . urlencode($numero_recurso);
 
-        $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
-        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
+        require_once "push_helper.php";
+        sendPushBackground($titulo, $mensagem, $url);
 
-        exec($comando);
+
 
         return "ok";
     } else {

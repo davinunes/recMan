@@ -6,6 +6,35 @@ use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
 /**
+ * Obtém a configuração das chaves VAPID do sistema.
+ * Se o arquivo vapid.json não existir ou estiver corrompido, utiliza as chaves oficiais e restaura o arquivo físico.
+ * 
+ * @return array ['publicKey' => string, 'privateKey' => string]
+ */
+function getVapidConfig()
+{
+    $vapidPath = __DIR__ . '/vapid.json';
+    if (file_exists($vapidPath)) {
+        $content = @file_get_contents($vapidPath);
+        $data = json_decode($content, true);
+        if (is_array($data) && !empty($data['publicKey']) && !empty($data['privateKey']) && strpos($data['publicKey'], '{{') === false) {
+            return $data;
+        }
+    }
+
+    // Chaves oficiais do recMan compatíveis com inscrições já salvas no banco
+    $defaultKeys = [
+        'publicKey' => 'BGaKShgVE_Z2WPds6j9pUoLjuEBZ14io6fUXWDVBriycLhdvNHKdyHUP0g3LZXDLb9ZXsehEY5dbp1uC-NsdoZY',
+        'privateKey' => 'x-Av76CQzKwX3KqGbQ8ZaU81eBO3bAYu45llWTmziWY',
+    ];
+
+    // Tenta persistir para leituras rápidas subsequentes
+    @file_put_contents($vapidPath, json_encode($defaultKeys, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return $defaultKeys;
+}
+
+/**
  * Envia um Push Notification via Web (Celular ou Navegador)
  * 
  * @param string $titulo O Título do Pop Up
@@ -22,13 +51,12 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
             return false;
         }
 
-        $vapidPath = __DIR__ . '/vapid.json';
-        if (!file_exists($vapidPath)) {
-            error_log("Vapid file does not exist at $vapidPath");
+        $vapid = getVapidConfig();
+        if (empty($vapid['publicKey']) || empty($vapid['privateKey'])) {
+            error_log("Chaves VAPID não configuradas ou inválidas.");
             return false;
         }
 
-        $vapid = json_decode(file_get_contents($vapidPath), true);
         $auth = [
             'VAPID' => [
                 'subject' => 'mailto:admin@recman.miami', // Identificação obrigatória do Firebase

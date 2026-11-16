@@ -59,11 +59,11 @@ if (!$disparar) {
             echo "<li style='color:green;'>OK: Classe WebPush encontrada.</li>";
         }
 
-        $vapidPath = __DIR__ . '/classes/vapid.json';
-        if (!file_exists($vapidPath)) {
-            echo "<li style='color:red;'>ERRO: Arquivo $vapidPath não existe.</li>";
+        $vapid = getVapidConfig();
+        if (!empty($vapid['publicKey']) && !empty($vapid['privateKey'])) {
+            echo "<li style='color:green;'>OK: Chaves VAPID ativas (Pública: " . htmlspecialchars(substr($vapid['publicKey'], 0, 15)) . "...).</li>";
         } else {
-            echo "<li style='color:green;'>OK: Arquivo VAPID existe.</li>";
+            echo "<li style='color:red;'>ERRO: Chaves VAPID não configuradas.</li>";
         }
 
         $resTest = DBExecute('SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions');
@@ -78,7 +78,6 @@ if (!$disparar) {
 
         echo "<p><strong>Disparando notificação de teste...</strong></p>";
 
-        $vapid = json_decode(file_get_contents($vapidPath), true);
         $auth = [
             'VAPID' => [
                 'subject' => 'mailto:admin@recman.miami',
