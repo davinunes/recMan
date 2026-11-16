@@ -78,10 +78,10 @@ $documentos = [
     </script>
 
     <!-- Favicon Oficial do Conselho -->
-    <link rel="apple-touch-icon" sizes="180x180" href="logo-conselho.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="logo-conselho.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="logo-conselho.png">
-    <link rel="shortcut icon" href="logo-conselho.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo-conselho.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="logo-conselho.png?v=2">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo-conselho.png?v=2">
+    <link rel="shortcut icon" href="logo-conselho.png?v=2">
     
     <!-- Tailwind CSS & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -100,7 +100,7 @@ $documentos = [
     <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/95">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
-                <img src="logo-conselho.png" alt="Logo Oficial do Conselho" class="w-11 h-11 object-contain drop-shadow-sm">
+                <img src="logo-conselho.png?v=2" alt="Logo Oficial do Conselho" class="w-11 h-11 object-contain drop-shadow-sm">
                 <div>
                     <span class="text-xs uppercase font-bold tracking-wider text-orange-600 block leading-tight">Transparência & Governança</span>
                     <h1 class="text-lg sm:text-xl font-extrabold text-blue-900 leading-tight">Documentos Normativos & LGPD</h1>

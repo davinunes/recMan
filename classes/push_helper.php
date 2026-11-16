@@ -67,9 +67,13 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
 
         $webPush = new WebPush($auth);
 
-        // Icone padrão se não for passado (Novo Logo do Conselho)
+        // Icone padrão se não for passado (Novo Logo do Conselho) com Cache Busting
+        $iconFile = __DIR__ . '/../storage/icons/logo-conselho.png';
+        $v = file_exists($iconFile) ? filemtime($iconFile) : '20261116';
         if (!$icon) {
-            $icon = 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png';
+            $icon = 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png?v=' . $v;
+        } elseif (strpos($icon, 'logo-conselho.png') !== false && strpos($icon, '?') === false) {
+            $icon .= '?v=' . $v;
         }
 
         $sql = "SELECT id, user_id, endpoint, p256dh, auth, base_url FROM push_subscriptions";

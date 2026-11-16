@@ -1,3 +1,4 @@
+// Service Worker recMan - v2.2 (2026-11-16)
 self.addEventListener('push', function (event) {
     if (event.data) {
         let data = {};
@@ -14,8 +15,8 @@ self.addEventListener('push', function (event) {
 
         let options = {
             body: data.body,
-            icon: data.icon || 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png',
-            badge: data.badge || 'https://mini.davinunes.eti.br/favicon/logo-conselho/96-96.png',
+            icon: data.icon || 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png?v=20261116',
+            badge: data.badge || 'https://mini.davinunes.eti.br/favicon/logo-conselho/96-96.png?v=20261116',
             vibrate: [200, 100, 200, 100, 200, 100, 200], // vibração bacana de notificação
             data: { url: data.url }
         };

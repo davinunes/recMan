@@ -86,10 +86,13 @@ if (!$disparar) {
             ],
         ];
         $webPush = new \Minishlink\WebPush\WebPush($auth);
+        $iconFile = __DIR__ . '/storage/icons/logo-conselho.png';
+        $v = file_exists($iconFile) ? filemtime($iconFile) : '20261116';
         $payload = json_encode([
             'title' => 'Teste Manual de Diagnóstico',
             'body' => 'Disparado por conselheiro logado ID: ' . $_SESSION['user_id'],
-            'url' => '/'
+            'url' => '/',
+            'icon' => 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png?v=' . $v
         ]);
 
         echo "<h4>Resultados do Envio:</h4><ul>";
