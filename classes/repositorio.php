@@ -159,6 +159,7 @@ function updateParecer($dados)
             WHERE id = '$id'";
 
     if (DBExecute($sql)) {
+
         return true;
     } else {
         return false;
@@ -191,6 +192,26 @@ function finalizaParecer($dados)
     if (DBExecute($sqlParecer) && DBExecute($sqlRecurso)) {
         // Se ambas as atualizações forem bem-sucedidas, realiza o COMMIT
         DBExecute("COMMIT");
+        // Disparo de notificação push em background para os conselheiros
+        try {
+            require_once "push_helper.php";
+            if (!isset($_SESSION) && session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+            $finalizadorId = $userId ?: ($_SESSION['user_id'] ?? null);
+            $usuario = !empty($finalizadorId) ? getUsuariosById($finalizadorId) : null;
+            $nomeCompleto = trim($usuario['nome'] ?? 'Conselheiro');
+            $primeiroNome = explode(' ', $nomeCompleto)[0];
+
+            $titulo = "Parecer Publicado ($id)";
+            $mensagem = "$primeiroNome publicou o parecer $id";
+            $url = "/index.php?pag=recurso&rec=" . urlencode($id);
+
+            sendPushBackground($titulo, $mensagem, $url);
+        } catch (\Throwable $e) {
+            error_log("Erro ao enviar push de parecer publicado: " . $e->getMessage());
+        }
+
         return true;
     } else {
         // Se ocorrer algum erro, realiza o ROLLBACK
