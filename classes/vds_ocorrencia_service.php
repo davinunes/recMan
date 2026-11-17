@@ -1913,8 +1913,8 @@ function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConsel
     $ch = curl_init($urlSearch);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 12,
+        CURLOPT_CONNECTTIMEOUT => 6,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
@@ -1941,6 +1941,14 @@ function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConsel
     $regs = $data['regs'] ?? ($data['items'] ?? []);
 
     if (empty($regs[0])) {
+        // Gravar marcador em dados_json para evitar que protocolos inexistentes na VDS travem a fila em execuções seguintes
+        $stmtNotFound = mysqli_prepare($link, "UPDATE ocorrencias SET dados_json = '{\"vds_not_found\":true}' WHERE (id = ? OR protocolo_vds = ?) AND dados_json IS NULL");
+        if ($stmtNotFound) {
+            $tId = (int)$protoSearch;
+            mysqli_stmt_bind_param($stmtNotFound, "is", $tId, $protoSearch);
+            mysqli_stmt_execute($stmtNotFound);
+            mysqli_stmt_close($stmtNotFound);
+        }
         if ($closeLink) DBClose($link);
         return ['success' => false, 'message' => "Protocolo #{$protoSearch} não localizado na VDS."];
     }
@@ -2032,9 +2040,13 @@ function vds_enrich_legacy_ocorrencias($filtro = 'outros', $limit = 100, $delayM
     @mysqli_query($link, "UPDATE ocorrencias SET protocolo_vds = CAST(id AS CHAR) WHERE (protocolo_vds IS NULL OR protocolo_vds = '') AND id > 0");
 
     // 2. Montar cláusula WHERE conforme filtro selecionado
-    $sqlWhere = " WHERE id > 0 ";
+    // Ignora registros que já foram testados e confirmados como inexistentes na VDS (vds_not_found)
+    $sqlWhere = " WHERE id > 0 AND (dados_json IS NULL OR dados_json NOT LIKE '%vds_not_found%') ";
     if ($filtro === 'sem_uuid') {
         $sqlWhere .= " AND (uuid_remoto IS NULL OR uuid_remoto = '') ";
+    } elseif ($filtro === 'vds' || $filtro === 'vds_reais') {
+        // Foca estritamente nos protocolos legítimos da VDS (IDs até 7 dígitos) que precisam de UUID ou classificação
+        $sqlWhere .= " AND (uuid_remoto IS NULL OR uuid_remoto = '' OR oco_tipo IS NULL OR oco_tipo = 0 OR oco_tipo NOT IN (115,247,114,86,109,102,145,87,126,172) OR dados_json IS NULL) AND (LENGTH(protocolo_vds) <= 7 OR id < 10000000) ";
     } elseif ($filtro === 'todos') {
         // Todas as ocorrências
     } else {
