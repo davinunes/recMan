@@ -50,6 +50,10 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
 
     $dadosJsonLoc = !empty($local['dados_json']) ? json_decode($local['dados_json'], true) : [];
     
+    // Obter Delays e Duplicidades da Ocorrência
+    $delays = $detalheSel['delays'] ?? vds_calcular_delays_ocorrencia($local, [], $notas);
+    $duplicidades = $detalheSel['duplicidades'] ?? vds_get_duplicidades_ocorrencia($local['id']);
+
     // Verificar status de leitura relacional específico para este conselheiro
     $linkL = DBConnect();
     vds_ensure_leitura_table_exists($linkL);
@@ -89,14 +93,40 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
                     Bloco <?= htmlspecialchars($local['bloco']) ?> - Unidade <?= htmlspecialchars($local['unidade']) ?> 
                     <small style="color:#666;">(Protocolo: <?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>)</small>
                 </h6>
-                <div style="font-size: 0.8rem; color: #666;">
-                    Abertura: <?= htmlspecialchars($local['abertura']) ?>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap;">
+                    <span style="font-size: 0.78rem; color: #666;">
+                        Abertura: <?= htmlspecialchars($local['abertura']) ?>
+                    </span>
+
+                    <?php if (!empty($delays['is_resolvido'])): ?>
+                        <!-- Chamado Resolvido: Indicador Único da Abertura até a Última Interação -->
+                        <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;" title="Tempo total do atendimento: da abertura (<?= $delays['data_abertura_formatada'] ?>) até a última resposta (<?= $delays['data_ultima_interacao_formatada'] ?>)">
+                            <i class="material-icons tiny" style="font-size:0.95rem;">check_circle</i>
+                            <span><?= htmlspecialchars($delays['texto_resolucao']) ?></span>
+                        </span>
+                    <?php else: ?>
+                        <!-- Chamado Aberto/Pendente: Dias desde a abertura até hoje E dias desde a última interação até hoje -->
+                        <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:#e3f2fd; color:#0d47a1; border:1px solid #bbdefb;" title="Abertura do chamado: <?= $delays['data_abertura_formatada'] ?>">
+                            <i class="material-icons tiny" style="font-size:0.95rem;">schedule</i>
+                            <span><?= htmlspecialchars($delays['texto_abertura']) ?></span>
+                        </span>
+                        <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:<?= $delays['bg_interacao'] ?>; color:<?= $delays['cor_interacao'] ?>; border:1px solid rgba(0,0,0,0.12);" title="Última interação registrada: <?= $delays['data_ultima_interacao_formatada'] ?>">
+                            <i class="material-icons tiny" style="font-size:0.95rem;">forum</i>
+                            <span><?= htmlspecialchars($delays['texto_interacao']) ?></span>
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
         <!-- Botões Práticos com Ações AJAX Silenciosas (Sem Reload e Sem Skeleton) -->
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <!-- Botão Linkar Duplicidade -->
+            <button type="button" id="btn-linkar-duplicidade" class="btn-small waves-effect waves-light white grey-text text-darken-3" style="height:30px; line-height:30px; padding:0 8px; font-size:0.8rem; border:1px solid #dadce0; box-shadow:none; display:inline-flex; align-items:center; gap:4px;" title="Linkar como Duplicidade de outro chamado" onclick="abrirModalLinkarDuplicidade(<?= (int)$local['id'] ?>, '<?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>')">
+                <i class="material-icons tiny deep-orange-text text-darken-2" style="font-size:1.1rem; margin:0;">content_copy</i>
+                <span>Linkar Duplicado</span>
+            </button>
+
             <!-- Botão Encaminhar (VDS Remoto) - Discreto antes dos botões de responsabilidade -->
             <button type="button" id="btn-encaminhar-vds" class="btn-small waves-effect waves-light white grey-text text-darken-3" style="height:30px; line-height:30px; padding:0 8px; font-size:0.8rem; border:1px solid #dadce0; box-shadow:none; display:inline-flex; align-items:center; gap:4px;" title="Encaminhar Ocorrência para Grupo ou Funcionário na VDS" onclick="abrirModalEncaminharVds('<?= htmlspecialchars($local['uuid_remoto'] ?? '') ?>', <?= (int)$local['id'] ?>)">
                 <i class="material-icons tiny indigo-text text-darken-2" style="font-size:1.1rem; margin:0;">shortcut</i>
@@ -178,6 +208,64 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
             </button>
         </div>
     </div>
+
+    <!-- Alertas e Vínculos de Duplicidade -->
+    <?php if (!empty($duplicidades['eh_duplicada']) && !empty($duplicidades['principal'])): ?>
+        <?php $p = $duplicidades['principal']; ?>
+        <div class="card-panel orange lighten-5 orange-text text-darken-4 z-depth-1" style="margin: 8px 20px; padding: 10px 14px; border-left: 5px solid #ff9800; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="material-icons" style="font-size: 1.8rem; color: #e65100;">content_copy</i>
+                <div>
+                    <strong style="font-size: 0.9rem; color: #bf360c; display:flex; align-items:center; gap:4px;">
+                        <span>⚠️ PEDIDO DUPLICADO</span>
+                        <span style="font-weight:normal; font-size:0.8rem; color:#666;">(Marcado como cópia)</span>
+                    </strong>
+                    <span style="font-size: 0.82rem; color: #444;">
+                        Esta ocorrência é duplicada do chamado <strong>#<?= htmlspecialchars($p['protocolo_vds'] ?? $p['outro_id']) ?></strong>
+                        (Bloco <?= htmlspecialchars($p['bloco']) ?> - Apt <?= htmlspecialchars($p['unidade']) ?>)
+                        <?php if (!empty($p['motivo']) && $p['motivo'] !== 'Pedido duplicado'): ?>
+                            - <em><?= htmlspecialchars($p['motivo']) ?></em>
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" class="btn-small waves-effect waves-light orange darken-2 white-text" style="font-size: 0.78rem; height: 28px; line-height: 28px; padding: 0 10px; text-transform:none; border-radius:4px;" onclick="selecionarOcorrencia(<?= (int)$p['outro_id'] ?>)">
+                    <i class="material-icons left tiny" style="margin-right:3px;">open_in_new</i> Ver Chamado Original
+                </button>
+                <button type="button" onclick="desvincularDuplicidadeAjax(<?= (int)$p['link_id'] ?>, <?= (int)$local['id'] ?>)" class="btn-small btn-flat grey lighten-3 red-text text-darken-3" style="font-size: 0.78rem; height: 28px; line-height: 28px; padding: 0 8px; border:1px solid #ffccbc; border-radius:4px;" title="Remover este vínculo de duplicidade">
+                    <i class="material-icons tiny left" style="margin-right:2px;">link_off</i> Desvincular
+                </button>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($duplicidades['possui_duplicadas']) && !empty($duplicidades['duplicadas'])): ?>
+        <?php foreach ($duplicidades['duplicadas'] as $dupItem): ?>
+            <div class="card-panel blue lighten-5 blue-text text-darken-4 z-depth-1" style="margin: 8px 20px; padding: 10px 14px; border-left: 5px solid #2196f3; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="material-icons" style="font-size: 1.8rem; color: #1565c0;">call_split</i>
+                    <div>
+                        <strong style="font-size: 0.9rem; color: #0d47a1; display:flex; align-items:center; gap:4px;">
+                            <span>ℹ️ POSSUI DUPLICIDADE VINCULADA</span>
+                        </strong>
+                        <span style="font-size: 0.82rem; color: #333;">
+                            O chamado <strong>#<?= htmlspecialchars($dupItem['protocolo_vds'] ?? $dupItem['outro_id']) ?></strong>
+                            (Bloco <?= htmlspecialchars($dupItem['bloco']) ?> - Apt <?= htmlspecialchars($dupItem['unidade']) ?>) foi marcado como duplicado deste.
+                        </span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button type="button" class="btn-small waves-effect waves-light blue darken-2 white-text" style="font-size: 0.78rem; height: 28px; line-height: 28px; padding: 0 10px; text-transform:none; border-radius:4px;" onclick="selecionarOcorrencia(<?= (int)$dupItem['outro_id'] ?>)">
+                        <i class="material-icons left tiny" style="margin-right:3px;">open_in_new</i> Ver Chamado Duplicado
+                    </button>
+                    <button type="button" onclick="desvincularDuplicidadeAjax(<?= (int)$dupItem['link_id'] ?>, <?= (int)$local['id'] ?>)" class="btn-small btn-flat grey lighten-3 red-text text-darken-3" style="font-size: 0.78rem; height: 28px; line-height: 28px; padding: 0 8px; border:1px solid #bbdefb; border-radius:4px;" title="Remover vínculo de duplicidade">
+                        <i class="material-icons tiny left" style="margin-right:2px;">link_off</i> Desvincular
+                    </button>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 
     <?php
     // Identificar protocolo para busca no Gmail (habilitado para todos os tipos com protocolo)
@@ -439,7 +527,9 @@ if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'carregar_de
         'success' => !empty($detalheSel),
         'ocorrencia_id' => $selId,
         'html' => $htmlChat,
-        'local' => $detalheSel['local'] ?? null
+        'local' => $detalheSel['local'] ?? null,
+        'duplicidades' => $detalheSel['duplicidades'] ?? null,
+        'delays' => $detalheSel['delays'] ?? null
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -727,6 +817,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($resEnc, JSON_UNESCAPED_UNICODE);
         exit;
+    } elseif ($action === 'linkar_duplicidade') {
+        $ocorrenciaId = (int)($_POST['ocorrencia_id'] ?? 0);
+        $alvoProtocolo = trim($_POST['alvo_protocolo'] ?? '');
+        $tipoRelacao = trim($_POST['tipo_relacao'] ?? 'atual_duplicada');
+        $motivo = trim($_POST['motivo'] ?? 'Pedido duplicado');
+
+        $resLinkDup = vds_linkar_ocorrencias_duplicadas($ocorrenciaId, $alvoProtocolo, $usuarioIdConselho, $tipoRelacao, $motivo);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array_merge([
+                'action' => 'linkar_duplicidade',
+                'ocorrencia_id' => $ocorrenciaId
+            ], $resLinkDup), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $msg = $resLinkDup['message'] ?? 'Ação de duplicidade executada.';
+        $msgType = $resLinkDup['success'] ? 'success' : 'danger';
+    } elseif ($action === 'desvincular_duplicidade') {
+        $linkId = (int)($_POST['link_id'] ?? 0);
+        $ocorrenciaId = (int)($_POST['ocorrencia_id'] ?? 0);
+
+        $resDesv = vds_desvincular_ocorrencia_duplicada($linkId, $ocorrenciaId);
+
+        if (!empty($_REQUEST['is_ajax'])) {
+            if (ob_get_length()) ob_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array_merge([
+                'action' => 'desvincular_duplicidade',
+                'link_id' => $linkId,
+                'ocorrencia_id' => $ocorrenciaId
+            ], $resDesv), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $msg = $resDesv['message'] ?? 'Vínculo removido.';
+        $msgType = $resDesv['success'] ? 'success' : 'danger';
     }
 }
 
@@ -1143,6 +1272,20 @@ if (!$detalheSel && $selId) {
                 <?php endif; ?>
             </div>
         <?php else: ?>
+            <?php
+            // Carregar mapa de duplicidades para badges na sidebar
+            $mapaDuplicadasSidebar = [];
+            $linkDupS = DBConnect();
+            vds_ensure_duplicadas_table_exists($linkDupS);
+            $resDupS = mysqli_query($linkDupS, "SELECT ocorrencia_id_principal, ocorrencia_id_duplicada FROM ocorrencia_duplicadas");
+            if ($resDupS) {
+                while ($rD = mysqli_fetch_assoc($resDupS)) {
+                    $mapaDuplicadasSidebar[(int)$rD['ocorrencia_id_duplicada']]['eh_duplicada'] = true;
+                    $mapaDuplicadasSidebar[(int)$rD['ocorrencia_id_principal']]['possui_duplicadas'] = true;
+                }
+            }
+            DBClose($linkDupS);
+            ?>
             <!-- Lista Agrupada por Tipo/Categoria de Ocorrência -->
             <?php foreach ($ocorrenciasAgrupadas as $tId => $groupItems): ?>
                 <?php
@@ -1170,8 +1313,11 @@ if (!$detalheSel && $selId) {
                             $isSel = ($selId == $oco['id']);
                             $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
                             $isAuditoriaItem = !empty($oco['auditoria']);
+                            $hasDupSidebar = !empty($mapaDuplicadasSidebar[$oco['id']]);
+                            $delaysSidebar = vds_calcular_delays_ocorrencia($oco);
                             $searchAuditoria = $isAuditoriaItem ? ' auditoria pendente' : '';
-                            $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . $searchAuditoria . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
+                            $searchDup = $hasDupSidebar ? ' duplicada duplicidade' : '';
+                            $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . $searchAuditoria . $searchDup . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
                             ?>
                             <div class="item-oco <?= $isSel ? 'active' : '' ?>" id="item-oco-<?= $oco['id'] ?>" data-id="<?= $oco['id'] ?>" data-search="<?= htmlspecialchars($searchContext) ?>" onclick="selecionarOcorrencia(<?= $oco['id'] ?>, this, event)">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -1179,6 +1325,11 @@ if (!$detalheSel && $selId) {
                                         <?= htmlspecialchars($infoTipo['nome']) ?>
                                     </span>
                                     <div style="display:flex; align-items:center; gap:4px;">
+                                        <?php if ($hasDupSidebar): ?>
+                                            <span class="badge-dup-sidebar" style="background:#fff3e0; color:#e65100; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffe0b2;" title="<?= !empty($mapaDuplicadasSidebar[$oco['id']]['eh_duplicada']) ? 'Chamado marcado como duplicidade' : 'Chamado possui duplicidade vinculada' ?>">
+                                                🔗 DUP
+                                            </span>
+                                        <?php endif; ?>
                                         <span class="badge-auditoria-sidebar" style="display:<?= $isAuditoriaItem ? 'inline-block' : 'none' ?>; background:#fff3cd; color:#856404; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffeeba;" title="Chamado sob Auditoria / Pendência">
                                             🔍 AUDITORIA
                                         </span>
@@ -1193,7 +1344,18 @@ if (!$detalheSel && $selId) {
                                 </div>
 
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                                    <span>Resp: <strong class="resp-text-label"><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
+                                    <span style="display:inline-flex; align-items:center; gap:4px;">
+                                        <span>Resp: <strong class="resp-text-label"><?= strtoupper($oco['responsabilidade'] ?? 'Pendente') ?></strong></span>
+                                        <?php if (!empty($delaysSidebar['is_resolvido'])): ?>
+                                            <span class="badge-delay-sidebar" style="font-size:0.7rem; color:#2e7d32; background:#e8f5e9; padding:1px 5px; border-radius:4px; font-weight:600;" title="Tempo total: <?= htmlspecialchars($delaysSidebar['texto_resolucao']) ?>">
+                                                🏁 <?= $delaysSidebar['dias_resolucao'] ?>d
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge-delay-sidebar" style="font-size:0.7rem; color:<?= $delaysSidebar['cor_interacao'] ?>; background:<?= $delaysSidebar['bg_interacao'] ?>; padding:1px 5px; border-radius:4px; font-weight:600;" title="<?= htmlspecialchars($delaysSidebar['texto_abertura']) ?> • <?= htmlspecialchars($delaysSidebar['texto_interacao']) ?>">
+                                                ⏱️ <?= $delaysSidebar['dias_abertura'] ?>d • 💬 <?= $delaysSidebar['dias_ultima_interacao'] ?>d
+                                            </span>
+                                        <?php endif; ?>
+                                    </span>
                                     <span class="status-resolvido-label" style="color: <?= $oco['resolvido'] ? '#28a745' : '#dc3545' ?>;">
                                         <?= $oco['resolvido'] ? '✓ Resolvido' : '• Aberto' ?>
                                     </span>
@@ -2450,6 +2612,61 @@ function abrirModalVisualizarEmailGmail(messageId) {
     </div>
 </div>
 
+<!-- Modal Linkar Ocorrência Duplicada -->
+<div id="modal-linkar-duplicidade" class="modal" style="max-width:520px; border-radius:10px; overflow:visible;">
+    <div class="modal-content" style="padding:20px 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:16px;">
+            <h5 style="margin:0; font-size:1.15rem; font-weight:600; color:#e65100; display:flex; align-items:center; gap:8px;">
+                <i class="material-icons">content_copy</i>
+                <span>Linkar Ocorrência Duplicada</span>
+            </h5>
+            <button type="button" class="modal-close btn-flat circle waves-effect" style="padding:4px; margin:0;"><i class="material-icons">close</i></button>
+        </div>
+
+        <input type="hidden" id="dup-oco-id" value="" />
+
+        <div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:6px; padding:10px 14px; margin-bottom:16px; font-size:0.85rem; color:#bf360c;">
+            Chamado selecionado: <strong id="dup-oco-info-proto">-</strong>
+        </div>
+
+        <!-- Protocolo ou ID da outra Ocorrência -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:4px;">Número do Protocolo ou ID da outra Ocorrência:</label>
+            <input type="text" id="dup-alvo-protocolo" placeholder="Ex: 259564 ou 105" autocomplete="off" style="height:38px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.9rem; width:100%; box-sizing:border-box; background:#fff; margin:0;" />
+            <small style="color:#777; font-size:0.75rem; display:block; margin-top:3px;">Digite o número do protocolo VDS ou o ID local do chamado.</small>
+        </div>
+
+        <!-- Tipo de Relação (Esta é a duplicada vs Esta é a principal) -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:6px;">Definição do Vínculo:</label>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <label style="margin:0; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    <input name="dup_tipo_relacao" type="radio" value="atual_duplicada" checked />
+                    <span style="font-size:0.88rem; color:#333;">O chamado atual <strong>é o DUPLICADO</strong> (cópia de um chamado anterior)</span>
+                </label>
+                <label style="margin:0; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    <input name="dup_tipo_relacao" type="radio" value="atual_principal" />
+                    <span style="font-size:0.88rem; color:#333;">O chamado atual <strong>é o ORIGINAL</strong> (o outro chamado é duplicata deste)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Motivo Opcional -->
+        <div style="margin-bottom:8px;">
+            <label style="font-weight:600; color:#444; font-size:0.85rem; display:block; margin-bottom:4px;">Motivo / Observação:</label>
+            <input type="text" id="dup-motivo" value="Pedido duplicado" placeholder="Ex: Pedido duplicado, morador abriu 2 vezes..." style="height:36px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.85rem; width:100%; box-sizing:border-box; background:#fff; margin:0;" />
+        </div>
+    </div>
+
+    <div class="modal-footer" style="padding:12px 24px; background:#f8f9fa; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="modal-close btn-flat waves-effect" style="color:#666;">Cancelar</button>
+        <button type="button" id="btn-executar-linkar-dup" class="btn waves-effect waves-light orange darken-3" style="border-radius:6px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;" onclick="submeterLinkarDuplicidade()">
+            <i class="material-icons tiny">link</i>
+            <span>Linkar Duplicidade</span>
+        </button>
+    </div>
+</div>
+
 <script>
 // Abrir Modal de Encaminhamento VDS
 window.abrirModalEncaminharVds = function(uuidRemoto, ocorrenciaId) {
@@ -2591,6 +2808,123 @@ window.submeterEncaminharVds = function() {
         error: function(err) {
             $btn.prop('disabled', false).css('opacity', '1').html('<i class="material-icons tiny">send</i> <span>Encaminhar Chamado</span>');
             M.toast({ html: 'Erro de conexão ao encaminhar ocorrência.', classes: 'red' });
+        }
+    });
+};
+
+// Abrir Modal de Linkar Duplicidade
+window.abrirModalLinkarDuplicidade = function(ocorrenciaId, protocolo) {
+    if (!ocorrenciaId) {
+        M.toast({ html: 'Nenhuma ocorrência selecionada.', classes: 'orange' });
+        return;
+    }
+
+    $('#dup-oco-id').val(ocorrenciaId);
+    $('#dup-oco-info-proto').text('#' + (protocolo || ocorrenciaId));
+    $('#dup-alvo-protocolo').val('');
+    $('#dup-motivo').val('Pedido duplicado');
+    $('input[name="dup_tipo_relacao"][value="atual_duplicada"]').prop('checked', true);
+
+    const $modal = $('#modal-linkar-duplicidade');
+    if ($modal.length) {
+        const instance = M.Modal.getInstance($modal[0]) || M.Modal.init($modal[0]);
+        instance.open();
+        setTimeout(function() {
+            $('#dup-alvo-protocolo').focus();
+        }, 200);
+    }
+};
+
+// Submeter vínculo de duplicidade via AJAX
+window.submeterLinkarDuplicidade = function() {
+    const ocorrenciaId = parseInt($('#dup-oco-id').val());
+    const alvoProtocolo = $.trim($('#dup-alvo-protocolo').val());
+    const tipoRelacao = $('input[name="dup_tipo_relacao"]:checked').val() || 'atual_duplicada';
+    const motivo = $.trim($('#dup-motivo').val()) || 'Pedido duplicado';
+    const $btn = $('#btn-executar-linkar-dup');
+
+    if (!alvoProtocolo) {
+        M.toast({ html: 'Informe o protocolo ou ID da outra ocorrência.', classes: 'orange' });
+        $('#dup-alvo-protocolo').focus();
+        return;
+    }
+
+    $btn.prop('disabled', true).css('opacity', '0.7').html('<i class="material-icons tiny spin-icon left">sync</i> Salvando...');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'linkar_duplicidade',
+            ocorrencia_id: ocorrenciaId,
+            alvo_protocolo: alvoProtocolo,
+            tipo_relacao: tipoRelacao,
+            motivo: motivo
+        },
+        dataType: 'json',
+        success: function(res) {
+            $btn.prop('disabled', false).css('opacity', '1').html('<i class="material-icons tiny">link</i> <span>Linkar Duplicidade</span>');
+
+            if (res && res.success) {
+                M.toast({ html: res.message || 'Duplicidade linkada com sucesso!', classes: 'green' });
+                const $modal = $('#modal-linkar-duplicidade');
+                if ($modal.length) {
+                    const instance = M.Modal.getInstance($modal[0]);
+                    if (instance) instance.close();
+                }
+
+                // Atualizar badge DUP na sidebar no item atual
+                const $itemSide = $('#item-oco-' + ocorrenciaId);
+                if ($itemSide.length && !$itemSide.find('.badge-dup-sidebar').length) {
+                    $itemSide.find('.badge-tipo').after(' <span class="badge-dup-sidebar" style="background:#fff3e0; color:#e65100; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:3px; border:1px solid #ffe0b2;" title="Chamado possui vínculo de duplicidade">🔗 DUP</span>');
+                }
+
+                // Recarregar o chat para exibir o alerta de duplicidade imediatamente
+                if (typeof selecionarOcorrencia === 'function') {
+                    selecionarOcorrencia(ocorrenciaId, null, null, false);
+                }
+            } else {
+                M.toast({ html: (res && res.message) ? res.message : 'Falha ao linkar duplicidade.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            $btn.prop('disabled', false).css('opacity', '1').html('<i class="material-icons tiny">link</i> <span>Linkar Duplicidade</span>');
+            M.toast({ html: 'Erro de conexão ao linkar duplicidade.', classes: 'red' });
+        }
+    });
+};
+
+// Desvincular duplicidade via AJAX
+window.desvincularDuplicidadeAjax = function(linkId, ocorrenciaId) {
+    if (!linkId) return;
+
+    if (!confirm('Deseja realmente remover o vínculo de duplicidade desta ocorrência?')) {
+        return;
+    }
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'desvincular_duplicidade',
+            link_id: linkId,
+            ocorrencia_id: ocorrenciaId
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success) {
+                M.toast({ html: res.message || 'Vínculo de duplicidade removido com sucesso!', classes: 'green' });
+                if (typeof selecionarOcorrencia === 'function' && ocorrenciaId) {
+                    selecionarOcorrencia(ocorrenciaId, null, null, false);
+                }
+            } else {
+                M.toast({ html: (res && res.message) ? res.message : 'Falha ao desvincular duplicidade.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            M.toast({ html: 'Erro de conexão ao desvincular duplicidade.', classes: 'red' });
         }
     });
 };

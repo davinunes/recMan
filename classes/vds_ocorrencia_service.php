@@ -455,11 +455,32 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
         }
     }
 
+    // 6. Consultar vínculos de duplicidade
+    $duplicidades = vds_get_duplicidades_ocorrencia($ocorrencia['id']);
+
+    // 7. Extrair eventos remotos consolidados para cálculo de delay
+    $eventosParaDelay = [];
+    if (!empty($remoteData)) {
+        if (isset($remoteData['eventos']) && is_array($remoteData['eventos'])) {
+            $eventosParaDelay = $remoteData['eventos'];
+        } elseif (isset($remoteData['regs']) && is_array($remoteData['regs'])) {
+            $eventosParaDelay = $remoteData['regs'];
+        } elseif (isset($remoteData['data']['eventos']) && is_array($remoteData['data']['eventos'])) {
+            $eventosParaDelay = $remoteData['data']['eventos'];
+        } elseif (is_array($remoteData) && isset($remoteData[0])) {
+            $eventosParaDelay = $remoteData;
+        }
+    }
+
+    $delays = vds_calcular_delays_ocorrencia($ocorrencia, $eventosParaDelay, $notasInternas);
+
     return [
         'local' => $ocorrencia,
         'notasInternas' => $notasInternas,
         'tagsUnidades' => $tagsUnidades,
         'remoteData' => $remoteData,
+        'duplicidades' => $duplicidades,
+        'delays' => $delays,
         'debug' => $debug
     ];
 }
@@ -965,6 +986,394 @@ function vds_ensure_leitura_table_exists($link) {
 }
 
 /**
+ * Converte diferentes formatos de data/hora retornados pela VDS ou banco para timestamp Unix.
+ */
+function vds_parse_datetime_to_timestamp($dtStr) {
+    if (empty($dtStr)) return null;
+    $dtStr = trim($dtStr);
+    
+    // Formato BR com hora: 17/11/2026 14:30:00 ou 17/11/2026 14:30
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/', $dtStr, $m)) {
+        $dia = (int)$m[1];
+        $mes = (int)$m[2];
+        $ano = (int)$m[3];
+        $hora = isset($m[4]) ? (int)$m[4] : 0;
+        $min = isset($m[5]) ? (int)$m[5] : 0;
+        $sec = isset($m[6]) ? (int)$m[6] : 0;
+        return mktime($hora, $min, $sec, $mes, $dia, $ano);
+    }
+
+    // Formato ISO ou SQL: 2026-11-17 14:30:00 ou 2026-11-17T14:30:00Z
+    $ts = strtotime($dtStr);
+    if ($ts !== false && $ts > 0) {
+        return $ts;
+    }
+
+    return null;
+}
+
+/**
+ * Calcula sinalizadores de delay no atendimento para uma ocorrência.
+ * - Chamados abertos/pendentes: quantos dias desde a abertura até hoje, e quantos dias desde a última interação até hoje.
+ * - Chamados resolvidos: mantém apenas um indicador da abertura até a última interação (tempo total de resolução).
+ */
+function vds_calcular_delays_ocorrencia($local, $eventosRemotos = [], $notasInternas = []) {
+    $now = time();
+
+    // 1. Timestamp de Abertura
+    $tsAbertura = null;
+    if (!empty($local['abertura'])) {
+        $tsAbertura = vds_parse_datetime_to_timestamp($local['abertura']);
+    }
+
+    $dadosJson = !empty($local['dados_json']) ? (is_array($local['dados_json']) ? $local['dados_json'] : json_decode($local['dados_json'], true)) : [];
+
+    if (!$tsAbertura && !empty($dadosJson['abertura'])) {
+        $tsAbertura = vds_parse_datetime_to_timestamp($dadosJson['abertura']);
+    }
+    if (!$tsAbertura && !empty($dadosJson['dtExibicao'])) {
+        $tsAbertura = vds_parse_datetime_to_timestamp($dadosJson['dtExibicao']);
+    }
+    if (!$tsAbertura) {
+        $tsAbertura = $now;
+    }
+
+    // 2. Timestamp da Última Interação
+    $tsUltimaInteracao = $tsAbertura;
+
+    // Verificar eventos remotos VDS
+    if (!empty($eventosRemotos) && is_array($eventosRemotos)) {
+        foreach ($eventosRemotos as $ev) {
+            $dtEv = $ev['dtHora'] ?? ($ev['dthora'] ?? ($ev['data'] ?? ($ev['dtExibicao'] ?? null)));
+            if ($dtEv) {
+                $tsEv = vds_parse_datetime_to_timestamp($dtEv);
+                if ($tsEv && $tsEv > $tsUltimaInteracao) {
+                    $tsUltimaInteracao = $tsEv;
+                }
+            }
+        }
+    }
+
+    // Verificar notas internas do conselho
+    if (!empty($notasInternas) && is_array($notasInternas)) {
+        foreach ($notasInternas as $n) {
+            $dtNota = $n['created_at'] ?? null;
+            if ($dtNota) {
+                $tsNota = vds_parse_datetime_to_timestamp($dtNota);
+                if ($tsNota && $tsNota > $tsUltimaInteracao) {
+                    $tsUltimaInteracao = $tsNota;
+                }
+            }
+        }
+    }
+
+    // Fallback com dtExibicao do JSON local se não houver eventos avulsos
+    if ($tsUltimaInteracao <= $tsAbertura && !empty($dadosJson['dtExibicao'])) {
+        $tsExib = vds_parse_datetime_to_timestamp($dadosJson['dtExibicao']);
+        if ($tsExib && $tsExib > $tsUltimaInteracao) {
+            $tsUltimaInteracao = $tsExib;
+        }
+    }
+
+    // 3. Status de Resolução
+    $statusStr = strtolower(trim($local['status'] ?? ''));
+    $isResolvido = !empty($local['resolvido']) || in_array($statusStr, ['resolvido', 'resolvida', 'concluido', 'concluida', 'fechado', 'fechada', 'finalizado', 'finalizada']);
+
+    // 4. Cálculos dos Delays
+    $diasAbertura = max(0, (int)floor(($now - $tsAbertura) / 86400));
+    $diasUltimaInteracao = max(0, (int)floor(($now - $tsUltimaInteracao) / 86400));
+    $diasResolucao = max(0, (int)floor(($tsUltimaInteracao - $tsAbertura) / 86400));
+
+    // Determinar severidade/cor do delay para chamados abertos
+    // Verde: < 3 dias sem resposta; Laranja: 3 a 6 dias; Vermelho: >= 7 dias
+    $severidadeInteracao = 'normal';
+    $corInteracao = '#2e7d32'; // verde
+    $bgInteracao = '#e8f5e9';
+    if ($diasUltimaInteracao >= 7) {
+        $severidadeInteracao = 'critico';
+        $corInteracao = '#c62828'; // vermelho
+        $bgInteracao = '#ffebee';
+    } elseif ($diasUltimaInteracao >= 3) {
+        $severidadeInteracao = 'alerta';
+        $corInteracao = '#ef6c00'; // laranja escuro
+        $bgInteracao = '#fff3e0';
+    }
+
+    // Textos descritivos amigáveis
+    if ($diasAbertura === 0) {
+        $textoAbertura = "Aberto hoje";
+    } elseif ($diasAbertura === 1) {
+        $textoAbertura = "Aberto há 1 dia";
+    } else {
+        $textoAbertura = "Aberto há {$diasAbertura} dias";
+    }
+
+    if ($diasUltimaInteracao === 0) {
+        $textoInteracao = "Última interação hoje";
+    } elseif ($diasUltimaInteracao === 1) {
+        $textoInteracao = "Última interação há 1 dia";
+    } else {
+        $textoInteracao = "Última interação há {$diasUltimaInteracao} dias";
+    }
+
+    if ($diasResolucao === 0) {
+        $textoResolucao = "Resolvido no mesmo dia";
+    } elseif ($diasResolucao === 1) {
+        $textoResolucao = "Resolvido em 1 dia";
+    } else {
+        $textoResolucao = "Resolvido em {$diasResolucao} dias";
+    }
+
+    return [
+        'is_resolvido' => $isResolvido,
+        'ts_abertura' => $tsAbertura,
+        'ts_ultima_interacao' => $tsUltimaInteracao,
+        'data_abertura_formatada' => date('d/m/Y H:i', $tsAbertura),
+        'data_ultima_interacao_formatada' => date('d/m/Y H:i', $tsUltimaInteracao),
+        'dias_abertura' => $diasAbertura,
+        'dias_ultima_interacao' => $diasUltimaInteracao,
+        'dias_resolucao' => $diasResolucao,
+        'texto_abertura' => $textoAbertura,
+        'texto_interacao' => $textoInteracao,
+        'texto_resolucao' => $textoResolucao,
+        'severidade_interacao' => $severidadeInteracao,
+        'cor_interacao' => $corInteracao,
+        'bg_interacao' => $bgInteracao
+    ];
+}
+
+/**
+ * Garante que a tabela `ocorrencia_duplicadas` existe no banco.
+ */
+function vds_ensure_duplicadas_table_exists($link) {
+    $sql = "CREATE TABLE IF NOT EXISTS ocorrencia_duplicadas (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        ocorrencia_id_principal INT NOT NULL COMMENT 'ID da ocorrência principal / de referência',
+        ocorrencia_id_duplicada INT NOT NULL COMMENT 'ID da ocorrência duplicada',
+        motivo VARCHAR(255) DEFAULT 'Pedido duplicado',
+        criado_por INT DEFAULT NULL COMMENT 'ID do conselheiro que realizou o vínculo',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_duplicidade (ocorrencia_id_principal, ocorrencia_id_duplicada),
+        KEY idx_principal (ocorrencia_id_principal),
+        KEY idx_duplicada (ocorrencia_id_duplicada)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    @mysqli_query($link, $sql);
+}
+
+/**
+ * Consulta todas as duplicidades vinculadas a uma ocorrência (tanto se ela for duplicada quanto se for principal).
+ */
+function vds_get_duplicidades_ocorrencia($ocorrenciaId, $linkParam = null) {
+    $ocorrenciaId = (int)$ocorrenciaId;
+    if ($ocorrenciaId <= 0) {
+        return [
+            'total' => 0,
+            'eh_duplicada' => false,
+            'possui_duplicadas' => false,
+            'principal' => null,
+            'duplicadas' => [],
+            'links' => []
+        ];
+    }
+
+    $closeLink = false;
+    $link = $linkParam;
+    if (!$link) {
+        $link = DBConnect();
+        $closeLink = true;
+    }
+
+    vds_ensure_duplicadas_table_exists($link);
+
+    // Buscar onde é duplicada (ou seja, foi marcada como duplicada de uma principal)
+    $stmt1 = mysqli_prepare($link, "SELECT d.id as link_id, d.motivo, d.created_at, d.criado_por,
+            o.id as outro_id, o.protocolo_vds, o.bloco, o.unidade, o.abertura, o.status, o.resolvido, o.oco_tipo
+        FROM ocorrencia_duplicadas d
+        INNER JOIN ocorrencias o ON o.id = d.ocorrencia_id_principal
+        WHERE d.ocorrencia_id_duplicada = ?");
+    
+    $principal = null;
+    $links = [];
+    if ($stmt1) {
+        mysqli_stmt_bind_param($stmt1, "i", $ocorrenciaId);
+        mysqli_stmt_execute($stmt1);
+        $res1 = mysqli_stmt_get_result($stmt1);
+        while ($row = mysqli_fetch_assoc($res1)) {
+            $row['tipo_relacao'] = 'eh_duplicada_de';
+            $principal = $row;
+            $links[] = $row;
+        }
+        mysqli_stmt_close($stmt1);
+    }
+
+    // Buscar onde é principal (ou seja, outras ocorrências foram marcadas como duplicadas desta)
+    $stmt2 = mysqli_prepare($link, "SELECT d.id as link_id, d.motivo, d.created_at, d.criado_por,
+            o.id as outro_id, o.protocolo_vds, o.bloco, o.unidade, o.abertura, o.status, o.resolvido, o.oco_tipo
+        FROM ocorrencia_duplicadas d
+        INNER JOIN ocorrencias o ON o.id = d.ocorrencia_id_duplicada
+        WHERE d.ocorrencia_id_principal = ?");
+    
+    $duplicadas = [];
+    if ($stmt2) {
+        mysqli_stmt_bind_param($stmt2, "i", $ocorrenciaId);
+        mysqli_stmt_execute($stmt2);
+        $res2 = mysqli_stmt_get_result($stmt2);
+        while ($row = mysqli_fetch_assoc($res2)) {
+            $row['tipo_relacao'] = 'possui_duplicada';
+            $duplicadas[] = $row;
+            $links[] = $row;
+        }
+        mysqli_stmt_close($stmt2);
+    }
+
+    if ($closeLink) {
+        DBClose($link);
+    }
+
+    return [
+        'total' => count($links),
+        'eh_duplicada' => !empty($principal),
+        'possui_duplicadas' => !empty($duplicadas),
+        'principal' => $principal,
+        'duplicadas' => $duplicadas,
+        'links' => $links
+    ];
+}
+
+/**
+ * Linka duas ocorrências como duplicidade.
+ * $tipoRelacao: 'atual_duplicada' (a atual é a duplicada da outra) ou 'atual_principal' (a atual é a principal e a outra é a duplicada).
+ */
+function vds_linkar_ocorrencias_duplicadas($ocorrenciaIdAtual, $alvoProtocoloOuId, $usuarioId = null, $tipoRelacao = 'atual_duplicada', $motivo = 'Pedido duplicado') {
+    $ocorrenciaIdAtual = (int)$ocorrenciaIdAtual;
+    $alvoLimpo = trim((string)$alvoProtocoloOuId);
+    if ($ocorrenciaIdAtual <= 0 || empty($alvoLimpo)) {
+        return ['success' => false, 'message' => 'Informe o ID ou protocolo da ocorrência a ser linkada.'];
+    }
+
+    $link = DBConnect();
+    vds_ensure_duplicadas_table_exists($link);
+
+    // 1. Resolver ocorrência alvo (por id numérico ou protocolo_vds)
+    $alvoId = null;
+    $alvoProtocolo = null;
+    $alvoBloco = null;
+    $alvoUnidade = null;
+
+    $stmtFind = mysqli_prepare($link, "SELECT id, protocolo_vds, bloco, unidade FROM ocorrencias WHERE id = ? OR protocolo_vds = ? LIMIT 1");
+    $alvoInt = (int)$alvoLimpo;
+    mysqli_stmt_bind_param($stmtFind, "is", $alvoInt, $alvoLimpo);
+    mysqli_stmt_execute($stmtFind);
+    $resFind = mysqli_stmt_get_result($stmtFind);
+    $rowAlvo = mysqli_fetch_assoc($resFind);
+    mysqli_stmt_close($stmtFind);
+
+    if ($rowAlvo) {
+        $alvoId = (int)$rowAlvo['id'];
+        $alvoProtocolo = $rowAlvo['protocolo_vds'] ?: (string)$alvoId;
+        $alvoBloco = $rowAlvo['bloco'];
+        $alvoUnidade = $rowAlvo['unidade'];
+    } else {
+        // Tentar buscar na VDS e persistir localmente
+        $detalheRemoto = vds_get_ocorrencia_detalhe($alvoLimpo, $usuarioId);
+        if (!empty($detalheRemoto['local']['id'])) {
+            $alvoId = (int)$detalheRemoto['local']['id'];
+            $alvoProtocolo = $detalheRemoto['local']['protocolo_vds'] ?: (string)$alvoId;
+            $alvoBloco = $detalheRemoto['local']['bloco'];
+            $alvoUnidade = $detalheRemoto['local']['unidade'];
+        }
+    }
+
+    if (!$alvoId) {
+        DBClose($link);
+        return ['success' => false, 'message' => "Ocorrência com protocolo ou ID '{$alvoLimpo}' não foi encontrada."];
+    }
+
+    if ($alvoId === $ocorrenciaIdAtual) {
+        DBClose($link);
+        return ['success' => false, 'message' => 'Não é possível linkar uma ocorrência consigo mesma.'];
+    }
+
+    // Definir quem é a principal e quem é a duplicada
+    if ($tipoRelacao === 'atual_principal') {
+        $idPrincipal = $ocorrenciaIdAtual;
+        $idDuplicada = $alvoId;
+    } else {
+        $idPrincipal = $alvoId;
+        $idDuplicada = $ocorrenciaIdAtual;
+    }
+
+    // Verificar se o vínculo já existe
+    $stmtCheck = mysqli_prepare($link, "SELECT id FROM ocorrencia_duplicadas WHERE ocorrencia_id_principal = ? AND ocorrencia_id_duplicada = ? LIMIT 1");
+    mysqli_stmt_bind_param($stmtCheck, "ii", $idPrincipal, $idDuplicada);
+    mysqli_stmt_execute($stmtCheck);
+    $resCheck = mysqli_stmt_get_result($stmtCheck);
+    $jaExiste = (bool)mysqli_fetch_assoc($resCheck);
+    mysqli_stmt_close($stmtCheck);
+
+    if ($jaExiste) {
+        DBClose($link);
+        return ['success' => true, 'already_exists' => true, 'message' => 'Ocorrências já estão linkadas como duplicidade.'];
+    }
+
+    $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencia_duplicadas (ocorrencia_id_principal, ocorrencia_id_duplicada, motivo, criado_por) VALUES (?, ?, ?, ?)");
+    mysqli_stmt_bind_param($stmtIns, "iisi", $idPrincipal, $idDuplicada, $motivo, $usuarioId);
+    $ok = mysqli_stmt_execute($stmtIns);
+    $insertId = mysqli_insert_id($link);
+    mysqli_stmt_close($stmtIns);
+
+    DBClose($link);
+
+    if (!$ok) {
+        return ['success' => false, 'message' => 'Falha ao gravar vínculo de duplicidade no banco.'];
+    }
+
+    return [
+        'success' => true,
+        'link_id' => $insertId,
+        'principal_id' => $idPrincipal,
+        'duplicada_id' => $idDuplicada,
+        'outro_protocolo' => $alvoProtocolo,
+        'outro_bloco' => $alvoBloco,
+        'outro_unidade' => $alvoUnidade,
+        'message' => "Ocorrência linkada com sucesso como duplicidade de #{$alvoProtocolo} (Bloco {$alvoBloco} - Apt {$alvoUnidade})!"
+    ];
+}
+
+/**
+ * Remove um vínculo de duplicidade.
+ */
+function vds_desvincular_ocorrencia_duplicada($linkId, $ocorrenciaId = null) {
+    $linkId = (int)$linkId;
+    if ($linkId <= 0) {
+        return ['success' => false, 'message' => 'ID de vínculo inválido.'];
+    }
+
+    $link = DBConnect();
+    vds_ensure_duplicadas_table_exists($link);
+
+    if ($ocorrenciaId) {
+        $stmtDel = mysqli_prepare($link, "DELETE FROM ocorrencia_duplicadas WHERE id = ? AND (ocorrencia_id_principal = ? OR ocorrencia_id_duplicada = ?)");
+        $ocoId = (int)$ocorrenciaId;
+        mysqli_stmt_bind_param($stmtDel, "iii", $linkId, $ocoId, $ocoId);
+    } else {
+        $stmtDel = mysqli_prepare($link, "DELETE FROM ocorrencia_duplicadas WHERE id = ?");
+        mysqli_stmt_bind_param($stmtDel, "i", $linkId);
+    }
+
+    $ok = mysqli_stmt_execute($stmtDel);
+    $affected = mysqli_stmt_affected_rows($stmtDel);
+    mysqli_stmt_close($stmtDel);
+    DBClose($link);
+
+    if (!$ok || $affected === 0) {
+        return ['success' => false, 'message' => 'Vínculo de duplicidade não encontrado ou já removido.'];
+    }
+
+    return ['success' => true, 'message' => 'Vínculo de duplicidade removido com sucesso.'];
+}
+
+/**
  * Consulta a lista de chamados não lidos (Lida=0) diretamente na VDS API para a Visão Prática.
  * Com limit=10 por página, a API responde em < 1s de forma ultra-rápida.
  */
@@ -1282,6 +1691,11 @@ function vds_adicionar_tag_livre($ocorrenciaId, $tagInput) {
     $tagInput = trim($tagInput);
     if (empty($tagInput)) {
         return ['success' => false, 'message' => 'Tag vazia.'];
+    }
+
+    // 0. Duplicidade (ex: dup:259564, duplicada:259564, #259564)
+    if (preg_match('/^(?:dup(?:licada)?|duplicado|#)[\s:]*(\d+)/i', $tagInput, $mDup)) {
+        return vds_linkar_ocorrencias_duplicadas($ocorrenciaId, $mDup[1]);
     }
 
     // 1. Recurso / Notificação (ex: 123/2026, 45/26, N123/2026) — testado ANTES de unidade
