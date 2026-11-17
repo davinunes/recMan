@@ -1908,40 +1908,81 @@ function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConsel
         $closeLink = true;
     }
 
-    $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=5&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoSearch);
+    $isLargeId = (is_numeric($protoSearch) && strlen($protoSearch) >= 8);
+    $item = null;
+    $ultimoErro = null;
 
-    $ch = curl_init($urlSearch);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 12,
-        CURLOPT_CONNECTTIMEOUT => 6,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token,
-            'Origin: ' . VDS_ORIGIN_HEADER
-        ]
-    ]);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlErr = curl_error($ch);
-    curl_close($ch);
+    // Função interna curl para requisições rápidas
+    $execCurlVds = function($urlPath) use ($token) {
+        $ch = curl_init(VDS_BASE_URL . $urlPath);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Origin: ' . VDS_ORIGIN_HEADER
+            ]
+        ]);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+        return ['code' => $code, 'err' => $err, 'json' => $resp ? json_decode($resp, true) : null];
+    };
 
-    if ($httpCode === 401) {
-        vds_mark_token_expired($token);
-        if ($closeLink) DBClose($link);
-        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado na VDS.'];
+    if ($isLargeId) {
+        // IDs com 8 dígitos ou mais representam o `ocorrenciaId` interno da VDS
+        // Tentativa 1: Detalhe direto pelo ID no path: GET /ocorrencia/{id}
+        $r1 = $execCurlVds('/ocorrencia/' . urlencode($protoSearch));
+        if ($r1['code'] === 200 && is_array($r1['json']) && (!empty($r1['json']['uuid']) || !empty($r1['json']['protocolo']))) {
+            $item = $r1['json'];
+        }
+
+        // Tentativa 2: Busca por query param Id= na lista: GET /ocorrencia?Id={id}
+        if (!$item) {
+            $r2 = $execCurlVds('/ocorrencia?page=1&limit=5&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Id=' . urlencode($protoSearch));
+            if ($r2['code'] === 200 && is_array($r2['json'])) {
+                $regs = $r2['json']['regs'] ?? ($r2['json']['items'] ?? []);
+                if (!empty($regs[0])) {
+                    $item = $regs[0];
+                }
+            }
+        }
+
+        // Tentativa 3: Busca por query param ocorrenciaId= na lista: GET /ocorrencia?ocorrenciaId={id}
+        if (!$item) {
+            $r3 = $execCurlVds('/ocorrencia?page=1&limit=5&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&ocorrenciaId=' . urlencode($protoSearch));
+            if ($r3['code'] === 200 && is_array($r3['json'])) {
+                $regs = $r3['json']['regs'] ?? ($r3['json']['items'] ?? []);
+                if (!empty($regs[0])) {
+                    $item = $regs[0];
+                }
+            }
+        }
     }
 
-    if ($httpCode !== 200 || !$response) {
-        if ($closeLink) DBClose($link);
-        return ['success' => false, 'httpCode' => $httpCode, 'message' => "Erro na consulta VDS: " . ($curlErr ?: "HTTP {$httpCode}")];
+    // Se for protocolo de tamanho normal (<= 7 dígitos) OU se as tentativas por ID não acharam
+    if (!$item) {
+        $rProto = $execCurlVds('/ocorrencia?page=1&limit=5&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoSearch));
+        if ($rProto['code'] === 401) {
+            vds_mark_token_expired($token);
+            if ($closeLink) DBClose($link);
+            return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado na VDS.'];
+        }
+        if ($rProto['code'] === 200 && is_array($rProto['json'])) {
+            $regs = $rProto['json']['regs'] ?? ($rProto['json']['items'] ?? []);
+            if (!empty($regs[0])) {
+                $item = $regs[0];
+            }
+        } else {
+            $ultimoErro = $rProto['err'] ?: "HTTP {$rProto['code']}";
+        }
     }
 
-    $data = json_decode($response, true);
-    $regs = $data['regs'] ?? ($data['items'] ?? []);
-
-    if (empty($regs[0])) {
-        // Gravar marcador em dados_json para evitar que protocolos inexistentes na VDS travem a fila em execuções seguintes
+    if (empty($item)) {
+        // Gravar marcador em dados_json para evitar que identificadores inexistentes na VDS travem a fila em execuções seguintes
         $stmtNotFound = mysqli_prepare($link, "UPDATE ocorrencias SET dados_json = '{\"vds_not_found\":true}' WHERE (id = ? OR protocolo_vds = ?) AND dados_json IS NULL");
         if ($stmtNotFound) {
             $tId = (int)$protoSearch;
@@ -1950,21 +1991,27 @@ function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConsel
             mysqli_stmt_close($stmtNotFound);
         }
         if ($closeLink) DBClose($link);
-        return ['success' => false, 'message' => "Protocolo #{$protoSearch} não localizado na VDS."];
+        $descTipo = $isLargeId ? "ID interno / Protocolo" : "Protocolo";
+        return ['success' => false, 'message' => "{$descTipo} #{$protoSearch} não localizado na VDS." . ($ultimoErro ? " ({$ultimoErro})" : "")];
     }
 
-    $item = $regs[0];
     $realOcoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
     $realProtocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? $protoSearch);
     $realUuid = $item['uuid'] ?? ($item['uuid_remoto'] ?? null);
 
-    // Parsear bloco e unidade do campo 'cargo'
+    // Parsear bloco e unidade (do campo cargo ou autor ou unidadeNome)
     $bloco = null;
     $unidade = null;
-    $cargoStr = $item['cargo'] ?? '';
-    if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
-        $bloco = trim($bu[1]);
-        $unidade = trim($bu[2]);
+    if (!empty($item['autor']) && is_array($item['autor'])) {
+        $bloco = $item['autor']['bloco'] ?? null;
+        $unidade = $item['autor']['unidade'] ?? null;
+    }
+    if (empty($bloco) || empty($unidade)) {
+        $cargoStr = $item['cargo'] ?? ($item['unidadeNome'] ?? '');
+        if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+            $bloco = trim($bu[1]);
+            $unidade = trim($bu[2]);
+        }
     }
     if (empty($bloco)) { $bloco = 'Z'; }
     if (empty($unidade)) { $unidade = '999'; }

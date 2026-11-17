@@ -45,6 +45,26 @@
 
 ---
 
+## 4. Diagnóstico Avançado (Rodada 1): IDs Internos de 8 Dígitos vs Protocolos da VDS
+
+Na 1ª rodada de execução, observou-se:
+1. Registros com números de 6 dígitos (`254767`, `254681`, etc.) tiveram taxa de sucesso de ~100% via `GET /ocorrencia?Protocolo=...`.
+2. Registros com números de 8 dígitos (`57023129`, `56980981`, etc.) retornaram "não localizado" com a busca por `Protocolo=`.
+3. **Causa Raiz Identificada:** A VDS possui internamente:
+   - `ocorrenciaId` (numérico, 8 dígitos, ex: `54860421`, `52075990`).
+   - `protocolo` (6 dígitos, ex: `259564`).
+   - `uuid` (UUID v4).
+   No passado, durante a era de scraping, o sistema gravou o `ocorrenciaId` interno de 8 dígitos no campo `id` / `protocolo_vds`.
+4. **Estratégia Híbrida Implementada:**
+   - Para identificadores com 8+ dígitos:
+     - Tentativa 1: `GET /ocorrencia/{id}` no path.
+     - Tentativa 2: `GET /ocorrencia?Id={id}`.
+     - Tentativa 3: `GET /ocorrencia?ocorrenciaId={id}`.
+   - Ao localizar, o sistema não só recupera o UUID e a categoria, como também **corrige o campo `protocolo_vds`** com o número de protocolo real da VDS!
+   - Para identificadores convencionais (≤ 7 dígitos): busca direta com `GET /ocorrencia?Protocolo={protocolo}`.
+
+---
+
 ## 3. Decisão de Arquitetura
 
 - Refatorar e fortalecer a função `vds_enrich_legacy_ocorrencias` em `classes/vds_ocorrencia_service.php` para aceitar parâmetros flexíveis (`$filtro`, `$limit`, `$delayMs`, `$callbackProgresso`).

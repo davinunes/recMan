@@ -150,8 +150,14 @@ $callbackProgresso = function($indice, $total, $row, $resultado) use ($isCli) {
         $loc = trim("{$bloco} {$unid}");
         $uuidShort = substr($resultado['uuid'] ?? '', 0, 10) . '...';
         
-        $msgCli = "[{$dataHora}] [{$indice}/{$total}] ({$percent}%) Chamado #{$proto} -> OK! Tipo: [{$tipoNome}] {$loc} (UUID: {$uuidShort})";
-        $msgWeb = "<span class='log-ok'>[{$dataHora}] [{$indice}/{$total}] Chamado #{$proto} &rarr; OK! Tipo: [{$tipoNome}] {$loc} (UUID: {$uuidShort})</span><br>\n";
+        $protoRealInfo = "";
+        if (!empty($resultado['protocolo']) && (string)$resultado['protocolo'] !== (string)$proto) {
+            $protoRealInfo = " <span style='color:#e1bee7;'>(Prot Real: #" . htmlspecialchars($resultado['protocolo']) . ")</span>";
+        }
+        $protoRealCli = (!empty($resultado['protocolo']) && (string)$resultado['protocolo'] !== (string)$proto) ? " (Prot Real: #{$resultado['protocolo']})" : "";
+
+        $msgCli = "[{$dataHora}] [{$indice}/{$total}] ({$percent}%) Chamado #{$proto}{$protoRealCli} -> OK! Tipo: [{$tipoNome}] {$loc} (UUID: {$uuidShort})";
+        $msgWeb = "<span class='log-ok'>[{$dataHora}] [{$indice}/{$total}] Chamado #{$proto}{$protoRealInfo} &rarr; OK! Tipo: [{$tipoNome}] {$loc} (UUID: {$uuidShort})</span><br>\n";
     } else {
         $motivo = $resultado['message'] ?? 'Falha';
         $msgCli = "[{$dataHora}] [{$indice}/{$total}] ({$percent}%) Chamado #{$proto} -> AVISO: {$motivo}";
