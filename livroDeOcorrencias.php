@@ -1104,11 +1104,16 @@ if (!$detalheSel && $selId) {
             </button>
         </form>
 
-        <!-- Botão Sincronizar Agora -->
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <!-- Ações Globais: Roleta de Legados e Sincronizar Agora -->
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="cron_vds_enrich_legadas.php?limit=100&filtro=outros" target="_blank" class="btn-small waves-effect waves-light amber darken-3 white-text" style="height:32px; line-height:32px; padding:0 12px; font-size:0.82rem; border-radius:4px; text-transform:none; display:inline-flex; align-items:center; gap:4px;" title="Roleta de Atualização: busca UUIDs e tipos na VDS para chamados antigos / Outros">
+                <i class="material-icons tiny left" style="margin-right:2px;">autorenew</i>
+                <span>Atualizar Legados (VDS)</span>
+            </a>
+
             <form method="POST" style="margin:0;">
                 <input type="hidden" name="action" value="sync_agora">
-                <button type="submit" class="btn waves-effect waves-light blue btn-small">
+                <button type="submit" class="btn waves-effect waves-light blue btn-small" style="height:32px; line-height:32px;">
                     <i class="material-icons left">sync</i> Sincronizar Agora
                 </button>
             </form>

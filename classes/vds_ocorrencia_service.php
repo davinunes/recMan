@@ -1883,37 +1883,221 @@ function vds_remover_tag($tagId, $ocorrenciaId = null) {
 }
 
 /**
- * Varre o banco local por ocorrências legadas (sem protocolo_vds ou sem uuid_remoto)
- * e realiza a busca na API VDS para preencher protocolo_vds, uuid_remoto, oco_tipo e dados_json.
+ * Consulta a API v8 da VDS por número de protocolo e atualiza os dados cadastrais
+ * (uuid_remoto, oco_tipo, bloco, unidade, status, dados_json) na tabela local `ocorrencias`.
+ * Faz uma requisição ultra-rápida (limit=1) sem puxar todos os eventos de mensagens.
  */
-function vds_enrich_legacy_ocorrencias($usuarioIdConselho = null) {
+function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConselho = null, $tokenPreCarregado = null, $linkPreCarregado = null) {
+    $protoSearch = trim((string)$protocoloOuId);
+    if (empty($protoSearch)) {
+        return ['success' => false, 'message' => 'Protocolo ou ID inválido.'];
+    }
+
+    $token = $tokenPreCarregado ?: vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        $token = vds_get_token(null, true);
+    }
+    if (!$token) {
+        return ['success' => false, 'message' => 'Nenhum token VDS ativo disponível.'];
+    }
+
+    $closeLink = false;
+    $link = $linkPreCarregado;
+    if (!$link) {
+        $link = DBConnect();
+        $closeLink = true;
+    }
+
+    $urlSearch = VDS_BASE_URL . '/ocorrencia?page=1&limit=5&sortBy=dtExibicao&order=desc&Lida=9&Caixa=0&Protocolo=' . urlencode($protoSearch);
+
+    $ch = curl_init($urlSearch);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Origin: ' . VDS_ORIGIN_HEADER
+        ]
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($httpCode === 401) {
+        vds_mark_token_expired($token);
+        if ($closeLink) DBClose($link);
+        return ['success' => false, 'httpCode' => 401, 'message' => 'Token expirado na VDS.'];
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        if ($closeLink) DBClose($link);
+        return ['success' => false, 'httpCode' => $httpCode, 'message' => "Erro na consulta VDS: " . ($curlErr ?: "HTTP {$httpCode}")];
+    }
+
+    $data = json_decode($response, true);
+    $regs = $data['regs'] ?? ($data['items'] ?? []);
+
+    if (empty($regs[0])) {
+        if ($closeLink) DBClose($link);
+        return ['success' => false, 'message' => "Protocolo #{$protoSearch} não localizado na VDS."];
+    }
+
+    $item = $regs[0];
+    $realOcoId = (int)($item['ocorrenciaId'] ?? ($item['id'] ?? 0));
+    $realProtocolo = $item['protocolo'] ?? ($item['Protocolo'] ?? $protoSearch);
+    $realUuid = $item['uuid'] ?? ($item['uuid_remoto'] ?? null);
+
+    // Parsear bloco e unidade do campo 'cargo'
+    $bloco = null;
+    $unidade = null;
+    $cargoStr = $item['cargo'] ?? '';
+    if (preg_match('/Bl(?:oco|\.)\s*([A-Za-z0-9]+)\s*-\s*(\d+)/i', $cargoStr, $bu)) {
+        $bloco = trim($bu[1]);
+        $unidade = trim($bu[2]);
+    }
+    if (empty($bloco)) { $bloco = 'Z'; }
+    if (empty($unidade)) { $unidade = '999'; }
+
+    $rawDt = $item['dtExibicao'] ?? ($item['dthora'] ?? ($item['abertura'] ?? null));
+    if ($rawDt && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawDt, $m)) {
+        $abertura = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+    } elseif ($rawDt && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawDt)) {
+        $abertura = date('Y-m-d H:i:s', strtotime($rawDt));
+    } else {
+        $abertura = date('Y-m-d H:i:s');
+    }
+
+    $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
+    $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
+    $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
+
+    $blocoReal = ($bloco !== 'Z') ? $bloco : null;
+    $unidadeReal = ($unidade !== '999') ? $unidade : null;
+
+    $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ? OR protocolo_vds = ?");
+    $targetId = is_numeric($protoSearch) ? (int)$protoSearch : $realOcoId;
+    mysqli_stmt_bind_param($stmtUp, "ssissssisi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $targetId, $protoSearch);
+    $ok = mysqli_stmt_execute($stmtUp);
+    $rowsAffected = mysqli_stmt_affected_rows($stmtUp);
+    mysqli_stmt_close($stmtUp);
+
+    // Se não havia o registro com id ou protocolo_vds, tenta atualizar pelo id retornado pela VDS
+    if ($rowsAffected === 0 && $realOcoId > 0 && $realOcoId !== $targetId) {
+        $stmtUp2 = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp2, "ssissssi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $realOcoId);
+        mysqli_stmt_execute($stmtUp2);
+        mysqli_stmt_close($stmtUp2);
+    }
+
+    $mapaNomes = [
+        115 => 'Fale com o Conselho',
+        247 => 'Monitoramento',
+        114 => 'Livro de ocorrência',
+        86  => 'Fale com o Síndico',
+        109 => 'Fale com o Síndico de Bloco',
+        102 => 'Fale com a Administração',
+        145 => 'Fale com a Mensageria',
+        87  => 'Fale com a portaria',
+        126 => 'Fale com a Supervisão',
+        172 => 'Suporte ao Controle de Acesso'
+    ];
+
+    if ($closeLink) {
+        DBClose($link);
+    }
+
+    return [
+        'success' => true,
+        'protocolo' => $realProtocolo,
+        'uuid' => $realUuid,
+        'oco_tipo' => $ocoTipo,
+        'tipo_nome' => $mapaNomes[$ocoTipo] ?? 'Outros / Diversos',
+        'bloco' => $blocoReal,
+        'unidade' => $unidadeReal,
+        'status' => $status
+    ];
+}
+
+/**
+ * Varre o banco local por ocorrências legadas (sem protocolo_vds, sem uuid_remoto ou com tipo Outros/Diversos)
+ * e realiza a busca na API VDS para enriquecer e preencher uuid_remoto, oco_tipo, bloco/unidade e dados_json.
+ */
+function vds_enrich_legacy_ocorrencias($filtro = 'outros', $limit = 100, $delayMs = 150, $usuarioIdConselho = null, $callbackProgresso = null) {
     $link = DBConnect();
 
     // 1. Garantir que protocolo_vds seja populado com o id numérico legado para onde estivesse NULL
     @mysqli_query($link, "UPDATE ocorrencias SET protocolo_vds = CAST(id AS CHAR) WHERE (protocolo_vds IS NULL OR protocolo_vds = '') AND id > 0");
 
-    // 2. Buscar ocorrências que ainda não possuem uuid_remoto ou dados_json
-    $res = mysqli_query($link, "SELECT id, protocolo_vds FROM ocorrencias WHERE (uuid_remoto IS NULL OR uuid_remoto = '' OR dados_json IS NULL) AND id > 0 ORDER BY id DESC");
+    // 2. Montar cláusula WHERE conforme filtro selecionado
+    $sqlWhere = " WHERE id > 0 ";
+    if ($filtro === 'sem_uuid') {
+        $sqlWhere .= " AND (uuid_remoto IS NULL OR uuid_remoto = '') ";
+    } elseif ($filtro === 'todos') {
+        // Todas as ocorrências
+    } else {
+        // Padrão 'outros': não tem uuid, ou não tem tipo, ou tipo = 0, ou tipo não mapeado nas 10 categorias oficiais, ou sem dados_json
+        $sqlWhere .= " AND (uuid_remoto IS NULL OR uuid_remoto = '' OR oco_tipo IS NULL OR oco_tipo = 0 OR oco_tipo NOT IN (115,247,114,86,109,102,145,87,126,172) OR dados_json IS NULL) ";
+    }
+
+    $sqlLimit = "";
+    $limit = (int)$limit;
+    if ($limit > 0) {
+        $sqlLimit = " LIMIT " . $limit;
+    }
+
+    $sql = "SELECT id, protocolo_vds, oco_tipo, uuid_remoto, bloco, unidade FROM ocorrencias {$sqlWhere} ORDER BY id DESC {$sqlLimit}";
+    $res = mysqli_query($link, $sql);
 
     $count = 0;
+    $naoEncontrados = 0;
+    $erros = 0;
     $total = 0;
+
+    $token = vds_get_token($usuarioIdConselho);
+    if (!$token) {
+        $token = vds_get_token(null, true);
+    }
 
     if ($res) {
         $total = mysqli_num_rows($res);
+        $idx = 0;
         while ($row = mysqli_fetch_assoc($res)) {
-            $proto = $row['protocolo_vds'] ?: (string)$row['id'];
-            if (!empty($proto)) {
-                // Tenta consultar detalhe via API v8 da VDS (que já faz a busca por protocolo e atualiza o banco local)
-                $detalhe = vds_get_ocorrencia_detalhe($proto, $usuarioIdConselho);
-                if ($detalhe && !empty($detalhe['local']['uuid_remoto'])) {
-                    $count++;
-                }
+            $idx++;
+            $proto = !empty($row['protocolo_vds']) ? $row['protocolo_vds'] : (string)$row['id'];
+            
+            $resUpdate = vds_atualizar_ocorrencia_por_protocolo($proto, $usuarioIdConselho, $token, $link);
+            
+            if ($resUpdate['success']) {
+                $count++;
+            } elseif (!empty($resUpdate['httpCode']) && $resUpdate['httpCode'] === 401) {
+                // Token expirou, renovar
+                $token = vds_get_token($usuarioIdConselho) ?: vds_get_token(null, true);
+                $erros++;
+            } else {
+                $naoEncontrados++;
+            }
+
+            if (is_callable($callbackProgresso)) {
+                $callbackProgresso($idx, $total, $row, $resUpdate);
+            }
+
+            if ($delayMs > 0 && $idx < $total) {
+                usleep((int)$delayMs * 1000);
             }
         }
     }
 
     DBClose($link);
-    return ['success' => true, 'updated' => $count, 'total' => $total];
+    return [
+        'success' => true,
+        'updated' => $count,
+        'nao_encontrados' => $naoEncontrados,
+        'erros' => $erros,
+        'total' => $total
+    ];
 }
 
 /**
