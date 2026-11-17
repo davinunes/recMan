@@ -109,3 +109,17 @@ CREATE TABLE IF NOT EXISTS ocorrencia_duplicadas (
 3. **Navegar e Desvincular:**
    - No banner de alerta de duplicidade, clique em **"Ver Chamado Original"** (ou **"Ver Chamado Duplicado"**) para carregar instantaneamente o outro chamado no chat.
    - Para remover a duplicidade, clique no botão **"Desvincular"** no mesmo banner.
+
+---
+
+## 4. Paridade e Sincronização de Delays (Modo Analítico vs Modo Prático)
+
+Foi identificado que, na Visão Analítica, a lista da sidebar lia exclusivamente do MySQL local sem os eventos remotos da VDS em tempo real (para evitar dezenas de requisições HTTP síncronas que degradariam a performance). Isso causava uma discrepância visual temporária entre a lista (`⏱️ 21d • 💬 21d`) e o chat aberto (`Aberto há 21 dias | Última interação há 1 dia`).
+
+Para resolver isso em definitivo com alta performance e sem sobrecarregar a API:
+1. **Persistência Automática em `vds_get_ocorrencia_detalhe`:** Ao carregar os eventos remotos de um chamado, o serviço agora persiste automaticamente a data do evento mais recente na coluna nativa `data_ultima_mensagem` da tabela `ocorrencias`.
+2. **Leitura de `data_ultima_mensagem`:** A função `vds_calcular_delays_ocorrencia` passou a considerar prioritariamente o campo `data_ultima_mensagem` e o campo `dtExibicao` do JSON local.
+3. **Pré-carregamento em Lote de Notas Internas:** Na Visão Analítica, as datas das notas internas mais recentes são agregadas em uma única query leve (`SELECT ocorrencia_id, MAX(created_at)`) e aplicadas a todos os itens da sidebar.
+4. **Sincronização Imediata no SSR e no JavaScript:**
+   - O item inicial ativo no servidor já nasce com os delays calculados do chat repassados para o card da sidebar.
+   - No retorno do AJAX `carregar_detalhe`, o JavaScript atualiza instantaneamente o badge `#item-oco-ID .badge-delay-sidebar` no DOM, garantindo 100% de paridade entre sidebar e chat.

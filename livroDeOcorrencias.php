@@ -930,6 +930,15 @@ if ($visao === 'pratico') {
         $sqlWhere .= " AND (auditoria IS NULL OR auditoria = 0)";
     }
 
+    // Pré-carregar em lote a data da última nota interna por ocorrência para precisão de delay na sidebar
+    $mapaNotasLote = [];
+    $resNotasLote = @mysqli_query($link, "SELECT ocorrencia_id, MAX(created_at) as max_nota FROM ocorrencia_notas_internas GROUP BY ocorrencia_id");
+    if ($resNotasLote) {
+        while ($rN = mysqli_fetch_assoc($resNotasLote)) {
+            $mapaNotasLote[(int)$rN['ocorrencia_id']] = $rN['max_nota'];
+        }
+    }
+
     $sqlList = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1000";
     $stmtList = mysqli_prepare($link, $sqlList);
     if ($types && !empty($params)) {
@@ -939,6 +948,9 @@ if ($visao === 'pratico') {
     $resList = mysqli_stmt_get_result($stmtList);
 
     while ($row = mysqli_fetch_assoc($resList)) {
+        if (isset($mapaNotasLote[(int)$row['id']])) {
+            $row['max_nota_interna'] = $mapaNotasLote[(int)$row['id']];
+        }
         $ocorrencias[] = $row;
         $tKey = (int)($row['oco_tipo'] ?? 0);
         $ocorrenciasAgrupadas[$tKey][] = $row;
@@ -976,6 +988,12 @@ if (!$selId && !$isMobileView && !empty($ocorrencias)) {
 
 if (!$detalheSel && $selId) {
     $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
+}
+
+// Mapa de delays pré-calculados para garantir paridade 100% imediata entre a sidebar e o chat no SSR
+$mapaDelaysPrecalculados = [];
+if (!empty($detalheSel['local']['id']) && !empty($detalheSel['delays'])) {
+    $mapaDelaysPrecalculados[(int)$detalheSel['local']['id']] = $detalheSel['delays'];
 }
 ?>
 
@@ -1319,7 +1337,7 @@ if (!$detalheSel && $selId) {
                             $dadosJsonItem = !empty($oco['dados_json']) ? json_decode($oco['dados_json'], true) : [];
                             $isAuditoriaItem = !empty($oco['auditoria']);
                             $hasDupSidebar = !empty($mapaDuplicadasSidebar[$oco['id']]);
-                            $delaysSidebar = vds_calcular_delays_ocorrencia($oco);
+                            $delaysSidebar = $mapaDelaysPrecalculados[(int)$oco['id']] ?? vds_calcular_delays_ocorrencia($oco);
                             $searchAuditoria = $isAuditoriaItem ? ' auditoria pendente' : '';
                             $searchDup = $hasDupSidebar ? ' duplicada duplicidade' : '';
                             $searchContext = strtolower($oco['bloco'] . ' ' . $oco['unidade'] . ' ' . ($oco['protocolo_vds'] ?? '') . ' ' . ($oco['responsabilidade'] ?? '') . $searchAuditoria . $searchDup . ' ' . ($dadosJsonItem['mensagem'] ?? '') . ' ' . ($dadosJsonItem['titulo'] ?? ''));
@@ -1738,7 +1756,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
-                        <span>Resp: <strong class="resp-text-label">${respText}</strong></span>
+                        <span style="display:inline-flex; align-items:center; gap:4px;">
+                            <span>Resp: <strong class="resp-text-label">${respText}</strong></span>
+                            <span class="badge-delay-sidebar" style="display:none;"></span>
+                        </span>
                         <span class="status-resolvido-label" style="color: ${resolvidoColor};">
                             ${resolvidoText}
                         </span>
@@ -1841,6 +1862,22 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
                 // Inicializar visualizadores de imagens estilo feed
                 if (typeof initMaterialboxed === 'function') {
                     initMaterialboxed('#chat-real-content .materialboxed');
+                }
+
+                // Sincronizar instantaneamente o badge de delay na sidebar com os dados reais calculados
+                if (res.delays) {
+                    let $cardDelay = $(`#item-oco-${ocorrenciaId} .badge-delay-sidebar`);
+                    if ($cardDelay.length) {
+                        if (res.delays.is_resolvido) {
+                            $cardDelay.attr('style', 'font-size:0.7rem; color:#2e7d32; background:#e8f5e9; padding:1px 5px; border-radius:4px; font-weight:600;');
+                            $cardDelay.attr('title', 'Tempo total: ' + (res.delays.texto_resolucao || ''));
+                            $cardDelay.html('🏁 ' + res.delays.dias_resolucao + 'd');
+                        } else {
+                            $cardDelay.attr('style', `font-size:0.7rem; color:${res.delays.cor_interacao}; background:${res.delays.bg_interacao}; padding:1px 5px; border-radius:4px; font-weight:600;`);
+                            $cardDelay.attr('title', `${res.delays.texto_abertura} • ${res.delays.texto_interacao}`);
+                            $cardDelay.html(`⏱️ ${res.delays.dias_abertura}d • 💬 ${res.delays.dias_ultima_interacao}d`);
+                        }
+                    }
                 }
 
                 // Iniciar verificação assíncrona de e-mail no Gmail

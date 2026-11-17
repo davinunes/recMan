@@ -474,6 +474,22 @@ function vds_get_ocorrencia_detalhe($ocorrenciaId, $usuarioIdConselho = null) {
 
     $delays = vds_calcular_delays_ocorrencia($ocorrencia, $eventosParaDelay, $notasInternas);
 
+    // Persistir timestamp da última interação no banco para manter paridade na listagem analítica
+    if (!empty($delays['ts_ultima_interacao']) && $delays['ts_ultima_interacao'] > 0 && !empty($ocorrencia['id'])) {
+        $dataUltimaMsgStr = date('Y-m-d H:i:s', $delays['ts_ultima_interacao']);
+        if (($ocorrencia['data_ultima_mensagem'] ?? '') !== $dataUltimaMsgStr) {
+            $linkSync = DBConnect();
+            $stmtUpMsg = mysqli_prepare($linkSync, "UPDATE ocorrencias SET data_ultima_mensagem = ? WHERE id = ?");
+            if ($stmtUpMsg) {
+                mysqli_stmt_bind_param($stmtUpMsg, "si", $dataUltimaMsgStr, $ocorrencia['id']);
+                mysqli_stmt_execute($stmtUpMsg);
+                mysqli_stmt_close($stmtUpMsg);
+            }
+            DBClose($linkSync);
+            $ocorrencia['data_ultima_mensagem'] = $dataUltimaMsgStr;
+        }
+    }
+
     return [
         'local' => $ocorrencia,
         'notasInternas' => $notasInternas,
@@ -923,6 +939,15 @@ function vds_persist_item_local($item, $linkParam = null) {
     $ocoTipo = (int)($item['tipoId'] ?? ($item['tipo'] ?? ($item['ocoTipo'] ?? 115)));
     $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
 
+    // Timestamp da última interação/mensagem (dtExibicao na VDS representa a última mensagem)
+    $dtUltimaMsgSql = null;
+    $rawExib = $item['dtExibicao'] ?? ($item['dthora'] ?? null);
+    if ($rawExib && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawExib, $mE)) {
+        $dtUltimaMsgSql = "{$mE[3]}-{$mE[2]}-{$mE[1]} {$mE[4]}";
+    } elseif ($rawExib && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawExib)) {
+        $dtUltimaMsgSql = date('Y-m-d H:i:s', strtotime($rawExib));
+    }
+
     $localId = $ocoId;
 
     if ($protocolo || $uuidRemoto || $ocoId) {
@@ -940,18 +965,18 @@ function vds_persist_item_local($item, $linkParam = null) {
         if ($rowFind) {
             $blocoReal = ($bloco !== 'Z') ? $bloco : null;
             $unidadeReal = ($unidade !== '999') ? $unidade : null;
-            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmtUp, "ssissssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $rowFind['id']);
+            $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ?, data_ultima_mensagem = IFNULL(?, data_ultima_mensagem) WHERE id = ?");
+            mysqli_stmt_bind_param($stmtUp, "ssisssssi", $uuidStr, $protoStr, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEncoded, $dtUltimaMsgSql, $rowFind['id']);
             mysqli_stmt_execute($stmtUp);
             mysqli_stmt_close($stmtUp);
             $localId = $rowFind['id'];
         } else {
             if ($ocoId > 0) {
-                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                mysqli_stmt_bind_param($stmtIns, "issssssis", $ocoId, $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (id, abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                mysqli_stmt_bind_param($stmtIns, "issssssiss", $ocoId, $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded, $dtUltimaMsgSql);
             } else {
-                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                mysqli_stmt_bind_param($stmtIns, "ssssssis", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded);
+                $stmtIns = mysqli_prepare($link, "INSERT INTO ocorrencias (abertura, bloco, unidade, status, uuid_remoto, protocolo_vds, oco_tipo, dados_json, data_ultima_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                mysqli_stmt_bind_param($stmtIns, "ssssssiss", $abertura, $bloco, $unidade, $status, $uuidStr, $protoStr, $ocoTipo, $jsonEncoded, $dtUltimaMsgSql);
             }
             mysqli_stmt_execute($stmtIns);
             $localId = mysqli_insert_id($link) ?: $ocoId;
@@ -1041,7 +1066,32 @@ function vds_calcular_delays_ocorrencia($local, $eventosRemotos = [], $notasInte
     // 2. Timestamp da Última Interação
     $tsUltimaInteracao = $tsAbertura;
 
-    // Verificar eventos remotos VDS
+    // Verificar se o registro já possui data_ultima_mensagem registrada no banco local
+    if (!empty($local['data_ultima_mensagem'])) {
+        $tsMsg = vds_parse_datetime_to_timestamp($local['data_ultima_mensagem']);
+        if ($tsMsg && $tsMsg > $tsUltimaInteracao) {
+            $tsUltimaInteracao = $tsMsg;
+        }
+    }
+
+    // Verificar dtExibicao / dthora do JSON local (retornado em listagens da VDS)
+    $rawJsonDt = $dadosJson['dtExibicao'] ?? ($dadosJson['dthora'] ?? null);
+    if (!empty($rawJsonDt)) {
+        $tsExib = vds_parse_datetime_to_timestamp($rawJsonDt);
+        if ($tsExib && $tsExib > $tsUltimaInteracao) {
+            $tsUltimaInteracao = $tsExib;
+        }
+    }
+
+    // Verificar se foi informada nota interna mais recente em lote (max_nota_interna)
+    if (!empty($local['max_nota_interna'])) {
+        $tsNotaLote = vds_parse_datetime_to_timestamp($local['max_nota_interna']);
+        if ($tsNotaLote && $tsNotaLote > $tsUltimaInteracao) {
+            $tsUltimaInteracao = $tsNotaLote;
+        }
+    }
+
+    // Verificar eventos remotos VDS (quando consultados no detalhe do chamado)
     if (!empty($eventosRemotos) && is_array($eventosRemotos)) {
         foreach ($eventosRemotos as $ev) {
             $dtEv = $ev['dtHora'] ?? ($ev['dthora'] ?? ($ev['data'] ?? ($ev['dtExibicao'] ?? null)));
@@ -1054,7 +1104,7 @@ function vds_calcular_delays_ocorrencia($local, $eventosRemotos = [], $notasInte
         }
     }
 
-    // Verificar notas internas do conselho
+    // Verificar notas internas do conselho (quando passadas no detalhe do chamado)
     if (!empty($notasInternas) && is_array($notasInternas)) {
         foreach ($notasInternas as $n) {
             $dtNota = $n['created_at'] ?? null;
@@ -1064,14 +1114,6 @@ function vds_calcular_delays_ocorrencia($local, $eventosRemotos = [], $notasInte
                     $tsUltimaInteracao = $tsNota;
                 }
             }
-        }
-    }
-
-    // Fallback com dtExibicao do JSON local se não houver eventos avulsos
-    if ($tsUltimaInteracao <= $tsAbertura && !empty($dadosJson['dtExibicao'])) {
-        $tsExib = vds_parse_datetime_to_timestamp($dadosJson['dtExibicao']);
-        if ($tsExib && $tsExib > $tsUltimaInteracao) {
-            $tsUltimaInteracao = $tsExib;
         }
     }
 
@@ -2029,20 +2071,29 @@ function vds_atualizar_ocorrencia_por_protocolo($protocoloOuId, $usuarioIdConsel
     $status = $item['statusNome'] ?? ($item['statusStr'] ?? ($item['status'] ?? 'Aberto'));
     $jsonEnc = json_encode($item, JSON_UNESCAPED_UNICODE);
 
+    // Timestamp da última interação/mensagem vindo da VDS
+    $dtUltimaMsgSql = null;
+    $rawExib = $item['dtExibicao'] ?? ($item['dthora'] ?? null);
+    if ($rawExib && preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/', $rawExib, $mE)) {
+        $dtUltimaMsgSql = "{$mE[3]}-{$mE[2]}-{$mE[1]} {$mE[4]}";
+    } elseif ($rawExib && preg_match('/^\d{4}-\d{2}-\d{2}/', $rawExib)) {
+        $dtUltimaMsgSql = date('Y-m-d H:i:s', strtotime($rawExib));
+    }
+
     $blocoReal = ($bloco !== 'Z') ? $bloco : null;
     $unidadeReal = ($unidade !== '999') ? $unidade : null;
 
-    $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ? OR protocolo_vds = ?");
+    $stmtUp = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ?, data_ultima_mensagem = IFNULL(?, data_ultima_mensagem) WHERE id = ? OR protocolo_vds = ?");
     $targetId = is_numeric($protoSearch) ? (int)$protoSearch : $realOcoId;
-    mysqli_stmt_bind_param($stmtUp, "ssissssisi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $targetId, $protoSearch);
+    mysqli_stmt_bind_param($stmtUp, "ssisssssis", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $dtUltimaMsgSql, $targetId, $protoSearch);
     $ok = mysqli_stmt_execute($stmtUp);
     $rowsAffected = mysqli_stmt_affected_rows($stmtUp);
     mysqli_stmt_close($stmtUp);
 
     // Se não havia o registro com id ou protocolo_vds, tenta atualizar pelo id retornado pela VDS
     if ($rowsAffected === 0 && $realOcoId > 0 && $realOcoId !== $targetId) {
-        $stmtUp2 = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ? WHERE id = ?");
-        mysqli_stmt_bind_param($stmtUp2, "ssissssi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $realOcoId);
+        $stmtUp2 = mysqli_prepare($link, "UPDATE ocorrencias SET uuid_remoto = ?, protocolo_vds = ?, oco_tipo = ?, bloco = IFNULL(?, bloco), unidade = IFNULL(?, unidade), status = ?, dados_json = ?, data_ultima_mensagem = IFNULL(?, data_ultima_mensagem) WHERE id = ?");
+        mysqli_stmt_bind_param($stmtUp2, "ssisssssi", $realUuid, $realProtocolo, $ocoTipo, $blocoReal, $unidadeReal, $status, $jsonEnc, $dtUltimaMsgSql, $realOcoId);
         mysqli_stmt_execute($stmtUp2);
         mysqli_stmt_close($stmtUp2);
     }
