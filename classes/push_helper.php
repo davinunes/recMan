@@ -42,8 +42,10 @@ function getVapidConfig()
  * @param string $url URL para qual o usuário será redirecionado se clicar
  * @param array|null $userIds Array opcional de IDs de usuários. Null envia para todos os conselheiros.
  * @param string|null $icon URL ou caminho do ícone.
+ * @param string|null $tag Tag de agrupamento para substituir notificações do mesmo assunto/recurso.
+ * @param array|null $actions Ações interativas (botões) na notificação.
  */
-function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
+function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $icon = null, $tag = null, $actions = null)
 {
     try {
         if (!class_exists('Minishlink\WebPush\WebPush')) {
@@ -95,9 +97,9 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
             // Se a URL for relativa, tenta usar o base_url do dispositivo do conselheiro
             // Se o base_url for por exemplo https://mini.davinunes.eti.br
             // E a URL for /index.php, o link final será https://mini.davinunes.eti.br/index.php
+            $base = $row['base_url'] ?: 'https://mini.davinunes.eti.br';
             $finalUrl = $url;
             if (substr($url, 0, 4) !== 'http') {
-                $base = $row['base_url'] ?: 'https://mini.davinunes.eti.br';
                 $finalUrl = rtrim($base, '/') . '/' . ltrim($url, '/');
             }
 
@@ -107,12 +109,39 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
                 'authToken' => $row['auth']
             ]);
 
-            $devicePayload = json_encode([
+            $payloadData = [
                 'title' => $titulo,
                 'body' => $mensagem,
                 'url' => $finalUrl,
-                'icon' => $icon
-            ]);
+                'icon' => $icon,
+                'badge' => 'https://mini.davinunes.eti.br/favicon/logo-conselho/96-96.png?v=' . $v
+            ];
+
+            // Agrupamento Inteligente no Android/Chrome
+            if (!empty($tag)) {
+                $payloadData['tag'] = $tag;
+                $payloadData['renotify'] = true;
+            }
+
+            // Ações interativas (botões de ação)
+            if (!empty($actions) && is_array($actions)) {
+                $resolvedActions = [];
+                foreach ($actions as $act) {
+                    $actUrl = $act['url'] ?? $finalUrl;
+                    if (substr($actUrl, 0, 4) !== 'http') {
+                        $actUrl = rtrim($base, '/') . '/' . ltrim($actUrl, '/');
+                    }
+                    $resolvedActions[] = [
+                        'action' => $act['action'],
+                        'title' => $act['title'],
+                        'url' => $actUrl,
+                        'icon' => $act['icon'] ?? null
+                    ];
+                }
+                $payloadData['actions'] = $resolvedActions;
+            }
+
+            $devicePayload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
             $webPush->sendOneNotification($subscription, $devicePayload);
         }
@@ -143,8 +172,10 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
  * @param string $url
  * @param array|null $userIds
  * @param string|null $icon URL ou caminho do ícone.
+ * @param string|null $tag Tag de agrupamento por recurso.
+ * @param array|null $actions Ações rápidas na notificação.
  */
-function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
+function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $icon = null, $tag = null, $actions = null)
 {
     // Domínio oficial para garantir que o curl interno sempre funcione
     // Mesmo se o request vier do portal (outro dominio), o curl interno deve usar o dominio que tem a pasta /classes/
@@ -162,6 +193,14 @@ function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $ic
 
     if ($icon) {
         $postData['icon'] = $icon;
+    }
+
+    if ($tag) {
+        $postData['tag'] = $tag;
+    }
+
+    if ($actions) {
+        $postData['actions'] = json_encode($actions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     $postFields = http_build_query($postData);
