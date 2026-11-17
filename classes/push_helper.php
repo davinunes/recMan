@@ -103,6 +103,13 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
                 $finalUrl = rtrim($base, '/') . '/' . ltrim($url, '/');
             }
 
+            // Normalização: se o link iniciar com recurso., troca para home.; caso contrário mantém original
+            if (preg_match('#^https?://recurso\.#i', $finalUrl)) {
+                $finalUrl = preg_replace('#^(https?://)recurso\.#i', '${1}home.', $finalUrl);
+            } elseif (stripos($finalUrl, 'recurso.') === 0) {
+                $finalUrl = preg_replace('/^recurso\./i', 'home.', $finalUrl);
+            }
+
             $subscription = Subscription::create([
                 'endpoint' => $row['endpoint'],
                 'publicKey' => $row['p256dh'],
@@ -131,6 +138,14 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
                     if (substr($actUrl, 0, 4) !== 'http') {
                         $actUrl = rtrim($base, '/') . '/' . ltrim($actUrl, '/');
                     }
+
+                    // Normalização: se o link iniciar com recurso., troca para home.; caso contrário mantém original
+                    if (preg_match('#^https?://recurso\.#i', $actUrl)) {
+                        $actUrl = preg_replace('#^(https?://)recurso\.#i', '${1}home.', $actUrl);
+                    } elseif (stripos($actUrl, 'recurso.') === 0) {
+                        $actUrl = preg_replace('/^recurso\./i', 'home.', $actUrl);
+                    }
+
                     $resolvedActions[] = [
                         'action' => $act['action'],
                         'title' => $act['title'],
