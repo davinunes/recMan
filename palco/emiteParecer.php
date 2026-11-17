@@ -169,11 +169,105 @@ Content-Disposition: attachment; filename="' . "$nomeAnexo" . '"' . "\n" . "\n";
 
 
   <div class="card" id="previaPDF">
+    <div class="card-content" style="padding-bottom: 12px; border-bottom: 1px solid #e0e0e0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span class="card-title" style="margin: 0; font-size: 1.2rem; font-weight: bold; color: #1a237e; display: flex; align-items: center;">
+          <i class="material-icons left" style="color: #c62828;">picture_as_pdf</i> Prévia Oficial do Parecer
+        </span>
+        <div>
+          <a href="ver_parecer.php?rec=<?php echo urlencode($parecer['id']); ?>" target="_blank" class="btn blue darken-2 waves-effect waves-light" style="font-weight: 500;">
+            <i class="material-icons left">open_in_new</i>Abrir em Tela Cheia
+          </a>
+        </div>
+      </div>
+    </div>
 
-    <embed src="data:application/pdf;base64,<?php echo $parecerPdf; ?>" type="application/pdf" width="100%"
-      height="600px">
-
+    <!-- Visualizador Universal via PDF.js (compatível com Android, iOS e Desktop) -->
+    <div id="pdfCanvasContainer" style="background: #525659; padding: 20px 10px; border-radius: 0 0 4px 4px; overflow-x: auto; text-align: center; min-height: 250px;">
+      <div id="pdfLoading" style="color: #ffffff; padding: 30px 10px; font-size: 0.95rem;">
+        <div class="preloader-wrapper small active" style="vertical-align: middle; margin-right: 10px;">
+          <div class="spinner-layer spinner-blue-only">
+            <div class="circle-clipper left"><div class="circle"></div></div>
+            <div class="gap-patch"><div class="circle"></div></div>
+            <div class="circle-clipper right"><div class="circle"></div></div>
+          </div>
+        </div>
+        Carregando prévia do parecer...
+      </div>
+    </div>
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const base64Data = <?php echo json_encode($parecerPdf ?? ''); ?>;
+      const container = document.getElementById('pdfCanvasContainer');
+      const loadingElem = document.getElementById('pdfLoading');
+
+      if (!base64Data || !window.pdfjsLib) {
+        if (loadingElem) {
+          loadingElem.innerHTML = "<p style='color:#ffcdd2;'>Prévia não disponível.</p><p><a href='ver_parecer.php?rec=<?php echo urlencode($parecer['id']); ?>' target='_blank' class='btn blue waves-effect'>Abrir PDF Direto</a></p>";
+        }
+        return;
+      }
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      try {
+        const rawData = atob(base64Data);
+        const uint8Array = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; i++) {
+          uint8Array[i] = rawData.charCodeAt(i);
+        }
+
+        pdfjsLib.getDocument({ data: uint8Array }).promise.then(function (pdf) {
+          if (loadingElem) loadingElem.style.display = 'none';
+
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            pdf.getPage(pageNum).then(function (page) {
+              const containerWidth = container.clientWidth - 24;
+              const unscaledViewport = page.getViewport({ scale: 1.0 });
+              const targetWidth = Math.min(containerWidth > 220 ? containerWidth : 820, 850);
+              const scale = targetWidth / unscaledViewport.width;
+              const viewport = page.getViewport({ scale: scale });
+
+              const canvas = document.createElement('canvas');
+              canvas.className = 'pdf-page-canvas';
+              canvas.style.maxWidth = '100%';
+              canvas.style.height = 'auto';
+              canvas.style.display = 'block';
+              canvas.style.margin = '0 auto 15px auto';
+              canvas.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35)';
+              canvas.style.backgroundColor = '#ffffff';
+              canvas.style.borderRadius = '3px';
+
+              const context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+              };
+
+              page.render(renderContext);
+              container.appendChild(canvas);
+            });
+          }
+        }).catch(function (err) {
+          console.error("Erro na decodificação do PDF:", err);
+          if (loadingElem) {
+            loadingElem.innerHTML = "<p style='color:#ffcdd2;'>Falha ao desenhar o PDF no leitor interno.</p><p><a href='ver_parecer.php?rec=<?php echo urlencode($parecer['id']); ?>' target='_blank' class='btn blue darken-2 waves-effect'>Abrir em Tela Cheia</a></p>";
+          }
+        });
+      } catch (err) {
+        console.error("Erro de Base64:", err);
+        if (loadingElem) {
+          loadingElem.innerHTML = "<p style='color:#ffcdd2;'>Formato do parecer inválido.</p>";
+        }
+      }
+    });
+  </script>
 
 
 
