@@ -6,6 +6,35 @@ use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
 /**
+ * Obtém a configuração das chaves VAPID do sistema.
+ * Se o arquivo vapid.json não existir ou estiver corrompido, utiliza as chaves oficiais e restaura o arquivo físico.
+ * 
+ * @return array ['publicKey' => string, 'privateKey' => string]
+ */
+function getVapidConfig()
+{
+    $vapidPath = __DIR__ . '/vapid.json';
+    if (file_exists($vapidPath)) {
+        $content = @file_get_contents($vapidPath);
+        $data = json_decode($content, true);
+        if (is_array($data) && !empty($data['publicKey']) && !empty($data['privateKey']) && strpos($data['publicKey'], '{{') === false) {
+            return $data;
+        }
+    }
+
+    // Chaves oficiais do recMan compatíveis com inscrições já salvas no banco
+    $defaultKeys = [
+        'publicKey' => 'BGaKShgVE_Z2WPds6j9pUoLjuEBZ14io6fUXWDVBriycLhdvNHKdyHUP0g3LZXDLb9ZXsehEY5dbp1uC-NsdoZY',
+        'privateKey' => 'x-Av76CQzKwX3KqGbQ8ZaU81eBO3bAYu45llWTmziWY',
+    ];
+
+    // Tenta persistir para leituras rápidas subsequentes
+    @file_put_contents($vapidPath, json_encode($defaultKeys, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return $defaultKeys;
+}
+
+/**
  * Envia um Push Notification via Web (Celular ou Navegador)
  * 
  * @param string $titulo O Título do Pop Up
@@ -13,8 +42,10 @@ use Minishlink\WebPush\Subscription;
  * @param string $url URL para qual o usuário será redirecionado se clicar
  * @param array|null $userIds Array opcional de IDs de usuários. Null envia para todos os conselheiros.
  * @param string|null $icon URL ou caminho do ícone.
+ * @param string|null $tag Tag de agrupamento para substituir notificações do mesmo assunto/recurso.
+ * @param array|null $actions Ações interativas (botões) na notificação.
  */
-function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
+function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $icon = null, $tag = null, $actions = null)
 {
     try {
         if (!class_exists('Minishlink\WebPush\WebPush')) {
@@ -22,13 +53,12 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
             return false;
         }
 
-        $vapidPath = __DIR__ . '/vapid.json';
-        if (!file_exists($vapidPath)) {
-            error_log("Vapid file does not exist at $vapidPath");
+        $vapid = getVapidConfig();
+        if (empty($vapid['publicKey']) || empty($vapid['privateKey'])) {
+            error_log("Chaves VAPID não configuradas ou inválidas.");
             return false;
         }
 
-        $vapid = json_decode(file_get_contents($vapidPath), true);
         $auth = [
             'VAPID' => [
                 'subject' => 'mailto:admin@recman.miami', // Identificação obrigatória do Firebase
@@ -39,9 +69,13 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
 
         $webPush = new WebPush($auth);
 
-        // Icone padrão se não for passado (Novo Logo do Conselho)
+        // Icone padrão se não for passado (Novo Logo do Conselho) com Cache Busting
+        $iconFile = __DIR__ . '/../storage/icons/logo-conselho.png';
+        $v = file_exists($iconFile) ? filemtime($iconFile) : '20261116';
         if (!$icon) {
-            $icon = 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png';
+            $icon = 'https://mini.davinunes.eti.br/storage/icons/logo-conselho.png?v=' . $v;
+        } elseif (strpos($icon, 'logo-conselho.png') !== false && strpos($icon, '?') === false) {
+            $icon .= '?v=' . $v;
         }
 
         $sql = "SELECT id, user_id, endpoint, p256dh, auth, base_url FROM push_subscriptions";
@@ -63,10 +97,17 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
             // Se a URL for relativa, tenta usar o base_url do dispositivo do conselheiro
             // Se o base_url for por exemplo https://mini.davinunes.eti.br
             // E a URL for /index.php, o link final será https://mini.davinunes.eti.br/index.php
+            $base = $row['base_url'] ?: 'https://mini.davinunes.eti.br';
             $finalUrl = $url;
             if (substr($url, 0, 4) !== 'http') {
-                $base = $row['base_url'] ?: 'https://mini.davinunes.eti.br';
                 $finalUrl = rtrim($base, '/') . '/' . ltrim($url, '/');
+            }
+
+            // Normalização: se o link iniciar com recurso., troca para home.; caso contrário mantém original
+            if (preg_match('#^https?://recurso\.#i', $finalUrl)) {
+                $finalUrl = preg_replace('#^(https?://)recurso\.#i', '${1}home.', $finalUrl);
+            } elseif (stripos($finalUrl, 'recurso.') === 0) {
+                $finalUrl = preg_replace('/^recurso\./i', 'home.', $finalUrl);
             }
 
             $subscription = Subscription::create([
@@ -75,12 +116,47 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
                 'authToken' => $row['auth']
             ]);
 
-            $devicePayload = json_encode([
+            $payloadData = [
                 'title' => $titulo,
                 'body' => $mensagem,
                 'url' => $finalUrl,
-                'icon' => $icon
-            ]);
+                'icon' => $icon,
+                'badge' => 'https://mini.davinunes.eti.br/favicon/logo-conselho/96-96.png?v=' . $v
+            ];
+
+            // Agrupamento Inteligente no Android/Chrome
+            if (!empty($tag)) {
+                $payloadData['tag'] = $tag;
+                $payloadData['renotify'] = true;
+            }
+
+            // Ações interativas (botões de ação)
+            if (!empty($actions) && is_array($actions)) {
+                $resolvedActions = [];
+                foreach ($actions as $act) {
+                    $actUrl = $act['url'] ?? $finalUrl;
+                    if (substr($actUrl, 0, 4) !== 'http') {
+                        $actUrl = rtrim($base, '/') . '/' . ltrim($actUrl, '/');
+                    }
+
+                    // Normalização: se o link iniciar com recurso., troca para home.; caso contrário mantém original
+                    if (preg_match('#^https?://recurso\.#i', $actUrl)) {
+                        $actUrl = preg_replace('#^(https?://)recurso\.#i', '${1}home.', $actUrl);
+                    } elseif (stripos($actUrl, 'recurso.') === 0) {
+                        $actUrl = preg_replace('/^recurso\./i', 'home.', $actUrl);
+                    }
+
+                    $resolvedActions[] = [
+                        'action' => $act['action'],
+                        'title' => $act['title'],
+                        'url' => $actUrl,
+                        'icon' => $act['icon'] ?? null
+                    ];
+                }
+                $payloadData['actions'] = $resolvedActions;
+            }
+
+            $devicePayload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
             $webPush->sendOneNotification($subscription, $devicePayload);
         }
@@ -111,8 +187,10 @@ function sendPushNotification($titulo, $mensagem, $url = '/', $userIds = null, $
  * @param string $url
  * @param array|null $userIds
  * @param string|null $icon URL ou caminho do ícone.
+ * @param string|null $tag Tag de agrupamento por recurso.
+ * @param array|null $actions Ações rápidas na notificação.
  */
-function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $icon = null)
+function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $icon = null, $tag = null, $actions = null)
 {
     // Domínio oficial para garantir que o curl interno sempre funcione
     // Mesmo se o request vier do portal (outro dominio), o curl interno deve usar o dominio que tem a pasta /classes/
@@ -130,6 +208,14 @@ function sendPushBackground($titulo, $mensagem, $url = '/', $userIds = null, $ic
 
     if ($icon) {
         $postData['icon'] = $icon;
+    }
+
+    if ($tag) {
+        $postData['tag'] = $tag;
+    }
+
+    if ($actions) {
+        $postData['actions'] = json_encode($actions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     $postFields = http_build_query($postData);

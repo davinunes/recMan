@@ -42,6 +42,19 @@ function sanitizarNumeroAnoNotificacao($numero, $ano) {
     return [$numeroStr, $anoStr, $numeroCompleto];
 }
 
+/**
+ * Resolve o host para links de notificações push destinadas aos conselheiros.
+ * Caso o host comece com "recurso.", substitui por "home.".
+ * Caso não seja "recurso.", mantém o início do host original.
+ */
+function resolverHostPushConselheiro($host = null) {
+    $h = $host ?? ($_SERVER['HTTP_HOST'] ?? 'mini.davinunes.eti.br');
+    if (stripos($h, 'recurso.') === 0) {
+        return preg_replace('/^recurso\./i', 'home.', $h);
+    }
+    return $h;
+}
+
 // Sanitização preventiva e global das entradas POST 'numero' e 'ano'
 if (isset($_POST['numero']) || isset($_POST['ano'])) {
     list($_POST['numero'], $_POST['ano']) = sanitizarNumeroAnoNotificacao($_POST['numero'] ?? '', $_POST['ano'] ?? '');
@@ -523,12 +536,20 @@ if ($action == 'submit') {
     $mensagemPush = "Bloco {$bloco}-{$unidade} protocolou nova defesa.";
     
     // Detecta host e path base
-    $httpHost = $_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br";
+    $httpHost = resolverHostPushConselheiro();
     // Se o portal está em /recMan/portal, assumimos que o index.php está em /recMan/
     $basePathUrl = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/recMan/') !== false) ? '/recMan/' : '/';
     $urlPush = "https://" . $httpHost . $basePathUrl . "index.php?pag=recurso&rec=" . urlencode($numeroCompleto);
+    $tagPush = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numeroCompleto);
+    $actionsPush = [
+        [
+            'action' => 'abrir_recurso',
+            'title' => 'Abrir Defesa',
+            'url' => $urlPush
+        ]
+    ];
     
-    sendPushBackground($tituloPush, $mensagemPush, $urlPush);
+    sendPushBackground($tituloPush, $mensagemPush, $urlPush, null, null, $tagPush, $actionsPush);
 
     // Tratamento de Arquivos Anexados
     $storageDir = __DIR__ . '/../storage/anexos/';
@@ -774,8 +795,18 @@ if (
             $resumoTexto = mb_substr($textoLimpo, 0, $limite, 'UTF-8') . (mb_strlen($textoLimpo, 'UTF-8') > $limite ? "..." : "");
             $tituloPush = "Novo Comentário ($numeroRec)";
             $mensagemPush = "O condômino adicionou ao recurso $numeroRec:\n$resumoTexto";
-            $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroRec);
-            sendPushBackground($tituloPush, $mensagemPush, $urlPush);
+            $httpHost = resolverHostPushConselheiro();
+            $basePathUrl = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/recMan/') !== false) ? '/recMan/' : '/';
+            $urlPush = "https://" . $httpHost . $basePathUrl . "index.php?pag=recurso&rec=" . urlencode($numeroRec);
+            $tagPush = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numeroRec);
+            $actionsPush = [
+                [
+                    'action' => 'abrir_recurso',
+                    'title' => 'Ver Comentário',
+                    'url' => $urlPush
+                ]
+            ];
+            sendPushBackground($tituloPush, $mensagemPush, $urlPush, null, null, $tagPush, $actionsPush);
 
             echo json_encode(['success' => true]);
         } else {
@@ -812,8 +843,18 @@ if (
             // Notifica conselheiros
             $tituloPush = "Novos Anexos ($numeroRec)";
             $mensagemPush = "O condômino enviou novos arquivos para o recurso.";
-            $urlPush = "https://" . ($_SERVER['HTTP_HOST'] ?? "mini.davinunes.eti.br") . "/index.php?pag=recurso&rec=" . urlencode($numeroRec);
-            sendPushBackground($tituloPush, $mensagemPush, $urlPush);
+            $httpHost = resolverHostPushConselheiro();
+            $basePathUrl = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/recMan/') !== false) ? '/recMan/' : '/';
+            $urlPush = "https://" . $httpHost . $basePathUrl . "index.php?pag=recurso&rec=" . urlencode($numeroRec);
+            $tagPush = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numeroRec);
+            $actionsPush = [
+                [
+                    'action' => 'abrir_recurso',
+                    'title' => 'Ver Anexos',
+                    'url' => $urlPush
+                ]
+            ];
+            sendPushBackground($tituloPush, $mensagemPush, $urlPush, null, null, $tagPush, $actionsPush);
         }
 
         echo json_encode(['success' => true]);
@@ -875,7 +916,7 @@ if (
             $resp = json_decode(getParecerPdf($pdfData), true);
             if (isset($resp['pdf_base64'])) {
                 header("Content-type: application/pdf");
-                header('Content-Disposition: attachment; filename="Parecer_' . str_replace('/', '-', $numeroRec) .
+                header('Content-Disposition: inline; filename="Parecer_' . str_replace('/', '-', $numeroRec) .
                     '.pdf"');
                 echo base64_decode($resp['pdf_base64']);
                 exit;

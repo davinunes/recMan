@@ -7,9 +7,9 @@ $action = $_GET['action'] ?? '';
 
 // Retorna a Chave Pública pro Navegador do Conselheiro solicitar permissão
 if ($action == 'get_vapid') {
-    $vapidPath = __DIR__ . '/classes/vapid.json';
-    if (file_exists($vapidPath)) {
-        $vapid = json_decode(file_get_contents($vapidPath), true);
+    require_once __DIR__ . '/classes/push_helper.php';
+    $vapid = getVapidConfig();
+    if (!empty($vapid['publicKey'])) {
         echo json_encode(['publicKey' => $vapid['publicKey']]);
     } else {
         echo json_encode(['error' => 'Chaves VAPID não configuradas']);

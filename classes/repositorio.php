@@ -159,6 +159,7 @@ function updateParecer($dados)
             WHERE id = '$id'";
 
     if (DBExecute($sql)) {
+
         return true;
     } else {
         return false;
@@ -191,6 +192,39 @@ function finalizaParecer($dados)
     if (DBExecute($sqlParecer) && DBExecute($sqlRecurso)) {
         // Se ambas as atualizações forem bem-sucedidas, realiza o COMMIT
         DBExecute("COMMIT");
+        // Disparo de notificação push em background para os conselheiros
+        try {
+            require_once "push_helper.php";
+            if (!isset($_SESSION) && session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+            $finalizadorId = $userId ?: ($_SESSION['user_id'] ?? null);
+            $usuario = !empty($finalizadorId) ? getUsuariosById($finalizadorId) : null;
+            $nomeCompleto = trim($usuario['nome'] ?? 'Conselheiro');
+            $primeiroNome = explode(' ', $nomeCompleto)[0];
+
+            $titulo = "Parecer Publicado ($id)";
+            $mensagem = "$primeiroNome publicou o parecer $id";
+            $url = "/index.php?pag=recurso&rec=" . urlencode($id);
+            $tag = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $id);
+            $actions = [
+                [
+                    'action' => 'abrir_recurso',
+                    'title' => 'Abrir Recurso',
+                    'url' => $url
+                ],
+                [
+                    'action' => 'ver_parecer',
+                    'title' => 'Ver Parecer (PDF)',
+                    'url' => "/ver_parecer.php?rec=" . urlencode($id)
+                ]
+            ];
+
+            sendPushBackground($titulo, $mensagem, $url, null, null, $tag, $actions);
+        } catch (\Throwable $e) {
+            error_log("Erro ao enviar push de parecer publicado: " . $e->getMessage());
+        }
+
         return true;
     } else {
         // Se ocorrer algum erro, realiza o ROLLBACK
@@ -1088,8 +1122,16 @@ function upsertRecurso($dados)
             $titulo = "Sistema de Recursos";
             $mensagem = "O conselheiro $nome_usuario cadastrou um novo recurso: $numero_recurso";
             $url = "/index.php?pag=recurso&rec=" . urlencode($numero_recurso);
+            $tag = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numero_recurso);
+            $actions = [
+                [
+                    'action' => 'abrir_recurso',
+                    'title' => 'Abrir Recurso',
+                    'url' => $url
+                ]
+            ];
 
-            sendPushBackground($titulo, $mensagem, $url);
+            sendPushBackground($titulo, $mensagem, $url, null, null, $tag, $actions);
         }
         return "ok";
     } else {
@@ -1124,8 +1166,16 @@ function upsertComentario($dados)
         $titulo = "Novo Comentário ($numeroRecurso)";
         $mensagem = "$nome_usuario comentou no recurso $numeroRecurso:\n$resumo_comentario";
         $url = "/index.php?pag=recurso&rec=" . urlencode($numeroRecurso);
+        $tag = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numeroRecurso);
+        $actions = [
+            [
+                'action' => 'abrir_recurso',
+                'title' => 'Ver Comentário',
+                'url' => $url
+            ]
+        ];
 
-        sendPushBackground($titulo, $mensagem, $url);
+        sendPushBackground($titulo, $mensagem, $url, null, null, $tag, $actions);
         return $id_mensagem;
     } else {
         return "erro";
@@ -1322,12 +1372,20 @@ function upsertVoto($dados)
 
         $titulo = "Voto Registrado";
         $mensagem = "O conselheiro $nome_usuario votou no recurso $numero_recurso";
-        $domain = "mini.davinunes.eti.br";
+        $url = "/index.php?pag=recurso&rec=" . urlencode($numero_recurso);
+        $tag = "rec-" . preg_replace('/[^a-zA-Z0-9_-]/', '-', $numero_recurso);
+        $actions = [
+            [
+                'action' => 'abrir_recurso',
+                'title' => 'Ver Recurso',
+                'url' => $url
+            ]
+        ];
 
-        $postData = "titulo=" . urlencode($titulo) . "&mensagem=" . urlencode($mensagem);
-        $comando = "curl -s -H \"Host: $domain\" -d \"$postData\" http://127.0.0.1/classes/api_push_cli.php > /dev/null 2>&1 &";
+        require_once "push_helper.php";
+        sendPushBackground($titulo, $mensagem, $url, null, null, $tag, $actions);
 
-        exec($comando);
+
 
         return "ok";
     } else {
