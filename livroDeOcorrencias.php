@@ -403,16 +403,33 @@ function vds_render_chat_detalhe_conteudo($detalheSel, $visao, $usuarioIdConselh
             </button>
         </div>
 
-        <form id="form-adicionar-nota-interna" onsubmit="submeterNotaInternaAjax(event, <?= $local['id'] ?>)" style="margin:0;" enctype="multipart/form-data">
+        <?php
+        $moradorNome = $dadosJsonLoc['por'] ?? ($dadosJsonLoc['autor']['nome'] ?? '');
+        if (empty($moradorNome) && !empty($eventosRemotos[0]['por'])) {
+            $moradorNome = $eventosRemotos[0]['por'];
+        }
+        if (empty($moradorNome)) {
+            $moradorNome = 'Morador(a)';
+        }
+        ?>
+        <form id="form-adicionar-nota-interna" onsubmit="submeterNotaInternaAjax(event, <?= $local['id'] ?>)" 
+              data-bloco="<?= htmlspecialchars($local['bloco'] ?? '') ?>" 
+              data-unidade="<?= htmlspecialchars($local['unidade'] ?? '') ?>" 
+              data-protocolo="<?= htmlspecialchars($local['protocolo_vds'] ?? $local['id']) ?>" 
+              data-morador="<?= htmlspecialchars($moradorNome) ?>" 
+              style="margin:0;" enctype="multipart/form-data">
             <input type="hidden" name="action" value="adicionar_nota_interna">
             <input type="hidden" name="ocorrencia_id" value="<?= $local['id'] ?>">
             <input type="hidden" name="anexo_base64" id="input-anexo-base64" value="">
             <input type="file" name="anexo" id="input-anexo-nota" accept="image/*,application/pdf,.pdf" style="display:none;" onchange="tratarAnexoNotaArquivo(this)">
             
-            <div style="display:flex; gap:10px; align-items:center;">
+            <div style="display:flex; gap:8px; align-items:center;">
                 <label for="input-anexo-nota" id="btn-clip-anexo" class="btn-flat waves-effect" title="Anexar Imagem ou PDF" style="padding:0 10px; margin:0; height:50px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#555; border:1px solid #ccc; border-radius:6px; background:#fff;">
                     <i class="material-icons" style="font-size:1.4rem;">attach_file</i>
                 </label>
+                <button type="button" id="btn-respostas-rapidas" class="btn-flat waves-effect" title="Respostas Rápidas (Modelos Prontos)" onclick="abrirModalRespostasRapidas()" style="padding:0 10px; margin:0; height:50px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#e65100; border:1px solid #ffcc80; border-radius:6px; background:#fff8e1;">
+                    <i class="material-icons" style="font-size:1.4rem;">bolt</i>
+                </button>
                 <textarea name="texto" id="input-texto-nota-interna" placeholder="Digite uma Nota Interna do Conselho... (Cole Ctrl+V ou anexe PDF/imagem)" style="flex:1; border:1px solid #ccc; border-radius:6px; padding:8px; height:50px; resize:none; font-family:inherit;"></textarea>
                 <button type="submit" id="btn-salvar-nota-interna" class="btn waves-effect waves-light amber darken-3" style="height:50px;">
                     Salvar Nota Interna <i class="material-icons right">note_add</i>
@@ -463,6 +480,40 @@ if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'obter_conte
     if (ob_get_length()) ob_clean();
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($resMsg, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Endpoint AJAX: Listar Respostas Rápidas
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'listar_respostas_rapidas') {
+    $lista = vds_listar_respostas_rapidas(true);
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => true, 'respostas' => $lista], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Endpoint AJAX: Salvar / Editar Resposta Rápida
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'salvar_resposta_rapida') {
+    $id = (int)($_POST['id'] ?? 0);
+    $titulo = trim($_POST['titulo'] ?? '');
+    $categoria = trim($_POST['categoria'] ?? '');
+    $texto = trim($_POST['texto'] ?? '');
+    $ordem = (int)($_POST['ordem'] ?? 0);
+
+    $resSave = vds_salvar_resposta_rapida($id, $titulo, $categoria, $texto, $usuarioIdConselho, $ordem);
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($resSave, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Endpoint AJAX: Excluir Resposta Rápida
+if (!empty($_REQUEST['is_ajax']) && ($_REQUEST['action'] ?? '') === 'excluir_resposta_rapida') {
+    $id = (int)($_POST['id'] ?? 0);
+    $resDel = vds_excluir_resposta_rapida($id);
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($resDel, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -1629,6 +1680,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if ($.fn.modal) {
         $('#modal-visualizar-email-gmail').modal();
         $('#modal-encaminhar-vds').modal();
+        $('#modal-selecionar-resposta-rapida').modal();
+        $('#modal-gerenciar-respostas-rapidas').modal();
     }
 
     // Disparar busca de e-mail no Gmail se já houver ocorrência carregada inicialmente
@@ -2450,6 +2503,173 @@ function abrirModalVisualizarEmailGmail(messageId) {
     </div>
 </div>
 
+<!-- Modal 1: Selecionar e Inserir Resposta Rápida -->
+<div id="modal-selecionar-resposta-rapida" class="modal modal-fixed-footer" style="max-height:85%; height:80%; width:80%; max-width:850px; border-radius:10px;">
+    <div class="modal-content" style="padding:20px 24px; display:flex; flex-direction:column; height:calc(100% - 56px);">
+        <!-- Cabeçalho -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="background:#fff3e0; color:#e65100; width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+                    <i class="material-icons" style="font-size:1.3rem;">bolt</i>
+                </span>
+                <div>
+                    <h5 style="margin:0; font-size:1.15rem; font-weight:700; color:#212529;">Respostas Rápidas</h5>
+                    <div style="font-size:0.78rem; color:#6c757d;">Selecione um modelo para colar na área de texto. Tags como {unidade}, {bloco}, {morador} e {protocolo} serão preenchidas automaticamente.</div>
+                </div>
+            </div>
+            <button type="button" class="modal-close btn-flat circle waves-effect" style="padding:4px; margin:0;"><i class="material-icons">close</i></button>
+        </div>
+
+        <!-- Filtros: Campo de Busca e Categorias (Chips) -->
+        <div style="margin-bottom:12px;">
+            <div style="position:relative; margin-bottom:8px;">
+                <i class="material-icons" style="position:absolute; left:10px; top:8px; color:#888; font-size:1.2rem;">search</i>
+                <input type="text" id="filtro-busca-respostas-rapidas" placeholder="Filtrar respostas por título, conteúdo ou categoria..." oninput="filtrarRespostasRapidasUI()" style="height:36px; border:1px solid #ced4da; border-radius:6px; padding-left:34px; padding-right:10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff; margin:0;">
+            </div>
+            <!-- Categorias (Chips) -->
+            <div id="chips-categorias-respostas" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                <!-- Preenchido dinamicamente via JS -->
+            </div>
+        </div>
+
+        <!-- Preloader / Loading -->
+        <div id="loading-respostas-rapidas" style="text-align:center; padding:30px 0; display:none;">
+            <div class="preloader-wrapper small active">
+                <div class="spinner-layer spinner-yellow-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <div style="color:#666; font-size:0.85rem; margin-top:8px;">Carregando respostas rápidas...</div>
+        </div>
+
+        <!-- Lista de Cards de Respostas -->
+        <div id="container-cards-respostas-rapidas" style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:10px;">
+            <!-- Preenchido dinamicamente via JS -->
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="modal-footer" style="padding:0 24px; background:#f8f9fa; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; height:56px;">
+        <button type="button" class="btn-flat orange-text text-darken-3 waves-effect" onclick="abrirModalGerenciarRespostas()" style="font-weight:600; display:inline-flex; align-items:center; gap:4px; text-transform:none;">
+            <i class="material-icons tiny">settings</i> Gerenciar Modelos
+        </button>
+        <button type="button" class="modal-close btn-flat waves-effect" style="color:#666;">Fechar</button>
+    </div>
+</div>
+
+<!-- Modal 2: Gerenciar Respostas Rápidas (CRUD) -->
+<div id="modal-gerenciar-respostas-rapidas" class="modal modal-fixed-footer" style="max-height:90%; height:85%; width:85%; max-width:920px; border-radius:10px;">
+    <div class="modal-content" style="padding:20px 24px; display:flex; flex-direction:column; height:calc(100% - 56px);">
+        <!-- Cabeçalho -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="background:#e8eaf6; color:#3949ab; width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+                    <i class="material-icons" style="font-size:1.3rem;">tune</i>
+                </span>
+                <div>
+                    <h5 style="margin:0; font-size:1.15rem; font-weight:700; color:#212529;">Gerenciar Respostas Rápidas</h5>
+                    <div style="font-size:0.78rem; color:#6c757d;">Cadastre, edite ou remova os modelos compartilhados com todos os conselheiros.</div>
+                </div>
+            </div>
+            <button type="button" class="modal-close btn-flat circle waves-effect" style="padding:4px; margin:0;"><i class="material-icons">close</i></button>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding-right:4px;">
+            <!-- Formulário de Criação/Edição -->
+            <div style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; padding:14px 16px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span id="form-resp-titulo-acao" style="font-weight:700; font-size:0.92rem; color:#212529; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="material-icons tiny orange-text text-darken-3">add_circle</i> Cadastrar Novo Modelo
+                    </span>
+                    <button type="button" id="btn-limpar-form-resp" class="btn-flat btn-small" onclick="limparFormRespostaRapida()" style="display:none; font-size:0.78rem; text-transform:none; color:#666;">
+                        <i class="material-icons tiny left">clear</i> Cancelar Edição
+                    </button>
+                </div>
+
+                <form id="form-crud-resposta-rapida" onsubmit="salvarRespostaRapidaAjax(event)">
+                    <input type="hidden" id="crud-resp-id" value="0">
+                    
+                    <div style="display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+                        <div style="flex:2; min-width:240px;">
+                            <label style="font-size:0.8rem; font-weight:600; color:#495057;">Título do Modelo: *</label>
+                            <input type="text" id="crud-resp-titulo" placeholder="Ex: Barulho após 22h, Notificação de Mudança..." required style="height:36px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff; margin:4px 0 0 0;">
+                        </div>
+                        <div style="flex:1; min-width:160px;">
+                            <label style="font-size:0.8rem; font-weight:600; color:#495057;">Categoria: *</label>
+                            <input type="text" id="crud-resp-categoria" placeholder="Ex: Convivência, Operacional, Pets..." list="dl-categorias-sugeridas" required style="height:36px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff; margin:4px 0 0 0;">
+                            <datalist id="dl-categorias-sugeridas">
+                                <option value="Convivência">
+                                <option value="Operacional">
+                                <option value="Esclarecimento">
+                                <option value="Áreas Comuns">
+                                <option value="Encaminhamento">
+                                <option value="Encerramento">
+                                <option value="Geral">
+                            </datalist>
+                        </div>
+                        <div style="width:90px;">
+                            <label style="font-size:0.8rem; font-weight:600; color:#495057;">Ordem:</label>
+                            <input type="number" id="crud-resp-ordem" value="10" step="5" style="height:36px; border:1px solid #ced4da; border-radius:6px; padding:0 10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff; margin:4px 0 0 0;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:8px;">
+                        <label style="font-size:0.8rem; font-weight:600; color:#495057;">Texto da Mensagem: *</label>
+                        <textarea id="crud-resp-texto" placeholder="Digite o texto da resposta padrão..." required style="min-height:95px; border:1px solid #ced4da; border-radius:6px; padding:10px; font-size:0.88rem; width:100%; box-sizing:border-box; background:#fff; margin:4px 0 0 0; font-family:inherit; resize:vertical;"></textarea>
+                        
+                        <!-- Variáveis Suportadas -->
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; font-size:0.75rem; color:#6c757d;">
+                            <span>Tags automáticas (clique para inserir no texto):</span>
+                            <span class="chip-tag-var" onclick="inserirTagNoTextoCrud('{unidade}')" style="cursor:pointer; background:#e9ecef; padding:2px 6px; border-radius:4px; font-family:monospace; color:#0d6efd;" title="Número da Unidade">{unidade}</span>
+                            <span class="chip-tag-var" onclick="inserirTagNoTextoCrud('{bloco}')" style="cursor:pointer; background:#e9ecef; padding:2px 6px; border-radius:4px; font-family:monospace; color:#0d6efd;" title="Bloco">{bloco}</span>
+                            <span class="chip-tag-var" onclick="inserirTagNoTextoCrud('{protocolo}')" style="cursor:pointer; background:#e9ecef; padding:2px 6px; border-radius:4px; font-family:monospace; color:#0d6efd;" title="Número do Protocolo">{protocolo}</span>
+                            <span class="chip-tag-var" onclick="inserirTagNoTextoCrud('{morador}')" style="cursor:pointer; background:#e9ecef; padding:2px 6px; border-radius:4px; font-family:monospace; color:#0d6efd;" title="Nome do Morador">{morador}</span>
+                            <span class="chip-tag-var" onclick="inserirTagNoTextoCrud('{data}')" style="cursor:pointer; background:#e9ecef; padding:2px 6px; border-radius:4px; font-family:monospace; color:#0d6efd;" title="Data Atual">{data}</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                        <button type="submit" id="btn-salvar-crud-resp" class="btn-small waves-effect waves-light orange darken-3" style="border-radius:4px; font-size:0.82rem; text-transform:none; display:inline-flex; align-items:center; gap:4px; height:32px; line-height:32px;">
+                            <i class="material-icons tiny">save</i> <span id="lbl-btn-salvar-resp">Salvar Modelo</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabela de Modelos Cadastrados -->
+            <div style="margin-top:10px;">
+                <h6 style="margin:0 0 8px 0; font-size:0.88rem; font-weight:700; color:#495057;">Modelos Existentes</h6>
+                <div style="border:1px solid #dee2e6; border-radius:6px; overflow:hidden;">
+                    <table class="striped responsive-table" style="margin:0; font-size:0.85rem;">
+                        <thead style="background:#f1f3f5;">
+                            <tr>
+                                <th style="padding:8px 12px; width:45px; text-align:center;">Ord</th>
+                                <th style="padding:8px 12px;">Título</th>
+                                <th style="padding:8px 12px; width:130px;">Categoria</th>
+                                <th style="padding:8px 12px;">Prévia do Texto</th>
+                                <th style="padding:8px 12px; width:100px; text-align:center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-tabela-respostas-rapidas">
+                            <!-- Preenchido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="modal-footer" style="padding:0 24px; background:#f8f9fa; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; height:56px;">
+        <button type="button" class="btn-flat waves-effect" onclick="voltarParaSelecaoRespostas()" style="color:#1a73e8; display:inline-flex; align-items:center; gap:4px; text-transform:none;">
+            <i class="material-icons tiny">arrow_back</i> Voltar às Respostas Rápidas
+        </button>
+        <button type="button" class="modal-close btn-flat waves-effect" style="color:#666;">Fechar</button>
+    </div>
+</div>
+
 <script>
 // Abrir Modal de Encaminhamento VDS
 window.abrirModalEncaminharVds = function(uuidRemoto, ocorrenciaId) {
@@ -2594,9 +2814,383 @@ window.submeterEncaminharVds = function() {
         }
     });
 };
+
+// ==========================================
+// RESPOSTAS RÁPIDAS (LIVRO DE OCORRÊNCIAS)
+// ==========================================
+let cacheRespostasRapidas = [];
+let categoriaFiltroAtiva = 'todas';
+
+// 1. Abrir Modal de Seleção
+window.abrirModalRespostasRapidas = function() {
+    const modalEl = document.getElementById('modal-selecionar-resposta-rapida');
+    if (!modalEl) return;
+    const instance = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl);
+    instance.open();
+
+    $('#filtro-busca-respostas-rapidas').val('');
+    categoriaFiltroAtiva = 'todas';
+
+    carregarRespostasRapidasAjax(function() {
+        renderizarListaRespostasRapidas();
+    });
+};
+
+// 2. Carregar dados via AJAX
+window.carregarRespostasRapidasAjax = function(callback) {
+    $('#loading-respostas-rapidas').show();
+    $('#container-cards-respostas-rapidas').hide();
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'GET',
+        data: {
+            is_ajax: 1,
+            action: 'listar_respostas_rapidas'
+        },
+        dataType: 'json',
+        success: function(res) {
+            $('#loading-respostas-rapidas').hide();
+            $('#container-cards-respostas-rapidas').show();
+            if (res && res.success && Array.isArray(res.respostas)) {
+                cacheRespostasRapidas = res.respostas;
+                if (typeof callback === 'function') callback();
+            } else {
+                M.toast({ html: 'Erro ao carregar respostas rápidas.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            $('#loading-respostas-rapidas').hide();
+            $('#container-cards-respostas-rapidas').show();
+            console.error('[Respostas Rápidas] Erro ao carregar', err);
+            M.toast({ html: 'Erro de conexão ao carregar respostas rápidas.', classes: 'red' });
+        }
+    });
+};
+
+// 3. Renderizar Lista e Chips de Categoria
+window.renderizarListaRespostasRapidas = function() {
+    const $container = $('#container-cards-respostas-rapidas');
+    const $chips = $('#chips-categorias-respostas');
+    const termo = ($('#filtro-busca-respostas-rapidas').val() || '').toLowerCase().trim();
+
+    // Extrair categorias únicas
+    const categorias = ['todas'];
+    cacheRespostasRapidas.forEach(function(r) {
+        const cat = (r.categoria || 'Geral').trim();
+        if (cat && !categorias.includes(cat)) {
+            categorias.push(cat);
+        }
+    });
+
+    // Renderizar Chips
+    let chipsHtml = '';
+    categorias.forEach(function(cat) {
+        const isSel = (categoriaFiltroAtiva.toLowerCase() === cat.toLowerCase());
+        const label = (cat === 'todas') ? 'Todas as Categorias' : cat;
+        const bg = isSel ? '#e65100' : '#f1f3f5';
+        const color = isSel ? '#ffffff' : '#495057';
+        chipsHtml += `<span onclick="filtrarCategoriaRespostas('${cat.replace(/'/g, "\\'")}')" style="cursor:pointer; background:${bg}; color:${color}; padding:4px 12px; border-radius:14px; font-size:0.75rem; font-weight:${isSel ? '700' : '500'}; transition:all 0.15s ease;">${label}</span>`;
+    });
+    $chips.html(chipsHtml);
+
+    // Filtrar respostas
+    const filtradas = cacheRespostasRapidas.filter(function(r) {
+        const matchCat = (categoriaFiltroAtiva === 'todas' || (r.categoria || '').toLowerCase() === categoriaFiltroAtiva.toLowerCase());
+        const matchTermo = !termo || 
+            (r.titulo || '').toLowerCase().includes(termo) || 
+            (r.texto || '').toLowerCase().includes(termo) || 
+            (r.categoria || '').toLowerCase().includes(termo);
+        return matchCat && matchTermo;
+    });
+
+    if (filtradas.length === 0) {
+        $container.html('<div style="text-align:center; padding:35px 20px; color:#888; font-size:0.9rem;"><i class="material-icons" style="font-size:2.8rem; color:#ccc; display:block; margin-bottom:8px;">find_in_page</i>Nenhum modelo encontrado com os filtros atuais.</div>');
+        return;
+    }
+
+    let cardsHtml = '';
+    filtradas.forEach(function(r) {
+        const cat = r.categoria || 'Geral';
+        const textoEscapadoAttr = encodeURIComponent(r.texto || '');
+        cardsHtml += `
+            <div class="card-resp-item" style="border:1px solid #e9ecef; border-radius:8px; padding:12px 14px; background:#ffffff; transition:all 0.15s ease; cursor:pointer;" onclick="selecionarEColarRespostaRapida(${r.id}, decodeURIComponent('${textoEscapadoAttr}'))">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <div style="font-weight:700; font-size:0.95rem; color:#212529; display:flex; align-items:center; gap:6px;">
+                        <i class="material-icons tiny orange-text text-darken-3">chat_bubble_outline</i>
+                        <span>${r.titulo}</span>
+                    </div>
+                    <span style="background:#fff3e0; color:#e65100; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; border:1px solid #ffe0b2;">
+                        ${cat}
+                    </span>
+                </div>
+                <div style="font-size:0.83rem; color:#555; line-height:1.45; max-height:48px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-bottom:8px;">
+                    ${(r.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </div>
+                <div style="display:flex; justify-content:flex-end;">
+                    <span class="btn-small waves-effect waves-light orange darken-3" style="height:26px; line-height:26px; padding:0 10px; font-size:0.74rem; text-transform:none; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">
+                        <i class="material-icons tiny" style="font-size:0.95rem;">content_paste</i> Inserir no Texto
+                    </span>
+                </div>
+            </div>
+        `;
+    });
+    $container.html(cardsHtml);
+};
+
+// 4. Filtrar por Categoria e Input
+window.filtrarCategoriaRespostas = function(cat) {
+    categoriaFiltroAtiva = cat;
+    renderizarListaRespostasRapidas();
+};
+
+window.filtrarRespostasRapidasUI = function() {
+    renderizarListaRespostasRapidas();
+};
+
+// 5. Inserir Resposta Rápida e Interpolar Tags
+window.selecionarEColarRespostaRapida = function(id, textoBase) {
+    const $form = $('#form-adicionar-nota-interna');
+    let bloco = $form.attr('data-bloco') || '';
+    let unidade = $form.attr('data-unidade') || '';
+    let protocolo = $form.attr('data-protocolo') || '';
+    let morador = $form.attr('data-morador') || 'Morador(a)';
+    const hoje = new Date().toLocaleDateString('pt-BR');
+
+    // Fallback: se o form não tiver atributos (ex: caso seja selecionado pelo item-oco)
+    if (!bloco || !unidade) {
+        const $itemAtivo = $('.item-oco.active');
+        if ($itemAtivo.length) {
+            const txt = $itemAtivo.text();
+            const matchBloco = txt.match(/Bloco\s+([A-Za-z0-9]+)/i);
+            const matchUnidade = txt.match(/Apt\s+([A-Za-z0-9]+)/i);
+            const matchProt = txt.match(/Prot:\s*([A-Za-z0-9]+)/i);
+            if (matchBloco) bloco = matchBloco[1];
+            if (matchUnidade) unidade = matchUnidade[1];
+            if (matchProt) protocolo = matchProt[1];
+        }
+    }
+
+    // Substituir tags dinâmicas
+    let textoFinal = textoBase
+        .replace(/\{bloco\}/gi, bloco)
+        .replace(/\{unidade\}/gi, unidade)
+        .replace(/\{protocolo\}/gi, protocolo)
+        .replace(/\{morador\}/gi, morador)
+        .replace(/\{data\}/gi, hoje);
+
+    const $textarea = $('#input-texto-nota-interna');
+    if ($textarea.length) {
+        const textoAtual = $textarea.val().trim();
+        if (textoAtual.length > 0) {
+            $textarea.val(textoAtual + "\n\n" + textoFinal);
+        } else {
+            $textarea.val(textoFinal);
+        }
+
+        // Fechar Modal de Seleção
+        const modalEl = document.getElementById('modal-selecionar-resposta-rapida');
+        if (modalEl) {
+            const inst = M.Modal.getInstance(modalEl);
+            if (inst) inst.close();
+        }
+
+        // Ajustar visual e focar
+        $textarea.trigger('change').focus();
+        M.toast({ html: '⚡ Resposta rápida inserida no campo de texto!', classes: 'rounded green' });
+    } else {
+        M.toast({ html: 'Selecione uma ocorrência para colar a resposta rápida.', classes: 'rounded orange' });
+    }
+};
+
+// 6. Gerenciamento de Modelos (CRUD)
+window.abrirModalGerenciarRespostas = function() {
+    const modalSel = document.getElementById('modal-selecionar-resposta-rapida');
+    if (modalSel) {
+        const instSel = M.Modal.getInstance(modalSel);
+        if (instSel) instSel.close();
+    }
+
+    const modalGer = document.getElementById('modal-gerenciar-respostas-rapidas');
+    if (!modalGer) return;
+    const instGer = M.Modal.getInstance(modalGer) || M.Modal.init(modalGer);
+    instGer.open();
+
+    limparFormRespostaRapida();
+    renderizarTabelaGerenciarRespostas();
+};
+
+window.voltarParaSelecaoRespostas = function() {
+    const modalGer = document.getElementById('modal-gerenciar-respostas-rapidas');
+    if (modalGer) {
+        const instGer = M.Modal.getInstance(modalGer);
+        if (instGer) instGer.close();
+    }
+    abrirModalRespostasRapidas();
+};
+
+window.renderizarTabelaGerenciarRespostas = function() {
+    const $tbody = $('#tbody-tabela-respostas-rapidas');
+    if (!cacheRespostasRapidas || cacheRespostasRapidas.length === 0) {
+        $tbody.html('<tr><td colspan="5" style="text-align:center; color:#888; padding:20px;">Nenhum modelo cadastrado.</td></tr>');
+        return;
+    }
+
+    let rowsHtml = '';
+    cacheRespostasRapidas.forEach(function(r) {
+        const previa = (r.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 80) + ((r.texto || '').length > 80 ? '...' : '');
+        rowsHtml += `
+            <tr>
+                <td style="text-align:center; font-weight:600; color:#666;">${r.ordem || 0}</td>
+                <td style="font-weight:600; color:#212529;">${r.titulo}</td>
+                <td><span style="background:#e9ecef; color:#495057; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600;">${r.categoria || 'Geral'}</span></td>
+                <td style="color:#555; font-size:0.8rem;">${previa}</td>
+                <td style="text-align:center; white-space:nowrap;">
+                    <button type="button" class="btn-flat btn-small" onclick="editarRespostaRapidaModal(${r.id})" title="Editar modelo" style="padding:0 4px; color:#1a73e8;">
+                        <i class="material-icons tiny">edit</i>
+                    </button>
+                    <button type="button" class="btn-flat btn-small" onclick="excluirRespostaRapidaAjax(${r.id}, '${(r.titulo || '').replace(/'/g, "\\'")}')" title="Excluir modelo" style="padding:0 4px; color:#d32f2f;">
+                        <i class="material-icons tiny">delete</i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    $tbody.html(rowsHtml);
+};
+
+window.limparFormRespostaRapida = function() {
+    $('#crud-resp-id').val('0');
+    $('#crud-resp-titulo').val('');
+    $('#crud-resp-categoria').val('');
+    $('#crud-resp-ordem').val('10');
+    $('#crud-resp-texto').val('');
+    $('#lbl-btn-salvar-resp').text('Salvar Modelo');
+    $('#form-resp-titulo-acao').html('<i class="material-icons tiny orange-text text-darken-3">add_circle</i> Cadastrar Novo Modelo');
+    $('#btn-limpar-form-resp').hide();
+};
+
+window.editarRespostaRapidaModal = function(id) {
+    const item = cacheRespostasRapidas.find(r => parseInt(r.id) === parseInt(id));
+    if (!item) return;
+
+    $('#crud-resp-id').val(item.id);
+    $('#crud-resp-titulo').val(item.titulo);
+    $('#crud-resp-categoria').val(item.categoria);
+    $('#crud-resp-ordem').val(item.ordem || 10);
+    $('#crud-resp-texto').val(item.texto);
+
+    $('#lbl-btn-salvar-resp').text('Atualizar Modelo');
+    $('#form-resp-titulo-acao').html('<i class="material-icons tiny blue-text">edit</i> Editando Modelo: ' + item.titulo);
+    $('#btn-limpar-form-resp').show();
+
+    // Scroll suave até o topo do formulário
+    $('#modal-gerenciar-respostas-rapidas .modal-content').scrollTop(0);
+};
+
+window.inserirTagNoTextoCrud = function(tag) {
+    const textarea = document.getElementById('crud-resp-texto');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+    textarea.value = val.substring(0, start) + tag + val.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+};
+
+window.salvarRespostaRapidaAjax = function(e) {
+    e.preventDefault();
+    const id = parseInt($('#crud-resp-id').val()) || 0;
+    const titulo = $('#crud-resp-titulo').val().trim();
+    const categoria = $('#crud-resp-categoria').val().trim();
+    const ordem = parseInt($('#crud-resp-ordem').val()) || 0;
+    const texto = $('#crud-resp-texto').val().trim();
+    const $btn = $('#btn-salvar-crud-resp');
+
+    if (!titulo || !texto) {
+        M.toast({ html: 'Preencha o título e o texto do modelo.', classes: 'orange' });
+        return;
+    }
+
+    $btn.prop('disabled', true).css('opacity', '0.7');
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'salvar_resposta_rapida',
+            id: id,
+            titulo: titulo,
+            categoria: categoria,
+            ordem: ordem,
+            texto: texto
+        },
+        dataType: 'json',
+        success: function(res) {
+            $btn.prop('disabled', false).css('opacity', '1');
+            if (res && res.success) {
+                M.toast({ html: res.message || 'Modelo salvo com sucesso!', classes: 'green' });
+                limparFormRespostaRapida();
+                carregarRespostasRapidasAjax(function() {
+                    renderizarTabelaGerenciarRespostas();
+                });
+            } else {
+                M.toast({ html: (res && res.message) ? res.message : 'Falha ao salvar modelo.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            $btn.prop('disabled', false).css('opacity', '1');
+            console.error('[Respostas Rápidas] Erro ao salvar', err);
+            M.toast({ html: 'Erro de conexão ao salvar modelo.', classes: 'red' });
+        }
+    });
+};
+
+window.excluirRespostaRapidaAjax = function(id, titulo) {
+    if (!confirm('Deseja realmente excluir o modelo "' + titulo + '"?')) return;
+
+    $.ajax({
+        url: 'index.php?pag=livroDeOcorrencias',
+        type: 'POST',
+        data: {
+            is_ajax: 1,
+            action: 'excluir_resposta_rapida',
+            id: id
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.success) {
+                M.toast({ html: 'Modelo excluído com sucesso!', classes: 'green' });
+                carregarRespostasRapidasAjax(function() {
+                    renderizarTabelaGerenciarRespostas();
+                });
+            } else {
+                M.toast({ html: (res && res.message) ? res.message : 'Falha ao excluir modelo.', classes: 'red' });
+            }
+        },
+        error: function(err) {
+            console.error('[Respostas Rápidas] Erro ao excluir', err);
+            M.toast({ html: 'Erro de conexão ao excluir modelo.', classes: 'red' });
+        }
+    });
+};
 </script>
 
 <style>
+.card-resp-item:hover {
+    border-color: #ff9800 !important;
+    box-shadow: 0 2px 8px rgba(255,152,0,0.18) !important;
+    background: #fffdfa !important;
+}
+.chip-tag-var {
+    transition: all 0.15s ease;
+}
+.chip-tag-var:hover {
+    background: #0d6efd !important;
+    color: #fff !important;
+}
 .tag-badge {
     transition: box-shadow 0.15s ease;
 }

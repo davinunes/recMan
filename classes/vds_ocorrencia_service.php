@@ -1881,4 +1881,129 @@ function vds_alterar_status_classificacao($ocorrenciaUuid, $statusId, $classific
     ];
 }
 
+/**
+ * Garante que a tabela ocorrencias_respostas_rapidas existe e insere modelos padrão se vazia.
+ */
+function vds_ensure_respostas_rapidas_table_exists($link) {
+    $sqlTabela = "CREATE TABLE IF NOT EXISTS ocorrencias_respostas_rapidas (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        titulo VARCHAR(150) NOT NULL,
+        categoria VARCHAR(80) NOT NULL DEFAULT 'Geral',
+        texto TEXT NOT NULL,
+        conselheiro_id INT NULL,
+        ativo TINYINT(1) NOT NULL DEFAULT 1,
+        ordem INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_ativo (ativo),
+        KEY idx_categoria (categoria),
+        KEY idx_ordem (ordem)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    @mysqli_query($link, $sqlTabela);
+
+    // Se estiver vazia, insere sementes iniciais
+    $resCheck = @mysqli_query($link, "SELECT COUNT(*) as total FROM ocorrencias_respostas_rapidas");
+    if ($resCheck) {
+        $row = mysqli_fetch_assoc($resCheck);
+        if ($row && (int)$row['total'] === 0) {
+            $modelos = [
+                ['Barulho fora do horário regulamentar', 'Convivência', 10, "Prezado(a) morador(a) da unidade {bloco}-{unidade},\n\nRecebemos o registro referente ao protocolo {protocolo}. Esclarecemos que o regimento interno do condomínio estabelece silêncio e respeito à convivência, especialmente fora dos horários permitidos. O chamado foi registrado e as providências cabíveis de orientação e monitoramento estão sendo adotadas pela administração."],
+                ['Solicitação de fotos/evidências complementares', 'Esclarecimento', 20, "Prezado(a) condômino(a),\n\nPara que o Conselho e a Administração possam apurar adequadamente o ocorrido registrado no protocolo {protocolo}, solicitamos por gentileza o envio de mais informações e, se houver, fotos, vídeos ou identificação de data e horário exatos dos fatos narrados.\n\nAguardamos seu retorno para darmos prosseguimento."],
+                ['Regras de Mudança e Cargas', 'Operacional', 30, "Prezado(a) morador(a) da unidade {bloco}-{unidade},\n\nLembramos que todas as mudanças e transportes de grandes volumes devem ser previamente agendados junto à administração/portaria, respeitando os horários permitidos e a reserva do elevador de serviço devidamente protegido.\n\nQualquer dúvida, estamos à disposição."],
+                ['Encaminhado ao Síndico / Administração', 'Encaminhamento', 40, "Olá, agradecemos pelo seu contato.\n\nInformamos que a sua solicitação registrada no protocolo {protocolo} foi formalmente encaminhada ao Síndico e à equipe da Administração do condomínio para análise técnica e execução das providências necessárias."],
+                ['Descarte de Lixo e Entulho', 'Áreas Comuns', 50, "Prezado(a) morador(a),\n\nOrientamos que o descarte de resíduos domésticos e recicláveis deve ser realizado exclusivamente nas lixeiras designadas e em sacos bem vedados. É expressamente vedado o descarte de entulhos de obras ou móveis descartados nas áreas comuns sem autorização prévia da administração."],
+                ['Ocorrência Finalizada / Providências Adotadas', 'Encerramento', 60, "Prezado(a) morador(a),\n\nInformamos que as verificações pertinentes ao protocolo {protocolo} foram concluídas e as medidas cabíveis foram adotadas pela gestão condominial. Agradecemos pela sua colaboração na manutenção da ordem e boa convivência em nosso condomínio."]
+            ];
+            $stmt = @mysqli_prepare($link, "INSERT INTO ocorrencias_respostas_rapidas (titulo, categoria, ordem, texto, ativo) VALUES (?, ?, ?, ?, 1)");
+            if ($stmt) {
+                foreach ($modelos as $m) {
+                    mysqli_stmt_bind_param($stmt, "ssis", $m[0], $m[1], $m[2], $m[3]);
+                    mysqli_stmt_execute($stmt);
+                }
+                mysqli_stmt_close($stmt);
+            }
+        }
+    }
+}
+
+/**
+ * Retorna lista de respostas rápidas cadastradas.
+ */
+function vds_listar_respostas_rapidas($ativoApenas = true) {
+    $link = DBConnect();
+    vds_ensure_respostas_rapidas_table_exists($link);
+
+    $sql = "SELECT * FROM ocorrencias_respostas_rapidas";
+    if ($ativoApenas) {
+        $sql .= " WHERE ativo = 1";
+    }
+    $sql .= " ORDER BY categoria ASC, ordem ASC, titulo ASC";
+
+    $res = mysqli_query($link, $sql);
+    $lista = [];
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $lista[] = $row;
+        }
+    }
+    DBClose($link);
+    return $lista;
+}
+
+/**
+ * Salva ou atualiza uma resposta rápida.
+ */
+function vds_salvar_resposta_rapida($id, $titulo, $categoria, $texto, $conselheiroId = null, $ordem = 0) {
+    $titulo = trim($titulo ?? '');
+    $categoria = trim($categoria ?? '') ?: 'Geral';
+    $texto = trim($texto ?? '');
+    $id = (int)$id;
+    $ordem = (int)$ordem;
+
+    if (empty($titulo) || empty($texto)) {
+        return ['success' => false, 'message' => 'Título e texto da resposta rápida são obrigatórios.'];
+    }
+
+    $link = DBConnect();
+    vds_ensure_respostas_rapidas_table_exists($link);
+
+    if ($id > 0) {
+        $stmt = mysqli_prepare($link, "UPDATE ocorrencias_respostas_rapidas SET titulo = ?, categoria = ?, texto = ?, ordem = ? WHERE id = ?");
+        mysqli_stmt_bind_param($stmt, "sssii", $titulo, $categoria, $texto, $ordem, $id);
+        $ok = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        DBClose($link);
+        return ['success' => $ok, 'message' => $ok ? 'Resposta rápida atualizada com sucesso!' : 'Erro ao atualizar resposta rápida.', 'id' => $id];
+    } else {
+        $stmt = mysqli_prepare($link, "INSERT INTO ocorrencias_respostas_rapidas (titulo, categoria, texto, conselheiro_id, ordem, ativo) VALUES (?, ?, ?, ?, ?, 1)");
+        mysqli_stmt_bind_param($stmt, "sssii", $titulo, $categoria, $texto, $conselheiroId, $ordem);
+        $ok = mysqli_stmt_execute($stmt);
+        $newId = mysqli_insert_id($link);
+        mysqli_stmt_close($stmt);
+        DBClose($link);
+        return ['success' => $ok, 'message' => $ok ? 'Resposta rápida cadastrada com sucesso!' : 'Erro ao cadastrar resposta rápida.', 'id' => $newId];
+    }
+}
+
+/**
+ * Exclui uma resposta rápida.
+ */
+function vds_excluir_resposta_rapida($id) {
+    $id = (int)$id;
+    if ($id <= 0) {
+        return ['success' => false, 'message' => 'ID inválido.'];
+    }
+
+    $link = DBConnect();
+    vds_ensure_respostas_rapidas_table_exists($link);
+    $stmt = mysqli_prepare($link, "DELETE FROM ocorrencias_respostas_rapidas WHERE id = ? LIMIT 1");
+    mysqli_stmt_bind_param($stmt, "i", $id);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    DBClose($link);
+
+    return ['success' => $ok, 'message' => $ok ? 'Resposta rápida excluída com sucesso!' : 'Erro ao excluir resposta rápida.'];
+}
+
+
 
