@@ -182,7 +182,6 @@ function vds_auditoria_parse_timestamp($dtVal) {
 function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataReferenciaStr = null) {
     $now = time();
     $dataRefStr = !empty($dataReferenciaStr) ? $dataReferenciaStr : date('Y-m-d');
-    // Considerar o término do dia de referência às 23:59:59 para apurações fidedignas
     $tsReferencia = strtotime($dataRefStr . ' 23:59:59') ?: $now;
 
     // 1. Timestamp de Abertura
@@ -213,7 +212,6 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         $eventosOrdenados = $dadosJson['regs'];
     }
 
-    // Ordenar eventos por timestamp crescente
     usort($eventosOrdenados, function($a, $b) {
         $dtA = vds_auditoria_parse_timestamp($a['dtHora'] ?? ($a['dthora'] ?? ($a['data'] ?? '')));
         $dtB = vds_auditoria_parse_timestamp($b['dtHora'] ?? ($b['dthora'] ?? ($b['data'] ?? '')));
@@ -263,19 +261,16 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
                 ];
             }
 
-            // Capturar Primeira Providência Objetiva (Atos procedimentais formais na API)
-            // Na API VDS:
-            // - tipo = 79: Ato formal de encaminhamento a funcionário/grupo
-            // - Menciona formalmente despacho/OS gerada ou destinoId
+            // ATENÇÃO: Conforme diretriz explícita do Conselho:
+            // "Encaminhamentos da administração NÃO devem ser considerados atos formais de providência."
+            // Encaminhamento (ex: tipo 79 ou repasse a outro funcionário/grupo) é mero trâmite interno.
+            // Apenas ordens de serviço formais de execução ou vistorias de reparo comprovadas são providências.
             $isAtoFormalProvidencia = false;
             $motivoProvidencia = null;
 
-            if ($tipoEv === 79 || !empty($ev['destinoId']) || !empty($ev['destinoUuid']) || stripos($msgEv, 'encaminhado para') !== false) {
+            if (preg_match('/(?:ordem de servi[çc]o|os n[ºo]?\s*\d+|reparo executado|servi[çc]o conclu[íi]do)/i', $msgEv)) {
                 $isAtoFormalProvidencia = true;
-                $motivoProvidencia = 'encaminhamento_formal_api';
-            } elseif (stripos($msgEv, 'ordem de serviço') !== false || stripos($msgEv, 'ordem de servico') !== false || stripos($msgEv, 'os n') !== false || stripos($msgEv, 'os nº') !== false) {
-                $isAtoFormalProvidencia = true;
-                $motivoProvidencia = 'ordem_servico_formal';
+                $motivoProvidencia = 'ordem_servico_execucao';
             }
 
             if ($isAtoFormalProvidencia && $primeiraProvidencia === null) {
@@ -294,7 +289,7 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         }
     }
 
-    // 4. Dimensão 3: Situação do Chamado (Ciclo de Vida Formal)
+    // 4. Dimensão 3: Situação do Chamado (Ciclo de Vida Formal na VDS)
     $statusStr = mb_strtolower(trim((string)($local['status'] ?? '')), 'UTF-8');
     $isResolvidoBanco = !empty($local['resolvido']);
     $isStatusFechado = in_array($statusStr, ['resolvido', 'resolvida', 'concluido', 'concluida', 'fechado', 'fechada', 'finalizado', 'finalizada']);
@@ -303,9 +298,8 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
     $dataEncerramentoStr = null;
     $tsEncerramento = null;
 
-    if ($isResolvidoBanco || $isStatusFechado) {
+    if ($isStatusFechado) {
         $situacaoChamado = 'encerrado';
-        // Determinar timestamp de encerramento
         if (!empty($local['data_ultima_mensagem'])) {
             $tsEncerramento = vds_auditoria_parse_timestamp($local['data_ultima_mensagem']);
         } elseif (!empty($local['ultimaAtualizacao'])) {
@@ -322,7 +316,11 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         $situacaoChamado = 'nao_identificado';
     }
 
-    // 5. Dimensão 1: Tempo Transcorrido (Abertura até Referência ou Encerramento)
+    // 5. Avaliação Local do Conselho (Finalidade Atingida / Resolvido no recMan)
+    $conselhoResolvido = !empty($local['resolvido']);
+    $conselhoRotulo = $conselhoResolvido ? 'Finalidade Atingida' : 'Pendente no Conselho';
+
+    // 6. Dimensão 1: Tempo Transcorrido (Abertura até Referência ou Encerramento)
     $tsTerminoCalculo = ($situacaoChamado === 'encerrado' && $tsEncerramento) ? $tsEncerramento : $tsReferencia;
     $deltaSegundosTotal = max(0, $tsTerminoCalculo - $tsAbertura);
     $diasTranscorridos = (int)floor($deltaSegundosTotal / VDS_AUDITORIA_SEGUNDOS_DIA);
@@ -340,7 +338,7 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         $faixaTempo = 'ate_7_dias';
     }
 
-    // 6. Dimensão 2: Situação da Resposta (Art. 12 do Regimento Interno - 7 Dias Exatos)
+    // 7. Dimensão 2: Situação da Resposta (Art. 12 do Regimento Interno - 7 Dias Exatos = 604.800 s)
     $situacaoResposta = 'dados_insuficientes';
     $tempoPrimeiraRespostaDias = null;
 
@@ -357,15 +355,13 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         // Sem resposta da gestão registrada
         $deltaSegundosAteRef = max(0, $tsReferencia - $tsAbertura);
         if ($deltaSegundosAteRef <= VDS_AUDITORIA_PRAZO_REGIMENTAL_SEGUNDOS) {
-            // Aberto há menos de 7 dias completos: NÃO é atraso! Está no prazo regulamentar.
             $situacaoResposta = 'em_prazo_aguardando';
         } else {
-            // Ultrapassou o prazo de 7 dias sem resposta registrada
             $situacaoResposta = 'sem_resposta';
         }
     }
 
-    // 7. Dimensão 4: Situação das Providências
+    // 8. Dimensão 4: Situação das Providências
     $situacaoProvidencias = 'nao_determinado';
     $tempoPrimeiraProvidenciaDias = null;
 
@@ -374,13 +370,13 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         $tempoPrimeiraProvidenciaDias = (int)floor($deltaSegundosProv / VDS_AUDITORIA_SEGUNDOS_DIA);
         $situacaoProvidencias = 'providencia_identificavel';
     } elseif ($primeiraResposta !== null) {
-        // Teve manifestação textual mas nenhum ato fático ou encaminhamento formal
+        // Teve resposta textual ou encaminhamentos administrativos, mas sem comprovação formal de ato material
         $situacaoProvidencias = 'apenas_manifestacao';
     } else {
         $situacaoProvidencias = 'nenhuma_providencia';
     }
 
-    // 8. Tempo até Encerramento (se encerrado)
+    // Tempo até Encerramento (se encerrado na VDS)
     $tempoAteEncerramentoDias = null;
     if ($situacaoChamado === 'encerrado' && $tsEncerramento) {
         $tempoAteEncerramentoDias = max(0, (int)floor(($tsEncerramento - $tsAbertura) / VDS_AUDITORIA_SEGUNDOS_DIA));
@@ -411,11 +407,15 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         'primeira_resposta_ator' => $primeiraResposta ? $primeiraResposta['ator'] : null,
         'primeira_resposta_resumo' => $primeiraResposta ? $primeiraResposta['resumo'] : null,
         
-        // Dimensão 3: Situação do Chamado
+        // Dimensão 3: Situação do Chamado Oficial
         'situacao_chamado' => $situacaoChamado,
         'data_encerramento' => $dataEncerramentoStr,
         'tempo_ate_encerramento_dias' => $tempoAteEncerramentoDias,
         
+        // Avaliação do Conselho (Finalidade Atingida / Resolvido Local)
+        'conselho_resolvido' => $conselhoResolvido,
+        'conselho_rotulo' => $conselhoRotulo,
+
         // Dimensão 4: Situação das Providências
         'situacao_providencias' => $situacaoProvidencias,
         'primeira_providencia_data' => $primeiraProvidencia ? date('Y-m-d H:i:s', $primeiraProvidencia['ts']) : null,
@@ -452,6 +452,8 @@ function vds_auditoria_calcular_metricas($itens) {
             'abertos' => 0,
             'em_andamento' => 0,
             'encerrados' => 0,
+            'conselho_atingiu_finalidade' => 0,
+            'conselho_pendente' => 0,
             'com_providencia' => 0,
             'apenas_manifestacao' => 0,
             'nenhuma_providencia' => 0,
@@ -477,6 +479,7 @@ function vds_auditoria_calcular_metricas($itens) {
     $cAbertos = 0;
     $cEmAndamento = 0;
     $cEncerrados = 0;
+    $cConselhoFinalidade = 0;
 
     $cComProvidencia = 0;
     $cApenasManifestacao = 0;
@@ -513,11 +516,16 @@ function vds_auditoria_calcular_metricas($itens) {
             default: $cDadosInsuficientes++; break;
         }
 
-        // Situação do Chamado
+        // Situação do Chamado Oficial
         switch ($it['situacao_chamado']) {
             case 'aberto': $cAbertos++; break;
             case 'em_andamento': $cEmAndamento++; break;
             case 'encerrado': $cEncerrados++; break;
+        }
+
+        // Finalidade do Conselho
+        if (!empty($it['conselho_resolvido'])) {
+            $cConselhoFinalidade++;
         }
 
         // Situação das Providências
@@ -553,7 +561,6 @@ function vds_auditoria_calcular_metricas($itens) {
         $distCategorias[$cat] = ($distCategorias[$cat] ?? 0) + 1;
     }
 
-    // Cálculos de Média e Mediana
     $calcMedia = function($arr) {
         $c = count($arr);
         return $c > 0 ? round(array_sum($arr) / $c, 1) : 0;
@@ -569,8 +576,6 @@ function vds_auditoria_calcular_metricas($itens) {
         return round(($arr[$meio - 1] + $arr[$meio]) / 2, 1);
     };
 
-    // Denominador estritamente válido para % de resposta
-    // Exclui apenas registros abertos recentemente que ainda estão aguardando o transcurso legal dos 7 dias
     $denominadorAuditavel = $total - $cEmPrazoAguardando;
     $pctRespondidosNoPrazo = $denominadorAuditavel > 0 ? round(($cRespNoPrazo / $denominadorAuditavel) * 100, 1) : 0;
     $pctSemRespExtrapolada = $denominadorAuditavel > 0 ? round(($cSemRespExtrapolada / $denominadorAuditavel) * 100, 1) : 0;
@@ -594,6 +599,9 @@ function vds_auditoria_calcular_metricas($itens) {
         'encerrados' => $cEncerrados,
         'pendentes_total' => $cAbertos + $cEmAndamento,
         
+        'conselho_atingiu_finalidade' => $cConselhoFinalidade,
+        'conselho_pendente' => $total - $cConselhoFinalidade,
+        
         'com_providencia' => $cComProvidencia,
         'apenas_manifestacao' => $cApenasManifestacao,
         'nenhuma_providencia' => $cNenhumaProvidencia,
@@ -613,12 +621,6 @@ function vds_auditoria_calcular_metricas($itens) {
 
 /**
  * Cria uma Sessão de Auditoria Formal com Snapshot Imutável e Preservação Probatória.
- *
- * @param string $titulo Título descritivo da apuração
- * @param string $dataReferencia Data de corte (Y-m-d)
- * @param array $filtros Filtros aplicados na coleta
- * @param int $usuarioId ID do conselheiro logado
- * @return array
  */
 function vds_auditoria_criar_sessao_congelada($titulo, $dataReferencia, $filtros, $usuarioId) {
     $link = DBConnect();
@@ -628,7 +630,6 @@ function vds_auditoria_criar_sessao_congelada($titulo, $dataReferencia, $filtros
     $dataRef = !empty($dataReferencia) ? $dataReferencia : date('Y-m-d');
     $tituloSanitizado = !empty($titulo) ? trim($titulo) : "Auditoria Geral de Ocorrências ({$identificador})";
 
-    // 1. Filtrar chamados locais
     $sqlWhere = " WHERE id > 0 ";
     $params = [];
     $types = "";
@@ -648,10 +649,19 @@ function vds_auditoria_criar_sessao_congelada($titulo, $dataReferencia, $filtros
         $params[] = $filtros['bloco'];
         $types .= "s";
     }
+
+    // Suporte a múltiplas categorias
     if (!empty($filtros['oco_tipo'])) {
-        $sqlWhere .= " AND oco_tipo = ? ";
-        $params[] = (int)$filtros['oco_tipo'];
-        $types .= "i";
+        $tiposArr = is_array($filtros['oco_tipo']) ? $filtros['oco_tipo'] : explode(',', (string)$filtros['oco_tipo']);
+        $tiposLimpos = array_filter(array_map('intval', $tiposArr));
+        if (!empty($tiposLimpos)) {
+            $inPlaceholders = implode(',', array_fill(0, count($tiposLimpos), '?'));
+            $sqlWhere .= " AND oco_tipo IN ({$inPlaceholders}) ";
+            foreach ($tiposLimpos as $tp) {
+                $params[] = $tp;
+                $types .= "i";
+            }
+        }
     }
 
     $sql = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC";
@@ -757,6 +767,29 @@ function vds_auditoria_consultar_tempo_real($filtros, $dataReferencia) {
     $link = DBConnect();
     $dataRef = !empty($dataReferencia) ? $dataReferencia : date('Y-m-d');
 
+    // Suporte ao filtro por Trimestre (preenche dt_inicio e dt_fim se informado)
+    if (!empty($filtros['trimestre']) && !empty($filtros['ano'])) {
+        $ano = (int)$filtros['ano'];
+        switch ($filtros['trimestre']) {
+            case 'Q1':
+                $filtros['dt_inicio'] = "{$ano}-01-01";
+                $filtros['dt_fim'] = "{$ano}-03-31";
+                break;
+            case 'Q2':
+                $filtros['dt_inicio'] = "{$ano}-04-01";
+                $filtros['dt_fim'] = "{$ano}-06-30";
+                break;
+            case 'Q3':
+                $filtros['dt_inicio'] = "{$ano}-07-01";
+                $filtros['dt_fim'] = "{$ano}-09-30";
+                break;
+            case 'Q4':
+                $filtros['dt_inicio'] = "{$ano}-10-01";
+                $filtros['dt_fim'] = "{$ano}-12-31";
+                break;
+        }
+    }
+
     $sqlWhere = " WHERE id > 0 ";
     $params = [];
     $types = "";
@@ -781,16 +814,35 @@ function vds_auditoria_consultar_tempo_real($filtros, $dataReferencia) {
         $params[] = $filtros['unidade'];
         $types .= "s";
     }
+
+    // Suporte a múltiplas categorias
     if (!empty($filtros['oco_tipo'])) {
-        $sqlWhere .= " AND oco_tipo = ? ";
-        $params[] = (int)$filtros['oco_tipo'];
-        $types .= "i";
+        $tiposArr = is_array($filtros['oco_tipo']) ? $filtros['oco_tipo'] : explode(',', (string)$filtros['oco_tipo']);
+        $tiposLimpos = array_filter(array_map('intval', $tiposArr));
+        if (!empty($tiposLimpos)) {
+            $inPlaceholders = implode(',', array_fill(0, count($tiposLimpos), '?'));
+            $sqlWhere .= " AND oco_tipo IN ({$inPlaceholders}) ";
+            foreach ($tiposLimpos as $tp) {
+                $params[] = $tp;
+                $types .= "i";
+            }
+        }
     }
+
     if (!empty($filtros['protocolo'])) {
         $sqlWhere .= " AND (protocolo_vds = ? OR id = ?) ";
         $params[] = $filtros['protocolo'];
         $params[] = (int)$filtros['protocolo'];
         $types .= "si";
+    }
+
+    // Filtro por Finalidade do Conselho (resolvido local)
+    if (isset($filtros['finalidade_conselho']) && $filtros['finalidade_conselho'] !== '') {
+        if ($filtros['finalidade_conselho'] === 'atingida') {
+            $sqlWhere .= " AND resolvido = 1 ";
+        } elseif ($filtros['finalidade_conselho'] === 'pendente') {
+            $sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0) ";
+        }
     }
 
     $sql = "SELECT * FROM ocorrencias {$sqlWhere} ORDER BY abertura DESC LIMIT 1500";
@@ -805,7 +857,7 @@ function vds_auditoria_consultar_tempo_real($filtros, $dataReferencia) {
     while ($row = mysqli_fetch_assoc($res)) {
         $analise = vds_auditoria_analisar_chamado($row, [], $dataRef);
 
-        // Filtro em memória pós-análise para as 4 dimensões se especificadas
+        // Filtro em memória pós-análise para as dimensões
         if (!empty($filtros['faixa_tempo']) && $analise['faixa_tempo'] !== $filtros['faixa_tempo']) {
             continue;
         }

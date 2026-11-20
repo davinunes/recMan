@@ -15,17 +15,27 @@ $formato = $_GET['formato'] ?? 'csv';
 $sessaoId = !empty($_GET['sessao_id']) ? (int)$_GET['sessao_id'] : null;
 
 $dataRef = $_GET['data_referencia'] ?? date('Y-m-d');
+
+$ocoTipoParam = $_GET['oco_tipo'] ?? [];
+if (!is_array($ocoTipoParam) && $ocoTipoParam !== '') {
+    $ocoTipoParam = explode(',', (string)$ocoTipoParam);
+}
+$ocoTipoParam = array_filter(array_map('intval', (array)$ocoTipoParam));
+
 $filtros = [
     'dt_inicio' => $_GET['dt_inicio'] ?? '',
     'dt_fim' => $_GET['dt_fim'] ?? '',
+    'ano' => $_GET['ano'] ?? '',
+    'trimestre' => $_GET['trimestre'] ?? '',
     'bloco' => $_GET['bloco'] ?? '',
     'unidade' => $_GET['unidade'] ?? '',
-    'oco_tipo' => $_GET['oco_tipo'] ?? '',
+    'oco_tipo' => $ocoTipoParam,
     'protocolo' => $_GET['protocolo'] ?? '',
     'faixa_tempo' => $_GET['faixa_tempo'] ?? '',
     'situacao_resposta' => $_GET['situacao_resposta'] ?? '',
     'situacao_chamado' => $_GET['situacao_chamado'] ?? '',
-    'situacao_providencias' => $_GET['situacao_providencias'] ?? ''
+    'situacao_providencias' => $_GET['situacao_providencias'] ?? '',
+    'finalidade_conselho' => $_GET['finalidade_conselho'] ?? ''
 ];
 
 $nomeSessaoTitulo = "Apuração sob Demanda";
@@ -81,8 +91,9 @@ if ($formato === 'csv') {
         'Cargo Original Respondente',
         'Classificação Ator',
         'Resumo 1ª Manifestação',
-        'Situação do Chamado',
-        'Data Encerramento',
+        'Situação do Chamado Oficial (VDS)',
+        'Finalidade Atingida (Conselho)',
+        'Data Encerramento VDS',
         'Tempo até Encerramento (Dias)',
         'Situação das Providências',
         'Data 1ª Providência Identificada',
@@ -114,6 +125,7 @@ if ($formato === 'csv') {
             $it['primeira_resposta_ator'] ?? '',
             $it['primeira_resposta_resumo'] ?? '',
             $it['situacao_chamado'],
+            !empty($it['conselho_resolvido']) ? 'Sim (Finalidade Atingida)' : 'Não (Pendente)',
             $it['data_encerramento'] ?? '',
             $it['tempo_ate_encerramento_dias'] !== null ? $it['tempo_ate_encerramento_dias'] : '',
             $it['situacao_providencias'],
@@ -202,9 +214,9 @@ if ($formato === 'json') {
     
     <div class="meta-box">
         <strong>Apuração:</strong> <?= htmlspecialchars($nomeSessaoTitulo) ?><br>
-        <strong>Fundamento Regimental:</strong> Art. 12 do Regimento Interno (prazo de até 7 dias para dar retorno e iniciar providências)<br>
+        <strong>Fundamento Regimental:</strong> Art. 12 do Regimento Interno (prazo de até 7 dias para dar retorno e iniciar providências cabíveis)<br>
         <strong>Data de Referência da Auditoria:</strong> <?= date('d/m/Y', strtotime($dataRef)) ?> | <strong>Data/Hora da Extração:</strong> <?= $dataColetaStr ?><br>
-        <strong>Emissão Institucional:</strong> Conselho Consultivo e Fiscal | Plataforma de Trabalho recMan
+        <strong>Emissão Institucional:</strong> Conselho Consultivo e Fiscal | Plataforma recMan
     </div>
 
     <h2>1. Resumo dos Indicadores e Conformidade (Art. 12)</h2>
@@ -241,8 +253,8 @@ if ($formato === 'json') {
             <div class="card-desc">Maior Tempo Sem Resposta</div>
         </div>
         <div class="card">
-            <div class="card-num"><?= $metricas['com_providencia'] ?></div>
-            <div class="card-desc">Providência Comprovada</div>
+            <div class="card-num" style="color: #1a237e;"><?= $metricas['conselho_atingiu_finalidade'] ?></div>
+            <div class="card-desc">Finalidade Atingida (Conselho)</div>
         </div>
     </div>
 
@@ -252,13 +264,13 @@ if ($formato === 'json') {
             <tr>
                 <th>Protocolo</th>
                 <th>Abertura</th>
-                <th>Unidade</th>
+                <th>Local</th>
                 <th>Tempo Decorrido</th>
                 <th>Situação Resposta</th>
                 <th>1ª Manifestação Gestão</th>
                 <th>Ator</th>
-                <th>Providência Objetiva</th>
-                <th>Situação Chamado</th>
+                <th>Status VDS</th>
+                <th>Finalidade Conselho</th>
             </tr>
         </thead>
         <tbody>
@@ -284,15 +296,15 @@ if ($formato === 'json') {
                 <td><span class="badge <?= $badgeResp ?>"><?= $respTexto ?></span></td>
                 <td><?= !empty($it['primeira_resposta_data_formatada']) ? $it['primeira_resposta_data_formatada'] : (!empty($it['primeira_resposta_data']) ? date('d/m/Y H:i', strtotime($it['primeira_resposta_data'])) : '-') ?></td>
                 <td><?= htmlspecialchars($it['primeira_resposta_ator'] ?? '-') ?></td>
-                <td><?= $it['situacao_providencias'] === 'providencia_identificavel' ? '<span class="badge badge-success">Comprovada</span>' : '<span style="color:#888;">Não identificável</span>' ?></td>
                 <td><?= htmlspecialchars(ucfirst($it['situacao_chamado'])) ?></td>
+                <td><?= !empty($it['conselho_resolvido']) ? '<span class="badge badge-success">Atingida</span>' : '<span style="color:#888;">Pendente</span>' ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
     <div style="margin-top: 30px; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
-        * Documento probatório gerado a partir de dados auditáveis da API oficial da plataforma Vida de Síndico. A contagem de prazos adota o critério de períodos completos de 24 horas a partir do registro de abertura, respeitando o Art. 12 do Regimento Interno.
+        * Documento probatório gerado a partir de dados auditáveis da API oficial da plataforma Vida de Síndico. A contagem de prazos adota o critério de períodos completos de 24 horas a partir do registro de abertura, respeitando o Art. 12 do Regimento Interno. Encaminhamentos internos da administração não são computados como atos formais de providência cabível.
     </div>
 </body>
 </html>

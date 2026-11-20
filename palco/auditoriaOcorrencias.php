@@ -24,7 +24,8 @@ if (!empty($_REQUEST['action'])) {
             'dt_fim' => $_POST['dt_fim'] ?? '',
             'bloco' => $_POST['bloco'] ?? '',
             'oco_tipo' => $_POST['oco_tipo'] ?? '',
-            'protocolo' => $_POST['protocolo'] ?? ''
+            'protocolo' => $_POST['protocolo'] ?? '',
+            'finalidade_conselho' => $_POST['finalidade_conselho'] ?? ''
         ];
 
         $resSalvar = vds_auditoria_criar_sessao_congelada($titulo, $dataRef, $filtrosSalvar, $usuarioIdConselho);
@@ -60,17 +61,51 @@ if (!empty($_REQUEST['action'])) {
 $dataReferencia = $_GET['data_referencia'] ?? date('Y-m-d');
 $sessaoIdSelecionada = !empty($_GET['sessao_id']) ? (int)$_GET['sessao_id'] : null;
 
+// Multi-seleção de categorias (pode vir como array em oco_tipo[])
+$ocoTipoParam = $_GET['oco_tipo'] ?? [];
+if (!is_array($ocoTipoParam) && $ocoTipoParam !== '') {
+    $ocoTipoParam = explode(',', (string)$ocoTipoParam);
+}
+$ocoTipoParam = array_filter(array_map('intval', (array)$ocoTipoParam));
+
+$anoFiltro = $_GET['ano'] ?? date('Y');
+$trimestreFiltro = $_GET['trimestre'] ?? '';
+
+$dtInicioFiltro = $_GET['dt_inicio'] ?? '';
+$dtFimFiltro = $_GET['dt_fim'] ?? '';
+
+// Preencher período automaticamente se trimestre e ano foram selecionados
+if (!empty($trimestreFiltro) && !empty($anoFiltro)) {
+    $anoInt = (int)$anoFiltro;
+    if ($trimestreFiltro === 'Q1') {
+        $dtInicioFiltro = "{$anoInt}-01-01";
+        $dtFimFiltro = "{$anoInt}-03-31";
+    } elseif ($trimestreFiltro === 'Q2') {
+        $dtInicioFiltro = "{$anoInt}-04-01";
+        $dtFimFiltro = "{$anoInt}-06-30";
+    } elseif ($trimestreFiltro === 'Q3') {
+        $dtInicioFiltro = "{$anoInt}-07-01";
+        $dtFimFiltro = "{$anoInt}-09-30";
+    } elseif ($trimestreFiltro === 'Q4') {
+        $dtInicioFiltro = "{$anoInt}-10-01";
+        $dtFimFiltro = "{$anoInt}-12-31";
+    }
+}
+
 $filtros = [
-    'dt_inicio' => $_GET['dt_inicio'] ?? '',
-    'dt_fim' => $_GET['dt_fim'] ?? '',
+    'dt_inicio' => $dtInicioFiltro,
+    'dt_fim' => $dtFimFiltro,
+    'trimestre' => $trimestreFiltro,
+    'ano' => $anoFiltro,
     'bloco' => $_GET['bloco'] ?? '',
     'unidade' => $_GET['unidade'] ?? '',
-    'oco_tipo' => $_GET['oco_tipo'] ?? '',
+    'oco_tipo' => $ocoTipoParam,
     'protocolo' => $_GET['protocolo'] ?? '',
     'faixa_tempo' => $_GET['faixa_tempo'] ?? '',
     'situacao_resposta' => $_GET['situacao_resposta'] ?? '',
     'situacao_chamado' => $_GET['situacao_chamado'] ?? '',
-    'situacao_providencias' => $_GET['situacao_providencias'] ?? ''
+    'situacao_providencias' => $_GET['situacao_providencias'] ?? '',
+    'finalidade_conselho' => $_GET['finalidade_conselho'] ?? ''
 ];
 
 $modoHistorico = false;
@@ -94,26 +129,94 @@ if (!$modoHistorico) {
 
 $sessoesSalvas = vds_auditoria_listar_sessoes();
 
-// Mapa de Categorias
+// Mapa de Categorias Conhecidas
 $mapaCategorias = [
-    114 => 'Livro de Ocorrência',
-    86  => 'Fale com o Síndico',
-    109 => 'Fale com o Síndico de Bloco',
-    102 => 'Fale com a Administração',
-    145 => 'Fale com a Mensageria',
-    87  => 'Fale com a Portaria',
-    126 => 'Fale com a Supervisão',
-    115 => 'Fale com o Conselho',
-    247 => 'Monitoramento',
-    172 => 'Suporte Acesso'
+    114 => ['nome' => 'Livro de Ocorrência', 'cor' => '#0d6efd', 'bg' => '#e7f1ff'],
+    86  => ['nome' => 'Fale com o Síndico', 'cor' => '#dc3545', 'bg' => '#ffebee'],
+    109 => ['nome' => 'Fale com o Síndico de Bloco', 'cor' => '#b02a37', 'bg' => '#f8d7da'],
+    102 => ['nome' => 'Fale com a Administração', 'cor' => '#198754', 'bg' => '#d1e7dd'],
+    145 => ['nome' => 'Fale com a Mensageria', 'cor' => '#856404', 'bg' => '#fff3cd'],
+    87  => ['nome' => 'Fale com a Portaria', 'cor' => '#795548', 'bg' => '#efebe9'],
+    126 => ['nome' => 'Fale com a Supervisão', 'cor' => '#0dcaf0', 'bg' => '#cff4fc'],
+    115 => ['nome' => 'Fale com o Conselho', 'cor' => '#6f42c1', 'bg' => '#f3e8ff'],
+    247 => ['nome' => 'Monitoramento', 'cor' => '#fd7e14', 'bg' => '#ffe8d6'],
+    172 => ['nome' => 'Suporte Acesso', 'cor' => '#495057', 'bg' => '#e9ecef']
 ];
 
 // Query String base para exportação
-$qsExport = http_build_query(array_merge($filtros, [
-    'data_referencia' => $dataReferencia,
-    'sessao_id' => $sessaoIdSelecionada
-]));
+$paramsExport = $filtros;
+if (is_array($paramsExport['oco_tipo'])) {
+    $paramsExport['oco_tipo'] = implode(',', $paramsExport['oco_tipo']);
+}
+$paramsExport['data_referencia'] = $dataReferencia;
+$paramsExport['sessao_id'] = $sessaoIdSelecionada;
+$qsExport = http_build_query($paramsExport);
 ?>
+
+<style>
+/* Reset de Selects para impedir conflitos Materialize */
+.auditoria-container select.browser-default {
+    display: block !important;
+    width: 100% !important;
+    height: 36px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 0.85rem !important;
+    color: #333 !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+}
+
+.auditoria-container .select-wrapper {
+    display: none !important; /* Esconde qualquer wrapper duplicado que o Materialize tente injetar */
+}
+
+.auditoria-container input[type="date"],
+.auditoria-container input[type="text"] {
+    display: block !important;
+    width: 100% !important;
+    height: 36px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    padding: 0 10px !important;
+    font-size: 0.85rem !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+.card-kpi {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    background: #fff;
+    padding: 14px 18px;
+    height: 100%;
+    border-top: 4px solid #1a237e;
+    box-sizing: border-box;
+}
+
+.cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+    margin: 2px;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+.cat-pill.active {
+    background-color: #1a237e !important;
+    color: #fff !important;
+    border-color: #1a237e !important;
+}
+</style>
 
 <div class="auditoria-container" style="padding: 15px 25px;">
     <!-- Topo / Cabeçalho -->
@@ -126,15 +229,15 @@ $qsExport = http_build_query(array_merge($filtros, [
                 Auditoria de Ocorrências & Prazos
             </h4>
             <p style="margin: 0; color: #555; font-size: 0.9rem;">
-                Apuração fática e documental do prazo de até 7 dias para retorno e providências do Síndico e Subsíndicos.
+                Apuração fática e documental do prazo de até 7 dias para retorno do Síndico e Subsíndicos e acompanhamento de providências.
             </p>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
             <!-- Seletor de Sessões Salvas -->
-            <div style="display: inline-flex; align-items: center; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px;">
+            <div style="display: inline-flex; align-items: center; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 4px; padding: 2px 8px;">
                 <i class="material-icons tiny grey-text text-darken-2" style="margin-right: 4px;">history</i>
-                <select id="selectSessao" style="display: inline-block; width: auto; height: 32px; border: none; background: transparent; font-size: 0.85rem;" onchange="alternarSessao(this.value)">
+                <select id="selectSessao" class="browser-default" style="width: auto; height: 32px; border: none; background: transparent; font-size: 0.85rem; padding: 0 4px;" onchange="alternarSessao(this.value)">
                     <option value="">-- Apuração em Tempo Real --</option>
                     <?php foreach ($sessoesSalvas as $s): ?>
                         <option value="<?= $s['id'] ?>" <?= $sessaoIdSelecionada == $s['id'] ? 'selected' : '' ?>>
@@ -146,23 +249,23 @@ $qsExport = http_build_query(array_merge($filtros, [
 
             <!-- Botão Salvar Snapshot -->
             <?php if (!$modoHistorico): ?>
-                <button type="button" onclick="abrirModalSalvarSessao()" class="btn-small waves-effect waves-light green darken-3" style="text-transform: none; font-weight: 600;">
+                <button type="button" onclick="abrirModalSalvarSessao()" class="btn-small waves-effect waves-light green darken-3" style="text-transform: none; font-weight: 600; height: 34px; line-height: 34px;">
                     <i class="material-icons tiny left">archive</i> Salvar Apuração Formal
                 </button>
             <?php else: ?>
-                <a href="index.php?pag=auditoriaOcorrencias" class="btn-small waves-effect waves-light grey darken-2" style="text-transform: none;">
+                <a href="index.php?pag=auditoriaOcorrencias" class="btn-small waves-effect waves-light grey darken-2" style="text-transform: none; height: 34px; line-height: 34px;">
                     <i class="material-icons tiny left">refresh</i> Voltar para Tempo Real
                 </a>
             <?php endif; ?>
 
             <!-- Botões de Exportação -->
-            <a href="palco/exportar_auditoria.php?formato=csv&<?= $qsExport ?>" class="btn-small waves-effect waves-light teal darken-2" title="Exportar tabela completa em CSV (Excel)" style="text-transform: none;">
+            <a href="palco/exportar_auditoria.php?formato=csv&<?= $qsExport ?>" class="btn-small waves-effect waves-light teal darken-2" title="Exportar tabela completa em CSV (Excel)" style="text-transform: none; height: 34px; line-height: 34px;">
                 <i class="material-icons tiny left">table_view</i> CSV
             </a>
-            <a href="palco/exportar_auditoria.php?formato=json&<?= $qsExport ?>" class="btn-small waves-effect waves-light indigo darken-1" title="Exportar dados estruturados em JSON" style="text-transform: none;">
+            <a href="palco/exportar_auditoria.php?formato=json&<?= $qsExport ?>" class="btn-small waves-effect waves-light indigo darken-1" title="Exportar dados estruturados em JSON" style="text-transform: none; height: 34px; line-height: 34px;">
                 <i class="material-icons tiny left">code</i> JSON
             </a>
-            <a href="palco/exportar_auditoria.php?formato=html&<?= $qsExport ?>" target="_blank" class="btn-small waves-effect waves-light purple darken-2" title="Imprimir Relatório Formal" style="text-transform: none;">
+            <a href="palco/exportar_auditoria.php?formato=html&<?= $qsExport ?>" target="_blank" class="btn-small waves-effect waves-light purple darken-2" title="Imprimir Relatório Formal" style="text-transform: none; height: 34px; line-height: 34px;">
                 <i class="material-icons tiny left">print</i> Relatório
             </a>
         </div>
@@ -178,110 +281,128 @@ $qsExport = http_build_query(array_merge($filtros, [
         </div>
     <?php endif; ?>
 
-    <!-- Seletor de Data de Referência e Filtros Principais -->
+    <!-- PAINEL DE FILTROS AVANÇADOS -->
     <div class="card" style="margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
-        <div class="card-content" style="padding: 15px;">
+        <div class="card-content" style="padding: 16px;">
             <form method="GET" action="index.php" id="formFiltros">
                 <input type="hidden" name="pag" value="auditoriaOcorrencias">
                 <?php if ($sessaoIdSelecionada): ?>
                     <input type="hidden" name="sessao_id" value="<?= $sessaoIdSelecionada ?>">
                 <?php endif; ?>
 
-                <div class="row" style="margin-bottom: 0;">
-                    <!-- Data de Referência da Auditoria -->
+                <!-- Linha 1: Data de Corte, Trimestre e Período de Abertura -->
+                <div class="row" style="margin-bottom: 10px;">
+                    <!-- Data de Referência (Corte) -->
                     <div class="col s12 m3 l3">
-                        <label style="font-weight: bold; color: #1a237e;">Data de Referência (Corte):</label>
-                        <input type="date" name="data_referencia" id="data_referencia" value="<?= htmlspecialchars($dataReferencia) ?>" style="height: 34px; margin-bottom: 8px; font-size: 0.9rem; border: 1px solid #bbb; border-radius: 4px; padding: 0 8px; background: #fff;" <?= $modoHistorico ? 'disabled' : '' ?>>
+                        <label style="font-weight: bold; color: #1a237e; font-size: 0.85rem;">Data de Referência (Corte):</label>
+                        <input type="date" name="data_referencia" id="data_referencia" value="<?= htmlspecialchars($dataReferencia) ?>" <?= $modoHistorico ? 'disabled' : '' ?>>
                     </div>
 
-                    <!-- Período de Abertura Inicial e Final -->
-                    <div class="col s12 m3 l2">
-                        <label style="font-weight: bold; color: #333;">Abertura Inicial:</label>
-                        <input type="date" name="dt_inicio" value="<?= htmlspecialchars($filtros['dt_inicio']) ?>" style="height: 34px; margin-bottom: 8px; font-size: 0.9rem; border: 1px solid #bbb; border-radius: 4px; padding: 0 8px; background: #fff;">
-                    </div>
-                    <div class="col s12 m3 l2">
-                        <label style="font-weight: bold; color: #333;">Abertura Final:</label>
-                        <input type="date" name="dt_fim" value="<?= htmlspecialchars($filtros['dt_fim']) ?>" style="height: 34px; margin-bottom: 8px; font-size: 0.9rem; border: 1px solid #bbb; border-radius: 4px; padding: 0 8px; background: #fff;">
+                    <!-- Filtro Rápido por Trimestre -->
+                    <div class="col s12 m3 l3">
+                        <label style="font-weight: bold; color: #1a237e; font-size: 0.85rem;">Filtrar por Trimestre:</label>
+                        <div style="display: flex; gap: 4px;">
+                            <select name="ano" id="filtroAno" class="browser-default" style="width: 45%;" onchange="aplicarTrimestre()">
+                                <?php for ($y = (int)date('Y'); $y >= 2024; $y--): ?>
+                                    <option value="<?= $y ?>" <?= $anoFiltro == $y ? 'selected' : '' ?>><?= $y ?></option>
+                                <?php endfor; ?>
+                            </select>
+                            <select name="trimestre" id="filtroTrimestre" class="browser-default" style="width: 55%;" onchange="aplicarTrimestre()">
+                                <option value="">Trimestre...</option>
+                                <option value="Q1" <?= $trimestreFiltro === 'Q1' ? 'selected' : '' ?>>1º Trim (Jan-Mar)</option>
+                                <option value="Q2" <?= $trimestreFiltro === 'Q2' ? 'selected' : '' ?>>2º Trim (Abr-Jun)</option>
+                                <option value="Q3" <?= $trimestreFiltro === 'Q3' ? 'selected' : '' ?>>3º Trim (Jul-Set)</option>
+                                <option value="Q4" <?= $trimestreFiltro === 'Q4' ? 'selected' : '' ?>>4º Trim (Out-Dez)</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- Abertura De e Até -->
+                    <div class="col s6 m3 l3">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Abertura De:</label>
+                        <input type="date" name="dt_inicio" id="dt_inicio" value="<?= htmlspecialchars($filtros['dt_inicio']) ?>">
+                    </div>
+                    <div class="col s6 m3 l3">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Abertura Até:</label>
+                        <input type="date" name="dt_fim" id="dt_fim" value="<?= htmlspecialchars($filtros['dt_fim']) ?>">
+                    </div>
+                </div>
+
+                <!-- Linha 2: Multi-seleção de Categorias -->
+                <div class="row" style="margin-bottom: 10px; background: #fafafa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px;">
+                    <div class="col s12" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">
+                            Categorias / Assunto (Multi-seleção):
+                        </label>
+                        <div style="font-size: 0.8rem;">
+                            <a href="javascript:void(0)" onclick="selecionarTodasCategorias(true)" class="blue-text" style="margin-right: 10px;">Marcar Todas</a>
+                            <a href="javascript:void(0)" onclick="selecionarTodasCategorias(false)" class="grey-text">Limpar Seleção</a>
+                        </div>
+                    </div>
+                    <div class="col s12" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <?php foreach ($mapaCategorias as $catId => $catInfo): 
+                            $isSelected = in_array($catId, $ocoTipoParam);
+                        ?>
+                            <label class="cat-pill <?= $isSelected ? 'active' : '' ?>" id="cat_pill_<?= $catId ?>" style="background: <?= $catInfo['bg'] ?>; color: <?= $catInfo['cor'] ?>;">
+                                <input type="checkbox" name="oco_tipo[]" value="<?= $catId ?>" <?= $isSelected ? 'checked' : '' ?> style="display: none;" onchange="togglePill(<?= $catId ?>, this.checked)">
+                                <span><?= htmlspecialchars($catInfo['nome']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Linha 3: Filtros Ortogonais (Bloco, Situação Resposta, Status VDS, Finalidade Conselho, Faixa) -->
+                <div class="row" style="margin-bottom: 0;">
                     <!-- Bloco -->
-                    <div class="col s6 m3 l2">
-                        <label style="font-weight: bold; color: #333;">Bloco:</label>
-                        <select name="bloco" style="display: block; height: 34px; margin-bottom: 8px; font-size: 0.9rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
-                            <option value="">Todos</option>
+                    <div class="col s6 m2 l2">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Bloco:</label>
+                        <select name="bloco" class="browser-default">
+                            <option value="">Todos os Blocos</option>
                             <?php foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $b): ?>
                                 <option value="<?= $b ?>" <?= $filtros['bloco'] === $b ? 'selected' : '' ?>>Bloco <?= $b ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <!-- Categoria / Assunto -->
-                    <div class="col s6 m4 l3">
-                        <label style="font-weight: bold; color: #333;">Categoria:</label>
-                        <select name="oco_tipo" style="display: block; height: 34px; margin-bottom: 8px; font-size: 0.9rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
-                            <option value="">Todas as Categorias</option>
-                            <?php foreach ($mapaCategorias as $cId => $cNome): ?>
-                                <option value="<?= $cId ?>" <?= $filtros['oco_tipo'] == $cId ? 'selected' : '' ?>><?= htmlspecialchars($cNome) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Segunda Linha de Filtros (Ortogonalidade das Dimensões) -->
-                <div class="row" style="margin-bottom: 0; padding-top: 5px;">
-                    <!-- Faixa de Tempo -->
-                    <div class="col s12 m3 l3">
-                        <label style="font-weight: bold; color: #333;">Faixa Temporal:</label>
-                        <select name="faixa_tempo" style="display: block; height: 34px; font-size: 0.85rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
-                            <option value="">Todas as Faixas</option>
-                            <option value="ate_7_dias" <?= $filtros['faixa_tempo'] === 'ate_7_dias' ? 'selected' : '' ?>>Até 7 dias</option>
-                            <option value="8_a_30_dias" <?= $filtros['faixa_tempo'] === '8_a_30_dias' ? 'selected' : '' ?>>Atraso de 8 a 30 dias</option>
-                            <option value="31_a_90_dias" <?= $filtros['faixa_tempo'] === '31_a_90_dias' ? 'selected' : '' ?>>Atraso de 31 a 90 dias</option>
-                            <option value="91_a_365_dias" <?= $filtros['faixa_tempo'] === '91_a_365_dias' ? 'selected' : '' ?>>Atraso de 91 a 365 dias</option>
-                            <option value="mais_365_dias" <?= $filtros['faixa_tempo'] === 'mais_365_dias' ? 'selected' : '' ?>>Atraso superior a 365 dias</option>
-                        </select>
-                    </div>
-
-                    <!-- Situação da Resposta -->
-                    <div class="col s12 m3 l3">
-                        <label style="font-weight: bold; color: #333;">Situação da Resposta (Art. 12):</label>
-                        <select name="situacao_resposta" style="display: block; height: 34px; font-size: 0.85rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
+                    <!-- Situação da Resposta (Art. 12) -->
+                    <div class="col s6 m3 l3">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Resposta (Art. 12):</label>
+                        <select name="situacao_resposta" class="browser-default">
                             <option value="">Todas as Situações</option>
-                            <option value="respondido_no_prazo" <?= $filtros['situacao_resposta'] === 'respondido_no_prazo' ? 'selected' : '' ?>>Respondido no prazo (<= 7 dias)</option>
-                            <option value="respondido_com_atraso" <?= $filtros['situacao_resposta'] === 'respondido_com_atraso' ? 'selected' : '' ?>>Respondido com atraso (> 7 dias)</option>
-                            <option value="sem_resposta" <?= $filtros['situacao_resposta'] === 'sem_resposta' ? 'selected' : '' ?>>Sem resposta registrada (> 7 dias)</option>
-                            <option value="em_prazo_aguardando" <?= $filtros['situacao_resposta'] === 'em_prazo_aguardando' ? 'selected' : '' ?>>Em prazo regulamentar (< 7 dias)</option>
+                            <option value="respondido_no_prazo" <?= $filtros['situacao_resposta'] === 'respondido_no_prazo' ? 'selected' : '' ?>>Respondido no prazo (≤ 7d)</option>
+                            <option value="respondido_com_atraso" <?= $filtros['situacao_resposta'] === 'respondido_com_atraso' ? 'selected' : '' ?>>Respondido com atraso (> 7d)</option>
+                            <option value="sem_resposta" <?= $filtros['situacao_resposta'] === 'sem_resposta' ? 'selected' : '' ?>>Sem resposta registrada (> 7d)</option>
+                            <option value="em_prazo_aguardando" <?= $filtros['situacao_resposta'] === 'em_prazo_aguardando' ? 'selected' : '' ?>>Em prazo regulamentar (< 7d)</option>
                         </select>
                     </div>
 
-                    <!-- Situação do Chamado -->
+                    <!-- Status Oficial VDS -->
                     <div class="col s6 m2 l2">
-                        <label style="font-weight: bold; color: #333;">Status do Chamado:</label>
-                        <select name="situacao_chamado" style="display: block; height: 34px; font-size: 0.85rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
+                        <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Status VDS:</label>
+                        <select name="situacao_chamado" class="browser-default">
                             <option value="">Todos</option>
                             <option value="aberto" <?= $filtros['situacao_chamado'] === 'aberto' ? 'selected' : '' ?>>Aberto</option>
-                            <option value="em_andamento" <?= $filtros['situacao_chamado'] === 'em_andamento' ? 'selected' : '' ?>>Em andamento</option>
+                            <option value="em_andamento" <?= $filtros['situacao_chamado'] === 'em_andamento' ? 'selected' : '' ?>>Em Andamento</option>
                             <option value="encerrado" <?= $filtros['situacao_chamado'] === 'encerrado' ? 'selected' : '' ?>>Encerrado</option>
                         </select>
                     </div>
 
-                    <!-- Situação das Providências -->
-                    <div class="col s6 m2 l2">
-                        <label style="font-weight: bold; color: #333;">Providências:</label>
-                        <select name="situacao_providencias" style="display: block; height: 34px; font-size: 0.85rem; border: 1px solid #bbb; border-radius: 4px; background: #fff;">
-                            <option value="">Todas</option>
-                            <option value="providencia_identificavel" <?= $filtros['situacao_providencias'] === 'providencia_identificavel' ? 'selected' : '' ?>>Providência Identificável</option>
-                            <option value="apenas_manifestacao" <?= $filtros['situacao_providencias'] === 'apenas_manifestacao' ? 'selected' : '' ?>>Apenas Manifestação</option>
-                            <option value="nenhuma_providencia" <?= $filtros['situacao_providencias'] === 'nenhuma_providencia' ? 'selected' : '' ?>>Nenhuma Providência</option>
+                    <!-- Sugestão do Conselho: Finalidade Atingida -->
+                    <div class="col s6 m3 l3">
+                        <label style="font-weight: bold; color: #1a237e; font-size: 0.85rem;">Finalidade (Conselho):</label>
+                        <select name="finalidade_conselho" class="browser-default">
+                            <option value="">Todas as Classificações</option>
+                            <option value="atingida" <?= $filtros['finalidade_conselho'] === 'atingida' ? 'selected' : '' ?>>✓ Finalidade Atingida (Resolvido Local)</option>
+                            <option value="pendente" <?= $filtros['finalidade_conselho'] === 'pendente' ? 'selected' : '' ?>>• Pendente de Finalidade</option>
                         </select>
                     </div>
 
-                    <!-- Botões Filtrar / Limpar -->
+                    <!-- Botões de Ação -->
                     <div class="col s12 m2 l2" style="display: flex; gap: 6px; align-items: flex-end; height: 58px;">
-                        <button type="submit" class="btn-small waves-effect waves-light blue darken-3" style="height: 34px; line-height: 34px; flex: 1;">
-                            <i class="material-icons tiny left">search</i> Filtrar
+                        <button type="submit" class="btn-small waves-effect waves-light blue darken-3" style="height: 36px; line-height: 36px; flex: 1; font-weight: 600;">
+                            <i class="material-icons tiny left">filter_list</i> Filtrar
                         </button>
-                        <a href="index.php?pag=auditoriaOcorrencias" class="btn-small waves-effect waves-light grey lighten-1" title="Limpar Filtros" style="height: 34px; line-height: 34px; padding: 0 10px;">
+                        <a href="index.php?pag=auditoriaOcorrencias" class="btn-small waves-effect waves-light grey lighten-1" title="Limpar Filtros" style="height: 36px; line-height: 36px; padding: 0 10px;">
                             <i class="material-icons tiny">clear</i>
                         </a>
                     </div>
@@ -293,49 +414,41 @@ $qsExport = http_build_query(array_merge($filtros, [
     <!-- CARDS DE INDICADORES GERAIS (CONFORMIDADE DO ART. 12) -->
     <div class="row" style="margin-bottom: 15px;">
         <div class="col s12 m6 l3">
-            <div class="card" style="border-top: 4px solid #1a237e; border-radius: 6px; margin: 0 0 10px 0;">
-                <div class="card-content" style="padding: 12px 16px;">
-                    <span class="grey-text text-darken-1" style="font-size: 0.8rem; text-transform: uppercase; font-weight: bold;">Universo Auditado</span>
-                    <h4 style="margin: 4px 0; font-weight: bold; color: #1a237e; font-size: 1.8rem;"><?= $metricas['total_chamados'] ?></h4>
-                    <span style="font-size: 0.8rem; color: #555;">
-                        <b><?= $metricas['pendentes_total'] ?></b> pendentes | <b><?= $metricas['encerrados'] ?></b> encerrados
-                    </span>
+            <div class="card-kpi" style="border-top-color: #1a237e;">
+                <span class="grey-text text-darken-1" style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold;">Universo Auditado</span>
+                <h4 style="margin: 4px 0; font-weight: bold; color: #1a237e; font-size: 1.8rem;"><?= $metricas['total_chamados'] ?></h4>
+                <div style="font-size: 0.78rem; color: #555;">
+                    <b><?= $metricas['pendentes_total'] ?></b> pendentes | <b><?= $metricas['encerrados'] ?></b> encerrados
                 </div>
             </div>
         </div>
 
         <div class="col s12 m6 l3">
-            <div class="card" style="border-top: 4px solid #2e7d32; border-radius: 6px; margin: 0 0 10px 0;">
-                <div class="card-content" style="padding: 12px 16px;">
-                    <span class="grey-text text-darken-1" style="font-size: 0.8rem; text-transform: uppercase; font-weight: bold;">Respondidos no Prazo (≤ 7d)</span>
-                    <h4 style="margin: 4px 0; font-weight: bold; color: #2e7d32; font-size: 1.8rem;"><?= $metricas['respondidos_no_prazo'] ?></h4>
-                    <span style="font-size: 0.8rem; color: #2e7d32; font-weight: bold;">
-                        <?= $metricas['pct_respondidos_no_prazo'] ?>% do total auditável
-                    </span>
+            <div class="card-kpi" style="border-top-color: #2e7d32;">
+                <span class="grey-text text-darken-1" style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold;">Respondidos no Prazo (≤ 7d)</span>
+                <h4 style="margin: 4px 0; font-weight: bold; color: #2e7d32; font-size: 1.8rem;"><?= $metricas['respondidos_no_prazo'] ?></h4>
+                <div style="font-size: 0.78rem; color: #2e7d32; font-weight: bold;">
+                    <?= $metricas['pct_respondidos_no_prazo'] ?>% do total auditável
                 </div>
             </div>
         </div>
 
         <div class="col s12 m6 l3">
-            <div class="card" style="border-top: 4px solid #c62828; border-radius: 6px; margin: 0 0 10px 0;">
-                <div class="card-content" style="padding: 12px 16px;">
-                    <span class="grey-text text-darken-1" style="font-size: 0.8rem; text-transform: uppercase; font-weight: bold;">Sem Resposta (> 7d)</span>
-                    <h4 style="margin: 4px 0; font-weight: bold; color: #c62828; font-size: 1.8rem;"><?= $metricas['sem_resposta_extrapolada'] ?></h4>
-                    <span style="font-size: 0.8rem; color: #c62828; font-weight: bold;">
-                        <?= $metricas['pct_sem_resposta_extrapolada'] ?>% extrapolou o prazo
-                    </span>
+            <div class="card-kpi" style="border-top-color: #c62828;">
+                <span class="grey-text text-darken-1" style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold;">Sem Resposta (> 7d)</span>
+                <h4 style="margin: 4px 0; font-weight: bold; color: #c62828; font-size: 1.8rem;"><?= $metricas['sem_resposta_extrapolada'] ?></h4>
+                <div style="font-size: 0.78rem; color: #c62828; font-weight: bold;">
+                    <?= $metricas['pct_sem_resposta_extrapolada'] ?>% extrapolou o prazo
                 </div>
             </div>
         </div>
 
         <div class="col s12 m6 l3">
-            <div class="card" style="border-top: 4px solid #ef6c00; border-radius: 6px; margin: 0 0 10px 0;">
-                <div class="card-content" style="padding: 12px 16px;">
-                    <span class="grey-text text-darken-1" style="font-size: 0.8rem; text-transform: uppercase; font-weight: bold;">Respondidos com Atraso (> 7d)</span>
-                    <h4 style="margin: 4px 0; font-weight: bold; color: #ef6c00; font-size: 1.8rem;"><?= $metricas['respondidos_com_atraso'] ?></h4>
-                    <span style="font-size: 0.8rem; color: #ef6c00;">
-                        <b><?= $metricas['em_prazo_aguardando'] ?></b> em prazo legal (< 7d)
-                    </span>
+            <div class="card-kpi" style="border-top-color: #ef6c00;">
+                <span class="grey-text text-darken-1" style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold;">Finalidade (Conselho)</span>
+                <h4 style="margin: 4px 0; font-weight: bold; color: #283593; font-size: 1.8rem;"><?= $metricas['conselho_atingiu_finalidade'] ?></h4>
+                <div style="font-size: 0.78rem; color: #555;">
+                    Classificados como resolvidos localmente
                 </div>
             </div>
         </div>
@@ -344,28 +457,28 @@ $qsExport = http_build_query(array_merge($filtros, [
     <!-- CARDS DE ESTATÍSTICAS DE TEMPO E PROVIDÊNCIAS -->
     <div class="row" style="margin-bottom: 20px;">
         <div class="col s12 m3 l3">
-            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px; background:#fff;">
                 <span class="grey-text text-darken-2" style="font-size: 0.8rem;">Tempo Médio até 1ª Resposta:</span>
                 <div style="font-size: 1.3rem; font-weight: bold; color: #0d47a1;"><?= $metricas['tempo_medio_resposta'] ?> dias</div>
                 <small class="grey-text">Mediana: <?= $metricas['tempo_mediano_resposta'] ?> dias</small>
             </div>
         </div>
         <div class="col s12 m3 l3">
-            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px; background:#fff;">
                 <span class="grey-text text-darken-2" style="font-size: 0.8rem;">Maior Tempo Sem Resposta:</span>
                 <div style="font-size: 1.3rem; font-weight: bold; color: #c62828;"><?= $metricas['maior_tempo_sem_resposta'] ?> dias</div>
-                <small class="grey-text">Ocorrência crítica identificada</small>
+                <small class="grey-text">Chamado mais crítico identificado</small>
             </div>
         </div>
         <div class="col s12 m3 l3">
-            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px; background:#fff;">
                 <span class="grey-text text-darken-2" style="font-size: 0.8rem;">Tempo Médio até Encerramento:</span>
                 <div style="font-size: 1.3rem; font-weight: bold; color: #2e7d32;"><?= $metricas['tempo_medio_encerramento'] ?> dias</div>
                 <small class="grey-text">Para os chamados finalizados</small>
             </div>
         </div>
         <div class="col s12 m3 l3">
-            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div class="card-panel" style="padding: 10px 14px; margin: 0 0 10px 0; border: 1px solid #e0e0e0; border-radius: 6px; background:#fff;">
                 <span class="grey-text text-darken-2" style="font-size: 0.8rem;">Providências Comprovadas:</span>
                 <div style="font-size: 1.3rem; font-weight: bold; color: #4a148c;"><?= $metricas['com_providencia'] ?> chamados</div>
                 <small class="grey-text"><?= $metricas['apenas_manifestacao'] ?> tiveram apenas manifestação textual</small>
@@ -393,11 +506,12 @@ $qsExport = http_build_query(array_merge($filtros, [
                             <th>Abertura</th>
                             <th>Local</th>
                             <th>Categoria</th>
-                            <th>Tempo Transcorrido</th>
-                            <th>Situação Resposta (Art. 12)</th>
-                            <th>1ª Manifestação Gestão</th>
-                            <th>Providência Formal</th>
-                            <th>Status</th>
+                            <th>Tempo Decorrido</th>
+                            <th>Resposta (Art. 12)</th>
+                            <th>1ª Manifestação</th>
+                            <th>Providência</th>
+                            <th>Status VDS</th>
+                            <th>Finalidade (Conselho)</th>
                             <th style="text-align: center;">Ações</th>
                         </tr>
                     </thead>
@@ -430,37 +544,55 @@ $qsExport = http_build_query(array_merge($filtros, [
                                 $badgeRespHtml = '<span class="grey-text">Dados Insuficientes</span>';
                             }
 
-                            // Badge Providências
+                            // Badge Providências (Encaminhamento NÃO é providência)
                             $badgeProvHtml = '';
                             if ($it['situacao_providencias'] === 'providencia_identificavel') {
                                 $badgeProvHtml = '<span style="color:#2e7d32; font-weight:600;" title="' . htmlspecialchars($it['primeira_providencia_descricao'] ?? '') . '"><i class="material-icons tiny left" style="color:#2e7d32;">task_alt</i> Comprovada</span>';
                             } elseif ($it['situacao_providencias'] === 'apenas_manifestacao') {
-                                $badgeProvHtml = '<span style="color:#666;" title="Houve manifestação de texto, mas sem comprovação formal de providência"><i class="material-icons tiny left" style="color:#9e9e9e;">chat_bubble_outline</i> Apenas texto</span>';
+                                $badgeProvHtml = '<span style="color:#666;" title="Apenas troca de mensagens textuais ou encaminhamentos internos sem comprovação formal de ato executivo"><i class="material-icons tiny left" style="color:#9e9e9e;">chat_bubble_outline</i> Apenas texto</span>';
                             } else {
                                 $badgeProvHtml = '<span style="color:#999;">-</span>';
                             }
 
-                            $catNome = $mapaCategorias[$it['categoria_oco_tipo']] ?? 'Ocorrência';
+                            $catInfoRow = $mapaCategorias[$it['categoria_oco_tipo']] ?? ['nome' => 'Ocorrência', 'cor' => '#333', 'bg' => '#eee'];
                         ?>
                             <tr>
+                                <!-- 1. Protocolo -->
                                 <td>
                                     <strong><?= htmlspecialchars($it['protocolo_vds']) ?></strong>
                                     <br><small class="grey-text">ID <?= $it['ocorrencia_id'] ?></small>
                                 </td>
+
+                                <!-- 2. Abertura -->
                                 <td>
                                     <?= htmlspecialchars($it['data_abertura_formatada'] ?? substr($it['data_abertura_iso'] ?? '', 0, 16)) ?>
                                 </td>
+
+                                <!-- 3. Local -->
                                 <td>
                                     Bl <b><?= htmlspecialchars($it['bloco'] ?? '-') ?></b> / <?= htmlspecialchars($it['unidade'] ?? '-') ?>
                                 </td>
+
+                                <!-- 4. Categoria (Presente e Alinhada com TH) -->
+                                <td>
+                                    <span style="display:inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: <?= $catInfoRow['bg'] ?>; color: <?= $catInfoRow['cor'] ?>;">
+                                        <?= htmlspecialchars($catInfoRow['nome']) ?>
+                                    </span>
+                                </td>
+
+                                <!-- 5. Tempo Transcorrido -->
                                 <td>
                                     <span style="display:inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; <?= $badgeFaixa ?>">
                                         <?= $it['tempo_decorrido_dias'] ?> dias
                                     </span>
                                 </td>
+
+                                <!-- 6. Situação da Resposta -->
                                 <td>
                                     <?= $badgeRespHtml ?>
                                 </td>
+
+                                <!-- 7. 1ª Manifestação da Gestão -->
                                 <td>
                                     <?php if (!empty($it['primeira_resposta_data'])): ?>
                                         <div style="font-size: 0.8rem; font-weight: 600;">
@@ -474,9 +606,13 @@ $qsExport = http_build_query(array_merge($filtros, [
                                         <span class="grey-text">-</span>
                                     <?php endif; ?>
                                 </td>
+
+                                <!-- 8. Providência Formal -->
                                 <td>
                                     <?= $badgeProvHtml ?>
                                 </td>
+
+                                <!-- 9. Status Oficial VDS -->
                                 <td>
                                     <?php if ($it['situacao_chamado'] === 'encerrado'): ?>
                                         <span class="badge grey darken-1 white-text" style="font-size:0.75rem; border-radius:3px;">Encerrado</span>
@@ -486,12 +622,27 @@ $qsExport = http_build_query(array_merge($filtros, [
                                         <span class="badge blue darken-2 white-text" style="font-size:0.75rem; border-radius:3px;">Aberto</span>
                                     <?php endif; ?>
                                 </td>
+
+                                <!-- 10. Sugestão / Avaliação do Conselho (Finalidade Atingida) -->
+                                <td>
+                                    <?php if (!empty($it['conselho_resolvido'])): ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;" title="Conselho classificou localmente como Resolvido / Finalidade Atingida">
+                                            <i class="material-icons tiny">check_circle</i> Finalidade Atingida
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; color:#666; background:#f5f5f5; border:1px solid #e0e0e0;">
+                                            <i class="material-icons tiny">pending</i> Pendente Conselho
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <!-- 11. Ações (Total de 11 colunas exatas) -->
                                 <td style="text-align: center; white-space: nowrap;">
                                     <button type="button" class="btn-small btn-flat waves-effect" title="Ver Linha do Tempo e Evidências" onclick="abrirLinhaDoTempo(<?= $it['ocorrencia_id'] ?>, '<?= htmlspecialchars($it['protocolo_vds']) ?>')">
-                                        <i class="material-icons blue-text text-darken-3" style="font-size: 1.2rem;">timeline</i>
+                                        <i class="material-icons blue-text text-darken-3" style="font-size: 1.25rem;">timeline</i>
                                     </button>
                                     <a href="index.php?pag=livroDeOcorrencias&protocolo=<?= urlencode($it['protocolo_vds']) ?>" target="_blank" class="btn-small btn-flat waves-effect" title="Abrir no Livro de Ocorrências">
-                                        <i class="material-icons grey-text text-darken-2" style="font-size: 1.2rem;">open_in_new</i>
+                                        <i class="material-icons grey-text text-darken-2" style="font-size: 1.25rem;">open_in_new</i>
                                     </a>
                                 </td>
                             </tr>
@@ -510,9 +661,9 @@ $qsExport = http_build_query(array_merge($filtros, [
         <p style="font-size:0.85rem; color:#555;">
             Esta ação gravará uma fotografia imutável dos <b><?= count($itens) ?> chamados</b> auditados com a data de corte <b><?= date('d/m/Y', strtotime($dataReferencia)) ?></b>, garantindo preservação para a Assembleia Geral mesmo se os chamados forem alterados no sistema oficial posteriormente.
         </p>
-        <div class="input-field" style="margin-top: 15px;">
+        <div style="margin-top: 15px;">
+            <label style="font-weight: bold; color: #333; font-size: 0.85rem;">Título ou Finalidade da Apuração:</label>
             <input type="text" id="tituloSessaoInput" placeholder="Ex: Apuração Periódica - Assembleia Geral Extraordinária">
-            <label for="tituloSessaoInput" class="active">Título ou Finalidade da Apuração:</label>
         </div>
     </div>
     <div class="modal-footer" style="background:#f5f5f5; padding: 10px 20px;">
@@ -557,12 +708,12 @@ $qsExport = http_build_query(array_merge($filtros, [
                     <div style="font-weight: bold;" id="modalRespostaStatus">-</div>
                 </div>
                 <div class="col s6 m3" style="border-right: 1px solid #dee2e6;">
-                    <small class="grey-text">Situação Chamado</small>
+                    <small class="grey-text">Situação VDS</small>
                     <div style="font-weight: bold;" id="modalSituacaoChamado">-</div>
                 </div>
                 <div class="col s6 m3">
-                    <small class="grey-text">Providência</small>
-                    <div style="font-weight: bold;" id="modalSituacaoProv">-</div>
+                    <small class="grey-text">Conselho (Finalidade)</small>
+                    <div style="font-weight: bold;" id="modalConselhoStatus">-</div>
                 </div>
             </div>
 
@@ -585,7 +736,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var modals = document.querySelectorAll('.modal');
     M.Modal.init(modals);
 
-    // Inicializar DataTables se disponível
+    // Destruir instância anterior se existir para evitar duplicação
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tabelaAuditoria')) {
+        $('#tabelaAuditoria').DataTable().destroy();
+    }
+
+    // Inicialização Limpa do DataTables com 11 colunas idênticas no thead e tbody
     if (typeof $.fn.DataTable !== 'undefined') {
         $('#tabelaAuditoria').DataTable({
             language: {
@@ -593,10 +749,62 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             pageLength: 25,
             order: [[1, 'desc']],
-            responsive: true
+            responsive: true,
+            columnDefs: [
+                { orderable: false, targets: 10 } // Desativa ordenação na coluna de Ações
+            ]
         });
     }
 });
+
+function togglePill(catId, isChecked) {
+    var pill = document.getElementById('cat_pill_' + catId);
+    if (pill) {
+        if (isChecked) {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+    }
+}
+
+function selecionarTodasCategorias(marcar) {
+    var checkboxes = document.querySelectorAll('input[name="oco_tipo[]"]');
+    checkboxes.forEach(function(cb) {
+        cb.checked = marcar;
+        var pill = document.getElementById('cat_pill_' + cb.value);
+        if (pill) {
+            if (marcar) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+        }
+    });
+}
+
+function aplicarTrimestre() {
+    var ano = document.getElementById('filtroAno').value;
+    var trim = document.getElementById('filtroTrimestre').value;
+    var dtIni = document.getElementById('dt_inicio');
+    var dtFim = document.getElementById('dt_fim');
+
+    if (!trim) return;
+
+    if (trim === 'Q1') {
+        dtIni.value = ano + '-01-01';
+        dtFim.value = ano + '-03-31';
+    } else if (trim === 'Q2') {
+        dtIni.value = ano + '-04-01';
+        dtFim.value = ano + '-06-30';
+    } else if (trim === 'Q3') {
+        dtIni.value = ano + '-07-01';
+        dtFim.value = ano + '-09-30';
+    } else if (trim === 'Q4') {
+        dtIni.value = ano + '-10-01';
+        dtFim.value = ano + '-12-31';
+    }
+}
 
 function alternarSessao(sessaoId) {
     if (sessaoId) {
@@ -625,20 +833,15 @@ function confirmarSalvarSessao() {
     btn.innerHTML = '<i class="material-icons tiny left">hourglass_empty</i> Salvando...';
 
     var dataRef = document.getElementById('data_referencia').value;
+    var formData = $('#formFiltros').serializeArray();
+    formData.push({ name: 'action', value: 'salvar_sessao' });
+    formData.push({ name: 'titulo', value: titulo });
+    formData.push({ name: 'data_referencia', value: dataRef });
 
     $.ajax({
         url: 'palco/auditoriaOcorrencias.php',
         type: 'POST',
-        data: {
-            action: 'salvar_sessao',
-            titulo: titulo,
-            data_referencia: dataRef,
-            dt_inicio: '<?= addslashes($filtros['dt_inicio']) ?>',
-            dt_fim: '<?= addslashes($filtros['dt_fim']) ?>',
-            bloco: '<?= addslashes($filtros['bloco']) ?>',
-            oco_tipo: '<?= addslashes($filtros['oco_tipo']) ?>',
-            protocolo: '<?= addslashes($filtros['protocolo']) ?>'
-        },
+        data: formData,
         dataType: 'json',
         success: function(res) {
             btn.disabled = false;
@@ -698,7 +901,7 @@ function abrirLinhaDoTempo(ocoId, protocolo) {
             document.getElementById('modalTempoDecorrido').innerText = (analise.tempo_decorrido_dias || 0) + ' dias';
             document.getElementById('modalRespostaStatus').innerText = analise.situacao_resposta || '-';
             document.getElementById('modalSituacaoChamado').innerText = (analise.situacao_chamado || '-').toUpperCase();
-            document.getElementById('modalSituacaoProv').innerText = analise.situacao_providencias || '-';
+            document.getElementById('modalConselhoStatus').innerText = analise.conselho_rotulo || 'Pendente';
 
             // Montar Lista de Eventos
             var eventos = (res.remoteData && res.remoteData.eventos) ? res.remoteData.eventos : [];
@@ -727,14 +930,14 @@ function abrirLinhaDoTempo(ocoId, protocolo) {
                     }
 
                     html += '<div style="margin-bottom: 20px; position: relative;">';
-                    html += '  <div style="position: absolute; left: -26px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: ' + (isEncaminhamento ? '#2e7d32' : '#1a237e') + '; border: 2px solid #fff;"></div>';
+                    html += '  <div style="position: absolute; left: -26px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: ' + (isEncaminhamento ? '#ef6c00' : '#1a237e') + '; border: 2px solid #fff;"></div>';
                     html += '  <div style="background:#fff; border:1px solid #dee2e6; border-radius:6px; padding:10px 14px;">';
                     html += '    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">';
                     html += '      <span><b>' + por + '</b> <span style="display:inline-block; padding:1px 6px; border-radius:10px; font-size:0.75rem; font-weight:600; ' + badgeAtor + '">' + (cargo || 'Participante') + '</span></span>';
                     html += '      <small class="grey-text">' + dthora + '</small>';
                     html += '    </div>';
                     if (isEncaminhamento) {
-                        html += '    <div style="display:inline-block; background:#e8f5e9; color:#1b5e20; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:4px; margin-bottom:6px;"><i class="material-icons tiny left" style="line-height:inherit;">task_alt</i> ATO FORMAL DE PROVIDÊNCIA REGISTRADO NA API</div>';
+                        html += '    <div style="display:inline-block; background:#fff3e0; color:#e65100; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:4px; margin-bottom:6px;"><i class="material-icons tiny left" style="line-height:inherit;">reply</i> TRÂMITE / ENCAMINHAMENTO INTERNO (NÃO É PROVIDÊNCIA CABÍVEL)</div>';
                     }
                     html += '    <div style="font-size:0.85rem; color:#222; margin-top:4px;">' + msg + '</div>';
                     html += '  </div>';
