@@ -28,6 +28,7 @@ $tools = [
         ['label' => 'Configurações da IA', 'url' => 'index.php?pag=configuracoes_ia', 'icon' => 'psychology', 'target' => '_self', 'color' => 'purple darken-2'],
     ],
     'Condomínio Digital (VDS API v8)' => [
+        ['label' => 'Auditoria de Ocorrências (Art. 12)', 'url' => 'index.php?pag=auditoriaOcorrencias', 'icon' => 'gavel', 'target' => '_self', 'color' => 'indigo darken-4'],
         ['label' => 'Livro de Ocorrências (Chat)', 'url' => 'index.php?pag=livroDeOcorrencias', 'icon' => 'question_answer', 'target' => '_self', 'color' => 'blue darken-3'],
         ['label' => 'Configurações VDS & Ultra-Login', 'url' => 'index.php?pag=configVds', 'icon' => 'settings_suggest', 'target' => '_self', 'color' => 'purple darken-1'],
         ['label' => 'Relatórios e Gráficos (Legado)', 'url' => 'ocorrenciasCondominioDigital/relatorio.php', 'icon' => 'insert_chart', 'target' => '_blank', 'color' => 'indigo'],

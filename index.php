@@ -19,6 +19,9 @@ if (!empty($_REQUEST['is_ajax'])) {
 		case "livroDeOcorrencias":
 			include "livroDeOcorrencias.php";
 			break;
+		case "auditoriaOcorrencias":
+			include "palco/auditoriaOcorrencias.php";
+			break;
 		default:
 			header('Content-Type: application/json; charset=utf-8', true, 400);
 			echo json_encode(['success' => false, 'message' => 'Página AJAX não encontrada.'], JSON_UNESCAPED_UNICODE);
@@ -129,6 +132,9 @@ switch ($pag) {
 		break;
 	case "livroDeOcorrencias":
 		include "livroDeOcorrencias.php";
+		break;
+	case "auditoriaOcorrencias":
+		include "palco/auditoriaOcorrencias.php";
 		break;
 	case "configVds":
 		include "forms/configVds.php";

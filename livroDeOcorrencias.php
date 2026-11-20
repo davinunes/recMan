@@ -1173,8 +1173,13 @@ if (!empty($detalheSel['local']['id']) && !empty($detalheSel['delays'])) {
             </button>
         </form>
 
-        <!-- Ações Globais: Roleta de Legados e Sincronizar Agora -->
+        <!-- Ações Globais: Auditoria, Roleta de Legados e Sincronizar Agora -->
         <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="index.php?pag=auditoriaOcorrencias" class="btn-small waves-effect waves-light purple darken-3 white-text" style="height:32px; line-height:32px; padding:0 12px; font-size:0.82rem; border-radius:4px; text-transform:none; display:inline-flex; align-items:center; gap:4px;" title="Auditoria de Prazos (Art. 12 do Regimento)">
+                <i class="material-icons tiny left" style="margin-right:2px;">gavel</i>
+                <span>Auditoria (Art. 12)</span>
+            </a>
+
             <a href="cron_vds_enrich_legadas.php?limit=100&filtro=vds" target="_blank" class="btn-small waves-effect waves-light amber darken-3 white-text" style="height:32px; line-height:32px; padding:0 12px; font-size:0.82rem; border-radius:4px; text-transform:none; display:inline-flex; align-items:center; gap:4px;" title="Roleta de Atualização: busca UUIDs e tipos na VDS para chamados antigos / Outros">
                 <i class="material-icons tiny left" style="margin-right:2px;">autorenew</i>
                 <span>Atualizar Legados (VDS)</span>
