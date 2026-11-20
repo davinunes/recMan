@@ -415,6 +415,11 @@ function vds_auditoria_analisar_chamado($local, $eventosRemotos = [], $dataRefer
         // Avaliação do Conselho (Finalidade Atingida / Resolvido Local)
         'conselho_resolvido' => $conselhoResolvido,
         'conselho_rotulo' => $conselhoRotulo,
+        'conselho_classificacao' => $local['conselho_classificacao'] ?? ($conselhoResolvido ? 'finalidade_atingida' : 'nao_avaliado'),
+        'conselho_providencias' => $local['conselho_providencias'] ?? 'nao_avaliado',
+        'conselho_parecer_auditoria' => $local['conselho_parecer_auditoria'] ?? null,
+        'conselho_auditoria_por' => $local['conselho_auditoria_por'] ?? null,
+        'conselho_auditoria_em' => $local['conselho_auditoria_em'] ?? null,
 
         // Dimensão 4: Situação das Providências
         'situacao_providencias' => $situacaoProvidencias,
@@ -836,12 +841,18 @@ function vds_auditoria_consultar_tempo_real($filtros, $dataReferencia) {
         $types .= "si";
     }
 
-    // Filtro por Finalidade do Conselho (resolvido local)
+    // Filtro por Finalidade / Deliberação do Conselho
     if (isset($filtros['finalidade_conselho']) && $filtros['finalidade_conselho'] !== '') {
         if ($filtros['finalidade_conselho'] === 'atingida') {
-            $sqlWhere .= " AND resolvido = 1 ";
+            $sqlWhere .= " AND (resolvido = 1 OR conselho_classificacao = 'finalidade_atingida') ";
+        } elseif ($filtros['finalidade_conselho'] === 'nao_atingiu') {
+            $sqlWhere .= " AND conselho_classificacao = 'nao_atingiu_finalidade' ";
+        } elseif ($filtros['finalidade_conselho'] === 'em_auditoria') {
+            $sqlWhere .= " AND (conselho_classificacao = 'em_auditoria' OR auditoria = 1) ";
+        } elseif ($filtros['finalidade_conselho'] === 'improcedente') {
+            $sqlWhere .= " AND conselho_classificacao = 'improcedente' ";
         } elseif ($filtros['finalidade_conselho'] === 'pendente') {
-            $sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0) ";
+            $sqlWhere .= " AND (resolvido IS NULL OR resolvido = 0) AND (conselho_classificacao IS NULL OR conselho_classificacao = 'nao_avaliado') ";
         }
     }
 
@@ -938,4 +949,70 @@ function vds_auditoria_carregar_sessao($sessaoId) {
 
     $sessao['itens'] = $itens;
     return $sessao;
+}
+
+/**
+ * Salva a deliberação formal e classificação do chamado pelo Conselho na auditoria.
+ *
+ * @param int $ocorrenciaId
+ * @param string $classificacao 'finalidade_atingida' | 'nao_atingiu_finalidade' | 'em_auditoria' | 'improcedente' | 'nao_avaliado'
+ * @param string $providencias 'providencia_comprovada' | 'apenas_manifestacao_protelatoria' | 'sem_providencia' | 'nao_avaliado'
+ * @param string $parecer Texto de justificativa / notas do conselho
+ * @param int $usuarioId ID do conselheiro
+ * @param string $usuarioNome Nome do conselheiro
+ * @return array
+ */
+function vds_auditoria_salvar_deliberacao_conselho($ocorrenciaId, $classificacao, $providencias, $parecer, $usuarioId, $usuarioNome = '') {
+    $ocorrenciaId = (int)$ocorrenciaId;
+    if ($ocorrenciaId <= 0) {
+        return ['success' => false, 'message' => 'ID de ocorrência inválido.'];
+    }
+
+    $link = DBConnect();
+
+    // Sincronizar campo booleano 'resolvido' existente
+    $resolvidoVal = ($classificacao === 'finalidade_atingida') ? 1 : 0;
+    $auditoriaVal = ($classificacao === 'em_auditoria') ? 1 : 0;
+    $dataAgora = date('Y-m-d H:i:s');
+
+    $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET 
+        resolvido = ?,
+        auditoria = IF(? = 1, 1, auditoria),
+        conselho_classificacao = ?,
+        conselho_providencias = ?,
+        conselho_parecer_auditoria = ?,
+        conselho_auditoria_por = ?,
+        conselho_auditoria_em = ?
+        WHERE id = ?");
+
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "iisssssi", $resolvidoVal, $auditoriaVal, $classificacao, $providencias, $parecer, $usuarioNome, $dataAgora, $ocorrenciaId);
+        $ok = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    } else {
+        $ok = false;
+    }
+
+    // Se houver parecer digitado pelo Conselho, registrar também na tabela de notas internas para histórico permanente
+    if ($ok && !empty(trim((string)$parecer))) {
+        $textoNota = "[Deliberação da Auditoria] " . trim($parecer);
+        $stmtNota = mysqli_prepare($link, "INSERT INTO ocorrencia_notas_internas (ocorrencia_id, conselheiro_id, conselheiro_nome, texto, enviado_remoto) VALUES (?, ?, ?, ?, 0)");
+        if ($stmtNota) {
+            mysqli_stmt_bind_param($stmtNota, "iiss", $ocorrenciaId, $usuarioId, $usuarioNome, $textoNota);
+            mysqli_stmt_execute($stmtNota);
+            mysqli_stmt_close($stmtNota);
+        }
+    }
+
+    DBClose($link);
+
+    return [
+        'success' => $ok,
+        'ocorrencia_id' => $ocorrenciaId,
+        'resolvido' => $resolvidoVal,
+        'classificacao' => $classificacao,
+        'providencias' => $providencias,
+        'auditoria_por' => $usuarioNome,
+        'auditoria_em' => $dataAgora
+    ];
 }

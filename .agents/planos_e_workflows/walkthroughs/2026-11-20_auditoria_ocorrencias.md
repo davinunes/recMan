@@ -52,3 +52,18 @@
 - **Diretriz:** Encaminhamentos internos da administração (tipo `79`, repasses entre funcionários/grupos) **NÃO** são atos formais de providência.
 - **Ajuste:** Removida qualquer presunção de providência baseada em encaminhamento. Encaminhamentos são classificados estritamente como manifestações textuais ou trâmites internos.
 - **Resultado:** Apenas atos materiais formais comprovados (como emissão e execução de Ordem de Serviço de reparo/vistoria) contam como providência comprovada. Onde inexistente tal ato objetivo, é classificado como *"Apenas texto"* ou *"Nenhuma providência"*.
+
+### 1.7 Fluxo Completo de Deliberação e Julgamento do Conselho na Modal de Inspeção
+- **Objetivo:** Permitir que o auditor analise as evidências e classifique formalmente o chamado sem sair da tela de auditoria.
+- **Implementação:**
+  - Botão **"Inspecionar"** destacado na coluna de ações da tabela.
+  - Ao abrir a modal de detalhes:
+    1. Apresenta o **Painel de Deliberação do Conselho** em destaque azul superior.
+    2. Campo 1: Julgamento da Finalidade (`Finalidade Atingida`, `Não Atingiu`, `Em Auditoria`, `Improcedente`).
+    3. Campo 2: Avaliação das Providências do Art. 12 (`Providência Efetiva Comprovada`, `Apenas Manifestação Protelatória`, `Nenhuma Providência Identificável`).
+    4. Campo 3: Parecer Fundamentado da Auditoria (texto livre para fundamentar o relatório da Assembleia).
+  - Ao clicar em **"Salvar Deliberação do Conselho"**:
+    - Dispara requisição AJAX assíncrona (`salvar_deliberacao_conselho`).
+    - Salva na tabela local `ocorrencias` e insere nota interna comprobatória permanente.
+    - Se houver sessão congelada ativa, atualiza também a evidência histórica (`auditoria_execucao_itens`).
+    - Atualiza imediatamente os badges no cabeçalho da modal e na linha correspondente da tabela DataTables, sem precisar recarregar a página.

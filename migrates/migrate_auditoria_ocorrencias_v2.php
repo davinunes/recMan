@@ -86,15 +86,21 @@ if (@mysqli_query($link, $sqlItens)) {
     echo "[ERRO] Falha ao criar `auditoria_execucao_itens`: " . mysqli_error($link) . "\n";
 }
 
-// 3. Otimização na tabela `ocorrencias` para filtros rápidos
+// 3. Otimização na tabela `ocorrencias` para filtros rápidos e classificação deliberada do Conselho
 $alterOcorrencias = [
     "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS auditoria_status_resposta ENUM('sem_resposta', 'respondido_no_prazo', 'respondido_com_atraso', 'em_prazo_aguardando', 'dados_insuficientes') DEFAULT NULL;",
     "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS primeira_resposta_data DATETIME DEFAULT NULL;",
     "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS primeira_resposta_ator VARCHAR(50) DEFAULT NULL;",
     "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS primeira_providencia_data DATETIME DEFAULT NULL;",
     "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS situacao_providencias ENUM('providencia_identificavel', 'apenas_manifestacao', 'nenhuma_providencia', 'nao_determinado') DEFAULT 'nao_determinado';",
+    "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS conselho_classificacao ENUM('finalidade_atingida', 'nao_atingiu_finalidade', 'em_auditoria', 'improcedente', 'nao_avaliado') DEFAULT 'nao_avaliado';",
+    "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS conselho_providencias ENUM('providencia_comprovada', 'apenas_manifestacao_protelatoria', 'sem_providencia', 'nao_avaliado') DEFAULT 'nao_avaliado';",
+    "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS conselho_parecer_auditoria TEXT DEFAULT NULL;",
+    "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS conselho_auditoria_por VARCHAR(150) DEFAULT NULL;",
+    "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS conselho_auditoria_em DATETIME DEFAULT NULL;",
     "ALTER TABLE ocorrencias ADD INDEX IF NOT EXISTS idx_auditoria_status_resp (auditoria_status_resposta);",
-    "ALTER TABLE ocorrencias ADD INDEX IF NOT EXISTS idx_auditoria_prov (situacao_providencias);"
+    "ALTER TABLE ocorrencias ADD INDEX IF NOT EXISTS idx_auditoria_prov (situacao_providencias);",
+    "ALTER TABLE ocorrencias ADD INDEX IF NOT EXISTS idx_conselho_classificacao (conselho_classificacao);"
 ];
 
 foreach ($alterOcorrencias as $sql) {

@@ -96,3 +96,20 @@ As 4 dimensões devem ser avaliadas de forma estritamente independente:
 - Se $(\text{DataRef} - \text{Abertura}) \le 604.800 \text{ s}$ e não há manifestação:
   - O chamado **NÃO** pode ser classificado como atrasado.
   - Situação da resposta: `Sem resposta administrativa (em prazo regulamentar)`.
+
+---
+
+## 6. Fluxo de Inspeção, Julgamento e Deliberação do Conselho
+
+### 6.1 Problema de UX Identificado
+- No modelo anterior, a interface de auditoria apenas permitia visualizar passivamente o histórico ou redirecionava para o livro de ocorrências legado onde havia apenas um checkbox binário (`resolvido = 1`).
+- Isso fragmentava o trabalho do auditor e não permitia registrar a qualificação formal exigida para a prestação de contas na Assembleia Geral.
+
+### 6.2 Solução Implementada: Painel Integrado de Deliberação na Modal de Inspeção
+- Ao clicar em **"Inspecionar"** na tabela de auditoria:
+  1. A modal carrega a linha do tempo cronológica com destaque para autores (Síndico, Subsíndico, Gestão, Conselho, Morador) e identificação de encaminhamentos internos (que **não** são providências resolutivas).
+  2. O auditor dispõe imediatamente do **Painel de Deliberação do Conselho**:
+     - **Julgamento da Finalidade:** `Finalidade Atingida / Solucionado no Mundo Real`, `Não Atingiu a Finalidade / Irresolvido`, `Em Diligência / Auditoria Aberta`, `Improcedente / Sem Objeto`.
+     - **Avaliação das Providências:** `Providência Efetiva Comprovada`, `Apenas Manifestação Protelatória`, `Nenhuma Providência Identificável`.
+     - **Parecer Fundamentado:** Campo de notas e fundamentação probatória para citação direta no relatório da Assembleia.
+  3. Ao salvar, a API AJAX atualiza os dados locais, registra uma nota interna comprobatória e reflete o badge correspondente na tabela em tempo real sem necessidade de recarregar a página.

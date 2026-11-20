@@ -55,6 +55,34 @@ if (!empty($_REQUEST['action'])) {
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
+
+    // 3. Salvar Deliberação e Classificação Formal do Conselho
+    if ($action === 'salvar_deliberacao_conselho') {
+        $ocoId = (int)($_POST['ocorrencia_id'] ?? 0);
+        $classificacao = $_POST['classificacao'] ?? 'nao_avaliado';
+        $providencias = $_POST['providencias'] ?? 'nao_avaliado';
+        $parecer = $_POST['parecer'] ?? '';
+        $usuarioNome = $_SESSION['user_name'] ?? ($_SESSION['usuario_nome'] ?? 'Conselheiro');
+
+        $resDelib = vds_auditoria_salvar_deliberacao_conselho($ocoId, $classificacao, $providencias, $parecer, $usuarioIdConselho, $usuarioNome);
+
+        // Se estiver em uma apuração congelada (sessão salva), sincronizar também no registro estático do item
+        $sessaoIdReq = !empty($_POST['sessao_id']) ? (int)$_POST['sessao_id'] : 0;
+        if ($sessaoIdReq > 0 && !empty($resDelib['success'])) {
+            $link = DBConnect();
+            $stmtIt = mysqli_prepare($link, "UPDATE auditoria_execucao_itens SET conselho_resolvido = ? WHERE sessao_id = ? AND ocorrencia_id = ?");
+            if ($stmtIt) {
+                $resVal = ($classificacao === 'finalidade_atingida') ? 1 : 0;
+                mysqli_stmt_bind_param($stmtIt, "iii", $resVal, $sessaoIdReq, $ocoId);
+                mysqli_stmt_execute($stmtIt);
+                mysqli_stmt_close($stmtIt);
+            }
+            DBClose($link);
+        }
+
+        echo json_encode($resDelib, JSON_UNESCAPED_UNICODE);
+        exit();
+    }
 }
 
 // Parâmetros de Filtro e Seleção
@@ -387,13 +415,16 @@ $qsExport = http_build_query($paramsExport);
                         </select>
                     </div>
 
-                    <!-- Sugestão do Conselho: Finalidade Atingida -->
+                    <!-- Sugestão do Conselho: Deliberação e Finalidade -->
                     <div class="col s6 m3 l3">
-                        <label style="font-weight: bold; color: #1a237e; font-size: 0.85rem;">Finalidade (Conselho):</label>
+                        <label style="font-weight: bold; color: #1a237e; font-size: 0.85rem;">Deliberação (Conselho):</label>
                         <select name="finalidade_conselho" class="browser-default">
-                            <option value="">Todas as Classificações</option>
-                            <option value="atingida" <?= $filtros['finalidade_conselho'] === 'atingida' ? 'selected' : '' ?>>✓ Finalidade Atingida (Resolvido Local)</option>
-                            <option value="pendente" <?= $filtros['finalidade_conselho'] === 'pendente' ? 'selected' : '' ?>>• Pendente de Finalidade</option>
+                            <option value="">Todas as Deliberações</option>
+                            <option value="atingida" <?= $filtros['finalidade_conselho'] === 'atingida' ? 'selected' : '' ?>>✅ Finalidade Atingida</option>
+                            <option value="nao_atingiu" <?= $filtros['finalidade_conselho'] === 'nao_atingiu' ? 'selected' : '' ?>>❌ Não Atingiu a Finalidade</option>
+                            <option value="em_auditoria" <?= $filtros['finalidade_conselho'] === 'em_auditoria' ? 'selected' : '' ?>>🔍 Em Auditoria / Diligência</option>
+                            <option value="improcedente" <?= $filtros['finalidade_conselho'] === 'improcedente' ? 'selected' : '' ?>>🚫 Improcedente</option>
+                            <option value="pendente" <?= $filtros['finalidade_conselho'] === 'pendente' ? 'selected' : '' ?>>⏳ Pendente de Avaliação</option>
                         </select>
                     </div>
 
@@ -623,26 +654,42 @@ $qsExport = http_build_query($paramsExport);
                                     <?php endif; ?>
                                 </td>
 
-                                <!-- 10. Sugestão / Avaliação do Conselho (Finalidade Atingida) -->
+                                <!-- 10. Avaliação / Deliberação do Conselho -->
                                 <td>
-                                    <?php if (!empty($it['conselho_resolvido'])): ?>
-                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;" title="Conselho classificou localmente como Resolvido / Finalidade Atingida">
+                                    <div id="conselho_status_badge_<?= $it['ocorrencia_id'] ?>">
+                                    <?php 
+                                    $classifLocal = $it['conselho_classificacao'] ?? (!empty($it['conselho_resolvido']) ? 'finalidade_atingida' : 'nao_avaliado');
+                                    if ($classifLocal === 'finalidade_atingida'): ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;" title="Finalidade Atingida / Solucionado">
                                             <i class="material-icons tiny">check_circle</i> Finalidade Atingida
                                         </span>
+                                    <?php elseif ($classifLocal === 'nao_atingiu_finalidade'): ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#ffebee; color:#c62828; border:1px solid #ffcdd2;" title="Não Atingiu a Finalidade / Irresolvido">
+                                            <i class="material-icons tiny">cancel</i> Não Atingiu
+                                        </span>
+                                    <?php elseif ($classifLocal === 'em_auditoria'): ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#fff8e1; color:#f57f17; border:1px solid #ffe082;" title="Em Diligência / Auditoria">
+                                            <i class="material-icons tiny">search</i> Em Auditoria
+                                        </span>
+                                    <?php elseif ($classifLocal === 'improcedente'): ?>
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#eceff1; color:#455a64; border:1px solid #cfd8dc;" title="Chamado Improcedente">
+                                            <i class="material-icons tiny">block</i> Improcedente
+                                        </span>
                                     <?php else: ?>
-                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; color:#666; background:#f5f5f5; border:1px solid #e0e0e0;">
+                                        <span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; color:#666; background:#f5f5f5; border:1px solid #e0e0e0;" title="Pendente de Avaliação pelo Conselho">
                                             <i class="material-icons tiny">pending</i> Pendente Conselho
                                         </span>
                                     <?php endif; ?>
+                                    </div>
                                 </td>
 
                                 <!-- 11. Ações (Total de 11 colunas exatas) -->
                                 <td style="text-align: center; white-space: nowrap;">
-                                    <button type="button" class="btn-small btn-flat waves-effect" title="Ver Linha do Tempo e Evidências" onclick="abrirLinhaDoTempo(<?= $it['ocorrencia_id'] ?>, '<?= htmlspecialchars($it['protocolo_vds']) ?>')">
-                                        <i class="material-icons blue-text text-darken-3" style="font-size: 1.25rem;">timeline</i>
+                                    <button type="button" class="btn-small blue darken-3 white-text waves-effect" style="padding: 0 8px; font-size: 0.75rem; height: 28px; line-height: 28px; border-radius: 4px;" title="Inspecionar Histórico e Deliberar Classificação" onclick="abrirLinhaDoTempo(<?= $it['ocorrencia_id'] ?>, '<?= htmlspecialchars($it['protocolo_vds']) ?>')">
+                                        <i class="material-icons tiny left" style="margin-right: 3px;">assignment</i> Inspecionar
                                     </button>
-                                    <a href="index.php?pag=livroDeOcorrencias&protocolo=<?= urlencode($it['protocolo_vds']) ?>" target="_blank" class="btn-small btn-flat waves-effect" title="Abrir no Livro de Ocorrências">
-                                        <i class="material-icons grey-text text-darken-2" style="font-size: 1.25rem;">open_in_new</i>
+                                    <a href="index.php?pag=livroDeOcorrencias&protocolo=<?= urlencode($it['protocolo_vds']) ?>" target="_blank" class="btn-small btn-flat waves-effect" title="Abrir no Livro Oficial de Ocorrências" style="padding: 0 6px; height: 28px; line-height: 28px;">
+                                        <i class="material-icons grey-text text-darken-2" style="font-size: 1.15rem;">open_in_new</i>
                                     </a>
                                 </td>
                             </tr>
@@ -717,6 +764,58 @@ $qsExport = http_build_query($paramsExport);
                 </div>
             </div>
 
+            <!-- PAINEL DE INSPEÇÃO E DELIBERAÇÃO FORMAL DO CONSELHO -->
+            <div class="card-panel" style="background: #fcfdfe; border: 1px solid #bbdefb; border-left: 5px solid #1565c0; border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <h6 style="margin: 0; font-weight: bold; color: #0d47a1; display: flex; align-items: center; gap: 6px; font-size: 1rem;">
+                        <i class="material-icons small">gavel</i> Deliberação & Classificação da Auditoria pelo Conselho
+                    </h6>
+                    <span id="conselhoUltimaDelibInfo" style="font-size: 0.78rem; color: #555; background: #e3f2fd; padding: 2px 8px; border-radius: 12px;">Pendente de avaliação</span>
+                </div>
+                <form id="formDeliberacaoConselho" onsubmit="event.preventDefault(); salvarDeliberacaoConselho();">
+                    <input type="hidden" id="delibOcorrenciaId" name="ocorrencia_id" value="">
+                    <input type="hidden" id="delibSessaoId" name="sessao_id" value="<?= htmlspecialchars((string)($sessaoIdSelecionada ?? '')) ?>">
+
+                    <div class="row" style="margin-bottom: 10px;">
+                        <div class="col s12 m6" style="margin-bottom: 10px;">
+                            <label style="font-weight: 700; color: #263238; font-size: 0.85rem;">1. Julgamento da Finalidade (Conselho):</label>
+                            <select id="delibClassificacao" name="classificacao" class="browser-default" style="width: 100%; height: 38px; border: 1px solid #90caf9; border-radius: 4px; padding: 4px 8px; font-size: 0.85rem; margin-top: 4px; background: #fff;">
+                                <option value="nao_avaliado">⏳ Pendente de Avaliação</option>
+                                <option value="finalidade_atingida">✅ Finalidade Atingida / Solucionado no Mundo Real</option>
+                                <option value="nao_atingiu_finalidade">❌ Não Atingiu a Finalidade / Demanda Irresolvida</option>
+                                <option value="em_auditoria">🔍 Em Diligência / Auditoria Aberta</option>
+                                <option value="improcedente">🚫 Improcedente / Encerrado sem Objeto</option>
+                            </select>
+                            <small class="grey-text" style="display:block; font-size:0.75rem; margin-top:2px;">Indica se a demanda do morador foi efetivamente atendida, independentemente do status fechado na VDS.</small>
+                        </div>
+
+                        <div class="col s12 m6" style="margin-bottom: 10px;">
+                            <label style="font-weight: 700; color: #263238; font-size: 0.85rem;">2. Avaliação das Providências do Art. 12:</label>
+                            <select id="delibProvidencias" name="providencias" class="browser-default" style="width: 100%; height: 38px; border: 1px solid #90caf9; border-radius: 4px; padding: 4px 8px; font-size: 0.85rem; margin-top: 4px; background: #fff;">
+                                <option value="nao_avaliado">❓ Não Avaliado</option>
+                                <option value="providencia_comprovada">🛠️ Providência Efetiva Comprovada (reparo, visita técnica, laudo, notificação)</option>
+                                <option value="apenas_manifestacao_protelatoria">⚠️ Apenas Manifestação Protelatória (resposta padrão sem ação concreta)</option>
+                                <option value="sem_providencia">⛔ Nenhuma Providência Identificável</option>
+                            </select>
+                            <small class="grey-text" style="display:block; font-size:0.75rem; margin-top:2px;">Distingue medidas objetivas de meros encaminhamentos ou mensagens protelatórias.</small>
+                        </div>
+                    </div>
+
+                    <div class="row" style="margin-bottom: 12px;">
+                        <div class="col s12">
+                            <label style="font-weight: 700; color: #263238; font-size: 0.85rem;">3. Parecer Fundamentado da Auditoria (Notas do Conselho para o Relatório da Assembleia):</label>
+                            <textarea id="delibParecer" name="parecer" placeholder="Registre a apuração fática (ex: Morador informou vazamento persistente em 12/01; administração respondeu apenas em 25/01 encaminhando para manutenção, sem laudo nem reparo comprovado até a data de corte)." style="width: 100%; min-height: 75px; padding: 8px 10px; font-size: 0.85rem; border: 1px solid #90caf9; border-radius: 4px; box-sizing: border-box; background: #fff;"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                        <button type="button" id="btnSalvarDelib" class="btn blue darken-3 waves-effect" onclick="salvarDeliberacaoConselho()" style="font-size: 0.85rem; height: 36px; line-height: 36px;">
+                            <i class="material-icons left tiny">save</i> Salvar Deliberação do Conselho
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <!-- Linha do Tempo Visual dos Eventos -->
             <h6 style="font-weight: bold; color: #333; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 6px;">
                 Linha do Tempo Cronológica dos Eventos Registrados na API
@@ -726,7 +825,10 @@ $qsExport = http_build_query($paramsExport);
             </div>
         </div>
     </div>
-    <div class="modal-footer" style="background: #f5f5f5;">
+    <div class="modal-footer" style="background: #f5f5f5; display: flex; justify-content: space-between; align-items: center;">
+        <a id="modalLinkOcorrencia" href="#" target="_blank" class="btn-flat grey-text text-darken-2 waves-effect">
+            <i class="material-icons left tiny">open_in_new</i> Abrir no Livro Oficial
+        </a>
         <button type="button" class="modal-close btn-flat waves-effect">Fechar</button>
     </div>
 </div>
@@ -903,6 +1005,34 @@ function abrirLinhaDoTempo(ocoId, protocolo) {
             document.getElementById('modalSituacaoChamado').innerText = (analise.situacao_chamado || '-').toUpperCase();
             document.getElementById('modalConselhoStatus').innerText = analise.conselho_rotulo || 'Pendente';
 
+            // Configurar formulário de deliberação formal do Conselho
+            document.getElementById('delibOcorrenciaId').value = loc.id || ocoId;
+            var linkOficial = document.getElementById('modalLinkOcorrencia');
+            if (linkOficial) {
+                linkOficial.href = 'index.php?pag=livroDeOcorrencias&protocolo=' + encodeURIComponent(loc.protocolo_vds || loc.id);
+            }
+
+            var classifVal = loc.conselho_classificacao;
+            if (!classifVal || classifVal === 'nao_avaliado') {
+                if (loc.resolvido == 1) {
+                    classifVal = 'finalidade_atingida';
+                } else {
+                    classifVal = 'nao_avaliado';
+                }
+            }
+            document.getElementById('delibClassificacao').value = classifVal;
+            document.getElementById('delibProvidencias').value = loc.conselho_providencias || 'nao_avaliado';
+            document.getElementById('delibParecer').value = loc.conselho_parecer_auditoria || '';
+
+            var infoDelib = document.getElementById('conselhoUltimaDelibInfo');
+            if (infoDelib) {
+                if (loc.conselho_auditoria_em) {
+                    infoDelib.innerText = 'Deliberado por ' + (loc.conselho_auditoria_por || 'Conselho') + ' em ' + loc.conselho_auditoria_em;
+                } else {
+                    infoDelib.innerText = 'Pendente de avaliação formal';
+                }
+            }
+
             // Montar Lista de Eventos
             var eventos = (res.remoteData && res.remoteData.eventos) ? res.remoteData.eventos : [];
             var html = '';
@@ -951,6 +1081,80 @@ function abrirLinhaDoTempo(ocoId, protocolo) {
             document.getElementById('timelineLoading').style.display = 'none';
             document.getElementById('timelineConteudo').style.display = 'block';
             document.getElementById('eventosTimelineContainer').innerHTML = '<p class="red-text">Erro ao carregar detalhes do chamado.</p>';
+        }
+    });
+}
+
+function salvarDeliberacaoConselho() {
+    var ocoId = document.getElementById('delibOcorrenciaId').value;
+    if (!ocoId) return;
+
+    var btn = document.getElementById('btnSalvarDelib');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="material-icons tiny left">hourglass_empty</i> Salvando...';
+
+    var classif = document.getElementById('delibClassificacao').value;
+    var provs = document.getElementById('delibProvidencias').value;
+    var parecer = document.getElementById('delibParecer').value;
+    var sessaoId = document.getElementById('delibSessaoId') ? document.getElementById('delibSessaoId').value : '';
+
+    $.ajax({
+        url: 'palco/auditoriaOcorrencias.php',
+        type: 'POST',
+        data: {
+            action: 'salvar_deliberacao_conselho',
+            ocorrencia_id: ocoId,
+            classificacao: classif,
+            providencias: provs,
+            parecer: parecer,
+            sessao_id: sessaoId
+        },
+        dataType: 'json',
+        success: function(res) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons left tiny">save</i> Salvar Deliberação do Conselho';
+
+            if (res.success) {
+                M.toast({ html: 'Deliberação do Conselho salva com sucesso!', classes: 'green' });
+                
+                var infoDelib = document.getElementById('conselhoUltimaDelibInfo');
+                if (infoDelib) {
+                    infoDelib.innerText = 'Deliberado por ' + (res.auditoria_por || 'Você') + ' agora';
+                }
+
+                // Atualizar badge no resumo do modal
+                var labelModal = 'Pendente';
+                if (classif === 'finalidade_atingida') labelModal = 'Finalidade Atingida';
+                else if (classif === 'nao_atingiu_finalidade') labelModal = 'Não Atingiu';
+                else if (classif === 'em_auditoria') labelModal = 'Em Auditoria';
+                else if (classif === 'improcedente') labelModal = 'Improcedente';
+                document.getElementById('modalConselhoStatus').innerText = labelModal;
+
+                // Atualizar badge na tabela principal em tempo real sem recarregar
+                var badgeEl = document.getElementById('conselho_status_badge_' + ocoId);
+                if (badgeEl) {
+                    var htmlBadge = '';
+                    if (classif === 'finalidade_atingida') {
+                        htmlBadge = '<span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;" title="Finalidade Atingida / Solucionado"><i class="material-icons tiny">check_circle</i> Finalidade Atingida</span>';
+                    } else if (classif === 'nao_atingiu_finalidade') {
+                        htmlBadge = '<span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#ffebee; color:#c62828; border:1px solid #ffcdd2;" title="Não Atingiu a Finalidade / Irresolvido"><i class="material-icons tiny">cancel</i> Não Atingiu</span>';
+                    } else if (classif === 'em_auditoria') {
+                        htmlBadge = '<span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#fff8e1; color:#f57f17; border:1px solid #ffe082;" title="Em Diligência / Auditoria"><i class="material-icons tiny">search</i> Em Auditoria</span>';
+                    } else if (classif === 'improcedente') {
+                        htmlBadge = '<span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; font-weight:600; background:#eceff1; color:#455a64; border:1px solid #cfd8dc;" title="Chamado Improcedente"><i class="material-icons tiny">block</i> Improcedente</span>';
+                    } else {
+                        htmlBadge = '<span style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:0.72rem; color:#666; background:#f5f5f5; border:1px solid #e0e0e0;" title="Pendente de Avaliação pelo Conselho"><i class="material-icons tiny">pending</i> Pendente Conselho</span>';
+                    }
+                    badgeEl.innerHTML = htmlBadge;
+                }
+            } else {
+                M.toast({ html: res.message || 'Erro ao salvar deliberação.', classes: 'red' });
+            }
+        },
+        error: function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="material-icons left tiny">save</i> Salvar Deliberação do Conselho';
+            M.toast({ html: 'Erro de comunicação ao salvar deliberação.', classes: 'red' });
         }
     });
 }
