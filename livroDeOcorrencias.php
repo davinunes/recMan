@@ -3172,25 +3172,26 @@ window.renderizarListaRespostasRapidas = function() {
     let cardsHtml = '';
     filtradas.forEach(function(r) {
         const cat = r.categoria || 'Geral';
-        const textoEscapadoAttr = encodeURIComponent(r.texto || '');
+        const tituloEscapado = (r.titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const textoEscapado = (r.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         cardsHtml += `
-            <div class="card-resp-item" style="border:1px solid #e9ecef; border-radius:8px; padding:12px 14px; background:#ffffff; transition:all 0.15s ease; cursor:pointer;" onclick="selecionarEColarRespostaRapida(${r.id}, decodeURIComponent('${textoEscapadoAttr}'))">
+            <div class="card-resp-item" data-id="${r.id}" style="border:1px solid #e9ecef; border-radius:8px; padding:12px 14px; background:#ffffff; transition:all 0.15s ease; cursor:pointer;" onclick="selecionarEColarRespostaRapida(${r.id})">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                     <div style="font-weight:700; font-size:0.95rem; color:#212529; display:flex; align-items:center; gap:6px;">
                         <i class="material-icons tiny orange-text text-darken-3">chat_bubble_outline</i>
-                        <span>${r.titulo}</span>
+                        <span>${tituloEscapado}</span>
                     </div>
                     <span style="background:#fff3e0; color:#e65100; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; border:1px solid #ffe0b2;">
                         ${cat}
                     </span>
                 </div>
                 <div style="font-size:0.83rem; color:#555; line-height:1.45; max-height:48px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-bottom:8px;">
-                    ${(r.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                    ${textoEscapado}
                 </div>
                 <div style="display:flex; justify-content:flex-end;">
-                    <span class="btn-small waves-effect waves-light orange darken-3" style="height:26px; line-height:26px; padding:0 10px; font-size:0.74rem; text-transform:none; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">
+                    <button type="button" class="btn-small waves-effect waves-light orange darken-3" onclick="event.stopPropagation(); selecionarEColarRespostaRapida(${r.id})" style="height:26px; line-height:26px; padding:0 10px; font-size:0.74rem; text-transform:none; border-radius:4px; display:inline-flex; align-items:center; gap:4px; border:none; cursor:pointer;">
                         <i class="material-icons tiny" style="font-size:0.95rem;">content_paste</i> Inserir no Texto
-                    </span>
+                    </button>
                 </div>
             </div>
         `;
@@ -3210,6 +3211,17 @@ window.filtrarRespostasRapidasUI = function() {
 
 // 5. Inserir Resposta Rápida e Interpolar Tags
 window.selecionarEColarRespostaRapida = function(id, textoBase) {
+    if (!textoBase) {
+        const item = cacheRespostasRapidas.find(r => parseInt(r.id) === parseInt(id));
+        if (item) {
+            textoBase = item.texto;
+        }
+    }
+    if (!textoBase) {
+        M.toast({ html: 'Modelo não encontrado.', classes: 'orange' });
+        return;
+    }
+
     const $form = $('#form-adicionar-nota-interna');
     let bloco = $form.attr('data-bloco') || '';
     let unidade = $form.attr('data-unidade') || '';
@@ -3257,6 +3269,9 @@ window.selecionarEColarRespostaRapida = function(id, textoBase) {
 
         // Ajustar visual e focar
         $textarea.trigger('change').focus();
+        if (typeof M !== 'undefined' && M.textareaAutoResize) {
+            M.textareaAutoResize($textarea);
+        }
         M.toast({ html: '⚡ Resposta rápida inserida no campo de texto!', classes: 'rounded green' });
     } else {
         M.toast({ html: 'Selecione uma ocorrência para colar a resposta rápida.', classes: 'rounded orange' });
@@ -3309,7 +3324,7 @@ window.renderizarTabelaGerenciarRespostas = function() {
                     <button type="button" class="btn-flat btn-small" onclick="editarRespostaRapidaModal(${r.id})" title="Editar modelo" style="padding:0 4px; color:#1a73e8;">
                         <i class="material-icons tiny">edit</i>
                     </button>
-                    <button type="button" class="btn-flat btn-small" onclick="excluirRespostaRapidaAjax(${r.id}, '${(r.titulo || '').replace(/'/g, "\\'")}')" title="Excluir modelo" style="padding:0 4px; color:#d32f2f;">
+                    <button type="button" class="btn-flat btn-small" onclick="excluirRespostaRapidaAjax(${r.id})" title="Excluir modelo" style="padding:0 4px; color:#d32f2f;">
                         <i class="material-icons tiny">delete</i>
                     </button>
                 </td>
@@ -3408,7 +3423,9 @@ window.salvarRespostaRapidaAjax = function(e) {
     });
 };
 
-window.excluirRespostaRapidaAjax = function(id, titulo) {
+window.excluirRespostaRapidaAjax = function(id) {
+    const item = cacheRespostasRapidas.find(r => parseInt(r.id) === parseInt(id));
+    const titulo = item ? item.titulo : 'este modelo';
     if (!confirm('Deseja realmente excluir o modelo "' + titulo + '"?')) return;
 
     $.ajax({
