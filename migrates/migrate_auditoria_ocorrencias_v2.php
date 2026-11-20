@@ -69,6 +69,8 @@ $sqlItens = "CREATE TABLE IF NOT EXISTS auditoria_execucao_itens (
     
     -- Snapshot de Evidência Bruta Congelada da API
     dados_originais_api_json LONGTEXT DEFAULT NULL COMMENT 'Payload bruto congelado e lista de eventos observados',
+    conselho_resolvido TINYINT(1) DEFAULT 0,
+    conselho_classificacao VARCHAR(50) DEFAULT 'nao_avaliado',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     KEY idx_item_sessao (sessao_id),

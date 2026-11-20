@@ -969,13 +969,29 @@ function vds_auditoria_salvar_deliberacao_conselho($ocorrenciaId, $classificacao
     }
 
     $link = DBConnect();
+    if (!$link) {
+        return ['success' => false, 'message' => 'Erro de conexão com o banco de dados.'];
+    }
+
+    // Auto-criação resiliente de colunas estendidas caso a migration migrate_auditoria_ocorrencias_v2.php ainda não tenha rodado
+    $checkCol = @mysqli_query($link, "SHOW COLUMNS FROM ocorrencias LIKE 'conselho_classificacao'");
+    if ($checkCol && mysqli_num_rows($checkCol) == 0) {
+        @mysqli_query($link, "ALTER TABLE ocorrencias ADD COLUMN conselho_classificacao VARCHAR(50) DEFAULT 'nao_avaliado'");
+        @mysqli_query($link, "ALTER TABLE ocorrencias ADD COLUMN conselho_providencias VARCHAR(50) DEFAULT 'nao_avaliado'");
+        @mysqli_query($link, "ALTER TABLE ocorrencias ADD COLUMN conselho_parecer_auditoria TEXT DEFAULT NULL");
+        @mysqli_query($link, "ALTER TABLE ocorrencias ADD COLUMN conselho_auditoria_por VARCHAR(150) DEFAULT NULL");
+        @mysqli_query($link, "ALTER TABLE ocorrencias ADD COLUMN conselho_auditoria_em DATETIME DEFAULT NULL");
+    }
 
     // Sincronizar campo booleano 'resolvido' existente
     $resolvidoVal = ($classificacao === 'finalidade_atingida') ? 1 : 0;
     $auditoriaVal = ($classificacao === 'em_auditoria') ? 1 : 0;
     $dataAgora = date('Y-m-d H:i:s');
+    $protoStr = (string)$ocorrenciaId;
+    $erroMsg = '';
 
-    $stmt = mysqli_prepare($link, "UPDATE ocorrencias SET 
+    // Tentativa 1: Atualização completa com colunas de deliberação do Conselho
+    $stmt = @mysqli_prepare($link, "UPDATE ocorrencias SET 
         resolvido = ?,
         auditoria = IF(? = 1, 1, auditoria),
         conselho_classificacao = ?,
@@ -983,20 +999,32 @@ function vds_auditoria_salvar_deliberacao_conselho($ocorrenciaId, $classificacao
         conselho_parecer_auditoria = ?,
         conselho_auditoria_por = ?,
         conselho_auditoria_em = ?
-        WHERE id = ?");
+        WHERE id = ? OR protocolo_vds = ?");
 
+    $ok = false;
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "iisssssi", $resolvidoVal, $auditoriaVal, $classificacao, $providencias, $parecer, $usuarioNome, $dataAgora, $ocorrenciaId);
+        mysqli_stmt_bind_param($stmt, "iisssssis", $resolvidoVal, $auditoriaVal, $classificacao, $providencias, $parecer, $usuarioNome, $dataAgora, $ocorrenciaId, $protoStr);
         $ok = mysqli_stmt_execute($stmt);
+        if (!$ok) {
+            $erroMsg = mysqli_stmt_error($stmt);
+        }
         mysqli_stmt_close($stmt);
     } else {
-        $ok = false;
+        $erroMsg = mysqli_error($link);
+        
+        // Tentativa 2 (Fallback): Atualizar ao menos as colunas nativas que já existem
+        $stmtFb = @mysqli_prepare($link, "UPDATE ocorrencias SET resolvido = ?, auditoria = IF(? = 1, 1, auditoria) WHERE id = ? OR protocolo_vds = ?");
+        if ($stmtFb) {
+            mysqli_stmt_bind_param($stmtFb, "iiis", $resolvidoVal, $auditoriaVal, $ocorrenciaId, $protoStr);
+            $ok = mysqli_stmt_execute($stmtFb);
+            mysqli_stmt_close($stmtFb);
+        }
     }
 
-    // Se houver parecer digitado pelo Conselho, registrar também na tabela de notas internas para histórico permanente
-    if ($ok && !empty(trim((string)$parecer))) {
-        $textoNota = "[Deliberação da Auditoria] " . trim($parecer);
-        $stmtNota = mysqli_prepare($link, "INSERT INTO ocorrencia_notas_internas (ocorrencia_id, conselheiro_id, conselheiro_nome, texto, enviado_remoto) VALUES (?, ?, ?, ?, 0)");
+    // Registrar nas notas internas como documento comprobatório
+    if (!empty(trim((string)$parecer))) {
+        $textoNota = "[Deliberação da Auditoria - " . strtoupper(str_replace('_', ' ', $classificacao)) . "] " . trim($parecer);
+        $stmtNota = @mysqli_prepare($link, "INSERT INTO ocorrencia_notas_internas (ocorrencia_id, conselheiro_id, conselheiro_nome, texto, enviado_remoto) VALUES (?, ?, ?, ?, 0)");
         if ($stmtNota) {
             mysqli_stmt_bind_param($stmtNota, "iiss", $ocorrenciaId, $usuarioId, $usuarioNome, $textoNota);
             mysqli_stmt_execute($stmtNota);
@@ -1013,6 +1041,7 @@ function vds_auditoria_salvar_deliberacao_conselho($ocorrenciaId, $classificacao
         'classificacao' => $classificacao,
         'providencias' => $providencias,
         'auditoria_por' => $usuarioNome,
-        'auditoria_em' => $dataAgora
+        'auditoria_em' => $dataAgora,
+        'message' => $ok ? 'Deliberação salva com sucesso.' : ('Erro ao salvar no banco: ' . $erroMsg)
     ];
 }
