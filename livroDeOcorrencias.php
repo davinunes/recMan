@@ -1020,14 +1020,6 @@ if (!empty($protoFiltro)) {
     $detalheSel = $detalhePorProto;
     if ($detalhePorProto && isset($detalhePorProto['local']['id'])) {
         $selId = $detalhePorProto['local']['id'];
-
-        $jaNaLista = false;
-        foreach ($ocorrencias as $ocoItem) {
-            if ($ocoItem['id'] == $selId) { $jaNaLista = true; break; }
-        }
-        if (!$jaNaLista) {
-            array_unshift($ocorrencias, $detalhePorProto['local']);
-        }
     }
 }
 
@@ -1039,6 +1031,35 @@ if (!$selId && !$isMobileView && !empty($ocorrencias)) {
 
 if (!$detalheSel && $selId) {
     $detalheSel = vds_get_ocorrencia_detalhe($selId, $usuarioIdConselho);
+}
+
+// Garantir que a ocorrência selecionada esteja presente na lista e agrupamento da sidebar no SSR
+if (!empty($detalheSel['local']['id'])) {
+    $selLocalId = (int)$detalheSel['local']['id'];
+    $jaNaLista = false;
+    foreach ($ocorrencias as $ocoItem) {
+        if ((int)$ocoItem['id'] === $selLocalId) {
+            $jaNaLista = true;
+            break;
+        }
+    }
+    if (!$jaNaLista) {
+        array_unshift($ocorrencias, $detalheSel['local']);
+        $tKeySel = (int)($detalheSel['local']['oco_tipo'] ?? 0);
+        if (!isset($ocorrenciasAgrupadas[$tKeySel])) {
+            $ocorrenciasAgrupadas[$tKeySel] = [];
+        }
+        $jaNoGrupo = false;
+        foreach ($ocorrenciasAgrupadas[$tKeySel] as $gItem) {
+            if ((int)$gItem['id'] === $selLocalId) {
+                $jaNoGrupo = true;
+                break;
+            }
+        }
+        if (!$jaNoGrupo) {
+            array_unshift($ocorrenciasAgrupadas[$tKeySel], $detalheSel['local']);
+        }
+    }
 }
 
 // Mapa de delays pré-calculados para garantir paridade 100% imediata entre a sidebar e o chat no SSR
@@ -1746,6 +1767,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Carregamento Progressivo via AJAX da API VDS (Páginas 2, 3, etc.)
     const mapaCoresTipoJS = <?= json_encode($mapaCoresTipo, JSON_UNESCAPED_UNICODE) ?>;
     const visaoJS = <?= json_encode($visao) ?>;
+    let selectedOcorrenciaId = <?= json_encode(!empty($selId) ? (int)$selId : null) ?>;
     let vdsCurrentPage = 1;
     let vdsHasMore = <?= !empty($hasMorePratico) ? 'true' : 'false' ?>;
     let vdsIsLoadingPage = false;
@@ -1790,9 +1812,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const isAuditoria = parseInt(oco.auditoria || 0) === 1;
             const searchAuditoria = isAuditoria ? ' auditoria pendente' : '';
             const searchStr = `${oco.bloco} ${oco.unidade} ${protText} ${oco.responsabilidade || ''}${searchAuditoria}`.toLowerCase();
+            const isItemSel = (selectedOcorrenciaId && parseInt(selectedOcorrenciaId) === parseInt(oco.id));
+
+            let delayBadgeHtml = '';
+            if (oco.delays) {
+                if (oco.delays.is_resolvido) {
+                    delayBadgeHtml = `<span class="badge-delay-sidebar" style="font-size:0.7rem; color:#2e7d32; background:#e8f5e9; padding:1px 5px; border-radius:4px; font-weight:600;" title="Tempo total: ${oco.delays.texto_resolucao || ''}">🏁 ${oco.delays.dias_resolucao}d</span>`;
+                } else {
+                    delayBadgeHtml = `<span class="badge-delay-sidebar" style="font-size:0.7rem; color:${oco.delays.cor_interacao}; background:${oco.delays.bg_interacao}; padding:1px 5px; border-radius:4px; font-weight:600;" title="${oco.delays.texto_abertura} • ${oco.delays.texto_interacao}">⏱️ ${oco.delays.dias_abertura}d • 💬 ${oco.delays.dias_ultima_interacao}d</span>`;
+                }
+            } else {
+                delayBadgeHtml = `<span class="badge-delay-sidebar" style="display:none;"></span>`;
+            }
 
             const itemHtml = `
-                <div class="item-oco" id="item-oco-${oco.id}" data-id="${oco.id}" data-search="${searchStr}" onclick="selecionarOcorrencia(${oco.id}, this, event)">
+                <div class="item-oco ${isItemSel ? 'active' : ''}" id="item-oco-${oco.id}" data-id="${oco.id}" data-search="${searchStr}" onclick="selecionarOcorrencia(${oco.id}, this, event)">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span class="badge-tipo" style="background-color: ${infoTipo.bg}; color: ${infoTipo.color};">
                             ${infoTipo.nome}
@@ -1814,7 +1848,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px; font-size:0.8rem; color:#666;">
                         <span style="display:inline-flex; align-items:center; gap:4px;">
                             <span>Resp: <strong class="resp-text-label">${respText}</strong></span>
-                            <span class="badge-delay-sidebar" style="display:none;"></span>
+                            ${delayBadgeHtml}
                         </span>
                         <span class="status-resolvido-label" style="color: ${resolvidoColor};">
                             ${resolvidoText}
@@ -1888,6 +1922,8 @@ window.selecionarOcorrencia = function(ocorrenciaId, elem, ev, pushState = true)
         ev.preventDefault();
         ev.stopPropagation();
     }
+
+    selectedOcorrenciaId = ocorrenciaId;
 
     // 1. Atualizar visualmente o item ativo na lista sem recriar nenhum nó do DOM
     $('.item-oco').removeClass('active');

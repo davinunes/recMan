@@ -22,6 +22,12 @@ $items = $resPratico['items'] ?? [];
 $totalRegs = (int)($resPratico['totalRegs'] ?? 0);
 $hasMore = !empty($resPratico['hasMore']);
 
+// Pré-calcular delays de cada ocorrência para renderização imediata na sidebar do frontend
+foreach ($items as &$it) {
+    $it['delays'] = vds_calcular_delays_ocorrencia($it);
+}
+unset($it);
+
 // 3. Registrar a data da última sincronização bem-sucedida
 $now = date('Y-m-d H:i:s');
 $link = DBConnect();
